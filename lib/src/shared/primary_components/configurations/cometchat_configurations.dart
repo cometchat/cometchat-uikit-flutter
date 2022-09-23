@@ -1,0 +1,3 @@
+class CometChatConfigurations {
+  const CometChatConfigurations();
+}
