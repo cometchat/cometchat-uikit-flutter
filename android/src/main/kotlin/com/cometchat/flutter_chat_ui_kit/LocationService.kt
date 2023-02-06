@@ -119,10 +119,10 @@ class LocationService : AppCompatActivity() {
         val longitude: Double = call.argument("longitude") ?: 0.0
 
         val geocoder = Geocoder(context, Locale.getDefault())
-        val addresses: List<Address?>  = geocoder.getFromLocation(latitude, longitude, 1)
+        val addresses: MutableList<Address>?  = geocoder.getFromLocation(latitude, longitude, 1)
 
 
-        if(addresses.isNotEmpty()){
+        if(addresses!=null && addresses.isNotEmpty()){
             result.success(getAddressMap(addresses[0]))
         }else{
             result.error("NO DATA", "Address not found", "Address List came empty")
