@@ -31,6 +31,9 @@ class CometChatTextBubble extends StatelessWidget {
 
   onTapUrl(String url) async {
     if (BubbleUtils.urlRegex.hasMatch(url)) {
+      if (!RegExp(r'^(https?:\/\/)').hasMatch(url)) {
+        url = 'https://' + url;
+      }
       await launch(url);
     } else if (BubbleUtils.emailRegex.hasMatch(url)) {
       await launch('mailto:$url');

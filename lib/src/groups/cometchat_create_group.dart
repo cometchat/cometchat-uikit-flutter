@@ -106,22 +106,30 @@ class _CometChatCreateGroupState extends State<CometChatCreateGroup>
         _isLoading = true;
       });
 
-      CometChat.createGroup(gUid, _groupName, _groupType,
+      Group _group = Group(
+          guid: gUid,
+          name: _groupName,
+          type: _groupType,
           password: _groupType == GroupTypeConstants.password
               ? _groupPassword
-              : null, onSuccess: (Group group) {
-        debugPrint("Group Created Successfully : $group ");
-        Navigator.pop(context); //pop loading indicator
-        _isLoading = false;
-        Navigator.pop(context);
-        CometChatGroupEvents.onGroupCreate(group);
-      }, onError: (CometChatException e) {
-        Navigator.pop(context); //pop loading indicator
-        _isLoading = false;
-        setState(() {});
-        CometChatGroupEvents.onGroupError(e);
-        debugPrint("Group Creation failed with exception: ${e.message}");
-      });
+              : null);
+
+      CometChat.createGroup(
+          group: _group,
+          onSuccess: (Group group) {
+            debugPrint("Group Created Successfully : $group ");
+            Navigator.pop(context); //pop loading indicator
+            _isLoading = false;
+            Navigator.pop(context);
+            CometChatGroupEvents.onGroupCreate(group);
+          },
+          onError: (CometChatException e) {
+            Navigator.pop(context); //pop loading indicator
+            _isLoading = false;
+            setState(() {});
+            CometChatGroupEvents.onGroupError(e);
+            debugPrint("Group Creation failed with exception: ${e.message}");
+          });
     }
   }
 

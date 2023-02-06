@@ -65,6 +65,7 @@ post_install do |installer|
     <COPY FROM HERE------------>
     target.build_configurations.each do |build_configuration|
     build_configuration.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64 i386'
+    build_configuration.build_settings['ENABLE_BITCODE'] = 'NO'
     end
     <COPY TILL HERE------------>
   end
@@ -73,7 +74,7 @@ end
 
 </td></table>
 
-**Step 3-** Open app/build.gradle file and change min SDk version to 21 <br/>
+**Step 3-** Open app/build.gradle file and change min SDk version to 21 and add lint ignore option<br/>
 
 <table><td>
 
@@ -86,6 +87,15 @@ end
             versionCode flutterVersionCode.toInteger()
             versionName flutterVersionName
             }
+
+
+
+    lintOptions {
+        disable 'InvalidPackage'
+        disable "Instantiatable"
+        checkReleaseBuilds false
+        abortOnError false
+    }
 ```
 
 
