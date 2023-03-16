@@ -8,14 +8,14 @@ class DottedBorder extends StatelessWidget {
   final Color color;
   final Radius radius;
 
-  DottedBorder({
+  const DottedBorder({
     Key? key,
     required this.child,
     this.color = Colors.black,
     this.strokeWidth = 1,
     this.padding = const EdgeInsets.all(0),
     this.radius = const Radius.circular(0),
-  });
+  }):super(key: key);
 
   @override
   Widget build(BuildContext context) {

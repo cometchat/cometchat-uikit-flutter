@@ -18,7 +18,19 @@ class CometChatPlaceholderBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
+    // print( "Placeholder for ${message.id} category ${message.category} type ${message.type}");
+
     return Container(
+      height: style.height,
+      width: style.width,
+      decoration: BoxDecoration(
+          border: style.border,
+          borderRadius: BorderRadius.circular(style.borderRadius ?? 0),
+          color: style.gradient == null
+              ? style.background ?? Colors.transparent
+              : null,
+          gradient: style.gradient),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(children: [
@@ -42,10 +54,4 @@ class CometChatPlaceholderBubble extends StatelessWidget {
       ),
     );
   }
-}
-
-class PlaceholderBubbleStyle {
-  const PlaceholderBubbleStyle({this.textStyle, this.headerTextStyle});
-  final TextStyle? textStyle;
-  final TextStyle? headerTextStyle;
 }
