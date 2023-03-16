@@ -20,12 +20,10 @@ class MessageTypeConstants {
   static const String file = CometChatMessageType.file;
   static const String text = CometChatMessageType.text;
   static const String custom = CometChatMessageType.custom;
-  static const String poll = "extension_poll";
-  static const String sticker = "extension_sticker";
-  static const String whiteboard = "extension_whiteboard";
-  static const String document = "extension_document";
-  static const String location = "LOCATION";
   static const String groupActions = "groupMember";
+  static const String message = "message";
+  static const String takePhoto = "takePhoto";
+  static const String photoAndVideo = "photoAndVideo";
 }
 
 class ReceiverTypeConstants {
@@ -47,23 +45,6 @@ class MessageOptionConstants {
   static const String sendMessagePrivately = "sendMessagePrivately";
   static const String replyMessagePrivately = "replyMessagePrivately";
 }
-
-//MessageListAlignmentConstants
-enum ChatAlignment { leftAligned, standard }
-
-//MessageBubbleAlignmentConstants
-enum BubbleAlignment { left, center, right }
-
-//MessageTimeAlignmentConstants
-enum TimeAlignment { top, bottom }
-
-//MessageStatusConstants
-enum MessageStatus { inProgress, sent }
-
-//Message Edit Status Constants
-enum MessageEditStatus { inProgress, success }
-
-enum ConversationTypes { user, group, both }
 
 class MetadataConstants {
   static const String liveReaction = "live_reaction";
@@ -96,13 +77,9 @@ class UserOptionConstants {
   static const String voiceCall = "voiceCall";
   static const String videoCall = "videoCall";
   static const String viewInformation = "viewInformation";
+  static const String blockUser = "blockUser";
+  static const String unblockUser = "unblockUser";
 }
-
-// class ConversationTypeConstants {
-//   static const String users = 'user';
-//   static const String groups = 'group';
-//   static const String both = 'both';
-// }
 
 class GroupTypeConstants {
   static const String private = CometChatGroupType.private;
@@ -114,6 +91,7 @@ class GroupMemberScope {
   static const String admin = CometChatMemberScope.admin;
   static const String moderator = CometChatMemberScope.moderator;
   static const String participant = CometChatMemberScope.participant;
+  static const String owner = "owner";
 }
 
 class UserStatusConstants {
@@ -126,17 +104,34 @@ class ReceiptTypeConstants {
   static const String read = CometChatReceiptType.read;
 }
 
-// class CometChatUIMessageTypes {
-//   static const String text = "text";
-//   static const String audio = "audio";
-//   static const String video = "video";
-//   static const String image = "image";
-//   static const String location = "LOCATION";
-//   static const String extension_poll = "extension_poll";
-//   static const String collaborativeWhiteboard = "extension_whiteboard";
-//   static const String collaborativeDocument = "extension_document";
-//   static const String sticker = "extension_sticker";
-//   static const String groupActions = "groupMember";
-//   static const String file = "file";
-//   static const String custom = "custom";
-// }
+class DetailsTemplateConstants {
+  static const String primaryActions = "primaryActions";
+  static const String destructiveActions = "destructiveActions";
+  static const String moreActions = "moreActions";
+}
+
+class UITabNameConstants {
+  static const userWithMessages = "userWithMessages";
+  static const groupWithMessages = "groupWithMessages";
+  static const conversationWithMessages = "conversationWithMessages";
+}
+
+class ConversationOptionConstants {
+  static const delete = "delete";
+}
+
+class CallStatusConstants {
+  static const initiated = "initiated";
+  static const ongoing = "ongoing";
+  static const rejected = "rejected";
+  static const cancelled = "cancelled";
+  static const busy = "busy";
+  static const unanswered = "unanswered";
+  static const ended = "ended";
+}
+
+typedef OnError = Function(Exception e);
+
+class LiveReactionConstants {
+  static const timeout = 1500;
+}

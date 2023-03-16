@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+
+class GroupsStyle extends BaseStyles {
+  const GroupsStyle(
+      {this.titleStyle,
+      this.backIconTint,
+      this.searchBorderColor,
+      this.searchBackground,
+      this.searchBorderRadius,
+      this.searchBorderWidth,
+      this.searchTextStyle,
+      this.searchPlaceholderStyle,
+      this.searchIconTint,
+      this.loadingIconTint,
+      this.emptyTextStyle,
+      this.errorTextStyle,
+      double? width,
+      double? height,
+      Color? background,
+      BoxBorder? border,
+      double? borderRadius,
+      Gradient? gradient,
+      this.subtitleTextStyle,
+      this.privateGroupIconBackground,
+      this.passwordGroupIconBackground})
+      : super(
+            width: width,
+            height: height,
+            background: background,
+            border: border,
+            borderRadius: borderRadius,
+            gradient: gradient);
+
+  ///[titleStyle] provides styling for title text
+  final TextStyle? titleStyle;
+
+  ///[backIconTint] provides color for the back icon
+  final Color? backIconTint;
+
+  ///[searchBorderColor] provides color for the border around the search box
+  final Color? searchBorderColor;
+
+  ///[searchBackground] provides color for the search box
+  final Color? searchBackground;
+
+  ///[searchBorderRadius] provides radius for the border around the search box
+  final double? searchBorderRadius;
+
+  ///[searchBorderWidth] provides width to the border around the search box
+  final double? searchBorderWidth;
+
+  ///[searchTextStyle] provides styling for text inside the search box
+  final TextStyle? searchTextStyle;
+
+  ///[searchPlaceholderStyle] provides styling for the hint text inside the search box
+  final TextStyle? searchPlaceholderStyle;
+
+  ///[searchIconTint] provides color for the search icon
+  final Color? searchIconTint;
+
+  ///[loadingIconTint] provides color to loading icon
+  final Color? loadingIconTint;
+
+  ///[emptyTextStyle] provides styling for text to indicate group list is empty
+  final TextStyle? emptyTextStyle;
+
+  ///[errorTextStyle] provides styling for text to indicate some error has occurred while fetching the group list
+  final TextStyle? errorTextStyle;
+
+  ///[subtitleTextStyle] provides styling to the text in the subtitle
+  final TextStyle? subtitleTextStyle;
+
+  ///[privateGroupIconBackground] provides color to the icon for private group
+  final Color? privateGroupIconBackground;
+
+  ///[privateGroupIconBackground] provides color to the icon for password protected group
+  final Color? passwordGroupIconBackground;
+}

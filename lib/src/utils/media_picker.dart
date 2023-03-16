@@ -1,9 +1,12 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../flutter_chat_ui_kit.dart';
+
+enum FileType { image, video, audio, any, custom }
 
 class PickedFile {
   PickedFile(
@@ -32,85 +35,104 @@ class MediaPicker {
     }
   }
 
-  static Future<PickedFile?> pickFile(FileType type) async {
-    if (Platform.isIOS && (type == FileType.video || type == FileType.image)) {
-      final XFile? image;
-      if (type == FileType.video) {
-        image = await _picker.pickVideo(source: ImageSource.gallery);
-      } else {
-        image = await _picker.pickImage(source: ImageSource.gallery);
-      }
-      if (image != null) {
-        return PickedFile(name: image.name, path: image.path);
-      } else {
-        return null;
-      }
-    }
-
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: type,
-    );
-
-    if (result != null && result.files.first.path != null) {
-      PlatformFile file = result.files.first;
-      return PickedFile(
-          name: file.name,
-          path: file.path!,
-          size: file.size,
-          extension: file.extension);
-    } else {
-      return null;
-    }
-  }
-
   static Future<PickedFile?> pickAnyFile() async {
-    return pickFile(FileType.any);
+    return await _getFilesFromMethodChannel(type: "any");
   }
+
+  // static pickCustomFile() async {
+  //   try {
+  //     var result = await UIConstants.channel.invokeListMethod("pickFile",
+  //         {"allowMultipleSelection": true, "withData": false, "type": "any"});
+  //     print(result);
+  //     if (result != null && result.first["path"] != null) {
+  //       Map<String, dynamic> file = Map<String, dynamic>.from(result.first);
+  //       return PickedFile(
+  //         name: file["name"],
+  //         path: file["path"],
+  //         size: file["size"],
+  //       );
+  //     } else {
+  //       return null;
+  //     }
+  //   } on PlatformException catch (e, stack) {
+  //     debugPrint("$stack");
+  //   } catch (e) {
+  //     rethrow;
+  //   }
+  // }
 
   static Future<PickedFile?> pickImage() async {
-    return pickFile(FileType.image);
+    return _getFilesFromMethodChannel(type: "image");
   }
 
   static Future<PickedFile?> pickVideo() async {
-    return pickFile(FileType.video);
+    return _getFilesFromMethodChannel(type: "video");
   }
 
   static Future<PickedFile?> pickAudio() async {
-    return pickFile(FileType.audio);
+    return _getFilesFromMethodChannel(type: "audio");
   }
 
-  static List<String> videoExtensions = ['mp4', 'avi', 'mkv'];
-  static List<String> imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+  static List<String> videoExtensions = ['mp4', 'avi', 'mkv', 'mov', 'ts'];
+  static List<String> imageExtensions = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    "bmp",
+    "psd",
+    "sgi",
+    "tiff",
+    "tga"
+  ];
+  static List<String> audioExtensions = ['mp3', "aac", "wav", "aiff", "caf"];
   static Future<PickedFile?> pickImageVideo() async {
-    // if (Platform.isIOS) {
-    //   final XFile? image;
-    //   image = await _picker.pickImage(source: ImageSource.gallery);
-    //   debugPrint(image?.path);
-    //   if (image != null) {
-    //     return PickedFile(
-    //       name: image.name,
-    //       path: image.path,
-    //       fileType: MessageTypes.image,
-    //     );
-    //   } else {
-    //     return null;
-    //   }
-    // }
-
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
+    return await _getFilesFromMethodChannel(
+        type: Platform.isIOS ? "imagevideo" : "custom",
         allowedExtensions: imageExtensions + videoExtensions);
+  }
 
-    if (result != null && result.files.first.path != null) {
-      PlatformFile file = result.files.first;
-      return PickedFile(
-          name: file.name,
-          path: file.path!,
-          size: file.size,
-          extension: file.extension,
-          fileType: imageExtensions.contains(file.extension)
-              ? MessageTypeConstants.image
-              : MessageTypeConstants.video);
+  static Future<PickedFile?> _getFilesFromMethodChannel(
+      {String type = "any",
+      bool? allowMultipleSelection = false,
+      bool? withData = false,
+      List<String>? allowedExtensions}) async {
+    try {
+      var result = await UIConstants.channel.invokeListMethod("pickFile", {
+        "allowMultipleSelection": allowMultipleSelection,
+        "withData": withData,
+        "type": type,
+        "allowedExtensions": allowedExtensions
+      });
+      if (result != null && result.first["path"] != null) {
+        Map<String, dynamic> file = Map<String, dynamic>.from(result.first);
+        String _name = file["name"];
+        String _extension =
+            _name.substring(_name.lastIndexOf(".") + 1).toLowerCase();
+        String? _fileType = _getFileType(_extension);
+        return PickedFile(
+            name: _name,
+            path: file["path"],
+            size: file["size"],
+            extension: _extension,
+            fileType: _fileType);
+      } else {
+        return null;
+      }
+    } on PlatformException catch (e, stack) {
+      debugPrint("$stack");
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  static String? _getFileType(String extension) {
+    if (imageExtensions.contains(extension)) {
+      return MessageTypeConstants.image;
+    } else if (videoExtensions.contains(extension)) {
+      return MessageTypeConstants.video;
+    } else if (audioExtensions.contains(extension)) {
+      return MessageTypeConstants.audio;
     } else {
       return null;
     }

@@ -74,7 +74,7 @@ end
 
 </td></table>
 
-**Step 3-** Open app/build.gradle file and change min SDk version to 21 and add lint ignore option<br/>
+**Step 3-** Open app/build.gradle file and change min SDk version to 33 <br/>
 
 <table><td>
 
@@ -82,20 +82,18 @@ end
         defaultConfig {
             // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
             applicationId <YOUR_PACKAGE_NAME>
-            minSdkVersion 21
+            minSdkVersion 33
             targetSdkVersion <TARGET_SDK_Version>
             versionCode flutterVersionCode.toInteger()
             versionName flutterVersionName
             }
 
-
-
-    lintOptions {
-        disable 'InvalidPackage'
-        disable "Instantiatable"
-        checkReleaseBuilds false
-        abortOnError false
-    }
+lintOptions {
+    disable 'InvalidPackage'
+    disable "Instantiatable"
+    checkReleaseBuilds false
+    abortOnError false
+  }
 ```
 
 
@@ -111,12 +109,10 @@ import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
 
 ```
 
-<!-- You can refer to the below link for next instructions:<br/> -->
-<!-- [📝 Add Java Pluto UI Kit Dependency](https://www.cometchat.com/docs/java-uikit-beta/integration) -->
 
 <hr/>
 
-## Configure CometChat SDK
+## Configure CometChat UI kit
 
 ### i. Initialize CometChat 🌟
 The init() method initializes the settings required for CometChat. We suggest calling the init() method on app startup, preferably in the init() method of the Home class.
@@ -130,23 +126,30 @@ import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
 
 String appID = "APP_ID"; // Replace with your App ID
 String region = "REGION"; // Replace with your App Region ("eu" or "us")
+static const String authKey = "Auth key"; //Replace  with your auth key
 
- AppSettings appSettings = (AppSettingsBuilder()
-        ..subscriptionType = CometChatSubscriptionType.allUsers
-        ..region= region
-        ..autoEstablishSocketConnection =  true
-    ).build();
+ UIKitSettings authSettings = (UIKitSettingsBuilder()
+          ..subscriptionType = CometChatSubscriptionType.allUsers
+          ..region = region
+          ..autoEstablishSocketConnection = true
+          ..appId = appID
+          ..apiKey = authKey)
+        .build();
 
-    CometChat.init(appID, appSettings, onSuccess: (String successMessage) {
-      debugPrint("Initialization completed successfully  $successMessage");
-    }, onError: (CometChatException e) {
-      debugPrint("Initialization failed with exception: ${e.message}");
-    });
+    CometChatUIKit.init(
+            authSettings: authSettings,
+            onSuccess: (String successMessage){
+              debugPrint("Initialization completed successfully  $successMessage");
+            },
+            onError: (CometChatException e) {
+              debugPrint("Initialization failed with exception: ${e.message}");
+            }
+     );
 ```
 
 </td></table>
 
-| :information_source: &nbsp; <b> Note: Make sure to replace `region` and `appID` with your credentials.</b> |
+| :information_source: &nbsp; <b> Note: Make sure to replace `region`, `appID` and `authKey` with your credentials.</b> |
 |------------------------------------------------------------------------------------------------------------|
 
 ### ii. Create User 👤
@@ -157,14 +160,12 @@ Once initialisation is successful, you will need to create a user. You need to u
 import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
 
 
-String authKey = "AUTH_KEY"; // Replace with your App Auth Key
-User user = User(uid: "usr1" , name: "Kevin"  );
+User user = User(uid: "usr1", name: "Kevin");
 
-CometChat.createUser(user,  authKey, onSuccess: (User user){
+CometChatUIKit.createUser(user, onSuccess: (User user) {
    debugPrint("Create User succesfull ${user}");
-
-}, onError: (CometChatException e){
-    debugPrint("Create User Failed with exception ${e.message}");
+}, onError: (CometChatException e) {
+   debugPrint("Create User Failed with exception ${e.message}");
 });
 
 ```
@@ -181,16 +182,15 @@ Once you have created the user successfully, you will need to log the user into 
 
 ```dart
 String UID = "user_id"; // Replace with the UID of the user to login
-String authKey = "AUTH_KEY"; // Replace with your App Auth Key
 
-final user = await CometChat.getLoggedInUser();
+final user = await CometChat.getLoggedInUser();//checking if already logged in
 if (user == null) {
-  await CometChat.login(UID, authKey,
-                        onSuccess: (User user) {
-                          debugPrint("Login Successful : $user" );
-                        }, onError: (CometChatException e) {
-                          debugPrint("Login failed with exception:  ${e.message}");
-                        });
+
+  await CometChatUIKit.login(UID, onSuccess: (User loggedInUser) {
+         debugPrint("Login Successful : $user" );
+       }, onError: (CometChatException e) {
+         debugPrint("Login failed with exception:  ${e.message}");
+       });
 }else{
 //Already logged in
 }
@@ -198,7 +198,7 @@ if (user == null) {
 
 </td></table>
 
-| :information_source: &nbsp; <b>Note - The login() method needs to be called only once. Also replace AUTH_KEY with your App Auth Key.</b> |
+| :information_source: &nbsp; <b>Note - The login() method needs to be called only once. Use this method while development </b> |
 |------------------------------------------------------------------------------------------------------------|
 
 <hr/>
@@ -221,7 +221,8 @@ if (user == null) {
 
 Thanks to the following people who have contributed to this project:
 
-[👨‍💻 @shantanukhare 💻](https://github.com/Shantanu-CometChat) <br>
+[⚔️ @shantanukhare 🛡](https://github.com/Shantanu-CometChat) <br>
+[⚔️ @nabhodiptagarai 🛡](https://github.com/nabhodiptagarai) <br>
 
 ---
 

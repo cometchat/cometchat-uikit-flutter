@@ -1,7 +1,9 @@
 package com.cometchat.flutter_chat_ui_kit
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,19 +12,22 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.os.VibratorManager
+import android.util.Log
 import androidx.annotation.NonNull
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.FlutterPlugin.FlutterPluginBinding
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
-import io.flutter.plugin.common.EventChannel
-import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry
-
+import io.flutter.plugin.common.PluginRegistry.Registrar
+import java.io.File
+import java.lang.Exception
+import java.util.ArrayList
+import java.util.HashMap
 
 
 /** FlutterChatUiKitPlugin */
@@ -30,8 +35,6 @@ class FlutterChatUiKitPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
 
   private lateinit var channel : MethodChannel
   private lateinit var context: Context
-//  private lateinit var audioStream: EventChannel
-//  private  var audioStreamSink : EventChannel.EventSink? = null
   private var flutterPluginBinding: FlutterPluginBinding? = null
   private lateinit var activity: Activity
   private val locationRequestCheckCode = 111
@@ -39,16 +42,19 @@ class FlutterChatUiKitPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
   private var vibrator: Vibrator? = null
   private val VIBRATE_PATTERN = longArrayOf(0, 1000, 1000)
 
+  private var delegate: CometChatFilePickerDelegate? = null
+  private var isMultipleSelection = false
+  private var withData = false
+  private var activityBinding: ActivityPluginBinding? = null
+  private var fileType: String? = null
+
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPluginBinding) {
     this.flutterPluginBinding = flutterPluginBinding
 
     this.context = flutterPluginBinding.applicationContext
-    vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+//    vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_chat_ui_kit")
-//    audioStream =
-//            EventChannel(flutterPluginBinding.binaryMessenger, "cometchat_audio_stream")
-//    audioStream.setStreamHandler(this)
 
     channel.setMethodCallHandler(this)
     initAudio()
@@ -62,6 +68,8 @@ class FlutterChatUiKitPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
       "getAddress" -> getAddress(call,result)
       "getCurrentLocation" -> getCurrentLocation(result)
       "getLocationPermission" -> getLocationPermission(result)
+      "clear" -> clearCache(this.context)
+      "pickFile" -> pickFile(call, result)
       else -> result.notImplemented()
     }
   }
@@ -80,6 +88,88 @@ class FlutterChatUiKitPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
       ), 10)
     }
   }
+
+
+  private fun clearCache(context: Context): Boolean {
+    try {
+      val cacheDir = File(context.cacheDir.toString() + "/file_picker/")
+      val files = cacheDir.listFiles()
+      if (files != null) {
+        for (file in files) {
+          file.delete()
+        }
+      }
+    } catch (ex: Exception) {
+      Log.e("FileUtil", "There was an error while clearing cached files: $ex")
+      return false
+    }
+    return true
+  }
+
+
+  private fun pickFile(call: MethodCall, result: Result) {
+
+    val arguments = call.arguments as HashMap<*, *>
+    var allowedExtensions: Array<String>? = null
+
+
+    isMultipleSelection = arguments["allowMultipleSelection"] as Boolean
+    withData = arguments["withData"] as Boolean
+    fileType = resolveType(arguments["type"] as String);
+    allowedExtensions = CometChatFileUtils.getMimeTypes(arguments["allowedExtensions"] as ArrayList<String>?)
+
+    delegate!!.startFileExplorer(fileType, isMultipleSelection, withData, allowedExtensions , result)
+
+
+  }
+
+
+  private fun resolveType(type: String): String? {
+    return when (type) {
+      "audio" -> "audio/*"
+      "image" -> "image/*"
+      "video" -> "video/*"
+      "media" -> "image/*,video/*"
+      "any", "custom" -> "*/*"
+      "dir" -> "dir"
+      else -> null
+    }
+  }
+
+
+  private fun setup(
+          activity: Activity,
+          registrar: Registrar?,
+          activityBinding: ActivityPluginBinding) {
+    this.activity = activity
+    //this.application = application
+    delegate = CometChatFilePickerDelegate(activity)
+//    channel = MethodChannel(messenger, FilePickerPlugin.CHANNEL)
+//    channel.setMethodCallHandler(this)
+//    EventChannel(messenger, FilePickerPlugin.EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
+//      override fun onListen(arguments: Any, events: EventSink) {
+//        delegate.setEventHandler(events)
+//      }
+//
+//      override fun onCancel(arguments: Any) {
+//        delegate.setEventHandler(null)
+//      }
+//    })
+    //this.observer = FilePickerPlugin.LifeCycleObserver(activity)
+    if (registrar != null) {
+      // V1 embedding setup for activity listeners.
+      //application.registerActivityLifecycleCallbacks(this.observer)
+      registrar.addActivityResultListener(delegate!!)
+      registrar.addRequestPermissionsResultListener(delegate!!)
+    } else {
+      // V2 embedding setup for activity listeners.
+      activityBinding.addActivityResultListener(delegate!!)
+      activityBinding.addRequestPermissionsResultListener(delegate!!)
+//      this.lifecycle = FlutterLifecycleAdapter.getActivityLifecycle(activityBinding)
+//      this.lifecycle.addObserver(this.observer)
+    }
+  }
+
 
   private fun getCurrentLocation(result: Result){
 
@@ -111,6 +201,21 @@ class FlutterChatUiKitPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
     channel.setMethodCallHandler(this)
     binding.addRequestPermissionsResultListener(this)
     binding.addActivityResultListener(this)
+
+    activityBinding = binding
+    setup(
+            activity,
+            null,
+            activityBinding!!
+
+    )
+
+
+
+
+
+
+
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
@@ -129,18 +234,30 @@ class FlutterChatUiKitPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
 //    AudioPlayer().playDefaultSound(call,result,context)
 //  }
 
+
   private fun playCustomSound(call: MethodCall, result: Result) {
 
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    if (audioManager.isMusicActive) {
+    vibrator= if (Build.VERSION.SDK_INT >= 31) {
+      @SuppressLint("WrongConstant")
+      val vibratorManager =
+              context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+      vibratorManager.defaultVibrator
+
+    } else {
+  @Suppress("DEPRECATION")
+      context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
+
+    if ((audioManager.ringerMode!=AudioManager.RINGER_MODE_SILENT && audioManager.isMusicActive) || audioManager.ringerMode==AudioManager.RINGER_MODE_VIBRATE) {
       if (Build.VERSION.SDK_INT >= 26) {
-        vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+        vibrator?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
       } else {
-        vibrator?.vibrate(200)
+        vibrator?.vibrate(500)
       }
 
-     // vibrator?.vibrate(com.cometchatworkspace.components.shared.primaryComponents.soundManager.CometChatSoundManager.VIBRATE_PATTERN, 2)
-    }else{
+//      vibrator?.vibrate(com.cometchatworkspace.components.shared.primaryComponents.soundManager.CometChatSoundManager.VIBRATE_PATTERN, 2)
+    }else if (audioManager.ringerMode==AudioManager.RINGER_MODE_NORMAL) {
       AudioPlayer().playCustomSound(call,result,context)
     }
 

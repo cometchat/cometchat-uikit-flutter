@@ -1,0 +1,197 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../../flutter_chat_ui_kit.dart';
+import '../message_composer/live_reaction_animation.dart';
+
+///[CometChatMessagesController] view model for [CometChatMessages]
+class CometChatMessagesController extends GetxController
+    with
+        CometChatMessageEventListener,
+        MessageListener,
+        CometChatGroupEventListener,
+        CometChatUserEventListener {
+  late String _dateString;
+  late String _uiMessageListener;
+  late String _messageListener;
+  late String _uiGroupListener;
+  late String _uiUserListener;
+  bool isOverlayOpen = false;
+  List<Widget> liveAnimationList = [];
+  CometChatMessageComposerController? composerState;
+  // late StreamController<MessageListEvent> messageListEventStreamController;
+  CometChatDetailsController? detailsState;
+  User? user;
+  Group? group;
+  User? loggedInUser;
+  late BuildContext context;
+  static int counter = 0;
+  late String tag;
+
+  ///[threadedMessagesConfiguration] sets configuration properties for [CometChatThreadedMessages]
+  final ThreadedMessagesConfiguration? threadedMessagesConfiguration;
+
+  CometChatMessagesController(
+      {this.user, this.group, this.threadedMessagesConfiguration}) {
+    _dateString = DateTime.now().millisecondsSinceEpoch.toString();
+    _uiMessageListener = "${_dateString}UI_message_listener";
+    _messageListener = "${_dateString}message_listener";
+    _uiGroupListener = "${_dateString}UI_group_listener";
+    _uiUserListener = "${_dateString}UI_user_listener";
+
+    tag = "tag$counter";
+    counter++;
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    CometChatMessageEvents.addMessagesListener(_uiMessageListener, this);
+    CometChat.addMessageListener(_messageListener, this);
+    CometChatGroupEvents.addGroupsListener(_uiGroupListener, this);
+    CometChatUserEvents.addUsersListener(_uiUserListener, this);
+    _initializeLoggedInUser();
+  }
+
+  @override
+  void onClose() {
+    CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
+    CometChat.removeMessageListener(_messageListener);
+    CometChatGroupEvents.removeGroupsListener(_uiGroupListener);
+    CometChatUserEvents.removeUsersListener(_uiUserListener);
+    super.onClose();
+  }
+
+  //-----MessageComposerListener methods-----
+
+  @override
+  void onTransientMessageReceived(TransientMessage message) async {
+    if ((message.receiverType == ReceiverTypeConstants.user &&
+            message.receiverId == loggedInUser?.uid &&
+            group == null) ||
+        (message.receiverType == ReceiverTypeConstants.group &&
+            message.receiverId == group?.guid)) {
+      if (message.data["type"] == "live_reaction") {
+        isOverlayOpen = true;
+        String reaction = message.data["reaction"];
+        _addAnimations(reaction);
+      }
+    }
+  }
+
+  @override
+  void ccLiveReaction(String reaction) async {
+    isOverlayOpen = true;
+    _addAnimations(reaction);
+  }
+
+  //-----MessageListListener methods-----
+
+  // @override
+  // void onMessageReply(BaseMessage message) {
+  //   composerState?.previewMessage(message, PreviewMessageMode.reply);
+  // }
+
+  // @override
+  // onReplyInThread(BaseMessage parentMessage) async {
+  //   loggedInUser ??= await CometChat.getLoggedInUser();
+  //   Navigator.push(
+  //       context,
+  //       MaterialPageRoute(
+  //           builder: (context) => CometChatThreadedMessages(
+  //               parentMessage: parentMessage, loggedInUser: loggedInUser!)));
+  // }
+
+  //----------User Event Listeners--------------
+  @override
+  void ccUserBlocked(User user) {
+    if (this.user?.uid == user.uid) {
+      this.user?.blockedByMe = true;
+    }
+  }
+
+  @override
+  void ccUserUnblocked(User user) {
+    if (this.user?.uid == user.uid) {
+      this.user?.blockedByMe = false;
+    }
+  }
+
+  _initializeLoggedInUser() async {
+    loggedInUser = await CometChat.getLoggedInUser();
+  }
+
+  _addAnimations(String reaction) async {
+    //Counter to add no of live reactions
+    int _counter = 2;
+    for (int i = 0; i < _counter; i++) {
+      _addAnimation(reaction);
+      await Future.delayed(const Duration(milliseconds: 40));
+    }
+  }
+
+  _addAnimation(String reaction) {
+    liveAnimationList.add(
+      Positioned(
+          bottom: 100,
+          right: 0,
+          child: AnimatedSwitcher(
+            key: UniqueKey(),
+            duration: const Duration(milliseconds: 1000),
+            child: LiveReactionAnimation(
+              endAnimation: setOverLayFalse,
+              reaction: reaction,
+            ),
+          )),
+    );
+    update();
+  }
+
+  setOverLayFalse() {
+    if (liveAnimationList.isNotEmpty) {
+      liveAnimationList.removeAt(0);
+      if (liveAnimationList.isEmpty) {
+        isOverlayOpen = false;
+        update();
+      }
+    }
+  }
+
+  composerStateCallBack(CometChatMessageComposerController _composerState) {
+    composerState = _composerState;
+  }
+
+  detailsStateCallBack(CometChatDetailsController _detailsState) {
+    detailsState = _detailsState;
+  }
+
+  onThreadRepliesClick(BaseMessage message, BuildContext context,
+      {Widget Function(BaseMessage, BuildContext)? bubbleView}) async {
+    if (loggedInUser != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => CometChatThreadedMessages(
+                  parentMessage: message,
+                  loggedInUser: loggedInUser!,
+                  title: threadedMessagesConfiguration?.title,
+                  closeIcon: threadedMessagesConfiguration?.closeIcon,
+                  bubbleView:
+                      threadedMessagesConfiguration?.bubbleView ?? bubbleView,
+                  messageActionView:
+                      threadedMessagesConfiguration?.messageActionView,
+                  messageListConfiguration:
+                      threadedMessagesConfiguration?.messageListConfiguration,
+                  messageComposerConfiguration: threadedMessagesConfiguration
+                      ?.messageComposerConfiguration,
+                  threadedMessagesStyle:
+                      threadedMessagesConfiguration?.threadedMessagesStyle,
+                  hideMessageComposer:
+                      threadedMessagesConfiguration?.hideMessageComposer,
+                )),
+      );
+    }
+  }
+}

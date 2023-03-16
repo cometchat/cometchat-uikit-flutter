@@ -1,61 +1,49 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_chat_ui_kit/src/messages/cometchat_messages_controller.dart';
+import 'package:get/get.dart';
 import '../../flutter_chat_ui_kit.dart';
-import 'message_composer/live_reaction_animation.dart';
 
 ///
 ///[CometChatMessages] component encompasses [CometChatMessageHeader], [CometChatMessageList], [CometChatMessageComposer] component.
 ///It handles communication between these components.
 ///
-///```dart
-/// CometChatMessages(
-///        user:'user id',
-///        enableTypingIndicator:true,
-///        enableSoundForMessages:true,
-///        hideMessageComposer:false,
-///        messageHeaderConfiguration:MessageHeaderConfiguration(),
-///        messageBubbleConfiguration:MessageBubbleConfiguration(),
-///        messageListConfiguration:MessageListConfiguration(),
-///        messageComposerConfiguration:MessageComposerConfiguration(),
-///      )
-///
-///
-/// ```
-
 class CometChatMessages extends StatefulWidget {
   const CometChatMessages(
       {Key? key,
       this.user,
       this.group,
       this.hideMessageComposer = false,
-      this.theme,
       this.messageListConfiguration = const MessageListConfiguration(),
       this.messageHeaderConfiguration = const MessageHeaderConfiguration(),
       this.messageComposerConfiguration = const MessageComposerConfiguration(),
-      this.enableTypingIndicator = true,
-      this.enableSoundForMessages = true,
-      this.stateCallBack,
-      this.messageTypes,
-      this.excludeMessageTypes,
-      this.notifyParent})
-      : super(key: key);
-
-  ///[user] user uid for user message list
-  final String? user;
-
-  ///[group] group guid for group message list
-  final String? group;
+      this.disableTyping = false,
+      this.detailsConfiguration,
+      this.messagesStyle,
+      this.customSoundForIncomingMessages,
+      this.customSoundForIncomingMessagePackage,
+      this.customSoundForOutgoingMessages,
+      this.customSoundForOutgoingMessagePackage,
+      this.hideMessageHeader,
+      this.messageComposerView,
+      this.messageHeaderView,
+      this.messageListView,
+      this.disableSoundForMessages,
+      this.theme,
+      this.threadedMessagesConfiguration,
+      this.hideDetails})
+      : assert(user != null || group != null,
+            "One of user or group should be passed"),
+        assert(user == null || group == null,
+            "Only one of user or group should be passed"),
+        super(key: key);
 
   ///[hideMessageComposer] hides the composer , default false
   final bool hideMessageComposer;
 
-  ///[enableTypingIndicator] if true then show typing indicator for composer
-  final bool enableTypingIndicator;
-
-  ///[enableSoundForMessages] enables sound for sending message
-  final bool enableSoundForMessages;
-
-  ///[theme] customTheme can be passed inorder to change view
-  final CometChatTheme? theme;
+  ///[disableTyping] if true then show typing indicator for composer
+  final bool disableTyping;
 
   ///To set the configuration  of message list [messageListConfiguration] is used
   final MessageListConfiguration messageListConfiguration;
@@ -66,293 +54,399 @@ class CometChatMessages extends StatefulWidget {
   ///To set the configuration  of message list [messageComposerConfiguration] is used
   final MessageComposerConfiguration messageComposerConfiguration;
 
-  ///[stateCallBack] used to give state to parent
-  ///here we can set the state reference to its parent
-  final Function(CometChatMessagesState)? stateCallBack;
+  /// [messageHeaderView] to set custom header
+  final PreferredSizeWidget Function(
+      User? user, Group? group, BuildContext context)? messageHeaderView;
 
-  final List<CometChatMessageTemplate>? messageTypes;
+  ///[messageComposerView] to set custom message composer
+  final Widget Function(User? user, Group? group, BuildContext context)?
+      messageComposerView;
 
-  final List<String>? excludeMessageTypes;
+  ///[messageListView] to set custom message list
+  final Widget Function(User? user, Group? group, BuildContext context)?
+      messageListView;
 
-  ///[notifyParent] method to tell parent message List is active
-  final Function(String? id)? notifyParent;
+  ///[hideMessageHeader] toggle visibility for message header
+  final bool? hideMessageHeader;
+
+  ///[disableSoundForMessages] disable sound for incoming and outgoing message
+  final bool? disableSoundForMessages;
+
+  ///[customSoundForIncomingMessages] custom sound path for incoming messages
+  final String? customSoundForIncomingMessages;
+
+  ///[customSoundForIncomingMessagePackage] is the package name for sound incoming from different package
+  final String? customSoundForIncomingMessagePackage;
+
+  ///[customSoundForOutgoingMessagePackage] custom sound path for outgoing  messages
+  final String? customSoundForOutgoingMessagePackage;
+
+  ///[customSoundForOutgoingMessages]  custom sound path for outgoing messages
+  final String? customSoundForOutgoingMessages;
+
+  ///[detailsConfiguration] config properties for details module
+  final DetailsConfiguration? detailsConfiguration;
+
+  ///[messagesStyle] contains properties that affect the appearance of this widget
+  final MessagesStyle? messagesStyle;
+
+  ///[theme] custom theme
+  final CometChatTheme? theme;
+
+  ///[user] if not null will [CometChatMessages] for the [user]
+  final User? user;
+
+  ///[group] if not null will [CometChatMessages] for the [group]
+  final Group? group;
+
+  ///[threadedMessagesConfiguration] sets configuration properties for [CometChatThreadedMessages]
+  final ThreadedMessagesConfiguration? threadedMessagesConfiguration;
+
+  ///[hideDetails] toggle visibility for details icons
+  final bool? hideDetails;
 
   @override
-  State<CometChatMessages> createState() => CometChatMessagesState();
+  State<CometChatMessages> createState() => _CometChatMessagesState();
 }
 
-class CometChatMessagesState extends State<CometChatMessages>
-    with CometChatMessageEventListener, MessageListener {
-  CometChatMessageListState? messageListState;
-  CometChatMessageComposerState? composerState;
-  CometChatTheme _theme = cometChatTheme;
-  bool _isOverlayOpen = false;
-  List<Widget> _liveAnimationList = [];
-
-  messageListStateCallBack(CometChatMessageListState _messageListState) {
-    messageListState = _messageListState;
-  }
-
-  composerStateCallBack(CometChatMessageComposerState _composerState) {
-    composerState = _composerState;
-  }
+class _CometChatMessagesState extends State<CometChatMessages> {
+  late final CometChatTheme _theme;
+  late CometChatMessagesController cometchatMessagesController;
+  List<Widget> appbarOptions = [];
 
   @override
   void initState() {
     super.initState();
+    cometchatMessagesController = CometChatMessagesController(
+        user: widget.user,
+        group: widget.group,
+        threadedMessagesConfiguration: widget.threadedMessagesConfiguration);
     _theme = widget.theme ?? cometChatTheme;
-    if (widget.stateCallBack != null) widget.stateCallBack!(this);
-    CometChatMessageEvents.addMessagesListener(
-        "cometchat_message_listener", this);
-    CometChat.addMessageListener("cometchat_message_listener", this);
   }
 
-  @override
-  void dispose() {
-    CometChatMessageEvents.removeMessagesListener("cometchat_message_listener");
-    CometChat.removeMessageListener("cometchat_message_listener");
-    super.dispose();
-  }
-
-  //-----MessageComposerListener methods-----
-  @override
-  onMessageSent(BaseMessage message, MessageStatus messageStatus) {
-    if (messageStatus == MessageStatus.inProgress) {
-      messageListState?.addMessage(message);
-    } else if (messageStatus == MessageStatus.sent) {
-      messageListState?.updateMessageWithMuid(message);
+  Widget detailsWidget(User? user, Group? group, BuildContext context) {
+    if ((user != null && user.uid == user.uid) ||
+        ((group != null && group.guid == group.guid))) {
+      return IconButton(
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => CometChatDetails(
+                          user: user,
+                          group: group,
+                          data: widget.detailsConfiguration?.data,
+                          title: widget.detailsConfiguration?.title,
+                          closeButtonIcon:
+                              widget.detailsConfiguration?.closeButtonIcon,
+                          showCloseButton:
+                              widget.detailsConfiguration?.showCloseButton,
+                          //stateCallBack: detailsStateCallBack,
+                          detailsStyle:
+                              widget.detailsConfiguration?.detailsStyle,
+                          addMemberConfiguration: widget
+                              .detailsConfiguration?.addMemberConfiguration,
+                          transferOwnershipConfiguration: widget
+                              .detailsConfiguration
+                              ?.transferOwnershipConfiguration,
+                          bannedMemberConfiguration: widget
+                              .detailsConfiguration?.bannedMemberConfiguration,
+                          appBarOptions:
+                              widget.detailsConfiguration?.appBarOptions,
+                          avatarStyle: widget.detailsConfiguration?.avatarStyle,
+                          customProfileView:
+                              widget.detailsConfiguration?.customProfileView,
+                          disableUsersPresence: widget
+                                  .detailsConfiguration?.disableUsersPresence ??
+                              false,
+                          hideProfile: widget.detailsConfiguration?.hideProfile,
+                          listItemStyle:
+                              widget.detailsConfiguration?.listItemStyle,
+                          subtitleView:
+                              widget.detailsConfiguration?.subtitleView,
+                          privateGroupIcon:
+                              widget.detailsConfiguration?.privateGroupIcon,
+                          protectedGroupIcon:
+                              widget.detailsConfiguration?.protectedGroupIcon,
+                          statusIndicatorStyle:
+                              widget.detailsConfiguration?.statusIndicatorStyle,
+                          theme: _theme,
+                          onBack: widget.detailsConfiguration?.onBack,
+                          onError: widget.detailsConfiguration?.onError,
+                        ))).then((value) {
+              if (value != null && value > 0) {
+                Navigator.of(context).pop(value - 1);
+              }
+            });
+          },
+          icon: Image.asset(
+            AssetConstants.info,
+            package: UIConstants.packageName,
+            color: _theme.palette.getPrimary(),
+          ));
     }
+
+    return const SizedBox();
   }
 
-  @override
-  void onMessageReact(
-      BaseMessage message, String reaction, MessageStatus messageStatus) {
-    if (messageStatus == MessageStatus.inProgress) {
-      messageListState?.reactToMessage(message, reaction);
-    }
+  Widget getMessageList(
+      CometChatMessagesController controller, BuildContext context) {
+    return widget.messageListView != null
+        ? widget.messageListView!(controller.user, controller.group, context)
+        : CometChatMessageList(
+            user: controller.user,
+            group: controller.group,
+            alignment: widget.messageListConfiguration.alignment ??
+                ChatAlignment.standard,
+            templates: widget.messageListConfiguration.templates,
+            //stateCallBack: messageListStateCallBack,
+            messagesRequestBuilder:
+                widget.messageListConfiguration.messagesRequestBuilder,
+            footerView: widget.messageListConfiguration.footerView,
+            headerView: widget.messageListConfiguration.headerView,
+            controller: widget.messageListConfiguration.controller,
+            datePattern: widget.messageListConfiguration.datePattern,
+            avatarStyle: widget.messageListConfiguration.avatarStyle,
+            dateSeparatorPattern:
+                widget.messageListConfiguration.dateSeparatorPattern,
+            deliveredIcon: widget.messageListConfiguration.deliveredIcon,
+            emptyStateText: widget.messageListConfiguration.emptyStateText,
+            emptyStateView: widget.messageListConfiguration.emptyStateView,
+            errorStateText: widget.messageListConfiguration.errorStateText,
+            errorStateView: widget.messageListConfiguration.errorStateView,
+            hideError: widget.messageListConfiguration.hideError,
+            hideTimestamp: widget.messageListConfiguration.hideTimestamp,
+            waitIcon: widget.messageListConfiguration.waitIcon,
+            showAvatar: widget.messageListConfiguration.showAvatar,
+            loadingStateView: widget.messageListConfiguration.loadingStateView,
+            disableSoundForMessages:
+                widget.messageListConfiguration.disableSoundForMessages ??
+                    widget.disableSoundForMessages,
+            customSoundForMessagePackage:
+                widget.messageListConfiguration.customSoundForMessagePackage ??
+                    widget.customSoundForIncomingMessagePackage,
+            customSoundForMessages:
+                widget.messageListConfiguration.customSoundForMessages ??
+                    widget.customSoundForIncomingMessages,
+            messageListStyle:
+                widget.messageListConfiguration.messageListStyle ??
+                    const MessageListStyle(),
+            sentIcon: widget.messageListConfiguration.sentIcon,
+            readIcon: widget.messageListConfiguration.readIcon,
+            onThreadRepliesClick:
+                widget.messageListConfiguration.onThreadRepliesClick ??
+                    controller.onThreadRepliesClick,
+            scrollToBottomOnNewMessages:
+                widget.messageListConfiguration.scrollToBottomOnNewMessages,
+            newMessageIndicatorText:
+                widget.messageListConfiguration.newMessageIndicatorText,
+            timestampAlignment:
+                widget.messageListConfiguration.timestampAlignment ??
+                    TimeAlignment.bottom,
+            // eventStreamController: controller.messageListEventStreamController,
+            onError: widget.messageListConfiguration.onError,
+            theme: widget.messageListConfiguration.theme,
+            disableReceipt: widget.messageListConfiguration.disableReceipt);
   }
 
-  @override
-  void onTransientMessageReceived(TransientMessage message) async {
-    if (message.data["type"] == "live_reaction") {
-      _isOverlayOpen = true;
-      String reaction = message.data["reaction"];
-      _addAnimations(reaction);
-    }
-  }
-
-  @override
-  void onLiveReaction(String reaction) async {
-    _isOverlayOpen = true;
-    _addAnimations(reaction);
-  }
-
-  setOverLayFalse() {
-    if (_liveAnimationList.isNotEmpty) {
-      _liveAnimationList.removeAt(0);
-      if (_liveAnimationList.isEmpty) {
-        _isOverlayOpen = false;
-        setState(() {});
-      }
-    }
-  }
-
-  @override
-  void onCreatePoll(MessageStatus messageStatus) {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => CometChatCreatePoll(
-                user: widget.user,
-                group: widget.group,
-                style: CreatePollStyle(
-                    background: _theme.palette.getBackground(),
-                    titleStyle: TextStyle(
-                        color: _theme.palette.getAccent(),
-                        fontSize: _theme.typography.title1.fontSize,
-                        fontWeight: _theme.typography.title1.fontWeight),
-                    closeIconColor: _theme.palette.getPrimary(),
-                    createPollIconColor: _theme.palette.getPrimary(),
-                    borderColor: _theme.palette.getAccent200(),
-                    inputTextStyle: TextStyle(
-                      color: _theme.palette.getAccent(),
-                      fontSize: _theme.typography.body.fontSize,
-                      fontFamily: _theme.typography.body.fontFamily,
-                      fontWeight: _theme.typography.body.fontWeight,
-                    ),
-                    hintTextStyle: TextStyle(
-                      color: _theme.palette.getAccent600(),
-                      fontSize: _theme.typography.body.fontSize,
-                      fontFamily: _theme.typography.body.fontFamily,
-                      fontWeight: _theme.typography.body.fontWeight,
-                    ),
-                    addAnswerTextStyle: TextStyle(
-                        color: _theme.palette.getPrimary(),
-                        fontSize: _theme.typography.body.fontSize,
-                        fontFamily: _theme.typography.body.fontFamily,
-                        fontWeight: _theme.typography.body.fontWeight),
-                    answerHelpText: TextStyle(
-                        color: _theme.palette.getAccent600(),
-                        fontSize: _theme.typography.text2.fontSize,
-                        fontWeight: _theme.typography.text2.fontWeight)))));
-  }
-
-  @override
-  void onMessageEdited(BaseMessage message) {
-    messageListState?.updateMessage(message);
-  }
-
-  @override
-  void onError(error, BaseMessage? message) {
-    if (message != null) {
-      messageListState?.updateMessage(message);
-    }
-  }
-
-  //-----MessageListListener methods-----
-  @override
-  void onMessageEdit(BaseMessage message, MessageEditStatus status) {
-    if (message.type == MessageTypeConstants.text &&
-        status == MessageEditStatus.inProgress) {
-      composerState?.previewMessage(message, PreviewMessageMode.edit);
-    } else {
-      messageListState?.updateMessage(message);
-    }
-  }
-
-  @override
-  void onMessageReply(BaseMessage message) {
-    composerState?.previewMessage(message, PreviewMessageMode.reply);
-  }
-
-  Widget getMessageList() {
-    return CometChatMessageList(
-      user: widget.user,
-      group: widget.group,
-      theme: widget.theme,
-      limit: widget.messageListConfiguration.limit,
-      onlyUnread: widget.messageListConfiguration.onlyUnread,
-      hideDeletedMessages: widget.messageListConfiguration.hideDeletedMessages,
-      hideThreadReplies: widget.messageListConfiguration.hideThreadReplies,
-      tags: widget.messageListConfiguration.tags,
-      excludeMessageTypes:
-          widget.messageListConfiguration.excludeMessageTypes ??
-              widget.excludeMessageTypes,
-      emptyText: widget.messageListConfiguration.emptyText,
-      errorText: widget.messageListConfiguration.errorText,
-      hideError: widget.messageListConfiguration.hideError ?? false,
-      customView: widget.messageListConfiguration.customView,
-      //onErrorCallBack: widget.messageListConfiguration.onErrorCallBack,
-      scrollToBottomOnNewMessage:
-          widget.messageListConfiguration.scrollToBottomOnNewMessage,
-      enableSoundForMessages: widget.enableSoundForMessages,
-      customIncomingMessageSound:
-          widget.messageListConfiguration.customIncomingMessageSound ?? '',
-      showEmojiInLargerSize:
-          widget.messageListConfiguration.showEmojiInLargerSize,
-      messageTypes:
-          widget.messageListConfiguration.messageTypes ?? widget.messageTypes,
-      stateCallBack: messageListStateCallBack,
-      messageBubbleConfiguration:
-          widget.messageListConfiguration.messageBubbleConfiguration,
-      excludedMessageOptions:
-          widget.messageListConfiguration.excludedMessageOptions,
-      alignment: widget.messageListConfiguration.messageAlignment,
-      hideMessagesFromBlockedUsers:
-          widget.messageListConfiguration.hideMessagesFromBlockedUsers,
-      receivedMessageInputData:
-          widget.messageListConfiguration.receivedMessageInputData,
-      sentMessageInputData:
-          widget.messageListConfiguration.sentMessageInputData,
-      notifyParent: widget.notifyParent,
-    );
-  }
-
-  Widget getMessageComposer() {
-    return CometChatMessageComposer(
-      user: widget.user,
-      group: widget.group,
-      theme: widget.theme,
-      stateCallBack: composerStateCallBack,
-      enableTypingIndicator: widget.enableTypingIndicator,
-      customOutgoingMessageSound:
-          widget.messageComposerConfiguration.customOutgoingMessageSound,
-      excludeMessageTypes:
-          widget.messageComposerConfiguration.excludeMessageTypes ??
-              widget.excludeMessageTypes,
-      messageTypes: widget.messageComposerConfiguration.messageTypes ??
-          widget.messageTypes,
-      enableSoundForMessages: widget.enableSoundForMessages,
-      hideEmoji: widget.messageComposerConfiguration.hideEmoji,
-      hideAttachment: widget.messageComposerConfiguration.hideAttachment,
-      hideLiveReaction: widget.messageComposerConfiguration.hideLiveReaction,
-      hideMicrophone: widget.messageComposerConfiguration.hideMicrophone,
-      showSendButton: widget.messageComposerConfiguration.showSendButton,
-      placeholderText: widget.messageComposerConfiguration.placeholderText,
-    );
+  Widget getMessageComposer(
+      CometChatMessagesController controller, BuildContext context) {
+    return widget.messageComposerView != null
+        ? widget.messageComposerView!(
+            controller.user, controller.group, context)
+        : CometChatMessageComposer(
+            user: controller.user,
+            group: controller.group,
+            placeholderText:
+                widget.messageComposerConfiguration.placeholderText,
+            hideLiveReaction:
+                widget.messageComposerConfiguration.hideLiveReaction ?? false,
+            text: widget.messageComposerConfiguration.text,
+            auxiliaryButtonView:
+                widget.messageComposerConfiguration.auxiliaryButtonView,
+            headerView: widget.messageComposerConfiguration.headerView,
+            footerView: widget.messageComposerConfiguration.footerView,
+            secondaryButtonView:
+                widget.messageComposerConfiguration.secondaryButtonView,
+            sendButtonView: widget.messageComposerConfiguration.sendButtonView,
+            attachmentOptions:
+                widget.messageComposerConfiguration.attachmentOptions,
+            onChange: widget.messageComposerConfiguration.onChange,
+            maxLine: widget.messageComposerConfiguration.maxLine,
+            auxiliaryButtonsAlignment:
+                widget.messageComposerConfiguration.auxiliaryButtonsAlignment,
+            // stateCallBack: composerStateCallBack,
+            stateCallBack: widget.messageComposerConfiguration.stateCallBack,
+            attachmentIcon: widget.messageComposerConfiguration.attachmentIcon,
+            liveReactionIcon: widget.messageComposerConfiguration.liveReactionIcon,
+            messageComposerStyle: MessageComposerStyle(
+                background: widget.messageComposerConfiguration
+                        .messageComposerStyle?.background ??
+                    (widget.messagesStyle?.gradient != null
+                        ? Colors.transparent
+                        : widget.messagesStyle?.background),
+                border:
+                    widget.messageComposerConfiguration.messageComposerStyle?.border ??
+                        (widget.messagesStyle?.background != null ||
+                                widget.messagesStyle?.gradient != null
+                            ? null
+                            : widget.messagesStyle?.border),
+                borderRadius: widget.messageComposerConfiguration
+                        .messageComposerStyle?.borderRadius ??
+                    widget.messagesStyle?.borderRadius,
+                inputBackground: widget.messageComposerConfiguration
+                        .messageComposerStyle?.inputBackground ??
+                    _theme.palette.getAccent100(),
+                gradient: widget.messageComposerConfiguration.messageComposerStyle?.gradient,
+                height: widget.messageComposerConfiguration.messageComposerStyle?.height,
+                width: widget.messageComposerConfiguration.messageComposerStyle?.width,
+                attachmentIconTint: widget.messageComposerConfiguration.messageComposerStyle?.attachmentIconTint,
+                closeIconTint: widget.messageComposerConfiguration.messageComposerStyle?.closeIconTint,
+                dividerTint: widget.messageComposerConfiguration.messageComposerStyle?.dividerTint ?? _theme.palette.getAccent500(),
+                emojiIconTint: widget.messageComposerConfiguration.messageComposerStyle?.emojiIconTint,
+                inputTextStyle: widget.messageComposerConfiguration.messageComposerStyle?.inputTextStyle,
+                placeholderTextStyle: widget.messageComposerConfiguration.messageComposerStyle?.placeholderTextStyle,
+                sendButtonIcon: widget.messageComposerConfiguration.messageComposerStyle?.sendButtonIcon,
+                sendButtonIconTint: widget.messageComposerConfiguration.messageComposerStyle?.sendButtonIconTint,
+                stickerIconTint: widget.messageComposerConfiguration.messageComposerStyle?.stickerIconTint),
+            attachmentIconURL:
+                widget.messageComposerConfiguration.attachmentIconURL,
+            customSoundForMessage:
+                widget.messageComposerConfiguration.customSoundForMessage,
+            customSoundForMessagePackage: widget
+                .messageComposerConfiguration.customSoundForMessagePackage,
+            disableSoundForMessages:
+                widget.messageComposerConfiguration.disableSoundForMessages,
+            onError: widget.messageComposerConfiguration.onError,
+            onSendButtonClick:
+                widget.messageComposerConfiguration.onSendButtonClick,
+            theme: widget.messageComposerConfiguration.theme,
+            liveReactionIconURL:
+                widget.messageComposerConfiguration.liveReactionIconURL,
+          );
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Scaffold(
-        appBar: CometChatMessageHeader(
-          user: widget.user,
-          group: widget.group,
-          enableTypingIndicator: widget.enableTypingIndicator,
-          theme: widget.theme,
-          showBackButton: widget.messageHeaderConfiguration.showBackButton,
-          backButton: widget.messageHeaderConfiguration.backButton,
-          avatarConfiguration:
-              widget.messageHeaderConfiguration.avatarConfiguration,
-          statusIndicatorConfiguration:
-              widget.messageHeaderConfiguration.statusIndicatorConfiguration,
-        ),
-        body: Stack(
-          children: [
-            Column(
-              children: [
-                //----message list-----
-                Expanded(child: getMessageList()),
+      child: DecoratedBox(
+          decoration: BoxDecoration(
+              gradient: widget.messagesStyle?.gradient,
+              color: widget.messagesStyle?.gradient == null
+                  ? widget.messagesStyle?.background
+                  : null,
+              border: widget.messagesStyle?.border,
+              borderRadius: BorderRadius.circular(
+                  widget.messagesStyle?.borderRadius ?? 0)),
+          child: GetBuilder(
+              init: cometchatMessagesController,
+              tag: cometchatMessagesController.tag,
+              builder: (CometChatMessagesController value) {
+                value.context = context;
+                return Scaffold(
+                  backgroundColor: widget.messagesStyle?.gradient != null ||
+                          widget.messagesStyle?.background != null
+                      ? Colors.transparent
+                      : null,
+                  appBar: widget.hideMessageHeader == true
+                      ? null
+                      : widget.messageHeaderView != null
+                          ? widget.messageHeaderView!(
+                              value.user, value.group, context)
+                          : CometChatMessageHeader(
+                              appBarOptions: widget.messageHeaderConfiguration
+                                      .appBarOptions ??
+                                  (widget.hideDetails != true
+                                      ? (User? user, Group? group,
+                                          BuildContext context) {
+                                          return [
+                                            detailsWidget(user, group, context)
+                                          ];
+                                        }
+                                      : null),
+                              user: value.user,
+                              group: value.group,
+                              disableTyping: widget.disableTyping,
+                              theme: _theme,
+                              avatarStyle:
+                                  widget.messageHeaderConfiguration.avatarStyle,
+                              statusIndicatorStyle: widget
+                                  .messageHeaderConfiguration
+                                  .statusIndicatorStyle,
+                              backButton:
+                                  widget.messageHeaderConfiguration.backButton,
+                              subtitleView: widget
+                                  .messageHeaderConfiguration.subtitleView,
+                              disableUserPresence: widget
+                                  .messageHeaderConfiguration
+                                  .disableUserPresence,
+                              hideBackButton: widget
+                                  .messageHeaderConfiguration.hideBackButton,
+                              listItemStyle: widget
+                                  .messageHeaderConfiguration.listItemStyle,
+                              listItemView: widget
+                                  .messageHeaderConfiguration.listItemView,
+                              privateGroupIcon: widget
+                                  .messageHeaderConfiguration.privateGroupIcon,
+                              protectedGroupIcon: widget
+                                  .messageHeaderConfiguration
+                                  .protectedGroupIcon,
+                              messageHeaderStyle: MessageHeaderStyle(
+                                background: widget.messageHeaderConfiguration
+                                        .messageHeaderStyle?.background ??
+                                    (widget.messagesStyle?.background != null ||
+                                            widget.messagesStyle?.gradient !=
+                                                null
+                                        ? Colors.transparent
+                                        : null),
+                                backButtonIconTint: widget
+                                    .messageHeaderConfiguration
+                                    .messageHeaderStyle
+                                    ?.backButtonIconTint,
+                                border: widget.messageHeaderConfiguration
+                                    .messageHeaderStyle?.border,
+                                borderRadius: widget.messageHeaderConfiguration
+                                    .messageHeaderStyle?.borderRadius,
+                                gradient: widget.messageHeaderConfiguration
+                                    .messageHeaderStyle?.gradient,
+                                height: widget.messageHeaderConfiguration
+                                    .messageHeaderStyle?.height,
+                                width: widget.messageHeaderConfiguration
+                                    .messageHeaderStyle?.width,
+                              ),
+                              onBack: widget.messageHeaderConfiguration.onBack,
+                            ),
+                  body: Stack(
+                    children: [
+                      Column(
+                        children: [
+                          //----message list-----
+                          Expanded(
+                              child: GestureDetector(
+                                  onTap: () {
+                                    if (Platform.isIOS) {
+                                      FocusScopeNode currentFocus =
+                                          FocusScope.of(context);
 
-                //-----message composer-----
-                if (widget.hideMessageComposer == false) getMessageComposer()
-              ],
-            ),
-            if (_isOverlayOpen == true) ..._liveAnimationList
-          ],
-        ),
-      ),
+                                      if (!currentFocus.hasPrimaryFocus) {
+                                        currentFocus.unfocus();
+                                      }
+                                    }
+                                  },
+                                  child: getMessageList(value, context))),
+
+                          //-----message composer-----
+                          if (widget.hideMessageComposer == false)
+                            getMessageComposer(value, context)
+                        ],
+                      ),
+                      if (value.isOverlayOpen == true)
+                        ...value.liveAnimationList
+                    ],
+                  ),
+                );
+              })),
     );
-  }
-
-  _addAnimations(String reaction) async {
-    //Counter to add no of live reactions
-    int _counter = 2;
-    for (int i = 0; i < _counter; i++) {
-      _addAnimation(reaction);
-      await Future.delayed(const Duration(milliseconds: 40));
-    }
-  }
-
-  _addAnimation(String reaction) {
-    _liveAnimationList.add(
-      Positioned(
-          bottom: 100,
-          right: 0,
-          child: Container(
-            child: AnimatedSwitcher(
-              key: UniqueKey(),
-              duration: const Duration(milliseconds: 1000),
-              child: LiveReactionAnimation(
-                endAnimation: setOverLayFalse,
-                reaction: reaction,
-              ),
-            ),
-          )),
-    );
-    if (mounted) {
-      setState(() {});
-    }
   }
 }
