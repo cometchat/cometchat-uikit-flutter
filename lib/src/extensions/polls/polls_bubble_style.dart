@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[PollsBubbleStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatPollsBubble]
 class PollsBubbleStyle {
   ///poll bubble style
   const PollsBubbleStyle(
@@ -10,7 +12,9 @@ class PollsBubbleStyle {
       this.radioButtonColor,
       this.pollOptionsBackgroundColor,
       this.selectedOptionColor,
-      this.unSelectedOptionColor});
+      this.unSelectedOptionColor,
+      this.backgroundColor
+      });
 
   ///[questionTextStyle] question text style
   final TextStyle? questionTextStyle;
@@ -35,4 +39,7 @@ class PollsBubbleStyle {
 
   ///[unSelectedOptionColor] unselected option poll bar color
   final Color? unSelectedOptionColor;
+
+  ///[backgroundColor] used to customise the background color of the polls bubble
+  final Color? backgroundColor;
 }

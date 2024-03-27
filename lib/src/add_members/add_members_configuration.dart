@@ -1,37 +1,51 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///Configuration class to alter [CometChatAddMembers] properties from all parent widgets
-
+///[AddMemberConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatAddMembers]
+///can be used by a component where [CometChatAddMembers] is a child component
+/// ```dart
+/// AddMembersConfiguration(
+///   title: "Add to Group",
+///   disableUsersPresence: true
+///   addMembersStyle: AddMembersStyle()
+/// );
+/// ```
 class AddMemberConfiguration {
-  const AddMemberConfiguration(
-      {this.onSelection,
-      this.subtitleView,
-      this.disableUsersPresence,
-      this.listItemView,
-      this.appBarOptions,
-      this.options,
-      this.hideSeparator,
-      this.selectionMode,
-      this.emptyStateText,
-      this.errorStateText,
-      this.loadingStateView,
-      this.emptyStateView,
-      this.errorStateView,
-      this.hideError,
-      this.usersRequestBuilder,
-      this.usersProtocol,
-      this.title,
-      this.searchPlaceholder,
-      this.backButton,
-      this.showBackButton = true,
-      this.searchIcon,
-      this.hideSearch = false,
-      this.theme,
-      this.style,
-      this.onBack,
-      this.selectionIcon});
+  const AddMemberConfiguration({
+    this.onSelection,
+    this.subtitleView,
+    this.disableUsersPresence,
+    this.listItemView,
+    this.appBarOptions,
+    this.options,
+    this.hideSeparator,
+    this.selectionMode,
+    this.emptyStateText,
+    this.errorStateText,
+    this.loadingStateView,
+    this.emptyStateView,
+    this.errorStateView,
+    this.hideError,
+    this.usersRequestBuilder,
+    this.usersProtocol,
+    this.title,
+    this.searchPlaceholder,
+    this.backButton,
+    this.showBackButton = true,
+    this.searchIcon,
+    this.hideSearch = false,
+    this.theme,
+    this.addMembersStyle,
+    this.onBack,
+    this.selectionIcon,
+    this.onError,
+    this.avatarStyle,
+    this.listItemStyle,
+    this.statusIndicatorStyle,
+    this.submitIcon,
+  });
 
   ///[title] Title of the component
   final String? title;
@@ -57,8 +71,8 @@ class AddMemberConfiguration {
   ///[onSelection] method will be performed on complete selection
   final Function(List<User>?, BuildContext)? onSelection;
 
-  ///[style] provides styling to this widget
-  final AddMembersStyle? style;
+  ///[addMembersStyle] provides styling to this widget
+  final AddMembersStyle? addMembersStyle;
 
   ///[subtitleView] provides custom view for subtitle in list item
   final Widget? Function(BuildContext, User)? subtitleView;
@@ -111,4 +125,19 @@ class AddMemberConfiguration {
 
   ///[selectionIcon] will override the default selection complete icon
   final Widget? selectionIcon;
+
+  ///[onError] callback triggered in case any error happens when fetching users or adding members
+  final OnError? onError;
+
+  ///[avatarStyle] set style for avatar
+  final AvatarStyle? avatarStyle;
+
+  ///[statusIndicatorStyle] set style for status indicator
+  final StatusIndicatorStyle? statusIndicatorStyle;
+
+  ///[listItemStyle] style for every list item
+  final ListItemStyle? listItemStyle;
+
+  ///[submitIcon] will override the default selection complete icon
+  final Widget? submitIcon;
 }

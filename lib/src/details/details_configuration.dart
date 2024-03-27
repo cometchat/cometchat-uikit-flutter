@@ -1,32 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[DetailsConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatDetails]
+///can be used by a component where [CometChatDetails] is a child component
+/// ```dart
+///   DetailsConfiguration(
+///      detailsStyle: DetailsStyle(),
+///      avatarStyle: AvatarStyle(),
+///      listItemStyle: ListItemStyle(),
+///      statusIndicatorStyle: StatusIndicatorStyle(),
+///      addMemberConfiguration: AddMemberConfiguration(),
+///      bannedMemberConfiguration: BannedMemberConfiguration(),
+///      groupMembersConfiguration: GroupMembersConfiguration(),
+///      transferOwnershipConfiguration: TransferOwnershipConfiguration()
+///    );
+/// ```
 class DetailsConfiguration {
-  DetailsConfiguration({
-    this.title,
-    this.showCloseButton,
-    this.closeButtonIcon,
-    this.disableUsersPresence = false,
-    this.appBarOptions,
-    this.detailsStyle,
-    this.listItemStyle,
-    this.avatarStyle,
-    this.statusIndicatorStyle,
-    this.subtitleView,
-    this.hideProfile,
-    this.protectedGroupIcon,
-    this.privateGroupIcon,
-    this.addMemberConfiguration,
-    this.transferOwnershipConfiguration,
-    this.bannedMemberConfiguration,
-    this.viewMemberConfiguration,
-    this.stateCallBack,
-    this.data,
-    this.customProfileView,
-    this.theme,
-    this.onBack,
-    this.onError
-  });
+  DetailsConfiguration(
+      {this.title,
+      this.showCloseButton,
+      this.closeButtonIcon,
+      this.disableUsersPresence = false,
+      this.appBarOptions,
+      this.detailsStyle,
+      this.listItemStyle,
+      this.avatarStyle,
+      this.statusIndicatorStyle,
+      this.subtitleView,
+      this.hideProfile,
+      this.protectedGroupIcon,
+      this.privateGroupIcon,
+      this.addMemberConfiguration,
+      this.transferOwnershipConfiguration,
+      this.bannedMemberConfiguration,
+      this.groupMembersConfiguration,
+      this.stateCallBack,
+      this.data,
+      this.customProfileView,
+      this.theme,
+      this.onBack,
+      this.onError,
+      this.leaveGroupDialogStyle});
 
   ///to pass [CometChatDetails] header text use [title]
   final String? title;
@@ -77,8 +92,8 @@ class DetailsConfiguration {
   ///configurations for opening transfer ownership
   final BannedMemberConfiguration? bannedMemberConfiguration;
 
-  ///configurations for opening view members
-  final GroupMembersConfiguration? viewMemberConfiguration;
+  ///configurations for viewing group members
+  final GroupMembersConfiguration? groupMembersConfiguration;
 
   ///[stateCallBack] a call back to give state to its parent
   final void Function(CometChatDetailsController)? stateCallBack;
@@ -98,4 +113,7 @@ class DetailsConfiguration {
 
   ///[onBack] callback triggered on closing this screen
   final VoidCallback? onBack;
+
+  ///[leaveGroupDialogStyle] used to customize the dialog box that pops up when trying to leave group
+  final ConfirmDialogStyle? leaveGroupDialogStyle;
 }

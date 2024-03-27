@@ -1,7 +1,9 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[SmartReplyExtensionDecorator] is a the view model for [SmartReplyExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class SmartReplyExtensionDecorator extends DataSourceDecorator
-    with MessageListener, CometChatUIEventListener {
+    with CometChatMessageEventListener, CometChatUIEventListener {
   late String dateStamp;
   late String _listenerId;
   User? loggedInUser;
@@ -11,9 +13,9 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
       : super(dataSource) {
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
     _listenerId = "ExtensionSmartReplyListener";
-    CometChat.removeMessageListener(_listenerId);
+    CometChatMessageEvents.removeMessagesListener(_listenerId);
     CometChatUIEvents.removeUiListener(_listenerId);
-    CometChat.addMessageListener(_listenerId, this);
+    CometChatMessageEvents.addMessagesListener(_listenerId, this);
     CometChatUIEvents.addUiListener(_listenerId, this);
     getLoggedInUser();
   }
@@ -27,26 +29,28 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
   }
 
   List<String> getReplies(BaseMessage message) {
-    List<String> _replies = [];
+    List<String> replies = [];
     Map<String, dynamic>? map = ExtensionModerator.extensionCheck(message);
     if (map != null && map.containsKey(ExtensionConstants.smartReply)) {
       Map<String, dynamic> smartReplies = map[ExtensionConstants.smartReply];
       if (smartReplies.containsKey("reply_neutral")) {
-        _replies.add(smartReplies["reply_neutral"]);
+        replies.add(smartReplies["reply_neutral"]);
       }
       if (smartReplies.containsKey("reply_negative")) {
-        _replies.add(smartReplies["reply_negative"]);
+        replies.add(smartReplies["reply_negative"]);
       }
       if (smartReplies.containsKey("reply_positive")) {
-        _replies.add(smartReplies["reply_positive"]);
+        replies.add(smartReplies["reply_positive"]);
       }
     }
-    return _replies;
+    return replies;
   }
 
+
+
   @override
-  void onConversationChanged(Map<String, dynamic>? id, BaseMessage? lastMessage,
-      User? user, Group? group) {
+  void ccActiveChatChanged(Map<String, dynamic>? id, BaseMessage? lastMessage,
+      User? user, Group? group, int unreadMessageCount ) {
     if (lastMessage != null &&
         lastMessage is TextMessage &&
         lastMessage.sender?.uid != loggedInUser?.uid) {
@@ -59,10 +63,26 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
     checkAndShowReplies(textMessage);
   }
 
-  checkAndShowReplies(TextMessage textMessage) {
-    List<String> _replies = getReplies(textMessage);
+  @override
+  void onSchedulerMessageReceived(SchedulerMessage schedulerMessage) {
+    Map<String, dynamic> id = {};
 
-    if (_replies.isEmpty) return;
+    if (schedulerMessage.receiver is User) {
+      id['uid'] = (schedulerMessage.sender as User).uid;
+    } else if (schedulerMessage.receiver is Group) {
+      id['guid'] = (schedulerMessage.receiver as Group).guid;
+    }
+
+    if (schedulerMessage.parentMessageId != 0) {
+      id['parentMessageId'] = schedulerMessage.parentMessageId;
+    }
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  checkAndShowReplies(TextMessage textMessage) {
+    List<String> replies = getReplies(textMessage);
+
+    if (replies.isEmpty) return;
 
     Map<String, dynamic> id = {};
 
@@ -77,22 +97,22 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
     }
 
     onCloseTap() {
-      CometChatUIEvents.hidePanel(id, alignment.composerTop);
+      CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
     }
 
     onCLick(String reply) {
-      CometChatUIEvents.hidePanel(id, alignment.composerTop);
+      CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
 
-      String _receiverUid;
+      String receiverUid;
       if (textMessage.receiverType == CometChatReceiverType.user) {
-        _receiverUid = (textMessage.sender!.uid);
+        receiverUid = (textMessage.sender!.uid);
       } else {
-        _receiverUid = (textMessage.receiver as Group).guid;
+        receiverUid = (textMessage.receiver as Group).guid;
       }
 
       TextMessage sendingMessage = TextMessage(
           text: reply,
-          receiverUid: _receiverUid,
+          receiverUid: receiverUid,
           type: CometChatMessageType.text,
           receiverType: textMessage.receiverType,
           sender: loggedInUser,
@@ -105,10 +125,10 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
 
     CometChatUIEvents.showPanel(
         id,
-        alignment.composerTop,
+        CustomUIPosition.messageListBottom,
         (context) => SmartReplyView(
               onCloseTap: onCloseTap,
-              replies: _replies,
+              replies: replies,
               onClick: onCLick,
             ));
   }

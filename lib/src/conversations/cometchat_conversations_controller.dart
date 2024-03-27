@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 
-import '../../../flutter_chat_ui_kit.dart';
-import '../../../flutter_chat_ui_kit.dart' as cc;
+import '../../../cometchat_chat_uikit.dart';
+import '../../../cometchat_chat_uikit.dart' as cc;
 
-///[CometChatConversationsController] is the View Model for the [CometChatConversations] component
-///it handles the business logic
+///[CometChatConversationsController] is the view model for [CometChatConversations]
+///it contains all the business logic involved in changing the state of the UI of [CometChatConversations]
 class CometChatConversationsController
     extends CometChatListController<Conversation, String>
     with
         CometChatSelectable,
         CometChatMessageEventListener,
         CometChatGroupEventListener,
-        MessageListener,
         UserListener,
         GroupListener,
-        CometChatUserEventListener {
+        CometChatUserEventListener,
+        CallListener,
+        CometChatCallEventListener,
+        ConnectionListener
+    implements CometChatConversationsControllerProtocol {
   //Constructor
   CometChatConversationsController(
       {required this.conversationsBuilderProtocol,
@@ -24,6 +27,8 @@ class CometChatConversationsController
       this.customSoundForMessages,
       this.disableUsersPresence,
       this.disableReceipt = false,
+      this.disableTyping,
+      this.deleteConversationDialogStyle,
       OnError? onError})
       : super(conversationsBuilderProtocol.getRequest(), onError: onError) {
     selectionMode = mode ?? SelectionMode.none;
@@ -35,6 +40,7 @@ class CometChatConversationsController
     messageUIListenerID = "${dateStamp}_ui_message_listener";
     userSDKListenerID = "${dateStamp}_user_sdk_listener";
     _uiUserListener = "${dateStamp}UI_user_listener";
+    _conversationListenerId = "${dateStamp}_conversation_listener";
   }
 
   late ConversationsBuilderProtocol conversationsBuilderProtocol;
@@ -46,6 +52,7 @@ class CometChatConversationsController
   late String messageUIListenerID;
   late String userSDKListenerID;
   late String _uiUserListener;
+  late String _conversationListenerId;
 
   Set<String> typingIndicatorMap = {};
   User? loggedInUser;
@@ -65,25 +72,32 @@ class CometChatConversationsController
 
   String loggedInUserId = "";
   String?
-      activeID; //active user or groupID, null when no message list is active
+      activeConversation; //active user or groupID, null when no message list is active
 
   ConversationsStyle? style;
 
   bool? disableUsersPresence;
 
+  ///[disableTyping] if true stops indicating if a participant in a conversation is typing
+  final bool? disableTyping;
+
+  ///[deleteConversationDialogStyle] provides customization for the dialog box that pops up when tapping the delete conversation option
+  final ConfirmDialogStyle? deleteConversationDialogStyle;
+
   @override
   void onInit() {
     CometChatMessageEvents.addMessagesListener(messageUIListenerID, this);
-
     CometChatGroupEvents.addGroupsListener(groupUIListenerID, this);
 
-    CometChat.addMessageListener(messageSDKListenerID, this);
     if (disableUsersPresence == false) {
       CometChat.addUserListener(userSDKListenerID, this);
     }
     CometChat.addGroupListener(groupSDKListenerID, this);
 
     CometChatUserEvents.addUsersListener(_uiUserListener, this);
+    CometChatCallEvents.addCallEventsListener(_conversationListenerId, this);
+    CometChat.addCallListener(_conversationListenerId, this);
+    CometChat.addConnectionListener(_conversationListenerId, this);
     super.onInit();
   }
 
@@ -95,8 +109,11 @@ class CometChatConversationsController
     if (disableUsersPresence == false) {
       CometChat.removeUserListener(userSDKListenerID);
     }
-    CometChat.removeGroupListener(groupSDKListenerID);
+    //CometChat.removeGroupListener(groupSDKListenerID);
     CometChatUserEvents.removeUsersListener(_uiUserListener);
+    CometChatCallEvents.removeCallEventsListener(_conversationListenerId);
+    CometChat.removeCallListener(_conversationListenerId);
+    CometChat.removeConnectionListener(_conversationListenerId);
     super.onClose();
   }
 
@@ -177,6 +194,7 @@ class CometChatConversationsController
     if (message.sender!.uid != loggedInUserId && disableReceipt != true) {
       CometChat.markAsDelivered(message, onSuccess: (_) {}, onError: (_) {});
     }
+
     if (disableSoundForMessages == false) {
       playNotificationSound(message);
     }
@@ -222,12 +240,31 @@ class CometChatConversationsController
 
   @override
   void onTypingStarted(TypingIndicator typingIndicator) {
-    setTypingIndicator(typingIndicator, true);
+    if (disableTyping != true) {
+      setTypingIndicator(typingIndicator, true);
+    }
   }
 
   @override
   void onTypingEnded(TypingIndicator typingIndicator) {
-    setTypingIndicator(typingIndicator, false);
+    if (disableTyping != true) {
+      setTypingIndicator(typingIndicator, false);
+    }
+  }
+
+  @override
+  void onFormMessageReceived(FormMessage formMessage) {
+    _onMessageReceived(formMessage, false);
+  }
+
+  @override
+  void onCardMessageReceived(CardMessage cardMessage) {
+    _onMessageReceived(cardMessage, false);
+  }
+
+  @override
+  void onCustomInteractiveMessageReceived(CustomInteractiveMessage cardMessage) {
+    _onMessageReceived(cardMessage, false);
   }
 
   //----------------Message Listeners end----------------------------------------------
@@ -245,9 +282,9 @@ class CometChatConversationsController
 
   @override
   void ccUserBlocked(User user) {
-    int matchingIndex = list.indexWhere((Conversation _conversation) =>
-        (_conversation.conversationType == ReceiverTypeConstants.user &&
-            (_conversation.conversationWith as User).uid == user.uid));
+    int matchingIndex = list.indexWhere((Conversation conversation) =>
+        (conversation.conversationType == ReceiverTypeConstants.user &&
+            (conversation.conversationWith as User).uid == user.uid));
     removeElementAt(matchingIndex);
   }
 
@@ -327,6 +364,7 @@ class CometChatConversationsController
   }
   //----------------Group Listeners end----------------------------------------------
 
+  @override
   updateUserStatus(User user, String status) {
     int matchingIndex = list.indexWhere((element) =>
         (element.conversationType == ReceiverTypeConstants.user &&
@@ -342,12 +380,14 @@ class CometChatConversationsController
 
   //----------------Public Methods -----------------------------------------------------
 
+  @override
   deleteConversation(Conversation conversation) {
-    int _matchingIndex = getMatchingIndex(conversation);
+    int matchingIndex = getMatchingIndex(conversation);
 
-    deleteConversationFromIndex(_matchingIndex);
+    deleteConversationFromIndex(matchingIndex);
   }
 
+  @override
   resetUnreadCount(BaseMessage message) {
     int matchingIndex = getMatchingIndexFromKey(message.conversationId!);
     if (matchingIndex != -1) {
@@ -356,7 +396,8 @@ class CometChatConversationsController
     }
   }
 
-  updateLastMessage(BaseMessage message) {
+  @override
+  updateLastMessage(BaseMessage message) async {
     int matchingIndex = getMatchingIndexFromKey(message.conversationId!);
 
     if (matchingIndex != -1) {
@@ -365,9 +406,15 @@ class CometChatConversationsController
       conversation.unreadMessageCount = 0;
       removeElementAt(matchingIndex);
       addElement(conversation);
+    } else {
+      CometChat.getConversationFromMessage(message,
+          onSuccess: (Conversation conversation) {
+        addElement(conversation);
+      }, onError: (_) {});
     }
   }
 
+  @override
   updateGroup(Group group) {
     int matchingIndex = list.indexWhere((element) =>
         ((element.conversationWith is Group) &&
@@ -379,6 +426,7 @@ class CometChatConversationsController
     }
   }
 
+  @override
   removeGroup(String guid) {
     int matchingIndex = list.indexWhere((element) =>
         ((element.conversationWith is Group) &&
@@ -389,6 +437,7 @@ class CometChatConversationsController
     }
   }
 
+  @override
   updateLastMessageOnEdited(BaseMessage message) async {
     int matchingIndex = getMatchingIndexFromKey(message.conversationId!);
 
@@ -400,6 +449,7 @@ class CometChatConversationsController
     }
   }
 
+  @override
   refreshSingleConversation(BaseMessage message, bool isActionMessage,
       {bool? remove}) async {
     CometChat.getConversationFromMessage(message,
@@ -415,12 +465,14 @@ class CometChatConversationsController
   }
 
   ///Update the conversation with new conversation Object matched according to conversation id ,  if not matched inserted at top
+  @override
   updateConversation(Conversation conversation) {
     int matchingIndex = getMatchingIndex(conversation);
 
     Map<String, dynamic>? metaData = conversation.lastMessage!.metadata;
     bool incrementUnreadCount = false;
-    bool isCategoryMessage = (conversation.lastMessage!.category == "message");
+    bool isCategoryMessage = (conversation.lastMessage!.category == MessageCategoryConstants.message) ||
+        (conversation.lastMessage!.category == MessageCategoryConstants.interactive);
     if (metaData != null) {
       if (metaData.containsKey("incrementUnreadCount")) {
         incrementUnreadCount = metaData["incrementUnreadCount"] as bool;
@@ -452,6 +504,7 @@ class CometChatConversationsController
   }
 
 //Set Receipt for
+  @override
   setReceipts(MessageReceipt receipt) {
     for (int i = 0; i < list.length; i++) {
       Conversation conversation = list[i];
@@ -483,18 +536,19 @@ class CometChatConversationsController
     }
   }
 
+  @override
   setTypingIndicator(
       TypingIndicator typingIndicator, bool isTypingStarted) async {
     int matchingIndex;
     if (typingIndicator.receiverType == ReceiverTypeConstants.user) {
-      matchingIndex = list.indexWhere((Conversation _conversation) =>
-          (_conversation.conversationType == ReceiverTypeConstants.user &&
-              (_conversation.conversationWith as User).uid ==
+      matchingIndex = list.indexWhere((Conversation conversation) =>
+          (conversation.conversationType == ReceiverTypeConstants.user &&
+              (conversation.conversationWith as User).uid ==
                   typingIndicator.sender.uid));
     } else {
-      matchingIndex = list.indexWhere((Conversation _conversation) =>
-          (_conversation.conversationType == ReceiverTypeConstants.group &&
-              (_conversation.conversationWith as Group).guid ==
+      matchingIndex = list.indexWhere((Conversation conversation) =>
+          (conversation.conversationType == ReceiverTypeConstants.group &&
+              (conversation.conversationWith as Group).guid ==
                   typingIndicator.receiverId));
     }
 
@@ -508,6 +562,7 @@ class CometChatConversationsController
     }
   }
 
+  @override
   void deleteConversationFromIndex(int index) async {
     late String conversationWith;
     late String conversationType;
@@ -536,19 +591,23 @@ class CometChatConversationsController
             Navigator.pop(context!);
           },
           style: ConfirmDialogStyle(
-              backgroundColor: theme?.palette.mode == PaletteThemeModes.light
-                  ? theme?.palette.getBackground()
-                  : Color.alphaBlend(theme!.palette.getAccent200(),
-                      theme!.palette.getBackground()),
-              shadowColor: theme?.palette.getAccent300(),
+              backgroundColor: deleteConversationDialogStyle?.backgroundColor ??
+                  (theme?.palette.mode == PaletteThemeModes.light
+                      ? theme?.palette.getBackground()
+                      : Color.alphaBlend(theme!.palette.getAccent200(),
+                          theme!.palette.getBackground())),
+              shadowColor: deleteConversationDialogStyle?.shadowColor ??
+                  theme?.palette.getAccent300(),
               confirmButtonTextStyle: TextStyle(
-                  fontSize: theme?.typography.text2.fontSize,
-                  fontWeight: theme?.typography.text2.fontWeight,
-                  color: theme?.palette.getPrimary()),
+                      fontSize: theme?.typography.text2.fontSize,
+                      fontWeight: theme?.typography.text2.fontWeight,
+                      color: theme?.palette.getPrimary())
+                  .merge(deleteConversationDialogStyle?.confirmButtonTextStyle),
               cancelButtonTextStyle: TextStyle(
-                  fontSize: theme?.typography.text2.fontSize,
-                  fontWeight: theme?.typography.text2.fontWeight,
-                  color: theme?.palette.getPrimary())),
+                      fontSize: theme?.typography.text2.fontSize,
+                      fontWeight: theme?.typography.text2.fontWeight,
+                      color: theme?.palette.getPrimary())
+                  .merge(deleteConversationDialogStyle?.cancelButtonTextStyle)),
           onConfirm: () async {
             await CometChat.deleteConversation(
                 conversationWith, conversationType, onSuccess: (_) {
@@ -561,26 +620,36 @@ class CometChatConversationsController
     }
   }
 
+  @override
   playNotificationSound(BaseMessage message) {
     //Write all conditions here to stop sound
     if (message.type == MessageTypeConstants.custom &&
         (message.metadata?["incrementUnreadCount"] != true)) {
       return;
     } //not playing sound in case message type is custom and increment counter is not true
-    if (activeID == null) {
+
+    ///checking if [CometChatConversations] is at the top of the navigation stack
+    if (context != null && ModalRoute.of(context!)!.isCurrent) {
+      //reset active conversation
+      if (activeConversation != null) {
+        activeConversation = null;
+      }
+    }
+    if (activeConversation == null) {
       //if no message list is open
-      SoundManager.play(
+      CometChatUIKit.soundManager.play(
           sound: Sound.incomingMessageFromOther,
           customSound: customSoundForMessages);
     } else {
-      if (activeID != message.conversationId) {
+      if (activeConversation != message.conversationId) {
         //if open message list has different conversation id then message received conversation id
-        SoundManager.play(
+        CometChatUIKit.soundManager.play(
             sound: Sound.incomingMessage, customSound: customSoundForMessages);
       }
     }
   }
 
+  @override
   bool getHideThreadIndicator(Conversation conversation) {
     if (conversation.lastMessage?.parentMessageId == null) {
       return true;
@@ -591,8 +660,12 @@ class CometChatConversationsController
     }
   }
 
+  @override
   bool getHideReceipt(Conversation conversation, bool? disableReadReceipt) {
     if (disableReadReceipt == true || conversation.lastMessage == null) {
+      return true;
+    } else if (conversation.lastMessage!.category ==
+        MessageCategoryConstants.call) {
       return true;
     } else if (conversation.lastMessage!.sender!.uid == loggedInUser?.uid) {
       return false;
@@ -602,6 +675,7 @@ class CometChatConversationsController
   }
 
   //----------- get last message text-----------
+  @override
   String getLastMessage(Conversation conversation, BuildContext context) {
     BaseMessage? lastMessage = conversation.lastMessage;
     String? messageCategory = lastMessage?.category;
@@ -612,11 +686,69 @@ class CometChatConversationsController
         lastMessage.deletedBy!.trim() != '') {
       return cc.Translations.of(context).this_message_deleted;
     } else {
-      return ChatConfigurator.getDataSource()
+      return CometChatUIKit.getDataSource()
           .getLastConversationMessage(conversation, context);
-
-      // ConversationUtils.getLastConversationMessage(
-      //   conversation, context);
     }
+  }
+
+  @override
+  void onConnected() {
+    if(!isLoading) {
+      request = conversationsBuilderProtocol.getRequest();
+      list = [];
+      loadMoreElements(
+        isIncluded: (element) => getMatchingIndex(element) != -1,
+      );
+    }
+  }
+
+  @override
+  void ccCallAccepted(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void ccOutgoingCall(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void ccCallRejected(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void ccCallEnded(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void onIncomingCallReceived(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void onOutgoingCallAccepted(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void onOutgoingCallRejected(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void onIncomingCallCancelled(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void onCallEndedMessageReceived(Call call) {
+    refreshSingleConversation(call, true);
+  }
+
+  @override
+  void onSchedulerMessageReceived(SchedulerMessage schedulerMessage) {
+    _onMessageReceived(schedulerMessage, false);
   }
 }

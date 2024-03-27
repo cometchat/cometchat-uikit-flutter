@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///You can modify the [CometChatMessageHeader] component's properties using the [MessageHeaderConfiguration] object
-///when using its parent parent components . To use a configuration, you simply need to pass it to the parent component.
+///[MessageHeaderConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatMessageHeader]
+///can be used by a component where [CometChatMessageHeader] is a child component
 class MessageHeaderConfiguration {
   const MessageHeaderConfiguration(
       {this.backButton,

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
+///[StickerKeyboardStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatStickerKeyboard]
 class StickerKeyboardStyle {
-  StickerKeyboardStyle({
-    this.loadingIconTint,
-    this.emptyTextStyle,
-    this.errorTextStyle,
-    this.errorIconTint,
-    this.errorIconBackground
-  });
+  StickerKeyboardStyle(
+      {this.loadingIconTint,
+      this.emptyTextStyle,
+      this.errorTextStyle,
+      this.errorIconTint,
+      this.errorIconBackground});
 
   ///[loadingIconTint] provides color to loading icon
   final Color? loadingIconTint;

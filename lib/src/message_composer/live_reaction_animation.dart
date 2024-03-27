@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
 class LiveReactionAnimation extends StatefulWidget {
   final VoidCallback? endAnimation;
@@ -73,11 +73,11 @@ class _LiveReactionAnimationState extends State<LiveReactionAnimation>
         return Opacity(
           opacity: (1 - _animationFloatUp.value),
           child: Container(
-            child: child,
             margin: EdgeInsets.only(
               bottom: _animationFloatUp.value * 200,
               right: _animationGrowSize.value * 0.25,
             ),
+            child: child,
             //width: _animationGrowSize.value,
           ),
         );

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
 class UIStyle extends BaseStyles {
-
   UIStyle({
     this.iconTint,
     this.titleStyle,
@@ -21,7 +20,7 @@ class UIStyle extends BaseStyles {
             background: background,
             gradient: gradient,
             border: border);
-            
+
   ///[iconTint] customize color of tab item icon
   final Color? iconTint;
 
@@ -39,5 +38,4 @@ class UIStyle extends BaseStyles {
 
   ///[barBackgroundColor]	used to set background color of the bottom navigation bar
   final Color? barBackgroundColor;
-
 }

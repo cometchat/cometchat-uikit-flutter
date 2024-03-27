@@ -1,10 +1,13 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[UsersBuilderProtocol] is an interface that defines the structure for fetching the users.
+///It provides a generic [requestBuilder] property and methods [getRequest] and [getSearchRequest] that needs to be overridden.
 abstract class UsersBuilderProtocol
     extends BuilderProtocol<UsersRequestBuilder, UsersRequest> {
   const UsersBuilderProtocol(UsersRequestBuilder _builder) : super(_builder);
 }
 
+///[UIUsersBuilder] is the default [UsersBuilderProtocol] used when a custom builder protocol is not passed
 class UIUsersBuilder extends UsersBuilderProtocol {
   const UIUsersBuilder(UsersRequestBuilder _builder) : super(_builder);
 

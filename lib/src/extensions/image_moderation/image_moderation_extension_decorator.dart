@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../cometchat_chat_uikit.dart';
 
+///[ImageModerationExtensionDecorator] is a the view model for [ImageModerationExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class ImageModerationExtensionDecorator extends DataSourceDecorator {
   User? loggedInUser;
   ImageModerationConfiguration? configuration;
 
-  ImageModerationExtensionDecorator(DataSource dataSource,{this.configuration}) : super(dataSource) {
+  ImageModerationExtensionDecorator(DataSource dataSource, {this.configuration})
+      : super(dataSource) {
     getLoggedInUser();
   }
 
@@ -16,13 +19,13 @@ class ImageModerationExtensionDecorator extends DataSourceDecorator {
   @override
   Widget getImageMessageContentView(MediaMessage message, BuildContext context,
       BubbleAlignment _alignment, CometChatTheme theme) {
-    Widget _child =
+    Widget child =
         super.getImageMessageContentView(message, context, _alignment, theme);
     if (message.sender?.uid == loggedInUser?.uid) {
-      return _child;
+      return child;
     }
 
-    return getImageContent(message, _child, theme);
+    return getImageContent(message, child, theme);
   }
 
   getImageContent(MediaMessage message, Widget child, CometChatTheme theme) {
@@ -30,9 +33,9 @@ class ImageModerationExtensionDecorator extends DataSourceDecorator {
       key: UniqueKey(),
       message: message,
       theme: theme,
-      child: child,
       warningText: configuration?.warningText,
       style: configuration?.style,
+      child: child,
     );
   }
 

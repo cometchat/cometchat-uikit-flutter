@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
+///[DetailsStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatDetails]
 class DetailsStyle extends BaseStyles {
   const DetailsStyle(
       {this.titleStyle,

@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[JoinProtectedGroupConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatJoinProtectedGroup]
+///can be used by a component where [CometChatJoinProtectedGroup] is a child component
+/// ```dart
+/// JoinProtectedGroupConfiguration(
+///          joinProtectedGroupStyle: JoinProtectedGroupStyle(),
+///          passwordPlaceholderText: "some password",
+///          description: "some description"
+///         );
+/// ```
 class JoinProtectedGroupConfiguration {
   const JoinProtectedGroupConfiguration(
       {this.closeIcon,
       this.joinIcon,
-      this.style,
+      this.joinProtectedGroupStyle,
       this.theme,
       this.onJoinTap,
       this.passwordPlaceholderText,
       this.title,
       this.description,
+      this.errorStateText,
       this.onBack,
-    this.onError});
+      this.onError});
 
   ///[closeIcon] replace back button
   final Widget? closeIcon;
@@ -20,8 +31,8 @@ class JoinProtectedGroupConfiguration {
   ///[joinIcon] replace create icon
   final Widget? joinIcon;
 
-  ///[style] set styling properties
-  final JoinProtectedGroupStyle? style;
+  ///[joinProtectedGroupStyle] set styling properties
+  final JoinProtectedGroupStyle? joinProtectedGroupStyle;
 
   ///[theme] set custom theme
   final CometChatTheme? theme;
@@ -43,4 +54,26 @@ class JoinProtectedGroupConfiguration {
 
   ///[onBack] callback triggered on closing this screen
   final VoidCallback? onBack;
+
+  ///[errorStateText] text to show if any error occurs when joining the group
+  final String? errorStateText;
+
+  JoinProtectedGroupConfiguration merge(
+      JoinProtectedGroupConfiguration mergeWith) {
+    return JoinProtectedGroupConfiguration(
+      closeIcon: closeIcon ?? mergeWith.closeIcon,
+      joinIcon: joinIcon ?? mergeWith.joinIcon,
+      joinProtectedGroupStyle:
+          joinProtectedGroupStyle ?? mergeWith.joinProtectedGroupStyle,
+      theme: theme ?? mergeWith.theme,
+      onJoinTap: onJoinTap ?? mergeWith.onJoinTap,
+      passwordPlaceholderText:
+          passwordPlaceholderText ?? mergeWith.passwordPlaceholderText,
+      title: title ?? mergeWith.title,
+      description: description ?? mergeWith.description,
+      errorStateText: errorStateText ?? mergeWith.errorStateText,
+      onBack: onBack ?? mergeWith.onBack,
+      onError: onError ?? mergeWith.onError,
+    );
+  }
 }

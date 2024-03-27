@@ -1,11 +1,14 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[MessagesBuilderProtocol] is an interface that defines the structure for fetching the messages.
+///It provides a generic [requestBuilder] property and methods [getRequest] and [getSearchRequest] that needs to be overridden.
 abstract class MessagesBuilderProtocol
     extends BuilderProtocol<MessagesRequestBuilder, MessagesRequest> {
   const MessagesBuilderProtocol(MessagesRequestBuilder _builder)
       : super(_builder);
 }
 
+///[UIMessagesBuilder] is the default [MessagesBuilderProtocol] used when a custom builder protocol is not passed
 class UIMessagesBuilder extends MessagesBuilderProtocol {
   const UIMessagesBuilder(MessagesRequestBuilder _builder) : super(_builder);
 

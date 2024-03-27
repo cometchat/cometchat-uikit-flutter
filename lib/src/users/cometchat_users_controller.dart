@@ -1,8 +1,13 @@
-import '../../../flutter_chat_ui_kit.dart';
+import '../../../cometchat_chat_uikit.dart';
 
+///[CometChatUsersController] is the view model for [CometChatUsers]
 class CometChatUsersController
     extends CometChatSearchListController<User, String>
-    with CometChatSelectable, UserListener, CometChatUserEventListener {
+    with
+        CometChatSelectable,
+        UserListener,
+        CometChatUserEventListener,
+        ConnectionListener {
   //--------------------Constructor-----------------------
   CometChatUsersController(
       {required this.usersBuilderProtocol,
@@ -13,7 +18,6 @@ class CometChatUsersController
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
     userListenerID = "${dateStamp}user_listener";
     _uiUserListener = "${dateStamp}UI_user_listener";
-
   }
 
   //-------------------------Variable Declaration-----------------------------
@@ -27,6 +31,7 @@ class CometChatUsersController
   void onInit() {
     CometChat.addUserListener(userListenerID, this);
     CometChatUserEvents.addUsersListener(_uiUserListener, this);
+    CometChat.addConnectionListener(userListenerID, this);
     super.onInit();
   }
 
@@ -34,6 +39,7 @@ class CometChatUsersController
   void onClose() {
     CometChat.removeUserListener(userListenerID);
     CometChatUserEvents.removeUsersListener(_uiUserListener);
+    CometChat.removeConnectionListener(userListenerID);
     super.onClose();
   }
 
@@ -68,5 +74,14 @@ class CometChatUsersController
   @override
   void ccUserUnblocked(User user) {
     updateElement(user);
+  }
+
+  @override
+  void onConnected() {
+    if(!isLoading) {
+      request = usersBuilderProtocol.getRequest();
+      list = [];
+      loadMoreElements();
+    }
   }
 }

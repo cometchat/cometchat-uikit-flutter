@@ -1,12 +1,19 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-class SmartReplyExtension implements ExtensionsDataSource {
+///[SmartReplyExtension] is the controller class for enabling and disabling the extension
+///enabling this extension would display automated suggestions to send in response of received text messages
+class SmartReplyExtension extends ExtensionsDataSource {
   SmartReplyConfiguration? configuration;
   SmartReplyExtension({this.configuration});
 
   @override
-  void enable() {
+  void addExtension() {
     ChatConfigurator.enable((dataSource) =>
         SmartReplyExtensionDecorator(dataSource, configuration: configuration));
+  }
+
+  @override
+  String getExtensionId() {
+    return "smart-reply";
   }
 }

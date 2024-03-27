@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../cometchat_chat_uikit.dart';
 
+///[CollaborativeWhiteBoardExtensionDecorator] is a the view model for [CollaborativeWhiteBoardExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
   String collaborativeWhiteBoardExtensionTypeConstant =
       ExtensionType.whiteboard;
@@ -90,17 +92,17 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
             BubbleAlignment alignment) {
           return getContentView(message as CustomMessage, _theme, context);
         },
-        options: ChatConfigurator.getDataSource().getCommonOptions,
-        bottomView: ChatConfigurator.getDataSource().getBottomView);
+        options: CometChatUIKit.getDataSource().getCommonOptions,
+        bottomView: CometChatUIKit.getDataSource().getBottomView);
   }
 
-  Widget getContentView(CustomMessage _customMessage, CometChatTheme _theme,
-      BuildContext context) {
-    if (_customMessage.deletedAt != null) {
-      return super.getDeleteMessageBubble(_customMessage, _theme);
+  Widget getContentView(
+      CustomMessage customMessage, CometChatTheme theme, BuildContext context) {
+    if (customMessage.deletedAt != null) {
+      return super.getDeleteMessageBubble(customMessage, theme);
     }
     return CometChatCollaborativeWhiteBoardBubble(
-      url: getWebViewUrl(_customMessage),
+      url: getWebViewUrl(customMessage),
       style: WhiteBoardBubbleStyle(
           background: configuration?.style?.background,
           dividerColor: configuration?.style?.dividerColor,
@@ -125,11 +127,11 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
       debugPrint("Success map $map");
     }, onError: (CometChatException e) {
       debugPrint('$e');
-      String _error = getErrorTranslatedText(context, e.code);
+      String error = getErrorTranslatedText(context, e.code);
       showCometChatConfirmDialog(
           context: context,
           messageText: Text(
-            _error,
+            error,
             style: TextStyle(
                 fontSize: theme.typography.title2.fontSize,
                 fontWeight: theme.typography.title2.fontWeight,
@@ -147,7 +149,7 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
   }
 
   CometChatMessageComposerAction getAttachmentOption(
-      CometChatTheme _theme, BuildContext context, Map<String, dynamic>? id) {
+      CometChatTheme theme, BuildContext context, Map<String, dynamic>? id) {
     return CometChatMessageComposerAction(
         id: collaborativeWhiteBoardExtensionTypeConstant,
         title: configuration?.optionTitle ??
@@ -157,25 +159,32 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
         iconUrlPackageName:
             configuration?.optionIconUrlPackageName ?? UIConstants.packageName,
         titleStyle: TextStyle(
-                color: _theme.palette.getAccent(),
-                fontSize: _theme.typography.subtitle1.fontSize,
-                fontWeight: _theme.typography.subtitle1.fontWeight)
+                color: theme.palette.getAccent(),
+                fontSize: theme.typography.subtitle1.fontSize,
+                fontWeight: theme.typography.subtitle1.fontWeight)
             .merge(configuration?.optionStyle?.titleStyle),
         iconTint: configuration?.optionStyle?.iconTint ??
-            _theme.palette.getAccent700(),
+            theme.palette.getAccent700(),
         background: configuration?.optionStyle?.background,
         cornerRadius: configuration?.optionStyle?.cornerRadius,
         iconBackground: configuration?.optionStyle?.iconBackground,
         iconCornerRadius: configuration?.optionStyle?.iconCornerRadius,
-        onItemClick: (String? uid, String? guid) {
+        onItemClick: (context, user, group) {
+          String? uid, guid;
           String receiverType = '';
-          if (uid == null) {
-            receiverType = ReceiverTypeConstants.group;
-          } else {
+          if (user != null) {
+            uid = user.uid;
             receiverType = ReceiverTypeConstants.user;
           }
-          sendCollaborativeWhiteBoard(
-              context, uid ?? guid ?? '', receiverType, _theme);
+          if (group != null) {
+            guid = group.guid;
+            receiverType = ReceiverTypeConstants.group;
+          }
+
+          if (uid != null || guid != null) {
+            sendCollaborativeWhiteBoard(
+                context, uid ?? guid ?? '', receiverType, theme);
+          }
         });
   }
 

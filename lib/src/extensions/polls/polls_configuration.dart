@@ -1,6 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[PollsConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [PollsExtension]
+///
+/// ```dart
+/// PollsConfiguration pollsConfiguration = PollsConfiguration(
+///    createPollsStyle: CreatePollsStyle(
+///        backgroundColor: Colors.white,
+///        questionTextStyle: TextStyle(fontSize: 16),
+///        addAnswerTextStyle: TextStyle(color: Colors.blue),
+///        answerTextStyle: TextStyle(fontSize: 16),
+///        deleteIconColor: Colors.red,
+///        addIconColor: Colors.blue,
+///        padding: EdgeInsets.all(8.0),
+///    ),
+///    pollsBubbleStyle: PollsBubbleStyle(),
+///    theme: CometChatTheme(),
+///    title: "Create a Poll",
+///    questionPlaceholderText: "Ask a Question",
+///    answerPlaceholderText: "Answer Option",
+///    answerHelpText: "Add or Remove Options",
+///    addAnswerText: "Add Another Option",
+///    deleteIcon: Icon(Icons.delete),
+///    closeIcon: Icon(Icons.close),
+///    createPollIcon: Icon(Icons.poll),
+///    optionTitle: "Option",
+///    optionIconUrl: "assets/option.png",
+///    optionIconUrlPackageName: "com.example.polls",
+///    optionStyle: PollsOptionStyle(
+///        selectedOptionTextStyle: TextStyle(
+///            color: Colors.white,
+///            fontWeight: FontWeight.bold,
+///        ),
+///        unselectedOptionTextStyle: TextStyle(
+///            color: Colors.black,
+///        ),
+///        selectedOptionColor: Colors.blue,
+///        unselectedOptionColor: Colors.grey,
+///    ),
+///);
+
+/// ```
 class PollsConfiguration {
   PollsConfiguration(
       {this.createPollsStyle,

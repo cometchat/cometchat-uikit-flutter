@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
-// import 'package:flutter_chat_ui_kit/src/utils/loading_indicator.dart';
+// import 'package:cometchat_chat_uikit/src/utils/loading_indicator.dart';
 
-/// A component that gives UI to join protected group
+///[CometChatJoinProtectedGroup] is a component that provides a screen with a form field to join a password protected group
 ///
 /// ```dart
 /// CometChatJoinProtectedGroup(
@@ -13,7 +13,7 @@ import 'package:get/get_state_manager/get_state_manager.dart';
 ///       hideCloseButton: false,
 ///       joinIcon:Icon(),
 ///       onJoinTap: (group){},
-///       style: JoinProtectedGroupStyle(
+///       joinProtectedGroupStyle: JoinProtectedGroupStyle(
 ///         background: Colors.white,
 ///         titleStyle: TextStyle()
 ///       )
@@ -26,19 +26,23 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
       this.title,
       this.description,
       this.passwordPlaceholderText,
-      Function({Group group,String password})? onJoinTap,
+      Function({Group group, String password})? onJoinTap,
       this.closeIcon,
       this.joinIcon,
-      this.style,
+      this.joinProtectedGroupStyle,
       OnError? onError,
       this.theme,
-      this.onBack
-      })
+      this.onBack,
+      String? errorStateText})
       : cometChatJoinProtectedGroupController =
             CometChatJoinProtectedGroupController(
-                group:group, onError: onError,onJoinTap: onJoinTap,background: style?.background,errorTextStyle: style?.errorTextStyle),
+                group: group,
+                onError: onError,
+                onJoinTap: onJoinTap,
+                background: joinProtectedGroupStyle?.background,
+                errorStateText: errorStateText,
+                errorTextStyle: joinProtectedGroupStyle?.errorTextStyle),
         super(key: key);
-
 
   ///[title] sets title of the component
   final String? title;
@@ -52,8 +56,8 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
   ///[joinIcon] replace join icon
   final Widget? joinIcon;
 
-  ///[style] set styling properties
-  final JoinProtectedGroupStyle? style;
+  ///[joinProtectedGroupStyle] set styling properties
+  final JoinProtectedGroupStyle? joinProtectedGroupStyle;
 
   ///[theme] set custom theme
   final CometChatTheme? theme;
@@ -63,7 +67,6 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
 
   ///[onBack] callback triggered on closing this screen
   final VoidCallback? onBack;
-
 
   final CometChatJoinProtectedGroupController
       cometChatJoinProtectedGroupController;
@@ -86,28 +89,30 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                   Image.asset(
                     AssetConstants.close,
                     package: UIConstants.packageName,
-                    color: style?.closeIconTint ?? _theme.palette.getPrimary(),
+                    color: joinProtectedGroupStyle?.closeIconTint ??
+                        _theme.palette.getPrimary(),
                   ),
               showBackButton: true,
               onBack: onBack,
               hideSearch: true,
               style: ListBaseStyle(
-                  backIconTint: style?.closeIconTint,
-                  background: style?.background,
-                  titleStyle: style?.titleStyle,
-                  gradient: style?.gradient,
-                  border: style?.border,
-                  borderRadius: style?.borderRadius,
-                  width: style?.width,
-                  height: style?.height),
+                  backIconTint: joinProtectedGroupStyle?.closeIconTint,
+                  background: joinProtectedGroupStyle?.background,
+                  titleStyle: joinProtectedGroupStyle?.titleStyle,
+                  gradient: joinProtectedGroupStyle?.gradient,
+                  border: joinProtectedGroupStyle?.border,
+                  borderRadius: joinProtectedGroupStyle?.borderRadius,
+                  width: joinProtectedGroupStyle?.width,
+                  height: joinProtectedGroupStyle?.height),
               menuOptions: [
                 IconButton(
-                    onPressed: () => controller.requestJoinGroup(context, _theme),
+                    onPressed: () =>
+                        controller.requestJoinGroup(context, _theme),
                     icon: joinIcon ??
                         Image.asset(
                           AssetConstants.checkmark,
                           package: UIConstants.packageName,
-                          color: style?.joinIconTint ??
+                          color: joinProtectedGroupStyle?.joinIconTint ??
                               _theme.palette.getPrimary(),
                         ))
               ],
@@ -116,13 +121,14 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      description ?? '${Translations.of(context).enter_password_to_access} ${controller.getGroupName(context)}.',
+                      description ??
+                          '${Translations.of(context).enter_password_to_access} ${controller.getGroupName(context)}.',
                       style: TextStyle(
                         color: _theme.palette.getAccent(),
                         fontSize: _theme.typography.subtitle1.fontSize,
                         fontFamily: _theme.typography.subtitle1.fontFamily,
                         fontWeight: _theme.typography.subtitle1.fontWeight,
-                      ).merge(style?.descriptionTextStyle),
+                      ).merge(joinProtectedGroupStyle?.descriptionTextStyle),
                     ),
                     const SizedBox(
                       height: 24,
@@ -131,7 +137,10 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                       height: 56,
                       child: TextFormField(
                         key: controller.passwordsFieldKey,
-                        keyboardAppearance: _theme.palette.mode==PaletteThemeModes.light?Brightness.light:Brightness.dark,
+                        keyboardAppearance:
+                            _theme.palette.mode == PaletteThemeModes.light
+                                ? Brightness.light
+                                : Brightness.dark,
                         obscureText: true,
                         validator: (value) =>
                             controller.validatePassword(value, context),
@@ -142,31 +151,37 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                           fontSize: _theme.typography.body.fontSize,
                           fontFamily: _theme.typography.body.fontFamily,
                           fontWeight: _theme.typography.body.fontWeight,
-                        ).merge(style?.passwordInputTextStyle),
+                        ).merge(
+                            joinProtectedGroupStyle?.passwordInputTextStyle),
                         decoration: InputDecoration(
                             counterText: '',
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: style?.inputBorderColor ??
+                                  color: joinProtectedGroupStyle
+                                          ?.inputBorderColor ??
                                       _theme.palette.getAccent100()),
                             ),
                             enabledBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: style?.inputBorderColor ??
+                                  color: joinProtectedGroupStyle
+                                          ?.inputBorderColor ??
                                       _theme.palette.getAccent100()),
                             ),
                             focusedBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: style?.inputBorderColor ??
+                                  color: joinProtectedGroupStyle
+                                          ?.inputBorderColor ??
                                       _theme.palette.getAccent100()),
                             ),
-                            hintText: passwordPlaceholderText ?? Translations.of(context).group_password,
+                            hintText: passwordPlaceholderText ??
+                                Translations.of(context).group_password,
                             hintStyle: TextStyle(
                               color: _theme.palette.getAccent600(),
                               fontSize: _theme.typography.body.fontSize,
                               fontFamily: _theme.typography.body.fontFamily,
                               fontWeight: _theme.typography.body.fontWeight,
-                            ).merge(style?.passwordPlaceholderStyle)),
+                            ).merge(joinProtectedGroupStyle
+                                ?.passwordPlaceholderStyle)),
                       ),
                     ),
                   ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[MessageTranslationBubbleStyle] is a data class that has styling-related properties
+///to customize the appearance of [MessageTranslationBubble]
 class MessageTranslationBubbleStyle {
   MessageTranslationBubbleStyle({this.infoTextStyle, this.translatedTextStyle});
 

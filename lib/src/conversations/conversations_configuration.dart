@@ -1,84 +1,78 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-/// A Configuration object for [CometChatConversations]
-///
-/// this Configuration object can be used to configure [CometChatConversations] properties
-/// from parents
+///[ConversationsConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatConversations]
+///can be used by a component where [CometChatConversations] is a child component
 
 /// {@tool snippet}
 /// ```dart
-/// ConversationConfigurations(
-/// avatarConfiguration:
-/// const AvatarConfiguration(),
-/// conversationListConfiguration:
-/// const  ConversationListConfigurations(),
-/// title: "CHATS",
-/// dateConfiguration:
-/// const DateConfiguration(),
-/// conversationType: ConversationTypes.both,
-/// badgeConfiguration:const BadgeConfiguration(),
-/// conversationListItemConfiguration:ConversationListItemConfigurations(
-/// inputData:ConversationInputData<Conversation>
-/// (subtitle:(Conversation
-/// conv) {
-/// return "Conv Subtitle";
-/// }))),
+///   ConversationsConfiguration(
+///      avatarStyle: AvatarStyle(),
+///      dateStyle: DateStyle(),
+///      badgeStyle: BadgeStyle(),
+///      conversationsStyle: ConversationsStyle(),
+///      receiptStyle: ReceiptStyle(),
+///      listItemStyle: ListItemStyle(),
+///      statusIndicatorStyle: StatusIndicatorStyle(),
+///      deleteConversationDialogStyle: ConfirmDialogStyle(),
+///    )
 ///```
 /// {@end-tool}
 class ConversationsConfiguration {
-  const ConversationsConfiguration({
-    this.conversationsRequestBuilder,
-    this.conversationType = ConversationTypes.both,
-    this.subtitleView,
-    this.title,
-    this.showBackButton = true,
-    this.backButton,
-    this.hideStartConversation = false,
-    this.startConversationIcon,
-    this.hideSearch = false,
-    this.search,
-    this.theme,
-    this.tailView,
-    this.hideSeparator,
-    this.listItemView,
-    this.conversationsStyle,
-    this.options,
-    this.selectionMode,
-    this.onSelection,
-    this.emptyText,
-    this.errorText,
-    this.loadingView,
-    this.emptyView,
-    this.errorView,
-    this.stateCallBack,
-    this.listItemStyle,
-    this.avatarStyle,
-    this.statusIndicatorStyle,
-    this.receiptStyle,
-    this.disableUsersPresence,
-    this.disableReceipt,
-    this.protectedGroupIcon,
-    this.privateGroupIcon,
-    this.readIcon,
-    this.deliveredIcon,
-    this.sentIcon,
-    this.datePattern,
-    this.typingIndicatorText,
-    this.dateStyle,
-    this.badgeStyle,
-    this.customSoundForMessages,
-    this.disableSoundForMessages,
-    this.conversationsProtocol,
-    this.hideError,
-    this.appBarOptions,
-    this.activateSelection,
-    this.controller,
-    this.onError,
-    this.onBack,
-    this.onItemTap,
-    this.onItemLongPress,
-  });
+  const ConversationsConfiguration(
+      {this.conversationsRequestBuilder,
+      this.conversationType = ConversationTypes.both,
+      this.subtitleView,
+      this.title,
+      this.showBackButton = true,
+      this.backButton,
+      this.hideStartConversation = false,
+      this.startConversationIcon,
+      this.theme,
+      this.tailView,
+      this.hideSeparator,
+      this.listItemView,
+      this.conversationsStyle,
+      this.options,
+      this.selectionMode,
+      this.onSelection,
+      this.emptyStateText,
+      this.errorStateText,
+      this.loadingStateText,
+      this.emptyStateView,
+      this.errorStateView,
+      this.stateCallBack,
+      this.listItemStyle,
+      this.avatarStyle,
+      this.statusIndicatorStyle,
+      this.receiptStyle,
+      this.disableUsersPresence,
+      this.disableReceipt,
+      this.protectedGroupIcon,
+      this.privateGroupIcon,
+      this.readIcon,
+      this.deliveredIcon,
+      this.sentIcon,
+      this.datePattern,
+      this.typingIndicatorText,
+      this.dateStyle,
+      this.badgeStyle,
+      this.customSoundForMessages,
+      this.disableSoundForMessages,
+      this.conversationsProtocol,
+      this.hideError,
+      this.appBarOptions,
+      this.activateSelection,
+      this.controller,
+      this.onError,
+      this.onBack,
+      this.onItemTap,
+      this.onItemLongPress,
+      this.disableTyping,
+      this.deleteConversationDialogStyle,
+      this.hideAppbar
+      });
 
   ///[conversationsProtocol] set custom conversations request builder protocol
   final ConversationsBuilderProtocol? conversationsProtocol;
@@ -94,12 +88,6 @@ class ConversationsConfiguration {
 
   ///[startConversationIcon] start conversation icon
   final Icon? startConversationIcon;
-
-  ///[hideSearch] if true then hides search box
-  final bool hideSearch;
-
-  ///[search] search box
-  final Widget? search;
 
   ///[subtitleView] to set subtitle for each conversation
   final Widget? Function(BuildContext, Conversation)? subtitleView;
@@ -139,20 +127,20 @@ class ConversationsConfiguration {
   ///[title] sets title for the list
   final String? title;
 
-  ///[emptyText] text to be displayed when the list is empty
-  final String? emptyText;
+  ///[emptyStateText] text to be displayed when the list is empty
+  final String? emptyStateText;
 
-  ///[errorText] text to be displayed when error occur
-  final String? errorText;
+  ///[errorStateText] text to be displayed when error occur
+  final String? errorStateText;
 
-  ///[loadingView] returns view fow loading state
-  final WidgetBuilder? loadingView;
+  ///[loadingStateText] returns view fow loading state
+  final WidgetBuilder? loadingStateText;
 
-  ///[emptyView] returns view fow empty state
-  final WidgetBuilder? emptyView;
+  ///[emptyStateView] returns view fow empty state
+  final WidgetBuilder? emptyStateView;
 
-  ///[errorView] returns view fow error state behind the dialog
-  final WidgetBuilder? errorView;
+  ///[errorStateView] returns view fow error state behind the dialog
+  final WidgetBuilder? errorStateView;
 
   ///[stateCallBack] to access controller functions  from parent pass empty reference of  CometChatConversationsController object
   final Function(CometChatConversationsController controller)? stateCallBack;
@@ -231,4 +219,13 @@ class ConversationsConfiguration {
 
   ///[receiptStyle] sets the style for the receipts shown in the subtitle
   final ReceiptStyle? receiptStyle;
+
+  ///[disableTyping] if true stops indicating if a participant in a conversation is typing
+  final bool? disableTyping;
+
+  ///[deleteConversationDialogStyle] provides customization for the dialog box that pops up when tapping the delete conversation option
+  final ConfirmDialogStyle? deleteConversationDialogStyle;
+
+  ///[hideAppbar] toggle visibility for app bar
+  final bool? hideAppbar;
 }

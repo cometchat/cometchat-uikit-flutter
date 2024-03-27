@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../flutter_chat_ui_kit.dart';
+import '../../../../cometchat_chat_uikit.dart';
 
+///[ExtensionModerator] is an utility class that scans for information of applied extensions inside the metadata of a [BaseMessage]
 class ExtensionModerator {
   static Map<String, Map>? extensionCheck(BaseMessage baseMessage) {
     Map<String, dynamic>? metadata = baseMessage.metadata;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[CollaborativeWhiteboardOptionStyle] is a data class that has styling-related properties
+///to customize the appearance of the option in the attachment options menu for the [CollaborativeWhiteBoardExtension]
 class CollaborativeWhiteboardOptionStyle {
   CollaborativeWhiteboardOptionStyle({
     this.iconTint,
@@ -27,5 +29,4 @@ class CollaborativeWhiteboardOptionStyle {
 
   ///[cornerRadius] is the border radius for the option for this extension
   final double? cornerRadius;
-
 }

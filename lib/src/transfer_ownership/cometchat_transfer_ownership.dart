@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 
+///[CometChatTransferOwnership] is a component that internally uses [CometChatGroupMembers]
+///that displays a list of group members to whom the ownership of the group they are part of can be transferred to
+///
+/// ```dart
+///   TransferOwnershipConfiguration(
+///        avatarStyle: AvatarStyle(),
+///        listItemStyle: ListItemStyle(),
+///        statusIndicatorStyle: StatusIndicatorStyle(),
+///        groupMemberStyle: GroupMembersStyle(),
+///        transferOwnershipStyle:
+///            TransferOwnershipStyle(memberScopeStyle: TextStyle())
+///      );
+/// ```
+///
 class CometChatTransferOwnership extends StatelessWidget {
   CometChatTransferOwnership(
       {Key? key,
@@ -32,7 +46,8 @@ class CometChatTransferOwnership extends StatelessWidget {
       this.submitIcon,
       this.theme,
       this.onBack,
-      OnError? onError})
+      OnError? onError,
+      this.listItemView})
       : _cometChatTransferOwnershipController =
             CometChatTransferOwnershipController(
                 group: group,
@@ -118,9 +133,12 @@ class CometChatTransferOwnership extends StatelessWidget {
   final CometChatTransferOwnershipController
       _cometChatTransferOwnershipController;
 
+  ///[listItemView] set custom view for each groupMember
+  final Widget Function(GroupMember)? listItemView;
+
   Widget _tailView(BuildContext context, GroupMember groupMember,
       CometChatTransferOwnershipController transferOwnershipController) {
-    final CometChatTheme _theme = theme ?? cometChatTheme;
+    final CometChatTheme theme = this.theme ?? cometChatTheme;
     String scope;
     if (groupMember.uid == transferOwnershipController.group.owner) {
       scope = GroupMemberScope.owner;
@@ -131,16 +149,16 @@ class CometChatTransferOwnership extends StatelessWidget {
       scope,
       style: transferOwnershipStyle?.memberScopeStyle ??
           TextStyle(
-            fontSize: _theme.typography.body.fontSize,
-            fontWeight: _theme.typography.body.fontWeight,
-            color: _theme.palette.getAccent500(),
+            fontSize: theme.typography.body.fontSize,
+            fontWeight: theme.typography.body.fontWeight,
+            color: theme.palette.getAccent500(),
           ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final CometChatTheme _theme = theme ?? cometChatTheme;
+    final CometChatTheme theme = this.theme ?? cometChatTheme;
     return GetBuilder(
         init: _cometChatTransferOwnershipController,
         global: false,
@@ -182,7 +200,7 @@ class CometChatTransferOwnership extends StatelessWidget {
                   AssetConstants.checkmark,
                   package: UIConstants.packageName,
                   color: transferOwnershipStyle?.submitIconTint ??
-                      _theme.palette.getPrimary(),
+                      theme.palette.getPrimary(),
                 ),
             selectIcon: selectIcon ??
                 Icon(
@@ -192,7 +210,7 @@ class CometChatTransferOwnership extends StatelessWidget {
                 ),
             onBack: onBack,
             activateSelection: ActivateSelection.onClick,
-            theme: _theme,
+            theme: theme,
           );
         });
   }

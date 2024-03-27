@@ -1,11 +1,13 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
-import 'package:flutter_chat_ui_kit/src/utils/debouncer.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'dart:io';
-import '../utils/media_picker.dart';
 
+///[CometChatMessageComposerController] is the view model for [CometChatMessageComposer]
+///it contains all the business logic involved in changing the state of the UI of [CometChatMessageComposer]
 class CometChatMessageComposerController extends GetxController
     with CometChatMessageEventListener, CometChatUIEventListener {
   CometChatMessageComposerController(
@@ -23,7 +25,10 @@ class CometChatMessageComposerController extends GetxController
       this.stateCallBack,
       this.headerView,
       this.footerView,
-      this.onError}) {
+      this.onSendButtonTap,
+      this.onError,
+      this.aiOptionStyle
+      }) {
     tag = "tag$counter";
     counter++;
   }
@@ -60,10 +65,10 @@ class CometChatMessageComposerController extends GetxController
   String _previousText = "";
 
   ///[headerView] ui component to be forwarded to message input component
-  final Widget? Function(BuildContext, {User? user, Group? group})? headerView;
+  final ComposerWidgetBuilder? headerView;
 
   ///[footerView] ui component to be forwarded to message input component
-  final Widget? Function(BuildContext, {User? user, Group? group})? footerView;
+  final ComposerWidgetBuilder? footerView;
 
   ///[_actionItems] show up in attachment options
   final List<ActionItem> _actionItems = [];
@@ -93,7 +98,7 @@ class CometChatMessageComposerController extends GetxController
   bool hideLiveReaction;
 
   ///[attachmentOptions] options to display on tapping attachment button
-  final List<CometChatMessageComposerAction>? attachmentOptions;
+  final ComposerActionsBuilder? attachmentOptions;
 
   ///[liveReactionIconURL] is the path of the icon to show in the live reaction button
   final String? liveReactionIconURL;
@@ -101,8 +106,12 @@ class CometChatMessageComposerController extends GetxController
   ///if sending sound url from other package pass package name here
   final String? customSoundForMessagePackage;
 
-  ///[stateCallBack]
+  ///[stateCallBack] retrieves the state of the composer
   final void Function(CometChatMessageComposerController)? stateCallBack;
+
+  ///[onSendButtonTap] some task to execute if user presses the primary/send button
+  final Function(BuildContext, BaseMessage, PreviewMessageMode?)?
+      onSendButtonTap;
 
   ///[onError] callback triggered in case any error happens when fetching users
   final OnError? onError;
@@ -130,6 +139,10 @@ class CometChatMessageComposerController extends GetxController
 
   Map<String, dynamic> composerId = {};
 
+  AIOptionsStyle? aiOptionStyle;
+
+  late FocusNode focusNode;
+
   //-------------------------LifeCycle Methods-----------------------------
   @override
   void onInit() {
@@ -156,6 +169,10 @@ class CometChatMessageComposerController extends GetxController
     _getLoggedInUser();
     populateComposerId();
 
+    focusNode = FocusNode();
+
+    focusNode.addListener(_onFocusChange);
+
     super.onInit();
   }
 
@@ -175,6 +192,9 @@ class CometChatMessageComposerController extends GetxController
     CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
     CometChatUIEvents.removeUiListener(_uiEventListener);
     textEditingController.dispose();
+    focusNode.removeListener(_onFocusChange);
+    focusNode.dispose();
+
     super.onClose();
   }
 
@@ -188,6 +208,13 @@ class CometChatMessageComposerController extends GetxController
     }
   }
 
+  @override
+  void ccComposeMessage(String text, MessageEditStatus status) {
+    textEditingController.text = text;
+    _previousText = text;
+    update();
+  }
+
   // @override
   // void onMessageReply(BaseMessage message) {
   //   if (message.parentMessageId==parentMessageId) {
@@ -196,24 +223,24 @@ class CometChatMessageComposerController extends GetxController
   // }
 
   @override
-  void showPanel(
-      Map<String, dynamic>? id, alignment align, WidgetBuilder child) {
-    // print("listen show panel");
+  void showPanel(Map<String, dynamic>? id, CustomUIPosition uiPosition,
+      WidgetBuilder child) {
+    print("is for this ID ${id} ${isForThisWidget(id)}");
     if (isForThisWidget(id) == false) return;
-    if (align == alignment.composerBottom) {
+    if (uiPosition == CustomUIPosition.composerBottom) {
       footer = child(context);
-    } else if (align == alignment.composerTop) {
+    } else if (uiPosition == CustomUIPosition.composerTop) {
       header = child(context);
     }
     update();
   }
 
   @override
-  void hidePanel(Map<String, dynamic>? id, alignment align) {
+  void hidePanel(Map<String, dynamic>? id, CustomUIPosition uiPosition) {
     if (isForThisWidget(id) == false) return;
-    if (align == alignment.composerBottom) {
+    if (uiPosition == CustomUIPosition.composerBottom) {
       footer = null;
-    } else if (align == alignment.composerTop) {
+    } else if (uiPosition == CustomUIPosition.composerTop) {
       header = null;
     }
     update();
@@ -226,11 +253,11 @@ class CometChatMessageComposerController extends GetxController
   //-----------------------Internal Dependency Initialization-------------------------
   initializeHeaderAndFooterView() {
     if (headerView != null) {
-      header = headerView!(context, user: user, group: group);
+      header = headerView!(context, user, group, composerId);
     }
 
     if (footerView != null) {
-      footer = footerView!(context, user: user, group: group);
+      footer = footerView!(context, user, group, composerId);
     }
   }
 
@@ -241,10 +268,12 @@ class CometChatMessageComposerController extends GetxController
     }
   }
 
-  getAttachmentOptions(CometChatTheme _theme, BuildContext context) {
-    if (attachmentOptions != null && attachmentOptions!.isNotEmpty) {
-      for (CometChatMessageComposerAction attachmentOption
-          in attachmentOptions!) {
+  getAttachmentOptions(CometChatTheme theme, BuildContext context) {
+    if (attachmentOptions != null) {
+      List<CometChatMessageComposerAction> actionList =
+          attachmentOptions!(context, user, group, {});
+
+      for (CometChatMessageComposerAction attachmentOption in actionList) {
         _actionItems.add(ActionItem(
             id: attachmentOption.id,
             title: attachmentOption.title,
@@ -252,11 +281,10 @@ class CometChatMessageComposerController extends GetxController
             iconUrlPackageName: attachmentOption.iconUrlPackageName,
             titleStyle: attachmentOption.titleStyle ??
                 TextStyle(
-                    color: _theme.palette.getAccent(),
-                    fontSize: _theme.typography.subtitle1.fontSize,
-                    fontWeight: _theme.typography.subtitle1.fontWeight),
-            iconTint:
-                attachmentOption.iconTint ?? _theme.palette.getAccent700(),
+                    color: theme.palette.getAccent(),
+                    fontSize: theme.typography.subtitle1.fontSize,
+                    fontWeight: theme.typography.subtitle1.fontWeight),
+            iconTint: attachmentOption.iconTint ?? theme.palette.getAccent700(),
             background: attachmentOption.background,
             cornerRadius: attachmentOption.cornerRadius,
             iconBackground: attachmentOption.iconBackground,
@@ -264,8 +292,8 @@ class CometChatMessageComposerController extends GetxController
             onItemClick: attachmentOption.onItemClick));
       }
     } else {
-      final defaultOptions = ChatConfigurator.getDataSource()
-          .getAttachmentOptions(_theme, context, composerId);
+      final defaultOptions = CometChatUIKit.getDataSource()
+          .getAttachmentOptions(theme, context, composerId);
 
       for (CometChatMessageComposerAction attachmentOption in defaultOptions) {
         _actionItems.add(ActionItem(
@@ -275,11 +303,10 @@ class CometChatMessageComposerController extends GetxController
             iconUrlPackageName: attachmentOption.iconUrlPackageName,
             titleStyle: attachmentOption.titleStyle ??
                 TextStyle(
-                    color: _theme.palette.getAccent(),
-                    fontSize: _theme.typography.subtitle1.fontSize,
-                    fontWeight: _theme.typography.subtitle1.fontWeight),
-            iconTint:
-                attachmentOption.iconTint ?? _theme.palette.getAccent700(),
+                    color: theme.palette.getAccent(),
+                    fontSize: theme.typography.subtitle1.fontSize,
+                    fontWeight: theme.typography.subtitle1.fontWeight),
+            iconTint: attachmentOption.iconTint ?? theme.palette.getAccent700(),
             background: attachmentOption.background,
             cornerRadius: attachmentOption.cornerRadius,
             iconBackground: attachmentOption.iconBackground,
@@ -343,47 +370,51 @@ class CometChatMessageComposerController extends GetxController
     textEditingController.clear();
     _previousText = '';
     update();
+    if (onSendButtonTap != null) {
+      onSendButtonTap!(context, textMessage, previewMessageMode);
+    } else {
+      CometChatMessageEvents.ccMessageSent(
+          textMessage, MessageStatus.inProgress);
 
-    CometChatMessageEvents.ccMessageSent(textMessage, MessageStatus.inProgress);
-
-    CometChat.sendMessage(textMessage, onSuccess: (TextMessage message) {
-      debugPrint("Message sent successfully:  ${message.text}");
-      if (disableSoundForMessages == false) {
-        SoundManager.play(
-            sound: Sound.outgoingMessage,
-            customSound: customSoundForMessage,
-            packageName:
-                customSoundForMessage == null || customSoundForMessage == ""
-                    ? UIConstants.packageName
-                    : customSoundForMessagePackage);
-      }
-      CometChatMessageEvents.ccMessageSent(message, MessageStatus.sent);
-    },
-        onError: onError ??
-            (CometChatException e) {
-              if (textMessage.metadata != null) {
-                textMessage.metadata!["error"] = e;
-              } else {
-                textMessage.metadata = {"error": e};
-              }
-              CometChatMessageEvents.ccMessageSent(
-                  textMessage, MessageStatus.error);
-              debugPrint(
-                  "Message sending failed with exception:  ${e.message}");
-            });
+      CometChat.sendMessage(textMessage, onSuccess: (TextMessage message) {
+        debugPrint("Message sent successfully:  ${message.text}");
+        if (disableSoundForMessages == false) {
+          CometChatUIKit.soundManager.play(
+              sound: Sound.outgoingMessage,
+              customSound: customSoundForMessage,
+              packageName:
+                  customSoundForMessage == null || customSoundForMessage == ""
+                      ? UIConstants.packageName
+                      : customSoundForMessagePackage);
+        }
+        CometChatMessageEvents.ccMessageSent(message, MessageStatus.sent);
+      },
+          onError: onError ??
+              (CometChatException e) {
+                if (textMessage.metadata != null) {
+                  textMessage.metadata!["error"] = e;
+                } else {
+                  textMessage.metadata = {"error": e};
+                }
+                CometChatMessageEvents.ccMessageSent(
+                    textMessage, MessageStatus.error);
+                debugPrint(
+                    "Message sending failed with exception:  ${e.message}");
+              });
+    }
   }
 
   sendMediaMessage(
-      {required PickedFile pickedFile,
+      {required String path,
       required String messageType,
       Map<String, dynamic>? metadata}) async {
     String muid = DateTime.now().microsecondsSinceEpoch.toString();
 
-    MediaMessage _mediaMessage = MediaMessage(
+    MediaMessage mediaMessage = MediaMessage(
       receiverType: receiverType,
       type: messageType,
       receiverUid: receiverID,
-      file: pickedFile.path,
+      file: path,
       metadata: metadata,
       sender: loggedInUser,
       parentMessageId: parentMessageId,
@@ -392,18 +423,18 @@ class CometChatMessageComposerController extends GetxController
     );
 
     CometChatMessageEvents.ccMessageSent(
-        _mediaMessage, MessageStatus.inProgress);
+        mediaMessage, MessageStatus.inProgress);
 
     //for sending files
-    MediaMessage _mediaMessage2 = MediaMessage(
+    MediaMessage mediaMessage2 = MediaMessage(
       receiverType: receiverType,
       type: messageType,
       receiverUid: receiverID,
       //file: Platform.isIOS ? 'file://${pickedFile.path}' : pickedFile.path,
 
-      file: (Platform.isIOS && (!pickedFile.path.startsWith('file://')))
-          ? 'file://${pickedFile.path}'
-          : pickedFile.path,
+      file: (Platform.isIOS && (!path.startsWith('file://')))
+          ? 'file://$path'
+          : path,
       metadata: metadata,
       sender: loggedInUser,
       parentMessageId: parentMessageId,
@@ -417,16 +448,16 @@ class CometChatMessageComposerController extends GetxController
       update();
     }
 
-    await CometChat.sendMediaMessage(_mediaMessage2,
+    await CometChat.sendMediaMessage(mediaMessage2,
         onSuccess: (MediaMessage message) async {
-      debugPrint("Media message sent successfully: ${_mediaMessage.muid}");
+      debugPrint("Media message sent successfully: ${mediaMessage.muid}");
 
       if (Platform.isIOS) {
         if (message.file != null) {
           message.file = message.file?.replaceAll("file://", '');
         }
       } else {
-        message.file = pickedFile.path;
+        message.file = path;
       }
 
       _playSound();
@@ -435,13 +466,13 @@ class CometChatMessageComposerController extends GetxController
     },
         onError: onError ??
             (e) {
-              if (_mediaMessage.metadata != null) {
-                _mediaMessage.metadata!["error"] = e;
+              if (mediaMessage.metadata != null) {
+                mediaMessage.metadata!["error"] = e;
               } else {
-                _mediaMessage.metadata = {"error": e};
+                mediaMessage.metadata = {"error": e};
               }
               CometChatMessageEvents.ccMessageSent(
-                  _mediaMessage, MessageStatus.error);
+                  mediaMessage, MessageStatus.error);
               debugPrint(
                   "Media message sending failed with exception: ${e.message}");
             });
@@ -518,7 +549,7 @@ class CometChatMessageComposerController extends GetxController
     CometChatMessageEvents.ccLiveReaction(
         liveReactionIconURL ?? AssetConstants.heart,
         user?.uid ?? group?.guid ?? '');
-    TransientMessage _transientMessage = TransientMessage(
+    TransientMessage transientMessage = TransientMessage(
         receiverType: receiverType,
         data: {
           "type": "live_reaction",
@@ -526,7 +557,7 @@ class CometChatMessageComposerController extends GetxController
           "packageName": UIConstants.packageName
         },
         receiverId: receiverID);
-    CometChat.sendTransientMessage(_transientMessage, onSuccess: () {
+    CometChat.sendTransientMessage(transientMessage, onSuccess: () {
       debugPrint("Success");
     },
         onError: onError ??
@@ -553,7 +584,7 @@ class CometChatMessageComposerController extends GetxController
     if (message is TextMessage) {
       messagePreviewSubtitle = message.text;
     } else {
-      messagePreviewSubtitle = ChatConfigurator.getDataSource()
+      messagePreviewSubtitle = CometChatUIKit.getDataSource()
           .getMessageTypeToSubtitle(message.type, context);
     }
 
@@ -568,71 +599,87 @@ class CometChatMessageComposerController extends GetxController
   }
 
   //shows attachment options
-  showBottomActionSheet(CometChatTheme _theme, BuildContext context) async {
+  showBottomActionSheet(CometChatTheme theme, BuildContext context) async {
     ActionItem? item = await showCometChatActionSheet(
         context: context,
         actionItems: _actionItems,
         titleStyle: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w500,
-            color: _theme.palette.getAccent()),
-        backgroundColor: _theme.palette.getBackground(),
-        iconBackground: _theme.palette.getAccent100(),
-        layoutIconColor: _theme.palette.getPrimary());
+            color: theme.palette.getAccent()),
+        backgroundColor: theme.palette.getBackground(),
+        iconBackground: theme.palette.getAccent100(),
+        layoutIconColor: theme.palette.getPrimary());
 
     if (item == null) {
       return;
     }
-    if (item.onItemClick != null) {
-      item.onItemClick(user?.uid, group?.guid);
+    if (item.onItemClick != null &&
+        item.onItemClick is Function(BuildContext, User?, Group?)) {
+      try {
+        if (context.mounted) {
+          item.onItemClick(context, user, group);
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint("the option could not be executed");
+        }
+      }
     } else {
-      PickedFile? _pickedFile;
-      String? _type;
+      PickedFile? pickedFile;
+      String? type;
 
       if (item.id == 'photoAndVideo') {
-        _pickedFile = await MediaPicker.pickImageVideo();
-        _type = _pickedFile?.fileType;
+        pickedFile = await MediaPicker.pickImageVideo();
+        type = pickedFile?.fileType;
       } else if (item.id == 'takePhoto') {
-        _pickedFile = await MediaPicker.takePhoto();
-        _type = MessageTypeConstants.image;
+        pickedFile = await MediaPicker.takePhoto();
+        type = MessageTypeConstants.image;
       } else if (item.id == MessageTypeConstants.file) {
-        _pickedFile = await MediaPicker.pickAnyFile();
-        _type = MessageTypeConstants.file;
+        pickedFile = await MediaPicker.pickAnyFile();
+        type = MessageTypeConstants.file;
       } else if (item.id == MessageTypeConstants.audio) {
-        _pickedFile = await MediaPicker.pickAudio();
-        _type = MessageTypeConstants.audio;
+        pickedFile = await MediaPicker.pickAudio();
+        type = MessageTypeConstants.audio;
       } else if (item.id == MessageTypeConstants.image) {
-        _pickedFile = await MediaPicker.pickImage();
-        _type = MessageTypeConstants.image;
+        pickedFile = await MediaPicker.pickImage();
+        type = MessageTypeConstants.image;
       } else if (item.id == MessageTypeConstants.video) {
-        _pickedFile = await MediaPicker.pickVideo();
-        _type = MessageTypeConstants.video;
+        pickedFile = await MediaPicker.pickVideo();
+        type = MessageTypeConstants.video;
       }
 
-      if (_pickedFile != null && _type != null) {
-        debugPrint(_pickedFile.path);
-        sendMediaMessage(pickedFile: _pickedFile, messageType: _type);
+      if (pickedFile != null && type != null) {
+        if (kDebugMode) {
+          debugPrint("File Path is: ${pickedFile.path}");
+        }
+        sendMediaMessage(path: pickedFile.path, messageType: type);
       }
     }
   }
 
   //shows CometChat's emoji keyboard
-  useEmojis(BuildContext context, CometChatTheme _theme) async {
+  useEmojis(BuildContext context, CometChatTheme theme) async {
     String? emoji = await showCometChatEmojiKeyboard(
         context: context,
-        backgroundColor: _theme.palette.getBackground(),
+        backgroundColor: theme.palette.getBackground(),
         titleStyle: TextStyle(
             fontSize: 17,
-            fontWeight: _theme.typography.name.fontWeight,
-            color: _theme.palette.getAccent()),
+            fontWeight: theme.typography.name.fontWeight,
+            color: theme.palette.getAccent()),
         categoryLabel: TextStyle(
-            fontSize: _theme.typography.caption1.fontSize,
-            fontWeight: _theme.typography.caption1.fontWeight,
-            color: _theme.palette.getAccent600()),
-        dividerColor: _theme.palette.getAccent100(),
-        selectedCategoryIconColor: _theme.palette.getPrimary(),
-        unselectedCategoryIconColor: _theme.palette.getAccent600());
+            fontSize: theme.typography.caption1.fontSize,
+            fontWeight: theme.typography.caption1.fontWeight,
+            color: theme.palette.getAccent600()),
+        dividerColor: theme.palette.getAccent100(),
+        selectedCategoryIconColor: theme.palette.getPrimary(),
+        unselectedCategoryIconColor: theme.palette.getAccent600());
     if (emoji != null) {
+      if (!focusNode.hasFocus) {
+        focusNode.requestFocus();
+        CometChatUIEvents.hidePanel(
+            composerId, CustomUIPosition.composerBottom);
+      }
       _addEmojiToText(emoji);
     }
   }
@@ -645,10 +692,10 @@ class CometChatMessageComposerController extends GetxController
       } else if (previewMessageMode == PreviewMessageMode.edit) {
         editTextMessage();
       } else if (previewMessageMode == PreviewMessageMode.reply) {
-        Map<String, dynamic> _metadata = {};
-        _metadata["reply-message"] = oldMessage!.toJson();
+        Map<String, dynamic> metadata = {};
+        metadata["reply-message"] = oldMessage!.toJson();
 
-        sendTextMessage(metadata: _metadata);
+        sendTextMessage(metadata: metadata);
       }
     }
   }
@@ -665,7 +712,7 @@ class CometChatMessageComposerController extends GetxController
 //plays sound on message sent
   _playSound() {
     if (disableSoundForMessages == false) {
-      SoundManager.play(
+      CometChatUIKit.soundManager.play(
           sound: Sound.outgoingMessage,
           customSound: customSoundForMessage,
           packageName:
@@ -678,6 +725,9 @@ class CometChatMessageComposerController extends GetxController
 //inserts emojis to correct position in the text
   _addEmojiToText(String emoji) {
     int cursorPosition = textEditingController.selection.base.offset;
+    if (cursorPosition == -1) {
+      cursorPosition = textEditingController.text.length;
+    }
 
     //get the text on the right side of cursor
     String textRightOfCursor =
@@ -702,7 +752,7 @@ class CometChatMessageComposerController extends GetxController
   bool isForThisWidget(Map<String, dynamic>? id) {
     if (id == null) {
       return true; //if passed id is null , that means for all composer
-    } 
+    }
     if ((id['uid'] != null &&
             id['uid'] ==
                 user?.uid) //checking if uid or guid match composer's uid or guid
@@ -718,4 +768,79 @@ class CometChatMessageComposerController extends GetxController
     }
     return false;
   }
+
+  void _onFocusChange() {
+    if (focusNode.hasFocus) {
+      CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerBottom);
+    }
+  }
+
+  void sendMediaRecording(BuildContext context, String path) {
+    if (onSendButtonTap != null) {
+      MediaMessage mediaMessage = MediaMessage(
+        receiverType: receiverType,
+        type: MessageTypeConstants.audio,
+        receiverUid: receiverID,
+        file: path,
+        sender: loggedInUser,
+        parentMessageId: parentMessageId,
+        muid: DateTime.now().microsecondsSinceEpoch.toString(),
+        category: CometChatMessageCategory.message,
+      );
+      onSendButtonTap!(context, mediaMessage, previewMessageMode);
+    } else {
+      sendMediaMessage(path: path, messageType: MessageTypeConstants.audio);
+    }
+  }
+
+
+  aiButtonTap(CometChatTheme theme,BuildContext context ,id,  ) async {
+
+    List<CometChatMessageComposerAction> aiFeatureList =  CometChatUIKit.getDataSource().
+    getAIOptions(user, group, theme, context, id, aiOptionStyle);
+
+
+
+    if(aiFeatureList.isNotEmpty ){
+
+      List<CometChatMessageComposerAction> actionList = [];
+
+
+      for (int i = 0; i < aiFeatureList.length ; i++) {
+
+        actionList.add(CometChatMessageComposerAction(
+            id: aiFeatureList[i].id,
+            title:  aiFeatureList[i].title,
+            titleStyle: aiFeatureList[i].titleStyle?? aiOptionStyle?.itemTextStyle,
+            background: aiFeatureList[i].background?? aiOptionStyle?.background,
+            cornerRadius: aiFeatureList[i].cornerRadius?? aiOptionStyle?.borderRadius,
+
+            onItemClick: (BuildContext context,  User? user, Group? group){
+              if(aiFeatureList[i].onItemClick!=null){
+                aiFeatureList[i].onItemClick!(context,user, group);
+              }
+            }
+        ));
+      }
+
+
+
+
+      showCometChatAiOptionSheet(context: context,
+          theme: theme,
+          user: user,
+          group: group,
+          actionItems: actionList,
+          backgroundColor:theme.palette.getBackground(),
+
+      );
+
+      return;
+    }
+
+
+
+
+  }
+
 }

@@ -1,6 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[MessageTranslationBubble] is a widget that is rendered as the content view for [MessageTranslationExtension]
+///
+/// ```dart
+/// MessageTranslationBubble(
+///   translatedText: "¡Hola mundo!",
+///   alignment: BubbleAlignment.right,
+///   style: MessageTranslationBubbleStyle(
+///     translatedTextStyle: TextStyle(
+///       fontSize: 16,
+///       fontWeight: FontWeight.bold,
+///       color: Colors.black,
+///     ),
+///   ),
+/// );
+///
+/// ```
 class MessageTranslationBubble extends StatelessWidget {
   const MessageTranslationBubble(
       {Key? key,

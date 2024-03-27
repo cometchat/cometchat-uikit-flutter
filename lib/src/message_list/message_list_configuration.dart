@@ -1,45 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///Configuration class for [CometChatMessageList]
+///[MessageListConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatMessageList]
+///can be used by a component where [CometChatMessageList] is a child component
 ///
 /// ```dart
 ///
 /// MessageListConfiguration(
-///          messageAlignment: ChatAlignment.standard,
-///      messageTypes: [
-///        TemplateUtils
-///            .getAudioMessageTemplate(),
-///        TemplateUtils
-///            .getTextMessageTemplate(),
-///        CometChatMessageTemplate(
-///            type: 'custom', name: 'custom')
-///      ],
-///      customView: CustomView(),
-///      excludeMessageTypes: [
-///        CometChatUIMessageTypes.image
-///      ],
-///      errorText: 'Something went wrong',
-///      emptyText: 'No messages',
-///      limit: 30,
-///      onlyUnread: false,
-///      hideDeletedMessages: false,
-///      hideThreadReplies: false,
-///      tags: [],
-///      hideError: false,
-///      scrollToBottomOnNewMessage: false,
-///      customIncomingMessageSound: 'asset url',
-///      excludedMessageOptions: [
-///        MessageOptionConstants.editMessage
-///      ],
-///      hideMessagesFromBlockedUsers: false,
-///      receivedMessageInputData:
-///          MessageInputData(
-///              title: true, thumbnail: true),
-///      sentMessageInputData: MessageInputData(
-///          title: false, thumbnail: false),
-///    )
+///      messageListStyle: MessageListStyle(),
+///      avatarStyle: AvatarStyle(),
+///      templates: MessagesDataSource().getAllMessageTemplates(),
+///      alignment: ChatAlignment.standard
+///    );
 ///
 /// ```
 ///
@@ -78,6 +52,15 @@ class MessageListConfiguration {
     this.onError,
     this.theme,
     this.disableReceipt = false,
+    this.messageInformationConfiguration,
+    this.dateSeparatorStyle,
+    this.reactionListConfiguration,
+    this.disableReactions,
+    this.favoriteReactions,
+    this.reactionsStyle,
+    this.addReactionIcon,
+    this.addReactionIconTap,
+    this.emojiKeyboardStyle,
   });
 
   ///[messagesRequestBuilder] custom request builder for fetching messages
@@ -160,12 +143,14 @@ class MessageListConfiguration {
   ///[footerView] sets custom widget to footer
   ///
   /// typically name is shown
-  final WidgetBuilder? headerView;
+  final Widget? Function(BuildContext,
+      {User? user, Group? group, int? parentMessageId})? headerView;
 
   ///[footerView] sets custom widget to footer
   ///
   /// typically time and read receipt is shown
-  final WidgetBuilder? footerView;
+  final Widget? Function(BuildContext,
+      {User? user, Group? group, int? parentMessageId})? footerView;
 
   ///[dateSeparatorPattern] pattern for  date separator
   final String Function(DateTime)? dateSeparatorPattern;
@@ -178,4 +163,31 @@ class MessageListConfiguration {
 
   ///[disableReceipt] controls visibility of read receipts
   final bool? disableReceipt;
+
+  ///[messageInformationConfiguration] set configuration for message Information
+  final MessageInformationConfiguration? messageInformationConfiguration;
+
+  ///[dateSeparatorStyle] sets style for date separator
+  final DateStyle? dateSeparatorStyle;
+
+  ///[reactionListConfiguration] sets configuration properties for reaction list
+  final ReactionListConfiguration? reactionListConfiguration;
+
+  ///[disableReactions] toggle visibility of reactions
+  final bool? disableReactions;
+
+  ///[addReactionIcon] sets custom icon for adding reaction
+  final Widget? addReactionIcon;
+
+  ///[addReactionIconTap] sets custom onTap for adding reaction
+  final Function(BaseMessage)? addReactionIconTap;
+
+  ///[reactionsStyle] is a parameter used to set the style for the reactions
+  final ReactionsStyle? reactionsStyle;
+
+  ///[favoriteReactions] is a list of frequently used reactions
+  final List<String>? favoriteReactions;
+
+  ///[emojiKeyboardStyle] is a parameter used to set the style for the emoji keyboard
+  final EmojiKeyboardStyle? emojiKeyboardStyle;
 }

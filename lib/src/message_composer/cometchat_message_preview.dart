@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+///[CometChatMessagePreview] is a component that provides a bubble consisting of text
+///that can be appended to the message composer, message bubble or any other component as desired
+///the appearance is similar to quote block of markdown files
 class CometChatMessagePreview extends StatelessWidget {
   const CometChatMessagePreview(
       {Key? key,
@@ -67,14 +70,15 @@ class CometChatMessagePreview extends StatelessWidget {
                               color: const Color(0xff141414).withOpacity(0.6)),
                     ),
                     if (hideCloseButton == false)
-                    GestureDetector(onTap: onCloseClick, child: messagePreviewCloseButtonIcon ??
-                          Icon(
-                            Icons.close,
-                            size: 16,
-                            color:
-                                style.closeIconColor ?? const Color(0xff000000),
-                          ))
-                      
+                      GestureDetector(
+                          onTap: onCloseClick,
+                          child: messagePreviewCloseButtonIcon ??
+                              Icon(
+                                Icons.close,
+                                size: 16,
+                                color: style.closeIconColor ??
+                                    const Color(0xff000000),
+                              ))
                   ],
                 ),
                 Flexible(

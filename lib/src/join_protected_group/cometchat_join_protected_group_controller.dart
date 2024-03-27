@@ -1,13 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
-import 'package:flutter_chat_ui_kit/src/utils/loading_indicator.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 
+///[CometChatJoinProtectedGroupController] is the view model for [CometChatJoinProtectedGroup]
+///it contains all the business logic involved in changing the state of the UI of [CometChatJoinProtectedGroup]
 class CometChatJoinProtectedGroupController extends GetxController {
   CometChatJoinProtectedGroupController(
       {required this.group,
       this.onJoinTap,
       this.onError,
+      this.errorStateText,
       this.errorTextStyle,
       this.background});
 
@@ -25,6 +28,9 @@ class CometChatJoinProtectedGroupController extends GetxController {
 
   ///[onJoinTap] triggered on join group icon tap
   final Function({Group group, String password})? onJoinTap;
+
+  ///[errorStateText] text to show if any error occurs when joining the group
+  final String? errorStateText;
 
   final passwordsFieldKey = GlobalKey<FormFieldState>();
 
@@ -52,10 +58,14 @@ class CometChatJoinProtectedGroupController extends GetxController {
         shadowColor: theme.palette.getAccent300());
     CometChat.joinGroup(guid, groupType, password: password,
         onSuccess: (Group group) async {
-      debugPrint("Group Joined Successfully : $group ");
+      if (kDebugMode) {
+        debugPrint("Group Joined Successfully : $group ");
+      }
       User? user = await CometChat.getLoggedInUser();
-      Navigator.pop(context); //pop loading indicator
-      Navigator.pop(context); //pop join group screen
+      if (context.mounted) {
+        Navigator.pop(context); //pop loading indicator
+        Navigator.pop(context); //pop join group screen
+      }
       if (group.hasJoined == false) {
         group.hasJoined = true;
       }
@@ -67,7 +77,11 @@ class CometChatJoinProtectedGroupController extends GetxController {
               showCometChatConfirmDialog(
                   context: context,
                   style: ConfirmDialogStyle(
-                     backgroundColor:theme.palette.mode==PaletteThemeModes.light? theme.palette.getBackground() : Color.alphaBlend(theme.palette.getAccent200(), theme.palette.getBackground()),
+                      backgroundColor:
+                          theme.palette.mode == PaletteThemeModes.light
+                              ? theme.palette.getBackground()
+                              : Color.alphaBlend(theme.palette.getAccent200(),
+                                  theme.palette.getBackground()),
                       shadowColor: theme.palette.getAccent300(),
                       confirmButtonTextStyle: TextStyle(
                           fontSize: theme.typography.text2.fontSize,
@@ -80,7 +94,8 @@ class CometChatJoinProtectedGroupController extends GetxController {
                           color: theme.palette.getAccent(),
                           fontFamily: theme.typography.name.fontFamily)),
                   messageText: Text(
-                    Translations.of(context).please_try_another_password,
+                    errorStateText ??
+                        Translations.of(context).please_try_another_password,
                     style: TextStyle(
                             fontSize: theme.typography.title2.fontSize,
                             fontWeight: theme.typography.title2.fontWeight,

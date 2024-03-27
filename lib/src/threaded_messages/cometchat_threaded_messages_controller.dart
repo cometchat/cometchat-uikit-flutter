@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
+///[CometChatThreadedMessageController] is the view model for [CometChatThreadedMessages]
+///it contains all the business logic involved in changing the state of the UI of [CometChatThreadedMessages]
 class CometChatThreadedMessageController extends GetxController
     with
         CometChatMessageEventListener,
@@ -37,7 +39,6 @@ class CometChatThreadedMessageController extends GetxController
   User loggedInUser;
   late String _dateString;
   late String _uiMessageListener;
-  late String _messageListener;
   late String _uiGroupListener;
   CometChatMessageComposerController? composerState;
   static int counter = 0;
@@ -51,17 +52,14 @@ class CometChatThreadedMessageController extends GetxController
     counter++;
     _dateString = DateTime.now().millisecondsSinceEpoch.toString();
     _uiMessageListener = "${_dateString}UI_message_listener";
-    _messageListener = "${_dateString}message_listener";
     _uiGroupListener = "${_dateString}UI_group_listener";
     CometChatMessageEvents.addMessagesListener(_uiMessageListener, this);
-    CometChat.addMessageListener(_messageListener, this);
     CometChatGroupEvents.addGroupsListener(_uiGroupListener, this);
   }
 
   @override
   void onClose() {
     CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
-    CometChat.removeMessageListener(_messageListener);
     CometChatGroupEvents.removeGroupsListener(_uiGroupListener);
     super.onClose();
   }
@@ -79,6 +77,38 @@ class CometChatThreadedMessageController extends GetxController
   void onMessageEdited(BaseMessage message) {
     if (message.id == parentMessage.id) {
       parentMessage = message;
+      update();
+    }
+  }
+
+  @override
+  void onTextMessageReceived(TextMessage textMessage) {
+    if (textMessage.parentMessageId == parentMessage.id) {
+      replyCount++;
+      update();
+    }
+  }
+
+  @override
+  void onMediaMessageReceived(MediaMessage mediaMessage) {
+    if (mediaMessage.parentMessageId == parentMessage.id) {
+      replyCount++;
+      update();
+    }
+  }
+
+  @override
+  void onCustomMessageReceived(CustomMessage customMessage) {
+    if (customMessage.parentMessageId == parentMessage.id) {
+      replyCount++;
+      update();
+    }
+  }
+
+  @override
+  void onSchedulerMessageReceived(SchedulerMessage schedulerMessage) {
+    if (schedulerMessage.parentMessageId == parentMessage.id) {
+      replyCount++;
       update();
     }
   }

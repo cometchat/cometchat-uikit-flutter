@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import 'package:cometchat_chat_uikit/src/cometchat_ui/tab_item.dart';
+import 'package:cometchat_chat_uikit/src/cometchat_ui/ui_style.dart';
 
 enum TabAlignment { top, bottom }
+
 enum Visibility { onTap, always }
 
 class CometChatUI extends StatefulWidget {
@@ -143,7 +146,6 @@ class _CometChatUIState extends State<CometChatUI> {
               ?.conversationConfigurations ??
           const ConversationsConfiguration(),
       theme: widget.conversationsWithMessagesConfiguration?.theme ?? _theme,
-      
     );
   }
 
@@ -163,10 +165,10 @@ class _CometChatUIState extends State<CometChatUI> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-          border: widget.style?.border, 
+          border: widget.style?.border,
           gradient: widget.style?.gradient,
-          color: widget.style?.gradient==null? widget.style?.background:null
-          ),
+          color:
+              widget.style?.gradient == null ? widget.style?.background : null),
       child: _tabAlignment == TabAlignment.bottom
           ? BottomBar(
               tabItems: _tabList,

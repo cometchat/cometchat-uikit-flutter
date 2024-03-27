@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[CreateGroupConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatCreateGroup]
+///can be used by a component where [CometChatCreateGroup] is a child component
+/// ```dart
+///  CreateGroupConfiguration(
+///          createGroupStyle: CreateGroupStyle(),
+///          namePlaceholderText: "some name",
+///          passwordPlaceholderText: "some password"
+///          );
+/// ```
 class CreateGroupConfiguration {
   const CreateGroupConfiguration(
       {this.title,
@@ -11,7 +21,7 @@ class CreateGroupConfiguration {
       this.onCreateTap,
       this.onError,
       this.onBack,
-      this.style,
+      this.createGroupStyle,
       this.theme,
       this.passwordPlaceholderText});
 
@@ -39,8 +49,8 @@ class CreateGroupConfiguration {
   ///[onCreateTap] triggered on create group icon click
   final Function(Group group)? onCreateTap;
 
-  ///[style] styling properties
-  final CreateGroupStyle? style;
+  ///[createGroupStyle] styling properties
+  final CreateGroupStyle? createGroupStyle;
 
   ///[onError] triggered in case of any error
   final OnError? onError;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 
-///[CometChatUsersWithMessages] is a container component that wraps and formats the [CometChatUsers] and [CometChatMessages] component
+///[CometChatUsersWithMessages] is a component that uses [CometChatUsers] to display a list of users and allows to access the [CometChatMessages] component for each user
 ///
 /// it list down users according to different parameter set in order of recent activity and opens message by default on click
 ///
@@ -64,7 +64,6 @@ class CometChatUsersWithMessages extends StatefulWidget {
 
 class _CometChatUsersWithMessagesState
     extends State<CometChatUsersWithMessages> {
-      
   late CometChatUsersWithMessagesController
       _cometChatUsersWithMessagesController;
 
@@ -75,9 +74,10 @@ class _CometChatUsersWithMessagesState
         CometChatUsersWithMessagesController(
             messageConfiguration: widget.messageConfiguration,
             theme: widget.theme);
-    if (widget.user != null && widget.user?.hasBlockedMe==false) {
-      WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
-        _cometChatUsersWithMessagesController.navigateToMessagesScreen(user:widget.user,context: context);
+    if (widget.user != null && widget.user?.hasBlockedMe == false) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        _cometChatUsersWithMessagesController.navigateToMessagesScreen(
+            user: widget.user, context: context);
       });
     }
   }
@@ -101,7 +101,7 @@ class _CometChatUsersWithMessagesState
           return CometChatUsers(
             usersRequestBuilder: widget.usersConfiguration?.usersRequestBuilder,
             title: widget.usersConfiguration?.title,
-            theme:  widget.usersConfiguration?.theme ?? widget.theme,
+            theme: widget.usersConfiguration?.theme ?? widget.theme,
             showBackButton: widget.usersConfiguration?.showBackButton ?? true,
             hideSearch: widget.usersConfiguration?.hideSearch ?? false,
             searchPlaceholder: widget.usersConfiguration?.searchPlaceholder,
@@ -134,11 +134,14 @@ class _CometChatUsersWithMessagesState
             avatarStyle: widget.usersConfiguration?.avatarStyle,
             usersStyle:
                 widget.usersConfiguration?.usersStyle ?? const UsersStyle(),
-            onItemTap: widget.usersConfiguration?.onItemTap ?? usersWithMessagesController.onItemTap,
+            onItemTap: widget.usersConfiguration?.onItemTap ??
+                usersWithMessagesController.onItemTap,
             onItemLongPress: widget.usersConfiguration?.onItemLongPress,
             onBack: widget.usersConfiguration?.onBack,
             onError: widget.usersConfiguration?.onError,
             selectionIcon: widget.usersConfiguration?.selectionIcon,
+            submitIcon: widget.usersConfiguration?.submitIcon,
+            hideAppbar: widget.usersConfiguration?.hideAppbar,
           );
         });
   }

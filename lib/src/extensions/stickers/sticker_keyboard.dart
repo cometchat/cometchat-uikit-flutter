@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
-import '../../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../../cometchat_chat_uikit.dart';
 
-/// Gives out sticker keyboard
+/// [CometChatStickerKeyboard] renders a keyboard consisting of stickers provided by the extension
+///
+/// ```dart
+/// CometChatStickerKeyboard(
+///   theme: CometChatTheme(),
+///   onStickerTap: (sticker) {
+///     print('Sticker tapped: ${sticker.id}');
+///   },
+///   errorIcon: Icon(Icons.error),
+///   emptyStateView: (context) => Center(child: Text('No stickers')),
+///   errorStateView: (context) => Center(child: Text('Error fetching stickers')),
+///   loadingStateView: (context) => Center(child: CircularProgressIndicator()),
+///   errorStateText: 'Failed to load stickers',
+///   emptyStateText: 'No stickers available',
+///   keyboardStyle: StickerKeyboardStyle(),
+/// );
+///
+/// ```
 class CometChatStickerKeyboard extends StatefulWidget {
   const CometChatStickerKeyboard(
       {Key? key,
@@ -132,7 +149,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
     setState(() {});
   }
 
-  Widget _getOnError(BuildContext context, CometChatTheme _theme) {
+  Widget _getOnError(BuildContext context, CometChatTheme theme) {
     if (widget.errorStateView != null) {
       return Center(child: widget.errorStateView!(context));
     } else {
@@ -142,12 +159,15 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
         mainAxisSize: MainAxisSize.max,
         children: [
           CircleAvatar(
-            backgroundColor: widget.keyboardStyle?.errorIconBackground ?? theme.palette.getAccent500(),
-            child: widget.errorIcon ?? Image.asset(
-              AssetConstants.warning,
-              package: UIConstants.packageName,
-              color: widget.keyboardStyle?.errorIconTint ?? theme.palette.getBackground(),
-            ),
+            backgroundColor: widget.keyboardStyle?.errorIconBackground ??
+                theme.palette.getAccent500(),
+            child: widget.errorIcon ??
+                Image.asset(
+                  AssetConstants.warning,
+                  package: UIConstants.packageName,
+                  color: widget.keyboardStyle?.errorIconTint ??
+                      theme.palette.getBackground(),
+                ),
           ),
           Text(
             widget.errorStateText ?? Translations.of(context).no_stickers_found,
@@ -155,7 +175,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                 TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w500,
-                    color: _theme.palette.getAccent400()),
+                    color: theme.palette.getAccent400()),
           ),
         ],
       ));
@@ -187,7 +207,8 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
         child: Image.asset(
           AssetConstants.spinner,
           package: UIConstants.packageName,
-          color: widget.keyboardStyle?.loadingIconTint ?? theme.palette.getAccent600(),
+          color: widget.keyboardStyle?.loadingIconTint ??
+              theme.palette.getAccent600(),
         ),
       );
     }
@@ -297,6 +318,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
   }
 }
 
+///[Sticker] is the model data class for storing the fetched stickers
 class Sticker {
   final String? modifiedAt;
   final int stickerOrder;

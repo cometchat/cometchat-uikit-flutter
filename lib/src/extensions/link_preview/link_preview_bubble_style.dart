@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[LinkPreviewBubbleStyle] is a data class that has styling-related properties
+///to customize the appearance of [LinkPreviewBubble]
 class LinkPreviewBubbleStyle {
   const LinkPreviewBubbleStyle(
       {this.titleStyle, this.urlStyle, this.tileColor, this.backgroundColor});

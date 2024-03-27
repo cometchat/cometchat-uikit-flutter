@@ -1,33 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 
-/// A container component that wraps and formats the [CometChatGroups] and [CometChatMessages] component
+///[CometChatGroupsWithMessages] is a component that uses [CometChatGroups] to display a list of groups and allows to access the [CometChatMessages] component for each group
 ///
 /// it list down groups according to different parameter set in order of recent activity and opens message by default on click
 ///
 ///Usage
 ///```dart
-///import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart' as fl;
+///
 /// CometChatGroupWithMessages(
 ///      groupsConfiguration: GroupsConfiguration(),
 ///      messageConfiguration: MessageConfiguration(),
-///      theme: CometChatTheme(palette: Palette(),typography: fl.Typography.fromDefault()),
-///             );
+///      createGroupConfiguration: CreateGroupConfiguration(),
+///      joinProtectedGroupConfiguration: JoinProtectedGroupConfiguration()
+///      theme: CometChatTheme(palette: Palette(),typography: Typography.fromDefault()),
+///  );
 /// ```
 class CometChatGroupsWithMessages extends StatefulWidget {
-  const CometChatGroupsWithMessages(
-      {Key? key,
-      this.group,
-      this.theme,
-      this.groupsConfiguration = const GroupsConfiguration(),
-      this.messageConfiguration = const MessageConfiguration(),
-      this.joinProtectedGroupConfiguration,
-      this.createGroupConfiguration = const CreateGroupConfiguration(),
-      this.createGroupIcon,
-      this.onCreateGroupIconClick,
-      this.hideCreateGroup = false})
-      : super(key: key);
+  const CometChatGroupsWithMessages({
+    Key? key,
+    this.group,
+    this.theme,
+    this.groupsConfiguration = const GroupsConfiguration(),
+    this.messageConfiguration = const MessageConfiguration(),
+    this.joinProtectedGroupConfiguration,
+    this.createGroupConfiguration = const CreateGroupConfiguration(),
+    this.createGroupIcon,
+    this.onCreateGroupIconClick,
+  }) : super(key: key);
 
   ///[group] if null will return [CometChatGroups] screen else will navigate to [CometChatMessages]
   final Group? group;
@@ -52,9 +53,6 @@ class CometChatGroupsWithMessages extends StatefulWidget {
 
   ///[onCreateGroupIconClick] on create group icon click
   final Function(BuildContext context)? onCreateGroupIconClick;
-
-  ///[hideCreateGroup] switch on/off option to create group
-  final bool hideCreateGroup;
 
   @override
   State<CometChatGroupsWithMessages> createState() =>
@@ -81,12 +79,12 @@ class _CometChatGroupsWithMessagesState
             createGroupConfiguration: widget.createGroupConfiguration);
     if (widget.group != null) {
       if (widget.group?.hasJoined == true) {
-        WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+        WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
           _cometChatGroupsWithMessagesController.navigateToMessagesScreen(
               group: widget.group!, context: context);
         });
       } else if (widget.group?.type == GroupTypeConstants.password) {
-        WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+        WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
           _cometChatGroupsWithMessagesController
               .navigateToJoinProtectedGroupScreen(
                   group: widget.group!, context: context);
@@ -115,21 +113,21 @@ class _CometChatGroupsWithMessagesState
           return CometChatGroups(
             groupsRequestBuilder:
                 widget.groupsConfiguration.groupsRequestBuilder,
-            theme: widget.groupsConfiguration.theme ?? widget.theme,
+            theme: widget.groupsConfiguration.theme ?? theme,
             title: widget.groupsConfiguration.title,
             showBackButton: widget.groupsConfiguration.showBackButton ?? true,
-            hideSearch: widget.groupsConfiguration.hideSearch,
+            hideSearch: widget.groupsConfiguration.hideSearch ?? false,
             searchPlaceholder: widget.groupsConfiguration.searchPlaceholder,
-            emptyText: widget.groupsConfiguration.emptyText,
-            emptyView: widget.groupsConfiguration.emptyView,
-            errorText: widget.groupsConfiguration.errorText,
-            errorView: widget.groupsConfiguration.errorView,
-            hideSeparator: widget.groupsConfiguration.hideSeparator,
+            emptyStateText: widget.groupsConfiguration.emptyStateText,
+            emptyStateView: widget.groupsConfiguration.emptyStateView,
+            errorStateText: widget.groupsConfiguration.errorStateText,
+            errorStateView: widget.groupsConfiguration.errorStateView,
+            hideSeparator: widget.groupsConfiguration.hideSeparator ?? false,
             avatarStyle: widget.groupsConfiguration.avatarStyle,
             backButton: widget.groupsConfiguration.backButton,
             listItemStyle: widget.groupsConfiguration.listItemStyle,
             listItemView: widget.groupsConfiguration.listItemView,
-            loadingView: widget.groupsConfiguration.loadingView,
+            loadingStateView: widget.groupsConfiguration.loadingStateView,
             onSelection: widget.groupsConfiguration.onSelection,
             options: widget.groupsConfiguration.options,
             passwordGroupIcon: widget.groupsConfiguration.passwordGroupIcon,
@@ -145,21 +143,21 @@ class _CometChatGroupsWithMessagesState
             appBarOptions: widget.groupsConfiguration.appBarOptions ??
                 (context) {
                   return [
-                    if (widget.hideCreateGroup != true)
-                      IconButton(
-                        onPressed: widget.onCreateGroupIconClick != null
-                            ? widget.onCreateGroupIconClick!(context)
-                            : () {
-                                groupsWithMessagesController
-                                    .navigateCreateGroup();
-                              },
-                        icon: widget.createGroupIcon ??
-                            Image.asset(
-                              AssetConstants.write,
-                              package: UIConstants.packageName,
-                              color: theme.palette.getPrimary(),
-                            ),
-                      )
+                    IconButton(
+                      onPressed: () {
+                        if (widget.onCreateGroupIconClick != null) {
+                          widget.onCreateGroupIconClick!(context);
+                        } else {
+                          groupsWithMessagesController.navigateCreateGroup();
+                        }
+                      },
+                      icon: widget.createGroupIcon ??
+                          Image.asset(
+                            AssetConstants.write,
+                            package: UIConstants.packageName,
+                            color: theme.palette.getPrimary(),
+                          ),
+                    )
                   ];
                 },
             controller: widget.groupsConfiguration.controller,
@@ -171,6 +169,9 @@ class _CometChatGroupsWithMessagesState
             onItemLongPress: widget.groupsConfiguration.onItemLongPress,
             onBack: widget.groupsConfiguration.onBack,
             onError: widget.groupsConfiguration.onError,
+            selectionIcon: widget.groupsConfiguration.selectionIcon,
+            submitIcon: widget.groupsConfiguration.submitIcon,
+            hideAppbar: widget.groupsConfiguration.hideAppbar,
           );
         });
   }

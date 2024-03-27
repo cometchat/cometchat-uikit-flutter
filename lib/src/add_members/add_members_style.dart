@@ -1,30 +1,31 @@
 import 'package:flutter/material.dart';
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///[AddMembersStyle] is a styling class to alter styling properties for [CometChatAddMember]
-///it list down users according to different parameter set in order of recent activity and select users on click
-
+///[AddMembersStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatAddMembers]
 class AddMembersStyle extends BaseStyles {
-  AddMembersStyle({
-    this.titleStyle,
-    this.backIconTint,
-    this.closeIconTint,
-    this.searchBackground,
-    this.searchStyle,
-    this.placeholderStyle,
-    this.searchIconTint,
-    this.searchBorderWidth,
-    this.searchBorderColor,
-    this.searchBorderRadius,
-    double? width,
-    double? height,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
-    this.emptyStateTextStyle,
-    this.errorStateTextStyle
-  }) : super(
+  AddMembersStyle(
+      {this.titleStyle,
+      this.backIconTint,
+      this.closeIconTint,
+      this.searchBackground,
+      this.searchStyle,
+      this.placeholderStyle,
+      this.searchIconTint,
+      this.searchBorderWidth,
+      this.searchBorderColor,
+      this.searchBorderRadius,
+      double? width,
+      double? height,
+      Color? background,
+      BoxBorder? border,
+      double? borderRadius,
+      Gradient? gradient,
+      this.emptyStateTextStyle,
+      this.errorStateTextStyle,
+      this.submitIconTint,
+      this.selectionIconTint})
+      : super(
             width: width,
             height: height,
             background: background,
@@ -67,4 +68,10 @@ class AddMembersStyle extends BaseStyles {
 
   ///[errorStateTextStyle] provides styling for text to indicate some error has occurred while fetching the user list
   final TextStyle? errorStateTextStyle;
+
+  ///[selectionIconTint] set selection icon color
+  final Color? selectionIconTint;
+
+  ///[submitIconTint] set submit icon tint
+  final Color? submitIconTint;
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[ImageModerationFilterStyle] is a data class that has styling-related properties
+///to customize the appearance of [ImageModerationFilter]
 class ImageModerationFilterStyle {
   ImageModerationFilterStyle(
       {this.warningTextStyle,

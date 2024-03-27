@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///[ThumbnailGenerationExtensionDecorator] object generates thumbnails
-///for images and videos with the help of thumbnail generation extension
+///[ThumbnailGenerationExtensionDecorator] is a the view model for [ThumbnailGenerationExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class ThumbnailGenerationExtensionDecorator extends DataSourceDecorator {
   String thumbnailGenerationTypeConstant =
       ExtensionConstants.thumbnailGeneration;
@@ -21,8 +21,8 @@ class ThumbnailGenerationExtensionDecorator extends DataSourceDecorator {
       BuildContext context,
       CometChatTheme theme,
       VideoBubbleStyle? style) {
-    String? _thumbnailUrl = checkForThumbnail(message);
-    return super.getVideoMessageBubble(videoUrl, _thumbnailUrl, message, null,
+    String? thumbnailUrl0 = checkForThumbnail(message);
+    return super.getVideoMessageBubble(videoUrl, thumbnailUrl0, message, null,
         context, configuration?.theme ?? theme, configuration?.style ?? style);
   }
 
@@ -36,9 +36,9 @@ class ThumbnailGenerationExtensionDecorator extends DataSourceDecorator {
       Function()? onClick,
       BuildContext context,
       CometChatTheme theme) {
-    String? _thumbnailUrl = checkForThumbnail(message);
+    String? thumbnailUrl = checkForThumbnail(message);
     return super.getImageMessageBubble(
-        _thumbnailUrl,
+        thumbnailUrl,
         placeholderImage,
         caption,
         style,

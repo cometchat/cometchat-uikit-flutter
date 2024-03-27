@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[ConversationsStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatConversations]
 class ConversationsStyle extends BaseStyles {
-  const ConversationsStyle({
-      this.backIconTint,
+  const ConversationsStyle(
+      {this.backIconTint,
       this.titleStyle,
       double? width,
       double? height,
@@ -28,7 +30,6 @@ class ConversationsStyle extends BaseStyles {
             border: border,
             borderRadius: borderRadius,
             gradient: gradient);
-
 
   ///[backIconTint] provides color for the back icon
   final Color? backIconTint;

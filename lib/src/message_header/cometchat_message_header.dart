@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../flutter_chat_ui_kit.dart';
-import '../../../flutter_chat_ui_kit.dart' as cc;
+import '../../../cometchat_chat_uikit.dart';
+import '../../../cometchat_chat_uikit.dart' as cc;
 
 ///[CometChatMessageHeader] is a widget which shows [user]/[group] details using [CometChatListItem]
-
-///It user [CometChatMessageHeaderController] for defining its business logics
+///if its being shown for an [User] then the name of the user will be in the [title] of [CometChatListItem] and their online/offline status will be in the [subtitle]
+///if its being shown for an [Group] then the name of the group will be in the [title] of [CometChatListItem] and their member count will be in the [subtitle]
 ///
 /// ```dart
 /// CometChatMessageHeader(
 ///   user: <user>,
-/// ),
+///   messageHeaderStyle: MessageHeaderStyle(),
+/// );
 ///
 /// ```
 /// For Group
 /// ```dart
 /// CometChatMessageHeader(
 ///   group: <group>,
-/// ),
+///  messageHeaderStyle: MessageHeaderStyle(),
+/// );
 ///
 /// ```
 class CometChatMessageHeader extends StatelessWidget
@@ -135,7 +137,7 @@ class CometChatMessageHeader extends StatelessWidget
   ///[onBack] callback triggered on closing this screen
   final VoidCallback? onBack;
 
-  Widget getBackButton(BuildContext context, CometChatTheme _theme) {
+  Widget getBackButton(BuildContext context, CometChatTheme theme) {
     if (hideBackButton != true) {
       Widget _backButton;
       if (backButton != null) {
@@ -150,7 +152,7 @@ class CometChatMessageHeader extends StatelessWidget
             AssetConstants.back,
             package: UIConstants.packageName,
             color: messageHeaderStyle.backButtonIconTint ??
-                _theme.palette.getPrimary(),
+                theme.palette.getPrimary(),
           ),
         );
       }
@@ -166,117 +168,117 @@ class CometChatMessageHeader extends StatelessWidget
   }
 
   Widget _getTypingIndicator(BuildContext context,
-      CometChatMessageHeaderController _controller, CometChatTheme _theme) {
+      CometChatMessageHeaderController controller, CometChatTheme theme) {
     String text;
-    if (_controller.userObject != null) {
+    if (controller.userObject != null) {
       text = cc.Translations.of(context).is_typing;
     } else {
       text =
-          "${_controller.typingUser?.name ?? ''} ${cc.Translations.of(context).is_typing}";
+          "${controller.typingUser?.name ?? ''} ${cc.Translations.of(context).is_typing}";
     }
     return Text(
       text,
       style: messageHeaderStyle.typingIndicatorTextStyle ??
           TextStyle(
-            fontSize: _theme.typography.subtitle2.fontSize,
-            color: _theme.palette.getPrimary(),
-            fontWeight: _theme.typography.subtitle2.fontWeight,
+            fontSize: theme.typography.subtitle2.fontSize,
+            color: theme.palette.getPrimary(),
+            fontWeight: theme.typography.subtitle2.fontWeight,
           ),
     );
   }
 
   Widget? _getSubtitleView(BuildContext context,
-      CometChatMessageHeaderController _controller, CometChatTheme _theme) {
-    Widget? _subtitle;
+      CometChatMessageHeaderController controller, CometChatTheme theme) {
+    Widget? subtitle;
 
-    if (_controller.isTyping == true) {
-      _subtitle = _getTypingIndicator(context, _controller, _theme);
+    if (controller.isTyping == true) {
+      subtitle = _getTypingIndicator(context, controller, theme);
     } else if (subtitleView != null) {
-      _subtitle = subtitleView!(
-          _controller.groupObject, _controller.userObject, context);
-    } else if (_controller.userObject != null) {
-      _subtitle = Text(
-        _controller.userObject?.status ?? "",
+      subtitle =
+          subtitleView!(controller.groupObject, controller.userObject, context);
+    } else if (controller.userObject != null) {
+      subtitle = Text(
+        controller.userObject?.status ?? "",
         style: TextStyle(
-          color: _controller.userObject?.status == UserStatusConstants.online
-              ? _theme.palette.getPrimary()
-              : _theme.palette.getAccent600(),
-          fontSize: _theme.typography.subtitle2.fontSize,
-          fontFamily: _theme.typography.subtitle2.fontFamily,
-          fontWeight: _theme.typography.subtitle2.fontWeight,
+          color: controller.userObject?.status == UserStatusConstants.online
+              ? theme.palette.getPrimary()
+              : theme.palette.getAccent600(),
+          fontSize: theme.typography.subtitle2.fontSize,
+          fontFamily: theme.typography.subtitle2.fontFamily,
+          fontWeight: theme.typography.subtitle2.fontWeight,
         ).merge(messageHeaderStyle.subtitleTextStyle),
       );
     } else {
-      _subtitle = Text(
-        '${_controller.membersCount ?? 0} ${cc.Translations.of(context).members}',
+      subtitle = Text(
+        '${controller.membersCount ?? 0} ${cc.Translations.of(context).members}',
         style: TextStyle(
-          color: _controller.userObject?.status == UserStatusConstants.online
-              ? _theme.palette.getPrimary()
-              : _theme.palette.getAccent600(),
-          fontSize: _theme.typography.subtitle2.fontSize,
-          fontFamily: _theme.typography.subtitle2.fontFamily,
-          fontWeight: _theme.typography.subtitle2.fontWeight,
+          color: controller.userObject?.status == UserStatusConstants.online
+              ? theme.palette.getPrimary()
+              : theme.palette.getAccent600(),
+          fontSize: theme.typography.subtitle2.fontSize,
+          fontFamily: theme.typography.subtitle2.fontFamily,
+          fontWeight: theme.typography.subtitle2.fontWeight,
         ).merge(messageHeaderStyle.subtitleTextStyle),
       );
     }
-    return _subtitle;
+    return subtitle;
   }
 
-  _getBody(CometChatMessageHeaderController _controller, BuildContext context,
-      CometChatTheme _theme) {
+  _getBody(CometChatMessageHeaderController controller, BuildContext context,
+      CometChatTheme theme) {
     return GetBuilder(
-        init: _controller,
-        tag: _controller.tag,
+        init: controller,
+        tag: controller.tag,
         dispose: (GetBuilderState<CometChatMessageHeaderController> state) =>
             Get.delete<CometChatMessageHeaderController>(
                 tag: state.controller?.tag),
         builder: (CometChatMessageHeaderController value) {
-          return _getListItem(value, _theme, context);
+          return _getListItem(value, theme, context);
         });
   }
 
-  Widget _getListItem(CometChatMessageHeaderController _controller,
-      CometChatTheme _theme, BuildContext context) {
+  Widget _getListItem(CometChatMessageHeaderController controller,
+      CometChatTheme theme, BuildContext context) {
     if (listItemView != null) {
       return listItemView!(group, user, context);
     }
 
-    String? _avatarName;
-    String? _avatarUrl;
-    String? _title;
-    Widget? _subtitleView;
-    Color? _statusIndicatorColor;
-    Widget? _icon;
-    Widget? _tailView;
+    String? avatarName;
+    String? avatarUrl;
+    String? title;
+    Widget? subtitleView;
+    Color? statusIndicatorColor;
+    Widget? icon;
+    Widget? tailView;
 
     if (user != null) {
-      _avatarName = _controller.userObject?.name;
-      _avatarUrl = _controller.userObject?.avatar;
-      _title = _controller.userObject?.name;
+      avatarName = controller.userObject?.name;
+      avatarUrl = controller.userObject?.avatar;
+      title = controller.userObject?.name;
     } else {
-      _avatarName = _controller.groupObject?.name;
-      _avatarUrl = _controller.groupObject?.icon;
-      _title = _controller.groupObject?.name;
+      avatarName = controller.groupObject?.name;
+      avatarUrl = controller.groupObject?.icon;
+      title = controller.groupObject?.name;
     }
-    StatusIndicatorUtils _util =
+    StatusIndicatorUtils util =
         StatusIndicatorUtils.getStatusIndicatorFromParams(
-            theme: _theme,
-            user: _controller.userObject,
-            group: _controller.groupObject,
+            theme: theme,
+            user: controller.userObject,
+            group: controller.groupObject,
             privateGroupIcon: privateGroupIcon,
             protectedGroupIcon: protectedGroupIcon,
             onlineStatusIndicatorColor: messageHeaderStyle.onlineStatusColor);
 
-    _statusIndicatorColor = _util.statusIndicatorColor;
-    _icon = _util.icon;
-    _subtitleView = _getSubtitleView(context, _controller, _theme);
-    List<Widget>? _tailWidgetList = [];
+    statusIndicatorColor = util.statusIndicatorColor;
+    icon = util.icon;
+    subtitleView = _getSubtitleView(context, controller, theme);
+    List<Widget>? tailWidgetList = [];
     if (appBarOptions != null) {
       var temp = appBarOptions!(
-          _controller.userObject, _controller.groupObject, context);
+          controller.userObject, controller.groupObject, context);
 
       if (temp != null) {
-        _tailWidgetList.addAll(temp);
+        tailWidgetList.addAll(temp);
       }
 
       // for (var item in appBarOptions!) {
@@ -299,38 +301,38 @@ class CometChatMessageHeader extends StatelessWidget
     //           )));
     // }
 
-    if (_tailWidgetList.isNotEmpty) {
-      _tailView = Row(
+    if (tailWidgetList.isNotEmpty) {
+      tailView = Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.end,
-        children: _tailWidgetList,
+        children: tailWidgetList,
       );
     }
 
     return GestureDetector(
       onTap: () {},
       child: CometChatListItem(
-        avatarName: _avatarName,
-        avatarURL: _avatarUrl,
-        title: _title,
-        subtitleView: _subtitleView,
+        avatarName: avatarName,
+        avatarURL: avatarUrl,
+        title: title,
+        subtitleView: subtitleView,
         avatarStyle: avatarStyle ?? const AvatarStyle(),
-        statusIndicatorColor: _statusIndicatorColor,
-        statusIndicatorIcon: _icon,
+        statusIndicatorColor: statusIndicatorColor,
+        statusIndicatorIcon: icon,
         statusIndicatorStyle:
             statusIndicatorStyle ?? const StatusIndicatorStyle(),
-        theme: _theme,
+        theme: theme,
         hideSeparator: true,
-        tailView: _tailView,
+        tailView: tailView,
         style: listItemStyle ??
             ListItemStyle(
                 background: Colors.transparent,
                 height: 56,
                 titleStyle: TextStyle(
-                    fontSize: _theme.typography.name.fontSize,
-                    fontWeight: _theme.typography.name.fontWeight,
-                    fontFamily: _theme.typography.name.fontFamily,
-                    color: _theme.palette.getAccent())),
+                    fontSize: theme.typography.name.fontSize,
+                    fontWeight: theme.typography.name.fontWeight,
+                    fontFamily: theme.typography.name.fontFamily,
+                    color: theme.palette.getAccent())),
       ),
     );
   }

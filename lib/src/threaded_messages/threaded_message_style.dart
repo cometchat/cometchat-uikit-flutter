@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///[MessagesStyle] is the component to provide styles for message module
+///[ThreadedMessageStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatThreadedMessages]
 class ThreadedMessageStyle extends BaseStyles {
+  ///[closeIconTint] sets color for close icon
   final Color? closeIconTint;
 
+  ///[titleStyle] sets TextStyle for title
   final TextStyle? titleStyle;
 
   const ThreadedMessageStyle(

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+///[LinkPreviewExtensionDecorator] is a the view model for [LinkPreviewExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class LinkPreviewExtensionDecorator extends DataSourceDecorator {
   String messageTranslationTypeConstant = ExtensionConstants.linkPreview;
   LinkPreviewConfiguration? configuration;
 
-  LinkPreviewExtensionDecorator(DataSource dataSource,{this.configuration}) : super(dataSource);
+  LinkPreviewExtensionDecorator(DataSource dataSource, {this.configuration})
+      : super(dataSource);
 
   @override
   Widget getTextMessageContentView(TextMessage message, BuildContext context,
@@ -17,9 +20,9 @@ class LinkPreviewExtensionDecorator extends DataSourceDecorator {
       theme: configuration?.theme ?? theme,
       onTapUrl: onTapUrl,
       links: getMessageLinks(message),
-      child: child,
       defaultImage: configuration?.defaultImage,
       style: configuration?.style,
+      child: child,
     );
   }
 
@@ -53,18 +56,19 @@ class LinkPreviewExtensionDecorator extends DataSourceDecorator {
   final RegExp _urlRegex =
       RegExp(r'(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+');
 
-  final RegExp _phoneNumberRegex =
-      RegExp(r'^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}');
+  final RegExp _phoneNumberRegex = RegExp(
+      r'\b(\+?( |-|\.)?\d{1,2}( |-|\.)?)?(\(?\d{3}\)?|\d{3})( |-|\.)?(\d{3}( |-|\.)?\d{4})\b');
+
   Future<void> onTapUrl(String url) async {
     if (_urlRegex.hasMatch(url)) {
       if (!RegExp(r'^(https?:\/\/)').hasMatch(url)) {
-        url = 'https://' + url;
+        url = 'https://$url';
       }
-      await launch(url);
+      await launchUrl(Uri.parse(url));
     } else if (_emailRegex.hasMatch(url)) {
-      await launch('mailto:$url');
+      await launchUrl(Uri.parse('mailto:$url'));
     } else if (_phoneNumberRegex.hasMatch(url)) {
-      await launch('tel:$url');
+      await launchUrl(Uri.parse('tel:$url'));
     }
   }
 }

@@ -1,12 +1,10 @@
-class ColorConstants{
+class ColorConstants {
   //static const int onlineGreen = 0xffE64CAF50;
   static const int offline = 0xffC4C4C4;
   static const int textBlack = 0xff212121;
   static const int containerBackground = 0xffbdbdbd;
   static const int circularAvatarBackground = 0xff7b1fa2;
   static const int whiteColor = 0xffeceff1;
-
-
 
   static const int colorPrimary = 0xff3399FF;
   static const int colorSecondary = 0xff808080;
@@ -34,12 +32,10 @@ class ColorConstants{
   static const int darkModeBackground = 0xff202124;
   static const int actionSheetIconBg = 0xff6929CA;
 
-
   static const int cometchatListBaseBackground = 0xffFFFFFF;
   static const int cometchatListBaseTitle = 0xff141414;
 
   static const int cometchatListItemBackground = 0xffFFFFFF;
 
   static const int black700 = 0xff141414;
-
 }

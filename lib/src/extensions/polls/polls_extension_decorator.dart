@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../cometchat_chat_uikit.dart';
 
+///[PollsExtensionDecorator] is a the view model for [PollsExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class PollsExtensionDecorator extends DataSourceDecorator {
   String pollsTypeConstant = "extension_poll";
   PollsConfiguration? configuration;
@@ -87,56 +89,63 @@ class PollsExtensionDecorator extends DataSourceDecorator {
             BubbleAlignment alignment) {
           return getContentView(message as CustomMessage, _theme, context);
         },
-        options: ChatConfigurator.getDataSource().getCommonOptions,
-        bottomView: ChatConfigurator.getDataSource().getBottomView);
+        options: CometChatUIKit.getDataSource().getCommonOptions,
+        bottomView: CometChatUIKit.getDataSource().getBottomView);
   }
 
-  Widget getContentView(CustomMessage _customMessage, CometChatTheme _theme,
-      BuildContext context) {
-    if (_customMessage.deletedAt != null) {
-      return super.getDeleteMessageBubble(_customMessage, _theme);
+  Widget getContentView(
+      CustomMessage customMessage, CometChatTheme theme, BuildContext context) {
+    if (customMessage.deletedAt != null) {
+      return super.getDeleteMessageBubble(customMessage, theme);
     }
     return CometChatPollsBubble(
       loggedInUser: loggedInUser?.uid,
-      theme: configuration?.theme ?? _theme,
+      theme: configuration?.theme ?? theme,
       choosePoll: choosePoll,
-      senderUid: _customMessage.sender?.uid,
-      pollQuestion: _customMessage.customData?["question"] ?? "",
-      pollId: _customMessage.customData?["id"],
-      metadata: getPollsResult(_customMessage),
+      senderUid: customMessage.sender?.uid,
+      pollQuestion: customMessage.customData?["question"] ?? "",
+      pollId: customMessage.customData?["id"],
+      metadata: getPollsResult(customMessage),
       style: configuration?.pollsBubbleStyle,
     );
   }
 
   CometChatMessageComposerAction getAttachmentOption(
-      CometChatTheme _theme, BuildContext context, Map<String, dynamic>? id) {
+      CometChatTheme theme, BuildContext context, Map<String, dynamic>? id) {
     return CometChatMessageComposerAction(
         id: pollsTypeConstant,
         title:
-            configuration?.optionTitle ?? Translations.of(context).poll + 's',
+            configuration?.optionTitle ?? '${Translations.of(context).poll}s',
         iconUrl: configuration?.optionIconUrl ?? AssetConstants.polls,
         iconUrlPackageName:
             configuration?.optionIconUrlPackageName ?? UIConstants.packageName,
         titleStyle: TextStyle(
-                color: _theme.palette.getAccent(),
-                fontSize: _theme.typography.subtitle1.fontSize,
-                fontWeight: _theme.typography.subtitle1.fontWeight)
+                color: theme.palette.getAccent(),
+                fontSize: theme.typography.subtitle1.fontSize,
+                fontWeight: theme.typography.subtitle1.fontWeight)
             .merge(configuration?.optionStyle?.titleStyle),
         iconTint: configuration?.optionStyle?.iconTint ??
-            _theme.palette.getAccent700(),
+            theme.palette.getAccent700(),
         background: configuration?.optionStyle?.background,
         cornerRadius: configuration?.optionStyle?.cornerRadius,
         iconBackground: configuration?.optionStyle?.iconBackground,
         iconCornerRadius: configuration?.optionStyle?.iconCornerRadius,
-        onItemClick: (String? uid, String? guid) {
+        onItemClick: (context, user, group) {
+          String? uid, guid;
+          if (user != null) {
+            uid = user.uid;
+          }
+          if (group != null) {
+            guid = group.guid;
+          }
           if (uid != null || guid != null) {
             return Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => CometChatCreatePoll(
+                    builder: (context) => CreatePoll(
                           user: uid,
                           group: guid,
-                          theme: _theme,
+                          theme: theme,
                           style: configuration?.createPollsStyle,
                           addAnswerText: configuration?.addAnswerText,
                           answerHelpText: configuration?.answerHelpText,
@@ -165,16 +174,16 @@ class PollsExtensionDecorator extends DataSourceDecorator {
   }
 
   Map<String, dynamic> getPollsResult(BaseMessage baseMessage) {
-    Map<String, dynamic> _result = {};
+    Map<String, dynamic> result = {};
     Map<String, Map>? extensionList =
         ExtensionModerator.extensionCheck(baseMessage);
     if (extensionList != null) {
       try {
         if (extensionList.containsKey(ExtensionConstants.polls)) {
-          Map? _polls = extensionList[ExtensionConstants.polls];
-          if (_polls != null) {
-            if (_polls.containsKey("results")) {
-              _result = _polls["results"];
+          Map? polls = extensionList[ExtensionConstants.polls];
+          if (polls != null) {
+            if (polls.containsKey("results")) {
+              result = polls["results"];
             }
           }
         }
@@ -182,7 +191,7 @@ class PollsExtensionDecorator extends DataSourceDecorator {
         debugPrint("$stacktrace");
       }
     }
-    return _result;
+    return result;
   }
 
   bool isNotThread(Map<String, dynamic>? id) {

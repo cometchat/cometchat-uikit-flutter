@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[UsersStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatUsers]
 class UsersStyle extends BaseStyles {
   const UsersStyle({
     this.titleStyle,
@@ -18,6 +20,8 @@ class UsersStyle extends BaseStyles {
     this.sectionHeaderTextStyle,
     this.onlineStatusColor,
     this.separatorColor,
+    this.selectionIconTint,
+    this.submitIconTint,
     double? width,
     double? height,
     Color? background,
@@ -76,4 +80,10 @@ class UsersStyle extends BaseStyles {
 
   ///[separatorColor] set separator color
   final Color? separatorColor;
+
+  ///[selectionIconTint] set selection icon color
+  final Color? selectionIconTint;
+
+  ///[submitIconTint] set submit icon tint
+  final Color? submitIconTint;
 }

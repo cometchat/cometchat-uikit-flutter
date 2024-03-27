@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///[GroupMembersStyle] is styling class for [CometChatGroupMembers]
+///[GroupMembersStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatGroupMembers]
 class GroupMembersStyle extends BaseStyles {
   const GroupMembersStyle({
     this.titleStyle,

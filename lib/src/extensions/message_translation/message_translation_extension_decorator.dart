@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[MessageExtensionTranslationDecorator] is a the view model for [MessageTranslationExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class MessageExtensionTranslationDecorator extends DataSourceDecorator {
   String messageTranslationTypeConstant = 'message-translation';
+  String translateMessage = "translateMessage";
   MessageTranslationConfiguration? configuration;
 
   MessageExtensionTranslationDecorator(DataSource dataSource,
@@ -21,8 +24,8 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
     List<CometChatMessageOption> textTemplateOptions = super
         .getTextMessageOptions(loggedInUser, messageObject, context, group);
 
-    
-    if (messageObject.metadata!=null && messageObject.metadata!.containsKey('translated_message')==false) {
+    if (messageObject.metadata != null &&
+        messageObject.metadata!.containsKey('translated_message') == false) {
       textTemplateOptions.add(getOption(context));
     }
 
@@ -36,7 +39,7 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
 
   CometChatMessageOption getOption(BuildContext context) {
     return CometChatMessageOption(
-        id: MessageOptionConstants.translateMessage,
+        id: translateMessage,
         title: configuration?.optionTitle ??
             Translations.of(context).translate_message,
         icon: configuration?.optionIconUrl ?? AssetConstants.translate,
@@ -44,9 +47,11 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
             configuration?.optionIconUrlPackageName ?? UIConstants.packageName,
         iconTint: configuration?.optionStyle?.iconTint,
         titleStyle: configuration?.optionStyle?.titleStyle,
-        onClick:
-            (BaseMessage message, CometChatMessageListController state) async {
-          _translateMessage(message, context, state);
+        onClick: (BaseMessage message,
+            CometChatMessageListControllerProtocol state) async {
+          if (state is CometChatMessageListController) {
+            _translateMessage(message, context, state);
+          }
         });
   }
 
@@ -65,40 +70,24 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
           String? translatedMessage =
               data['translations']?[0]?['message_translated'];
 
-          if (translatedMessage != null && translatedMessage.isNotEmpty && translatedMessage!=message.text) {
+          if (translatedMessage != null &&
+              translatedMessage.isNotEmpty &&
+              translatedMessage != message.text) {
             Map<String, dynamic> metadata =
                 message.metadata ?? <String, dynamic>{};
             metadata.addAll({'translated_message': translatedMessage});
             message.metadata = metadata;
             state.updateElement(message);
+          } else {
+            _showDialogPopUp(
+                "Selected language for translation is similar to the language of original message",
+                theme,
+                context);
           }
         }
       }, onError: (CometChatException e) {
-        String _error = getErrorTranslatedText(context, e.code);
-        showCometChatConfirmDialog(
-            context: context,
-            messageText: Text(
-              _error,
-              style: TextStyle(
-                  fontSize: theme.typography.title2.fontSize,
-                  fontWeight: theme.typography.title2.fontWeight,
-                  color: theme.palette.getAccent(),
-                  fontFamily: theme.typography.title2.fontFamily),
-            ),
-            style: ConfirmDialogStyle(
-                backgroundColor: theme.palette.mode == PaletteThemeModes.light
-                    ? theme.palette.getBackground()
-                    : Color.alphaBlend(theme.palette.getAccent200(),
-                        theme.palette.getBackground()),
-                shadowColor: theme.palette.getAccent300(),
-                confirmButtonTextStyle: TextStyle(
-                    fontSize: theme.typography.text2.fontSize,
-                    fontWeight: theme.typography.text2.fontWeight,
-                    color: theme.palette.getPrimary())),
-            confirmButtonText: Translations.of(context).okay,
-            onConfirm: () {
-              Navigator.pop(context);
-            });
+        String error = getErrorTranslatedText(context, e.code);
+        _showDialogPopUp(error, theme, context);
       });
     }
   }
@@ -113,8 +102,8 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
         translatedText: message.metadata?['translated_message'],
         theme: configuration?.theme ?? theme,
         alignment: alignment,
-        child: child,
         style: configuration?.style,
+        child: child,
       );
     } else {
       return child;
@@ -127,5 +116,32 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
     } else {}
 
     return Translations.of(context).something_went_wrong_error;
+  }
+
+  _showDialogPopUp(String message, CometChatTheme theme, BuildContext context) {
+    showCometChatConfirmDialog(
+        context: context,
+        messageText: Text(
+          message,
+          style: TextStyle(
+              fontSize: theme.typography.title2.fontSize,
+              fontWeight: theme.typography.title2.fontWeight,
+              color: theme.palette.getAccent(),
+              fontFamily: theme.typography.title2.fontFamily),
+        ),
+        style: ConfirmDialogStyle(
+            backgroundColor: theme.palette.mode == PaletteThemeModes.light
+                ? theme.palette.getBackground()
+                : Color.alphaBlend(theme.palette.getAccent200(),
+                    theme.palette.getBackground()),
+            shadowColor: theme.palette.getAccent300(),
+            confirmButtonTextStyle: TextStyle(
+                fontSize: theme.typography.text2.fontSize,
+                fontWeight: theme.typography.text2.fontWeight,
+                color: theme.palette.getPrimary())),
+        confirmButtonText: Translations.of(context).okay,
+        onConfirm: () {
+          Navigator.pop(context);
+        });
   }
 }

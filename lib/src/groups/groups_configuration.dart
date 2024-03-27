@@ -1,60 +1,63 @@
 import 'package:flutter/material.dart';
 
-import '../../../../flutter_chat_ui_kit.dart';
+import '../../../../cometchat_chat_uikit.dart';
 
-///Configuration class to alter [CometChatGroups] properties from all parent widgets
+///[GroupsConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatGroups]
+///can be used by a component where [CometChatGroups] is a child component
 ///
 /// ```dart
 /// GroupsConfiguration(
-///         hideCreateGroup: false,
-///         showBackButton: true,
-///         title: 'Groups',
-///         hideSearch: false,
-///         searchPlaceholder: 'Search',
-///         groupListConfiguration: GroupListConfiguration(),
-///       );
+///        groupsStyle: GroupsStyle(),
+///        avatarStyle: AvatarStyle(),
+///        listItemStyle: ListItemStyle(),
+///        statusIndicatorStyle: StatusIndicatorStyle(),
+///      );
 ///```
 ///
 class GroupsConfiguration {
-  const GroupsConfiguration({
-    this.title,
-    this.searchPlaceholder,
-    this.showBackButton = true,
-    this.hideSearch = false,
-    this.groupsStyle,
-    this.groupsRequestBuilder,
-    this.subtitleView,
-    this.listItemView,
-    this.controller,
-    this.options,
-    this.backButton,
-    this.searchBoxIcon,
-    this.theme,
-    this.selectionMode,
-    this.onSelection,
-    this.emptyText,
-    this.errorText,
-    this.loadingView,
-    this.emptyView,
-    this.errorView,
-    this.listItemStyle,
-    this.avatarStyle,
-    this.statusIndicatorStyle,
-    this.createGroupIcon,
-    this.joinProtectedGroupConfiguration,
-    this.hideSeparator = false,
-    this.passwordGroupIcon,
-    this.privateGroupIcon,
-    this.activateSelection,
-    this.hideError,
-    this.stateCallBack,
-    this.groupsProtocol,
-    this.appBarOptions,
-    this.onError,
-    this.onBack,
-    this.onItemTap,
-    this.onItemLongPress,
-  });
+  const GroupsConfiguration(
+      {this.title,
+      this.searchPlaceholder,
+      this.showBackButton,
+      this.hideSearch,
+      this.groupsStyle,
+      this.groupsRequestBuilder,
+      this.subtitleView,
+      this.listItemView,
+      this.controller,
+      this.options,
+      this.backButton,
+      this.searchBoxIcon,
+      this.theme,
+      this.selectionMode,
+      this.onSelection,
+      this.emptyStateText,
+      this.errorStateText,
+      this.loadingStateView,
+      this.emptyStateView,
+      this.errorStateView,
+      this.listItemStyle,
+      this.avatarStyle,
+      this.statusIndicatorStyle,
+      this.createGroupIcon,
+      this.joinProtectedGroupConfiguration,
+      this.hideSeparator,
+      this.passwordGroupIcon,
+      this.privateGroupIcon,
+      this.activateSelection,
+      this.hideError,
+      this.stateCallBack,
+      this.groupsProtocol,
+      this.appBarOptions,
+      this.onError,
+      this.onBack,
+      this.onItemTap,
+      this.onItemLongPress,
+      this.submitIcon,
+      this.selectionIcon,
+      this.hideAppbar,
+      this.controllerTag});
 
   ///[groupsRequestBuilder] set custom request builder
   final GroupsRequestBuilder? groupsRequestBuilder;
@@ -88,7 +91,7 @@ class GroupsConfiguration {
   final Widget? searchBoxIcon;
 
   ///[hideSearch] switch on/ff search input
-  final bool hideSearch;
+  final bool? hideSearch;
 
   ///[theme] can pass custom theme
   final CometChatTheme? theme;
@@ -102,20 +105,20 @@ class GroupsConfiguration {
   ///[title] sets title for the list
   final String? title;
 
-  ///[emptyText] text to be displayed when the list is empty
-  final String? emptyText;
+  ///[emptyStateText] text to be displayed when the list is empty
+  final String? emptyStateText;
 
-  ///[errorText] text to be displayed when error occur
-  final String? errorText;
+  ///[errorStateText] text to be displayed when error occur
+  final String? errorStateText;
 
-  ///[loadingView] returns view fow loading state
-  final WidgetBuilder? loadingView;
+  ///[loadingStateView] returns view fow loading state
+  final WidgetBuilder? loadingStateView;
 
-  ///[emptyView] returns view fow empty state
-  final WidgetBuilder? emptyView;
+  ///[emptyStateView] returns view fow empty state
+  final WidgetBuilder? emptyStateView;
 
-  ///[errorView] returns view fow error state behind the dialog
-  final WidgetBuilder? errorView;
+  ///[errorStateView] returns view fow error state behind the dialog
+  final WidgetBuilder? errorStateView;
 
   ///[listItemStyle] style for every list item
   final ListItemStyle? listItemStyle;
@@ -133,7 +136,7 @@ class GroupsConfiguration {
   final JoinProtectedGroupConfiguration? joinProtectedGroupConfiguration;
 
   ///[hideSeparator]
-  final bool hideSeparator;
+  final bool? hideSeparator;
 
   ///[passwordGroupIcon] sets icon in status indicator for password group
   final Widget? passwordGroupIcon;
@@ -160,11 +163,114 @@ class GroupsConfiguration {
   final VoidCallback? onBack;
 
   ///[onItemTap] callback triggered on tapping a group item
-  final Function(Group)? onItemTap;
+  final Function(BuildContext, Group)? onItemTap;
 
   ///[onItemLongPress] callback triggered on pressing for long on a group item
-  final Function(Group)? onItemLongPress;
+  final Function(BuildContext, Group)? onItemLongPress;
 
   ///[onError] callback triggered in case any error happens when fetching groups
   final OnError? onError;
+
+  ///[submitIcon] will override the default submit icon
+  final Widget? submitIcon;
+
+  ///[selectionIcon] will change selection icon
+  final Widget? selectionIcon;
+
+  ///[hideAppbar] toggle visibility for app bar
+  final bool? hideAppbar;
+
+  ///Group tag to create from , if this is passed its parent responsibility to close this
+  final String? controllerTag;
+
+  //
+  // GroupsConfiguration merge(GroupsConfiguration mergeWith) {
+  //   return GroupsConfiguration(
+  //     groupsRequestBuilder: mergeWith.groupsRequestBuilder ?? groupsRequestBuilder,
+  //     subtitleView: mergeWith.subtitleView ?? subtitleView,
+  //     listItemView: mergeWith.listItemView ?? listItemView,
+  //     groupsStyle: mergeWith.groupsStyle ?? groupsStyle,
+  //     controller: mergeWith.controller ?? controller,
+  //     options: mergeWith.options ?? options,
+  //     searchPlaceholder: mergeWith.searchPlaceholder ?? searchPlaceholder,
+  //     backButton: mergeWith.backButton ?? backButton,
+  //     showBackButton: mergeWith.showBackButton ?? showBackButton,
+  //     searchBoxIcon: mergeWith.searchBoxIcon ?? searchBoxIcon,
+  //     hideSearch: mergeWith.hideSearch ?? hideSearch,
+  //     theme: mergeWith.theme ?? theme,
+  //     selectionMode: mergeWith.selectionMode ?? selectionMode,
+  //     onSelection: mergeWith.onSelection ?? onSelection,
+  //     title: mergeWith.title ?? title,
+  //     emptyStateText: mergeWith.emptyStateText ?? emptyStateText,
+  //     errorStateText: mergeWith.errorStateText ?? errorStateText,
+  //     loadingStateView: mergeWith.loadingStateView ?? loadingStateView,
+  //     emptyStateView: mergeWith.emptyStateView ?? emptyStateView,
+  //     errorStateView: mergeWith.errorStateView ?? errorStateView,
+  //     listItemStyle: mergeWith.listItemStyle ?? listItemStyle,
+  //     avatarStyle: mergeWith.avatarStyle ?? avatarStyle,
+  //     statusIndicatorStyle: mergeWith.statusIndicatorStyle ?? statusIndicatorStyle,
+  //     createGroupIcon: mergeWith.createGroupIcon ?? createGroupIcon,
+  //     joinProtectedGroupConfiguration: mergeWith.joinProtectedGroupConfiguration ?? joinProtectedGroupConfiguration,
+  //     hideSeparator: mergeWith.hideSeparator ?? hideSeparator,
+  //     passwordGroupIcon: mergeWith.passwordGroupIcon ?? passwordGroupIcon,
+  //     privateGroupIcon: mergeWith.privateGroupIcon ?? privateGroupIcon,
+  //     activateSelection: mergeWith.activateSelection ?? activateSelection,
+  //     hideError: mergeWith.hideError ?? hideError,
+  //     stateCallBack: mergeWith.stateCallBack ?? stateCallBack,
+  //     groupsProtocol: mergeWith.groupsProtocol ?? groupsProtocol,
+  //     appBarOptions: mergeWith.appBarOptions ?? appBarOptions,
+  //     onBack: mergeWith.onBack ?? onBack,
+  //     onItemTap: mergeWith.onItemTap ?? onItemTap,
+  //     onItemLongPress: mergeWith.onItemLongPress ?? onItemLongPress,
+  //     onError: mergeWith.onError ?? onError,
+  //   );
+  // }
+
+  GroupsConfiguration merge(GroupsConfiguration mergeWith) {
+    return GroupsConfiguration(
+        groupsRequestBuilder:
+            groupsRequestBuilder ?? mergeWith.groupsRequestBuilder,
+        subtitleView: subtitleView ?? mergeWith.subtitleView,
+        listItemView: listItemView ?? mergeWith.listItemView,
+        groupsStyle: groupsStyle ?? mergeWith.groupsStyle,
+        controller: controller ?? mergeWith.controller,
+        options: options ?? mergeWith.options,
+        searchPlaceholder: searchPlaceholder ?? mergeWith.searchPlaceholder,
+        backButton: backButton ?? mergeWith.backButton,
+        showBackButton: showBackButton ?? mergeWith.showBackButton,
+        searchBoxIcon: searchBoxIcon ?? mergeWith.searchBoxIcon,
+        hideSearch: hideSearch ?? mergeWith.hideSearch,
+        theme: theme ?? mergeWith.theme,
+        selectionMode: selectionMode ?? mergeWith.selectionMode,
+        onSelection: onSelection ?? mergeWith.onSelection,
+        title: title ?? mergeWith.title,
+        emptyStateText: emptyStateText ?? mergeWith.emptyStateText,
+        errorStateText: errorStateText ?? mergeWith.errorStateText,
+        loadingStateView: loadingStateView ?? mergeWith.loadingStateView,
+        emptyStateView: emptyStateView ?? mergeWith.emptyStateView,
+        errorStateView: errorStateView ?? mergeWith.errorStateView,
+        listItemStyle: listItemStyle ?? mergeWith.listItemStyle,
+        avatarStyle: avatarStyle ?? mergeWith.avatarStyle,
+        statusIndicatorStyle:
+            statusIndicatorStyle ?? mergeWith.statusIndicatorStyle,
+        createGroupIcon: createGroupIcon ?? mergeWith.createGroupIcon,
+        joinProtectedGroupConfiguration: joinProtectedGroupConfiguration ??
+            mergeWith.joinProtectedGroupConfiguration,
+        hideSeparator: hideSeparator ?? mergeWith.hideSeparator,
+        passwordGroupIcon: passwordGroupIcon ?? mergeWith.passwordGroupIcon,
+        privateGroupIcon: privateGroupIcon ?? mergeWith.privateGroupIcon,
+        activateSelection: activateSelection ?? mergeWith.activateSelection,
+        hideError: hideError ?? mergeWith.hideError,
+        stateCallBack: stateCallBack ?? mergeWith.stateCallBack,
+        groupsProtocol: groupsProtocol ?? mergeWith.groupsProtocol,
+        appBarOptions: appBarOptions ?? mergeWith.appBarOptions,
+        onBack: onBack ?? mergeWith.onBack,
+        onItemTap: onItemTap ?? mergeWith.onItemTap,
+        onItemLongPress: onItemLongPress ?? mergeWith.onItemLongPress,
+        onError: onError ?? mergeWith.onError,
+        submitIcon: submitIcon ?? mergeWith.submitIcon,
+        selectionIcon: selectionIcon ?? mergeWith.selectionIcon,
+        hideAppbar: hideAppbar ?? mergeWith.hideAppbar,
+        controllerTag: controllerTag ?? mergeWith.controllerTag);
+  }
 }

@@ -1,11 +1,22 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../flutter_chat_ui_kit.dart';
-import '../../flutter_chat_ui_kit.dart' as cc;
+import '../../cometchat_chat_uikit.dart';
+import '../../cometchat_chat_uikit.dart' as cc;
 
+///[CometChatThreadedMessages] is a widget that internally uses [CometChatListBase], [CometChatMessageList] and [CometChatMessageComposer]
+///to display and create messages with respect to a certain parent message
+/// ```dart
+///   CometChatThreadedMessages(
+///      parentMessage: BaseMessage(
+///          receiverUid: 'receiverUid',
+///          type: 'type',
+///          receiverType: 'receiverType',
+///          readAt: DateTime.now()),
+///      loggedInUser: User(name: 'loggedInUser', uid: 'uid_of_loggedInUser'),
+///      threadedMessagesStyle: ThreadedMessageStyle(),
+///      );
+/// ```
 class CometChatThreadedMessages extends StatefulWidget {
   const CometChatThreadedMessages(
       {Key? key,
@@ -84,6 +95,43 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
       hideLiveReaction: true,
       attachmentIcon: widget.messageComposerConfiguration?.attachmentIcon,
       liveReactionIcon: widget.messageComposerConfiguration?.liveReactionIcon,
+      deleteIcon: widget.messageComposerConfiguration?.deleteIcon,
+      playIcon: widget.messageComposerConfiguration?.playIcon,
+      recordIcon: widget.messageComposerConfiguration?.recordIcon,
+      stopIcon: widget.messageComposerConfiguration?.stopIcon,
+      pauseIcon: widget.messageComposerConfiguration?.pauseIcon,
+      submitIcon: widget.messageComposerConfiguration?.submitIcon,
+      disableTypingEvents:
+          widget.messageComposerConfiguration?.disableTypingEvents ?? false,
+      mediaRecorderStyle:
+          widget.messageComposerConfiguration?.mediaRecorderStyle,
+      hideVoiceRecording:
+          widget.messageComposerConfiguration?.hideVoiceRecording ?? false,
+      voiceRecordingIcon:
+          widget.messageComposerConfiguration?.voiceRecordingIcon,
+      theme: widget.messageComposerConfiguration?.theme ?? _theme,
+      attachmentOptions: widget.messageComposerConfiguration?.attachmentOptions,
+      attachmentIconURL: widget.messageComposerConfiguration?.attachmentIconURL,
+      auxiliaryButtonsAlignment:
+          widget.messageComposerConfiguration?.auxiliaryButtonsAlignment,
+      customSoundForMessage:
+          widget.messageComposerConfiguration?.customSoundForMessage,
+      customSoundForMessagePackage:
+          widget.messageComposerConfiguration?.customSoundForMessagePackage,
+      disableSoundForMessages:
+          widget.messageComposerConfiguration?.disableSoundForMessages ?? false,
+      onChange: widget.messageComposerConfiguration?.onChange,
+      onSendButtonTap: widget.messageComposerConfiguration?.onSendButtonTap,
+      sendButtonView: widget.messageComposerConfiguration?.sendButtonView,
+      auxiliaryButtonView:
+          widget.messageComposerConfiguration?.auxiliaryButtonView,
+      secondaryButtonView:
+          widget.messageComposerConfiguration?.secondaryButtonView,
+      liveReactionIconURL:
+          widget.messageComposerConfiguration?.liveReactionIconURL,
+      maxLine: widget.messageComposerConfiguration?.maxLine,
+      footerView: widget.messageComposerConfiguration?.footerView,
+      headerView: widget.messageComposerConfiguration?.headerView,
       messageComposerStyle: MessageComposerStyle(
           background: widget.messageComposerConfiguration?.messageComposerStyle
                   ?.background ??
@@ -108,24 +156,30 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           attachmentIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.attachmentIconTint,
           closeIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.closeIconTint,
           dividerTint: widget.messageComposerConfiguration?.messageComposerStyle?.dividerTint ?? _theme.palette.getAccent500(),
-          emojiIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.emojiIconTint,
+          voiceRecordingIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.voiceRecordingIconTint,
           inputTextStyle: widget.messageComposerConfiguration?.messageComposerStyle?.inputTextStyle,
           placeholderTextStyle: widget.messageComposerConfiguration?.messageComposerStyle?.placeholderTextStyle,
           sendButtonIcon: widget.messageComposerConfiguration?.messageComposerStyle?.sendButtonIcon,
           sendButtonIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.sendButtonIconTint,
-          stickerIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.stickerIconTint,
-          contentPadding: widget.messageComposerConfiguration?.messageComposerStyle?.contentPadding ?? EdgeInsets.zero),
+          contentPadding: widget.messageComposerConfiguration?.messageComposerStyle?.contentPadding ?? EdgeInsets.zero,
+
+      ),
+        aiOptionStyle: widget.messageComposerConfiguration?.aiOptionStyle,
+        aiIconPackageName: widget.messageComposerConfiguration?.aiIconPackageName,
+        aiIconURL: widget.messageComposerConfiguration?.aiIconURL,
+        aiIcon: widget.messageComposerConfiguration?.aiIcon
+
     );
   }
 
   Widget getMessageList(
       CometChatThreadedMessageController controller, BuildContext context) {
-    MessagesRequestBuilder? _requestBuilder =
+    MessagesRequestBuilder? requestBuilder =
         widget.messageListConfiguration?.messagesRequestBuilder;
-    if (_requestBuilder != null) {
-      _requestBuilder.parentMessageId = widget.parentMessage.id;
+    if (requestBuilder != null) {
+      requestBuilder.parentMessageId = widget.parentMessage.id;
     } else {
-      _requestBuilder = MessagesRequestBuilder()
+      requestBuilder = MessagesRequestBuilder()
         ..parentMessageId = widget.parentMessage.id;
     }
 
@@ -136,7 +190,7 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           widget.messageListConfiguration?.alignment ?? ChatAlignment.standard,
       templates: widget.messageListConfiguration?.templates,
       // stateCallBack: messageListStateCallBack,
-      messagesRequestBuilder: _requestBuilder,
+      messagesRequestBuilder: requestBuilder,
       footerView: widget.messageListConfiguration?.footerView,
       headerView: widget.messageListConfiguration?.headerView,
       datePattern: widget.messageListConfiguration?.datePattern,
@@ -172,7 +226,14 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           widget.messageListConfiguration?.customSoundForMessages,
       customSoundForMessagePackage:
           widget.messageListConfiguration?.customSoundForMessagePackage,
+      // snackBarConfiguration: widget.messageListConfiguration?.snackBarConfiguration,
       // eventStreamController: controller.messageListEventStreamController,
+      messageInformationConfiguration:
+          widget.messageListConfiguration?.messageInformationConfiguration,
+      controller: widget.messageListConfiguration?.controller,
+      theme: widget.messageListConfiguration?.theme ?? _theme,
+      disableReceipt: widget.messageListConfiguration?.disableReceipt,
+      dateSeparatorStyle: widget.messageListConfiguration?.dateSeparatorStyle,
     );
   }
 
@@ -186,7 +247,7 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
   }
 
   Widget getActionView(CometChatThreadedMessageController controller,
-      BuildContext context, CometChatTheme _theme) {
+      BuildContext context, CometChatTheme theme) {
     if (widget.messageActionView != null) {
       return widget.messageActionView!(widget.parentMessage, context);
     }
@@ -196,15 +257,11 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
         const Divider(),
         Row(children: [
           Text(
-            controller.replyCount.toString() +
-                " " +
-                (widget.parentMessage.replyCount > 1
-                    ? cc.Translations.of(context).replies
-                    : cc.Translations.of(context).reply),
+            "${controller.replyCount} ${widget.parentMessage.replyCount > 1 ? cc.Translations.of(context).replies : cc.Translations.of(context).reply}",
             style: TextStyle(
-                fontSize: _theme.typography.text1.fontSize,
-                fontWeight: _theme.typography.text1.fontWeight,
-                color: _theme.palette.getAccent600()),
+                fontSize: theme.typography.text1.fontSize,
+                fontWeight: theme.typography.text1.fontWeight,
+                color: theme.palette.getAccent600()),
           )
         ]),
         const Divider()
@@ -246,13 +303,11 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
                   Expanded(
                       child: GestureDetector(
                           onTap: () {
-                            if (Platform.isIOS) {
-                              FocusScopeNode currentFocus =
-                                  FocusScope.of(context);
+                            FocusScopeNode currentFocus =
+                                FocusScope.of(context);
 
-                              if (!currentFocus.hasPrimaryFocus) {
-                                currentFocus.unfocus();
-                              }
+                            if (!currentFocus.hasPrimaryFocus) {
+                              currentFocus.unfocus();
                             }
                           },
                           child: getMessageList(value, context))),

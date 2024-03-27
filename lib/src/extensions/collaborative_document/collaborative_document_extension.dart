@@ -1,13 +1,21 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-class CollaborativeDocumentExtension implements ExtensionsDataSource {
+///[CollaborativeDocumentExtension] is the controller class for enabling and disabling the extension
+///the extension provides a document to collaborate on
+///will be received on the client side realtime through the message listener onCustomMessageReceived
+class CollaborativeDocumentExtension extends ExtensionsDataSource {
   CollaborativeDocumentConfiguration? configuration;
   CollaborativeDocumentExtension({this.configuration});
 
   @override
-  void enable() {
+  void addExtension() {
     ChatConfigurator.enable((dataSource) =>
         CollaborativeDocumentExtensionDecorator(dataSource,
             configuration: configuration));
+  }
+
+  @override
+  String getExtensionId() {
+    return "document";
   }
 }

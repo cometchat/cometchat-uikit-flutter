@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///Configuration class for [CometChatMessages]
+///[MessageConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatMessages]
+///can be used by a component where [CometChatMessages] is a child component
 ///
 /// ```dart
-/// MessageConfiguration messageCofig = MessageConfiguration(
-///   hideMessageComposer: true,
-///   hideMessageHeader: true,
-///  );
+///  MessageConfiguration(
+///        messagesStyle: MessagesStyle(),
+///        detailsConfiguration: DetailsConfiguration(),
+///        messageListConfiguration: MessageListConfiguration(),
+///        messageHeaderConfiguration: MessageHeaderConfiguration(),
+///        messageComposerConfiguration: MessageComposerConfiguration(),
+///        threadedMessagesConfiguration: ThreadedMessagesConfiguration()
+///      );
 ///
 /// ```
 ///
@@ -67,22 +73,22 @@ class MessageConfiguration {
   ///[disableSoundForMessages] disable sound for incoming and outgoing message
   final bool? disableSoundForMessages;
 
-  ///[customSoundForIncomingMessage] custom asset sound's  path for incoming messages
+  ///[customSoundForIncomingMessages] custom asset sound's  path for incoming messages
   final String? customSoundForIncomingMessages;
 
   ///[customSoundForIncomingMessagePackage] is the package name for different package
   final String? customSoundForIncomingMessagePackage;
 
-  ///[customSoundForIncomingMessage] custom sound path for outgoing  messages
+  ///[customSoundForIncomingMessages] custom sound path for outgoing  messages
   final String? customSoundForOutgoingMessagePackage;
 
-  ///[customSoundForOutgoingMessage] is the package name for different package
+  ///[customSoundForOutgoingMessages] is the package name for different package
   final String? customSoundForOutgoingMessages;
 
   ///[detailsConfiguration] config properties for details module
   final DetailsConfiguration? detailsConfiguration;
 
-  ///[style] contains properties that affect the appearance of this widget
+  ///[messagesStyle] contains properties that affect the appearance of this widget
   final MessagesStyle? messagesStyle;
 
   ///[theme] sets custom theme for [CometChatMessages]

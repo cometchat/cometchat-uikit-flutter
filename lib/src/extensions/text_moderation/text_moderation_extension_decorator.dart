@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_chat_ui_kit/src/shared/extra/behaviour_interface_implementer.dart';
-// import 'package:flutter_chat_ui_kit/src/shared/extra/behavour_interface.dart';
 
-import '../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../cometchat_chat_uikit.dart';
 
+///[TextModerationExtensionDecorator] is a the view model for [TextModerationExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class TextModerationExtensionDecorator extends DataSourceDecorator {
   TextModerationExtensionDecorator(DataSource dataSource, {this.configuration})
       : super(dataSource);

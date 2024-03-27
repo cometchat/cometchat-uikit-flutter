@@ -1,13 +1,20 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-class ImageModerationExtension implements ExtensionsDataSource {
+///[ImageModerationExtension] is the controller class for enabling and disabling the extension
+///it censors images with graphic content
+class ImageModerationExtension extends ExtensionsDataSource {
   ImageModerationConfiguration? configuration;
   ImageModerationExtension({this.configuration});
 
   @override
-  void enable() {
+  void addExtension() {
     ChatConfigurator.enable((dataSource) => ImageModerationExtensionDecorator(
         dataSource,
         configuration: configuration));
+  }
+
+  @override
+  String getExtensionId() {
+    return "image-moderation";
   }
 }

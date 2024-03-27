@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///[CometChatAddMembers] is a container component that wraps and formats  [CometChatUsers]  component
-///it list down users according to different parameter set in order of recent activity and select users on click
+///[CometChatAddMembers] is a component that internally uses [CometChatUsers] component
+///to display a list of users who can be added to a particular group
 ///
-///
-
+/// ```dart
+///   CometChatAddMembers(
+///   group: Group(guid: 'guid', name: 'name', type: 'public'),
+///   addMembersStyle: AddMembersStyle(),
+/// );
+/// ```
 class CometChatAddMembers extends StatelessWidget {
   CometChatAddMembers(
       {Key? key,
@@ -19,7 +23,7 @@ class CometChatAddMembers extends StatelessWidget {
       this.theme,
       this.onSelection,
       required Group group,
-      this.style,
+      this.addMembersStyle,
       this.subtitleView,
       this.disableUsersPresence,
       this.listItemView,
@@ -36,9 +40,14 @@ class CometChatAddMembers extends StatelessWidget {
       this.emptyStateView,
       this.errorStateView,
       this.onBack,
-      this.selectionIcon})
+      this.selectionIcon,
+      this.onError,
+      this.avatarStyle,
+      this.listItemStyle,
+      this.statusIndicatorStyle,
+      this.submitIcon})
       : _cometChatAddMembersController =
-            CometChatAddMembersController(group: group),
+            CometChatAddMembersController(group: group, onError: onError),
         super(key: key);
 
   ///[title] Title of the component
@@ -65,8 +74,8 @@ class CometChatAddMembers extends StatelessWidget {
   ///[onSelection] method will be performed on complete selection
   final Function(List<User>?, BuildContext)? onSelection;
 
-  ///[style] provides styling to this widget
-  final AddMembersStyle? style;
+  ///[addMembersStyle] provides styling to this widget
+  final AddMembersStyle? addMembersStyle;
 
   ///[subtitleView] provides custom view for subtitle in list item
   final Widget? Function(BuildContext, User)? subtitleView;
@@ -120,6 +129,21 @@ class CometChatAddMembers extends StatelessWidget {
   ///[selectionIcon] will override the default selection complete icon
   final Widget? selectionIcon;
 
+  ///[onError] callback triggered in case any error happens when fetching users or adding members
+  final OnError? onError;
+
+  ///[avatarStyle] set style for avatar
+  final AvatarStyle? avatarStyle;
+
+  ///[statusIndicatorStyle] set style for status indicator
+  final StatusIndicatorStyle? statusIndicatorStyle;
+
+  ///[listItemStyle] style for every list item
+  final ListItemStyle? listItemStyle;
+
+  ///[submitIcon] will override the default selection complete icon
+  final Widget? submitIcon;
+
   final CometChatAddMembersController _cometChatAddMembersController;
 
   @override
@@ -131,7 +155,7 @@ class CometChatAddMembers extends StatelessWidget {
             state.controller?.onClose(),
         builder: (CometChatAddMembersController controller) {
           return CometChatUsers(
-            theme: theme,
+            theme: theme ?? cometChatTheme,
             title: title ?? Translations.of(context).add_members,
             showBackButton: showBackButton,
             hideSearch: hideSearch ?? false,
@@ -142,23 +166,25 @@ class CometChatAddMembers extends StatelessWidget {
             onBack: onBack,
             searchBoxIcon: searchIcon,
             usersStyle: UsersStyle(
-                titleStyle: style?.titleStyle,
-                border: style?.border,
-                gradient: style?.gradient,
-                backIconTint: style?.backIconTint,
-                searchBackground: style?.searchBackground,
-                searchPlaceholderStyle: style?.placeholderStyle,
-                searchTextStyle: style?.searchStyle,
-                searchIconTint: style?.searchIconTint,
-                borderRadius: style?.borderRadius,
-                background: style?.background,
-                height: style?.height,
-                width: style?.width,
-                searchBorderColor: style?.searchBorderColor,
-                searchBorderRadius: style?.searchBorderRadius,
-                searchBorderWidth: style?.searchBorderWidth,
-                errorTextStyle: style?.errorStateTextStyle,
-                emptyTextStyle: style?.emptyStateTextStyle),
+                titleStyle: addMembersStyle?.titleStyle,
+                border: addMembersStyle?.border,
+                gradient: addMembersStyle?.gradient,
+                backIconTint: addMembersStyle?.backIconTint,
+                searchBackground: addMembersStyle?.searchBackground,
+                searchPlaceholderStyle: addMembersStyle?.placeholderStyle,
+                searchTextStyle: addMembersStyle?.searchStyle,
+                searchIconTint: addMembersStyle?.searchIconTint,
+                borderRadius: addMembersStyle?.borderRadius,
+                background: addMembersStyle?.background,
+                height: addMembersStyle?.height,
+                width: addMembersStyle?.width,
+                searchBorderColor: addMembersStyle?.searchBorderColor,
+                searchBorderRadius: addMembersStyle?.searchBorderRadius,
+                searchBorderWidth: addMembersStyle?.searchBorderWidth,
+                errorTextStyle: addMembersStyle?.errorStateTextStyle,
+                emptyTextStyle: addMembersStyle?.emptyStateTextStyle,
+                selectionIconTint: addMembersStyle?.selectionIconTint,
+                submitIconTint: addMembersStyle?.submitIconTint),
             appBarOptions: appBarOptions,
             listItemView: listItemView,
             hideSeparator: hideSeparator,
@@ -175,6 +201,12 @@ class CometChatAddMembers extends StatelessWidget {
             hideError: hideError,
             activateSelection: ActivateSelection.onClick,
             selectionIcon: selectionIcon,
+            onError: onError,
+            listItemStyle: listItemStyle,
+            avatarStyle: avatarStyle,
+            statusIndicatorStyle: statusIndicatorStyle,
+            hideSectionSeparator: hideSeparator,
+            submitIcon: submitIcon,
           );
         });
   }

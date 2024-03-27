@@ -1,0 +1,90 @@
+PODS:
+  - cometchat_chat_uikit (4.3.0):
+    - Flutter
+  - cometchat_sdk (4.0.7):
+    - CometChatSDK (= 4.0.43)
+    - Flutter
+  - cometchat_uikit_shared (4.2.6):
+    - Flutter
+  - CometChatSDK (4.0.43)
+  - Flutter (1.0.0)
+  - image_picker_ios (0.0.1):
+    - Flutter
+  - integration_test (0.0.1):
+    - Flutter
+  - package_info_plus (0.4.5):
+    - Flutter
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - url_launcher_ios (0.0.1):
+    - Flutter
+  - video_player_avfoundation (0.0.1):
+    - Flutter
+  - wakelock_plus (0.0.1):
+    - Flutter
+  - webview_flutter_wkwebview (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - cometchat_chat_uikit (from `.symlinks/plugins/cometchat_chat_uikit/ios`)
+  - cometchat_sdk (from `.symlinks/plugins/cometchat_sdk/ios`)
+  - cometchat_uikit_shared (from `.symlinks/plugins/cometchat_uikit_shared/ios`)
+  - Flutter (from `Flutter`)
+  - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - video_player_avfoundation (from `.symlinks/plugins/video_player_avfoundation/ios`)
+  - wakelock_plus (from `.symlinks/plugins/wakelock_plus/ios`)
+  - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/ios`)
+
+SPEC REPOS:
+  trunk:
+    - CometChatSDK
+
+EXTERNAL SOURCES:
+  cometchat_chat_uikit:
+    :path: ".symlinks/plugins/cometchat_chat_uikit/ios"
+  cometchat_sdk:
+    :path: ".symlinks/plugins/cometchat_sdk/ios"
+  cometchat_uikit_shared:
+    :path: ".symlinks/plugins/cometchat_uikit_shared/ios"
+  Flutter:
+    :path: Flutter
+  image_picker_ios:
+    :path: ".symlinks/plugins/image_picker_ios/ios"
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
+  video_player_avfoundation:
+    :path: ".symlinks/plugins/video_player_avfoundation/ios"
+  wakelock_plus:
+    :path: ".symlinks/plugins/wakelock_plus/ios"
+  webview_flutter_wkwebview:
+    :path: ".symlinks/plugins/webview_flutter_wkwebview/ios"
+
+SPEC CHECKSUMS:
+  cometchat_chat_uikit: cdd278dd667265111e8d1292ddcc8600bf4b3d30
+  cometchat_sdk: 0fa3c8e0f0219ed6475bc0e793c81a4077c784a0
+  cometchat_uikit_shared: e5b378ee722e46901c44887e295967e96af16226
+  CometChatSDK: aef868cd0190b76c2ce352127e9894b7a4f650b4
+  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  image_picker_ios: 4a8aadfbb6dc30ad5141a2ce3832af9214a705b5
+  integration_test: 13825b8a9334a850581300559b8839134b124670
+  package_info_plus: fd030dabf36271f146f1f3beacd48f564b0f17f7
+  path_provider_foundation: 29f094ae23ebbca9d3d0cec13889cd9060c0e943
+  url_launcher_ios: 08a3dfac5fb39e8759aeb0abbd5d9480f30fc8b4
+  video_player_avfoundation: 81e49bb3d9fb63dccf9fa0f6d877dc3ddbeac126
+  wakelock_plus: 8b09852c8876491e4b6d179e17dfe2a0b5f60d47
+  webview_flutter_wkwebview: 2e2d318f21a5e036e2c3f26171342e95908bd60a
+
+PODFILE CHECKSUM: 833aa310305db1b6bbf16544f4fa72336502393e
+
+COCOAPODS: 1.12.1

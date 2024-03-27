@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///Styling class for [CometChatGroupScope]
+///[GroupScopeStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatGroupScope]
 class GroupScopeStyle extends BaseStyles {
   ///[scopeTextStyle] text style for scope text shown,
   /// Works when there is no drop down

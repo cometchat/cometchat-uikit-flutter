@@ -1,9 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///creates a widget that gives collaborative whiteboard bubble
+///[CometChatCollaborativeWhiteboardBubble] is a widget that is rendered as the content view for [CometChatCollaborativeWhiteboardExtension]
 ///
-///used by default  when [messageObject.category]=[MessageTypes.custom] and [messageObject.type]=[MessageTypeConstants.whiteboard]
+/// ```dart
+/// CometChatCollaborativeWhiteboardBubble(
+///      url: "https://example.com/collaborative-whiteboard",
+///      title: "My Collaborative Whiteboard",
+///      subtitle: "Edit with your team members",
+///      icon: Icon(Icons.document),
+///      buttonText: "Edit Now",
+///      style: WhiteboardBubbleStyle(
+///        background: Colors.grey,
+///        iconTint: Colors.white,
+///        dividerColor: Colors.black,
+///        webViewAppBarColor: Colors.blueGrey,
+///        webViewTitleStyle: TextStyle(
+///          color: Colors.white,
+///          fontWeight: FontWeight.bold,
+///        ),
+///        webViewBackIconColor: Colors.white,
+///      ),
+///      theme: CometChatTheme.light(),
+///    );
+/// ```
+///
 class CometChatCollaborativeWhiteBoardBubble extends StatelessWidget {
   const CometChatCollaborativeWhiteBoardBubble(
       {Key? key,
@@ -13,10 +34,8 @@ class CometChatCollaborativeWhiteBoardBubble extends StatelessWidget {
       this.icon,
       this.buttonText,
       this.style,
-      this.theme
-     })
+      this.theme})
       : super(key: key);
-
 
   ///[title] title to be displayed default is 'Collaborative Whiteboard'
   final String? title;
@@ -41,9 +60,9 @@ class CometChatCollaborativeWhiteBoardBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme _theme = theme ?? cometChatTheme;
     return Container(
-      color: style?.background ?? _theme.palette.getAccent50(),
+      color: style?.background ?? Colors.transparent,
       constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 65 / 100),
       child: Column(
@@ -53,17 +72,17 @@ CometChatTheme _theme = theme ?? cometChatTheme;
               title ?? Translations.of(context).collaborative_whiteboard,
               style: style?.titleStyle ??
                   TextStyle(
-              color: _theme.palette.getAccent(),
-              fontSize: _theme.typography.text1.fontSize,
-              fontWeight: _theme.typography.text1.fontWeight),
+                      color: _theme.palette.getAccent(),
+                      fontSize: _theme.typography.text1.fontSize,
+                      fontWeight: _theme.typography.text1.fontWeight),
             ),
             subtitle: Text(
               subtitle ?? Translations.of(context).open_whiteboard_subtitle,
               style: style?.subtitleStyle ??
                   TextStyle(
-              color: _theme.palette.getAccent600(),
-              fontSize: _theme.typography.subtitle2.fontSize,
-              fontWeight: _theme.typography.subtitle2.fontWeight),
+                      color: _theme.palette.getAccent600(),
+                      fontSize: _theme.typography.subtitle2.fontSize,
+                      fontWeight: _theme.typography.subtitle2.fontWeight),
             ),
             trailing: icon ??
                 Image.asset(
@@ -71,7 +90,7 @@ CometChatTheme _theme = theme ?? cometChatTheme;
                   package: UIConstants.packageName,
                   color: style?.iconTint ?? _theme.palette.getAccent700(),
                 ),
-                tileColor: style?.background ?? _theme.palette.getAccent50(),
+            tileColor: style?.background ?? _theme.palette.getAccent50(),
           ),
           const SizedBox(
             height: 9,
@@ -86,30 +105,36 @@ CometChatTheme _theme = theme ?? cometChatTheme;
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => CometChatCollaborativeWebView(
+                        builder: (context) => CometChatWebView(
                               title: title ??
                                   Translations.of(context)
                                       .collaborative_whiteboard,
-                              webviewUrl: url!,
-                              appBarColor: style?.webViewAppBarColor ??  _theme.palette.getBackground(),
-                              backIconColor: style?.webViewBackIconColor ?? _theme.palette.getPrimary(),
-                              titleStyle: style?.webViewTitleStyle ?? TextStyle(
-              color: _theme.palette.getAccent(),
-              fontSize: 20,
-              fontWeight: _theme.typography.heading.fontWeight),
+                              webViewUrl: url!,
+                              appBarColor: style?.webViewAppBarColor ??
+                                  _theme.palette.getBackground(),
+                              webViewStyle: WebViewStyle(
+                               backIconColor: style?.webViewBackIconColor ??
+                                   _theme.palette.getPrimary(),
+                                titleStyle: style?.webViewTitleStyle??TextStyle(
+                                    color: _theme.palette.getAccent(),
+                                    fontSize: _theme.typography.heading.fontSize,
+                                    fontWeight:
+                                    _theme.typography.heading.fontWeight),
+                              )
                             )));
               }
             },
             child: SizedBox(
-              height: 48,
-              child: Center(
+              height: 30,
+              child: Align(
+                alignment: Alignment.bottomCenter,
                 child: Text(
                   buttonText ?? Translations.of(context).open_whiteboard,
                   style: style?.buttonTextStyle ??
-                       TextStyle(
-              color: _theme.palette.getPrimary(),
-              fontSize: _theme.typography.name.fontSize,
-              fontWeight: _theme.typography.name.fontWeight),
+                      TextStyle(
+                          color: _theme.palette.getPrimary(),
+                          fontSize: _theme.typography.name.fontSize,
+                          fontWeight: _theme.typography.name.fontWeight),
                 ),
               ),
             ),

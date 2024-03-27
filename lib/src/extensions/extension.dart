@@ -17,15 +17,6 @@ export 'stickers/sticker_configuration.dart';
 export 'stickers/stickers_extension_decorator.dart';
 export 'stickers/sticker_auxiliary_button.dart';
 
-//Reaction
-export 'reaction/reaction_extension.dart';
-export 'reaction/reaction_bubble.dart';
-export 'reaction/reaction_extension_decorator.dart';
-export 'reaction/reactions_style.dart';
-export 'reaction/reaction_configuration.dart';
-export 'reaction/reaction_option_style.dart';
-export 'reaction/reaction_emoji_keyboard_style.dart';
-
 //Smart reply
 export 'smart_reply/smart_reply_extension.dart';
 export 'smart_reply/smart_reply_extension_decorator.dart';
@@ -46,7 +37,7 @@ export 'polls/polls_extension.dart';
 export 'polls/polls_bubble.dart';
 export 'polls/polls_bubble_style.dart';
 export 'polls/polls_configuration.dart';
-export 'polls/cometchat_create_poll.dart';
+export 'polls/create_poll.dart';
 export 'polls/create_polls_style.dart';
 export 'polls/polls_extension_decorator.dart';
 export 'polls/polls_option_style.dart';
@@ -86,3 +77,5 @@ export 'image_moderation/image_moderation_filter_style.dart';
 export 'thumbnail_generation/thumbnail_generation_extension.dart';
 export 'thumbnail_generation/thumbnail_generation_extension_decorator.dart';
 export 'thumbnail_generation/thumbnail_generation_configuration.dart';
+
+export 'default_extension.dart';

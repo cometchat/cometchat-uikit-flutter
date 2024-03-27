@@ -1,14 +1,14 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
 abstract class BannedMemberBuilderProtocol extends BuilderProtocol<
     BannedGroupMembersRequestBuilder, BannedGroupMembersRequest> {
-  const BannedMemberBuilderProtocol(BannedGroupMembersRequestBuilder _builder)
-      : super(_builder);
+  const BannedMemberBuilderProtocol(BannedGroupMembersRequestBuilder builder)
+      : super(builder);
 }
 
 class UIBannedMemberBuilder extends BannedMemberBuilderProtocol {
-  const UIBannedMemberBuilder(BannedGroupMembersRequestBuilder _builder)
-      : super(_builder);
+  const UIBannedMemberBuilder(BannedGroupMembersRequestBuilder builder)
+      : super(builder);
 
   @override
   BannedGroupMembersRequest getRequest() {

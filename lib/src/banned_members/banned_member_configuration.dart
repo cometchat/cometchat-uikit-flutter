@@ -1,12 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[BannedMemberConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatBannedMembers]
+///can be used by a component where [CometChatBannedMembers] is a child component
+///
+/// ```dart
+/// BannedMemberConfiguration(
+///     title: "members banished",
+///     disableUsersPresence: true,
+/// 		bannedMembersStyle: BannedMembersStyle(
+///     backIconTint: Colors.green,
+///     background: Colors.lightBlue,
+///     titleStyle: TextStyle(
+///     backgroundColor: Colors.yellow,
+///           color: Colors.deepOrange,
+///           fontSize: 21,
+///           fontWeight: FontWeight.bold
+///     )
+///   )
+///  );
+/// ```
 class BannedMemberConfiguration {
   BannedMemberConfiguration(
       {this.requestBuilder,
       this.hideSeparator,
       this.childView,
-      this.style = const BannedMembersStyle(),
+      this.bannedMembersStyle = const BannedMembersStyle(),
       this.options,
       this.controller,
       this.theme,
@@ -18,18 +38,28 @@ class BannedMemberConfiguration {
       this.selectionMode,
       this.onSelection,
       this.title,
-      this.errorText,
-      this.emptyText,
-      this.subtitle,
-      this.tail,
+      this.errorStateText,
+      this.emptyStateText,
+      this.subtitleView,
       this.avatarStyle,
-      this.hideUserPresence,
-      this.loadingView,
-      this.emptyView,
-      this.errorView,
+      this.disableUsersPresence,
+      this.loadingStateView,
+      this.emptyStateView,
+      this.errorStateView,
       this.hideError,
       this.statusIndicatorStyle,
-      this.onError, this.onBack, this.onItemTap, this.onItemLongPress,this.activateSelection, this.appBarOptions, this.listItemStyle, this.bannedMemberProtocol, this.bannedMemberRequestBuilder, });
+      this.onError,
+      this.onBack,
+      this.onItemTap,
+      this.onItemLongPress,
+      this.activateSelection,
+      this.appBarOptions,
+      this.listItemStyle,
+      this.bannedMemberProtocol,
+      this.bannedMemberRequestBuilder,
+      this.unbanIconUrl,
+      this.unbanIconUrlPackageName,
+      this.stateCallBack});
 
   ///[requestBuilder] set custom request builder
   final UIBannedGroupMemberRequestBuilder? requestBuilder;
@@ -40,8 +70,8 @@ class BannedMemberConfiguration {
   ///[childView] set custom view for each banned member
   final Widget Function(GroupMember)? childView;
 
-  ///[style] sets style
-  final BannedMembersStyle style;
+  ///[bannedMembersStyle] sets bannedMembersStyle
+  final BannedMembersStyle bannedMembersStyle;
 
   ///[controller] sets controller for the list
   final ScrollController? controller;
@@ -80,32 +110,29 @@ class BannedMemberConfiguration {
   ///[title] sets title for the list
   final String? title;
 
-  ///[emptyText] text to be displayed when the list is empty
-  final String? emptyText;
+  ///[emptyStateText] text to be displayed when the list is empty
+  final String? emptyStateText;
 
-  ///[errorText] text to be displayed when error occurs
-  final String? errorText;
+  ///[errorStateText] text to be displayed when error occurs
+  final String? errorStateText;
 
-  ///[subtitle] to set subtitle for each banned member
-  final Widget? Function(GroupMember)? subtitle;
-
-  ///[tail] to set tail/trailing widget for each banned member
-  final Widget? Function(GroupMember)? tail;
+  ///[subtitleView] to set subtitleView for each banned member
+  final Widget? Function(GroupMember)? subtitleView;
 
   ///[hideUserPresence] controls visibility of status indicator
-  final bool? hideUserPresence;
+  final bool? disableUsersPresence;
 
   ///[avatarStyle] is applied to the avatar of the user banned from the group
   final AvatarStyle? avatarStyle;
 
-  ///[loadingView] returns view fow loading state
-  final WidgetBuilder? loadingView;
+  ///[loadingStateView] returns view fow loading state
+  final WidgetBuilder? loadingStateView;
 
-  ///[emptyView] returns view fow empty state
-  final WidgetBuilder? emptyView;
+  ///[emptyStateView] returns view fow empty state
+  final WidgetBuilder? emptyStateView;
 
-  ///[errorView] returns view fow error state behind the dialog
-  final WidgetBuilder? errorView;
+  ///[errorStateView] returns view fow error state behind the dialog
+  final WidgetBuilder? errorStateView;
 
   ///[hideError] toggle visibility of error dialog
   final bool? hideError;
@@ -131,7 +158,7 @@ class BannedMemberConfiguration {
   ///[appBarOptions] list of options to be visible in app bar
   final List<Widget>? appBarOptions;
 
-  ///[listItemStyle] style for every list item
+  ///[listItemStyle] bannedMembersStyle for every list item
   final ListItemStyle? listItemStyle;
 
   ///[bannedMemberProtocol] is a wrapper for request builder
@@ -139,4 +166,13 @@ class BannedMemberConfiguration {
 
   ///[bannedMemberRequestBuilder] set custom request builder
   final BannedGroupMembersRequestBuilder? bannedMemberRequestBuilder;
+
+  ///[unbanIconUrl] is a custom icon for the default option
+  final String? unbanIconUrl;
+
+  ///[unbanIconUrlPackageName] is the package for the asset image to show as custom icon for the default option
+  final String? unbanIconUrlPackageName;
+
+  ///[stateCallBack] to access controller functions  from parent pass empty reference of  CometChatBannedMembersController object
+  final Function(CometChatBannedMembersController controller)? stateCallBack;
 }

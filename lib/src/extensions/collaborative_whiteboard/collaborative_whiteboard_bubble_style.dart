@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[WhiteBoardBubbleStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatCollaborativeWhiteBoardBubble]
 class WhiteBoardBubbleStyle {
   ///Style for WhiteBoard bubble
   const WhiteBoardBubbleStyle(
@@ -11,8 +13,7 @@ class WhiteBoardBubbleStyle {
       this.webViewAppBarColor,
       this.iconTint,
       this.background,
-      this.dividerColor
-      });
+      this.dividerColor});
 
   ///[titleStyle] title text style
   final TextStyle? titleStyle;

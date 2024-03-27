@@ -1,12 +1,12 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart' as cc;
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
 
-///[CometChatMessageHeaderController] is the controller class for [CometChatMessageHeader]
-///Uses 3 SDk listeners i.e. [MessageListener] , [UserListener] and [GroupListener]
+///[CometChatMessageHeaderController] is the view model for [CometChatMessageHeader]
+///it contains all the business logic involved in changing the state of the UI of [CometChatMessageHeader]
 class CometChatMessageHeaderController extends GetxController
     with
-        MessageListener,
+        CometChatMessageEventListener,
         UserListener,
         GroupListener,
         CometChatGroupEventListener {
@@ -52,7 +52,7 @@ class CometChatMessageHeaderController extends GetxController
     _dateString = DateTime.now().millisecondsSinceEpoch.toString();
     _uiGroupListener = "${_dateString}UIGroupListener";
     if (disableTyping != true) {
-      CometChat.addMessageListener(messageListenerId, this);
+      CometChatMessageEvents.addMessagesListener(messageListenerId, this);
     }
     if (userObject != null && disableUserPresence != true) {
       CometChat.addUserListener(groupListenerId, this);
@@ -65,7 +65,7 @@ class CometChatMessageHeaderController extends GetxController
 
   @override
   void onClose() {
-    CometChat.removeMessageListener(messageListenerId);
+    CometChatMessageEvents.removeMessagesListener(messageListenerId);
     CometChat.removeUserListener(userListenerId);
     CometChat.removeGroupListener(groupListenerId);
     CometChatGroupEvents.removeGroupsListener(_uiGroupListener);
@@ -139,9 +139,10 @@ class CometChatMessageHeaderController extends GetxController
   }
   */
 
-  updateMemberCount(Group _group) {
-    if (groupObject != null && groupObject!.guid == _group.guid) {
-      membersCount = _group.membersCount;
+  updateMemberCount(Group group) {
+    if (groupObject != null && groupObject!.guid == group.guid) {
+      membersCount = group.membersCount;
+      groupObject?.membersCount = membersCount ?? 1;
       update();
     }
   }

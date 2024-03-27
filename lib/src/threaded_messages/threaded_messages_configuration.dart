@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
-///Configuration class for [CometChatThreadedMessages]
+///[ThreadedMessagesConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatThreadedMessages]
+/// ```dart
+/// ThreadedMessagesConfiguration(
+///      threadedMessagesStyle: ThreadedMessageStyle(),
+///      messageComposerConfiguration: MessageComposerConfiguration(),
+///      messageListConfiguration: MessageListConfiguration()
+///    );
+/// ```
 class ThreadedMessagesConfiguration {
   const ThreadedMessagesConfiguration(
       {this.title,

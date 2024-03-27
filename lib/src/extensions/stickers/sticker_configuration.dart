@@ -1,6 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[StickerConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [StickersExtension]
+///
+/// ```dart
+///
+/// final stickerConfig = StickerConfiguration(
+///   errorIcon: Icon(Icons.error),
+///   emptyStateView: (context) => Text('No stickers available.'),
+///   errorStateView: (context) => Text('Failed to load stickers.'),
+///   loadingStateView: (context) => CircularProgressIndicator(),
+///   errorStateText: 'Error fetching stickers',
+///   emptyStateText: 'No stickers available',
+///   stickerButtonIcon: Icon(Icons.sticky_note_2),
+///   keyboardButtonIcon: Icon(Icons.keyboard),
+///   theme: CometChatTheme(),
+///   stickerKeyboardStyle: StickerKeyboardStyle(),
+/// );
+///
+/// ```
 class StickerConfiguration {
   StickerConfiguration(
       {this.errorIcon,
@@ -12,7 +31,9 @@ class StickerConfiguration {
       this.stickerButtonIcon,
       this.keyboardButtonIcon,
       this.theme,
-      this.stickerKeyboardStyle});
+      this.stickerKeyboardStyle,
+      this.stickerIconTint,
+      this.keyboardIconTint});
 
   ///[stickerKeyboardStyle] style for the sticker keyboard
   final StickerKeyboardStyle? stickerKeyboardStyle;
@@ -43,4 +64,10 @@ class StickerConfiguration {
 
   ///[emptyStateText] text to be shown at empty state
   final String? emptyStateText;
+
+  ///[stickerIconTint] provides color to the sticker Icon/widget
+  final Color? stickerIconTint;
+
+  ///[keyboardIconTint] provides color to the keyboard Icon/widget
+  final Color? keyboardIconTint;
 }

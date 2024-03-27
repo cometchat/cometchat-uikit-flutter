@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
-import '../../flutter_chat_ui_kit.dart' as cc;
+import '../../cometchat_chat_uikit.dart' as cc;
 
+///[CometChatAddMembersController] is the view model for [CometChatAddMembers]
+///it contains all the business logic involved in changing the state of the UI of [CometChatAddMembers]
 class CometChatAddMembersController extends GetxController {
   CometChatAddMembersController({required this.group, this.onError});
 
@@ -27,15 +29,15 @@ class CometChatAddMembersController extends GetxController {
   initializeLoggedInUser() async {
     _loggedInUser = await CometChat.getLoggedInUser();
     _conversation ??= (await CometChat.getConversation(
-        group.guid, ConversationType.group, onSuccess: (_conversation) {
-      if (_conversation.lastMessage != null) {}
+        group.guid, ConversationType.group, onSuccess: (conversation) {
+      if (conversation.lastMessage != null) {}
     }, onError: (_) {}));
     _conversationId ??= _conversation?.conversationId;
   }
 
   addMember(List<User>? users, BuildContext context) {
     List<GroupMember> members = [];
-    List<User> _addedMembers = [];
+    List<User> addedMembers = [];
 
     if (users == null) return;
 
@@ -64,7 +66,7 @@ class CometChatAddMembersController extends GetxController {
           List<cc.Action> messages = [];
           for (GroupMember member in members) {
             if (result[member.uid] == "success") {
-              _addedMembers.add(member);
+              addedMembers.add(member);
               messages.add(cc.Action(
                 action: MessageCategoryConstants.action,
                 conversationId: _conversationId!,
@@ -72,8 +74,8 @@ class CometChatAddMembersController extends GetxController {
                 rawData: '{}',
                 oldScope: '',
                 newScope: GroupMemberScope.participant,
-                id: DateTime.now().microsecondsSinceEpoch,
-                muid: null,
+                id: 0,
+                muid: DateTime.now().microsecondsSinceEpoch.toString(),
                 sender: _loggedInUser!,
                 receiver: group,
                 receiverUid: group.guid,
@@ -94,13 +96,14 @@ class CometChatAddMembersController extends GetxController {
                 updatedAt: DateTime.now(),
                 parentMessageId: 0,
                 replyCount: 0,
+                unreadRepliesCount: 0,
               ));
             }
           }
-          group.membersCount += _addedMembers.length;
+          group.membersCount += addedMembers.length;
           Navigator.of(context).pop();
           CometChatGroupEvents.ccGroupMemberAdded(
-              messages, _addedMembers, group, _loggedInUser!);
+              messages, addedMembers, group, _loggedInUser!);
         },
         onError: onError);
   }

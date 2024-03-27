@@ -1,10 +1,13 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[GroupsBuilderProtocol] is an interface that defines the structure for fetching the groups.
+///It provides a generic [requestBuilder] property and methods [getRequest] and [getSearchRequest] that needs to be overridden.
 abstract class GroupsBuilderProtocol
     extends BuilderProtocol<GroupsRequestBuilder, GroupsRequest> {
   const GroupsBuilderProtocol(GroupsRequestBuilder _builder) : super(_builder);
 }
 
+///[UIGroupsBuilder] is the default [GroupsBuilderProtocol] used when a custom builder protocol is not passed
 class UIGroupsBuilder extends GroupsBuilderProtocol {
   const UIGroupsBuilder(GroupsRequestBuilder _builder) : super(_builder);
 

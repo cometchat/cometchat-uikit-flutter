@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../cometchat_chat_uikit.dart';
 
+///[CollaborativeDocumentExtensionDecorator] is a the view model for [CollaborativeDocumentExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class CollaborativeDocumentExtensionDecorator extends DataSourceDecorator {
   String collaborativeDocumentExtensionTypeConstant = ExtensionType.document;
   CollaborativeDocumentConfiguration? configuration;
@@ -86,17 +88,17 @@ class CollaborativeDocumentExtensionDecorator extends DataSourceDecorator {
             BubbleAlignment alignment) {
           return getContentView(message as CustomMessage, _theme, context);
         },
-        options: ChatConfigurator.getDataSource().getCommonOptions,
-        bottomView: ChatConfigurator.getDataSource().getBottomView);
+        options: CometChatUIKit.getDataSource().getCommonOptions,
+        bottomView: CometChatUIKit.getDataSource().getBottomView);
   }
 
-  Widget getContentView(CustomMessage _customMessage, CometChatTheme _theme,
-      BuildContext context) {
-    if (_customMessage.deletedAt != null) {
-      return super.getDeleteMessageBubble(_customMessage, _theme);
+  Widget getContentView(
+      CustomMessage customMessage, CometChatTheme theme, BuildContext context) {
+    if (customMessage.deletedAt != null) {
+      return super.getDeleteMessageBubble(customMessage, theme);
     }
     return CometChatCollaborativeDocumentBubble(
-      url: getWebViewUrl(_customMessage),
+      url: getWebViewUrl(customMessage),
       title: configuration?.title,
       subtitle: configuration?.subtitle,
       buttonText: configuration?.buttonText,
@@ -126,11 +128,11 @@ class CollaborativeDocumentExtensionDecorator extends DataSourceDecorator {
       debugPrint("Success map $map");
     }, onError: (CometChatException e) {
       debugPrint('$e');
-      String _error = getErrorTranslatedText(context, e.code);
+      String error = getErrorTranslatedText(context, e.code);
       showCometChatConfirmDialog(
           context: context,
           messageText: Text(
-            _error,
+            error,
             style: TextStyle(
                 fontSize: theme.typography.title2.fontSize,
                 fontWeight: theme.typography.title2.fontWeight,
@@ -147,7 +149,7 @@ class CollaborativeDocumentExtensionDecorator extends DataSourceDecorator {
   }
 
   CometChatMessageComposerAction getAttachmentOption(
-      CometChatTheme _theme, BuildContext context, Map<String, dynamic>? id) {
+      CometChatTheme theme, BuildContext context, Map<String, dynamic>? id) {
     return CometChatMessageComposerAction(
         id: collaborativeDocumentExtensionTypeConstant,
         title: configuration?.optionTitle ??
@@ -158,24 +160,31 @@ class CollaborativeDocumentExtensionDecorator extends DataSourceDecorator {
             configuration?.optionIconUrlPackageName ?? UIConstants.packageName,
         titleStyle: configuration?.optionStyle?.titleStyle ??
             TextStyle(
-                color: _theme.palette.getAccent(),
-                fontSize: _theme.typography.subtitle1.fontSize,
-                fontWeight: _theme.typography.subtitle1.fontWeight),
+                color: theme.palette.getAccent(),
+                fontSize: theme.typography.subtitle1.fontSize,
+                fontWeight: theme.typography.subtitle1.fontWeight),
         iconTint: configuration?.optionStyle?.iconTint ??
-            _theme.palette.getAccent700(),
+            theme.palette.getAccent700(),
         background: configuration?.optionStyle?.background,
         cornerRadius: configuration?.optionStyle?.cornerRadius,
         iconBackground: configuration?.optionStyle?.iconBackground,
         iconCornerRadius: configuration?.optionStyle?.iconCornerRadius,
-        onItemClick: (String? uid, String? guid) {
+        onItemClick: (context, user, group) {
+          String? uid, guid;
           String receiverType = '';
-          if (uid == null) {
-            receiverType = ReceiverTypeConstants.group;
-          } else {
+          if (user != null) {
+            uid = user.uid;
             receiverType = ReceiverTypeConstants.user;
           }
-          sendCollaborativeDocument(
-              context, uid ?? guid ?? '', receiverType, _theme);
+          if (group != null) {
+            guid = group.guid;
+            receiverType = ReceiverTypeConstants.group;
+          }
+
+          if (uid != null || guid != null) {
+            sendCollaborativeDocument(
+                context, uid ?? guid ?? '', receiverType, theme);
+          }
         });
   }
 

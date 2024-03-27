@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///creates a widget that gives sticker bubble
+///[CometChatStickerBubble] is a widget that is rendered as the content view for [StickersExtension]
 ///
-///used by default  when [messageObject.category]=custom and [messageObject.type]=[MessageTypeConstants.sticker]
+/// ```dart
+/// CometChatStickerBubble(
+///   messageObject: CustomMessage(),
+///   stickerUrl: "url of the sticker",
+///   stickerName: "name of sticker"
+/// );
+/// ```
 class CometChatStickerBubble extends StatelessWidget {
   const CometChatStickerBubble(
       {Key? key, this.messageObject, this.stickerUrl, this.stickerName})
@@ -29,11 +35,11 @@ class CometChatStickerBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String? _stickerUrl = getStickerUrl();
+    String? stickerUrl = getStickerUrl();
 
-    return _stickerUrl != null && _stickerUrl.isNotEmpty
+    return stickerUrl != null && stickerUrl.isNotEmpty
         ? Image.network(
-            _stickerUrl,
+            stickerUrl,
             fit: BoxFit.contain,
             errorBuilder: (context, object, stackTrace) {
               return const SizedBox(

@@ -1,5 +1,16 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[ThumbnailGenerationConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [ThumbnailGenerationExtension]
+///
+/// ```dart
+///
+///   ThumbnailGenerationConfiguration(
+///    style: VideoBubbleStyle(),
+///    theme: CometChatTheme(palette: Palette(),typography: Typography())
+///  );
+/// ```
+///
 class ThumbnailGenerationConfiguration {
   const ThumbnailGenerationConfiguration({this.theme, this.style});
 

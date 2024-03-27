@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[SmartReplyStyle] is a data class that has styling-related properties
+///to customize the appearance of [SmartReplyView]
 class SmartReplyStyle {
   const SmartReplyStyle(
       {this.replyTextStyle,

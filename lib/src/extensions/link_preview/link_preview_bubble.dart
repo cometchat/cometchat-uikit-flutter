@@ -1,6 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[LinkPreviewBubble] is a widget that is rendered as the content view for [LinkPreviewExtension]
+/// ```dart
+/// LinkPreviewBubble(
+///   onTapUrl: (url) async {
+///     // Open the URL in a browser when it is tapped
+///     await launch(url);
+///   },
+///   links: [    // The links contained in the website metadata    {      'url': 'https://www.example.com',      'title': 'Example Website',      'description': 'A sample website to demonstrate link previews',      'image': 'https://www.example.com/image.png',    }  ],
+///   child: Text('Link Preview'),
+///   defaultImage: Image.asset('assets/images/default.png'),
+///   style: LinkPreviewBubbleStyle(
+///     backgroundColor: Colors.white,
+///     titleStyle: TextStyle(
+///       fontSize: 16,
+///       fontWeight: FontWeight.bold,
+///     ),
+///   ),
+/// );
+///
+/// ```
 class LinkPreviewBubble extends StatelessWidget {
   const LinkPreviewBubble(
       {Key? key,

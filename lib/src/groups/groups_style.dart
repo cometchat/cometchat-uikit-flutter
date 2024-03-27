@@ -1,30 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[GroupsStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatGroups]
 class GroupsStyle extends BaseStyles {
-  const GroupsStyle(
-      {this.titleStyle,
-      this.backIconTint,
-      this.searchBorderColor,
-      this.searchBackground,
-      this.searchBorderRadius,
-      this.searchBorderWidth,
-      this.searchTextStyle,
-      this.searchPlaceholderStyle,
-      this.searchIconTint,
-      this.loadingIconTint,
-      this.emptyTextStyle,
-      this.errorTextStyle,
-      double? width,
-      double? height,
-      Color? background,
-      BoxBorder? border,
-      double? borderRadius,
-      Gradient? gradient,
-      this.subtitleTextStyle,
-      this.privateGroupIconBackground,
-      this.passwordGroupIconBackground})
-      : super(
+  const GroupsStyle({
+    this.titleStyle,
+    this.backIconTint,
+    this.searchBorderColor,
+    this.searchBackground,
+    this.searchBorderRadius,
+    this.searchBorderWidth,
+    this.searchTextStyle,
+    this.searchPlaceholderStyle,
+    this.searchIconTint,
+    this.loadingIconTint,
+    this.emptyTextStyle,
+    this.errorTextStyle,
+    double? width,
+    double? height,
+    Color? background,
+    BoxBorder? border,
+    double? borderRadius,
+    Gradient? gradient,
+    this.subtitleTextStyle,
+    this.privateGroupIconBackground,
+    this.passwordGroupIconBackground,
+    this.selectionIconTint,
+    this.submitIconTint,
+  }) : super(
             width: width,
             height: height,
             background: background,
@@ -76,4 +80,10 @@ class GroupsStyle extends BaseStyles {
 
   ///[privateGroupIconBackground] provides color to the icon for password protected group
   final Color? passwordGroupIconBackground;
+
+  ///[selectionIconTint] set selection icon color
+  final Color? selectionIconTint;
+
+  ///[submitIconTint] set submit icon tint
+  final Color? submitIconTint;
 }

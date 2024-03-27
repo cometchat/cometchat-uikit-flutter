@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../../flutter_chat_ui_kit.dart';
+import '../../../cometchat_chat_uikit.dart';
 
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart' as kit;
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as kit;
 
+///[CometChatGroupsController] is the view model for [CometChatGroups]
+///it contains all the business logic involved in changing the state of the UI of [CometChatGroups]
 class CometChatGroupsController
     extends CometChatSearchListController<Group, String>
-    with CometChatSelectable, CometChatGroupEventListener, GroupListener {
+    with
+        CometChatSelectable,
+        CometChatGroupEventListener,
+        GroupListener,
+        ConnectionListener {
   //Class members
   late GroupsBuilderProtocol groupsBuilderProtocol;
   late String dateStamp;
@@ -26,7 +32,7 @@ class CometChatGroupsController
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
 
     groupSDKListenerID = "${dateStamp}group_sdk_listener";
-    groupUIListenerID = "${dateStamp}_ui_group_listener";
+    groupUIListenerID = "${dateStamp}_ui_FromGroup_listener";
   }
 
 //initialization functions
@@ -34,6 +40,7 @@ class CometChatGroupsController
   void onInit() {
     CometChatGroupEvents.addGroupsListener(groupUIListenerID, this);
     CometChat.addGroupListener(groupSDKListenerID, this);
+    CometChat.addConnectionListener(groupSDKListenerID, this);
     super.onInit();
   }
 
@@ -41,6 +48,7 @@ class CometChatGroupsController
   void onClose() {
     CometChat.removeGroupListener(groupSDKListenerID);
     CometChatGroupEvents.removeGroupsListener(groupUIListenerID);
+    CometChat.removeConnectionListener(groupSDKListenerID);
     super.onClose();
   }
 
@@ -135,5 +143,29 @@ class CometChatGroupsController
   void ccGroupMemberKicked(
       kit.Action message, User kickedUser, User kickedBy, Group kickedFrom) {
     updateElement(kickedFrom);
+  }
+
+  //TODO: once hasJoined has been fixed in sdk the following override will be removed
+  @override
+  updateElement(Group element, {int? index}) {
+    int matchedIndex;
+    if (index == null) {
+      matchedIndex = getMatchingIndex(element);
+    } else {
+      matchedIndex = index;
+    }
+    if (index != -1) {
+      element.hasJoined = list[matchedIndex].hasJoined;
+    }
+    super.updateElement(element, index: matchedIndex);
+  }
+
+  @override
+  void onConnected() {
+    if (!isLoading) {
+      request = groupsBuilderProtocol.getRequest();
+      list = [];
+      loadMoreElements();
+    }
   }
 }

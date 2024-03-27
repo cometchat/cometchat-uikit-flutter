@@ -2,7 +2,7 @@
 // import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  // const MethodChannel channel = MethodChannel('flutter_chat_ui_kit');
+  // const MethodChannel channel = MethodChannel('cometchat_chat_uikit');
   //
   // TestWidgetsFlutterBinding.ensureInitialized();
   //

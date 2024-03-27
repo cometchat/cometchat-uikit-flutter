@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[CollaborativeWhiteBoardConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CollaborativeWhiteBoardExtension]
+/// ```dart
+///  CollaborativeWhiteboardConfiguration(
+///    title: "Collaborative Editing",
+///    subtitle: "Open a document to edit together",
+///    buttonText: "Open",
+///    optionTitle: "Collaborative Whiteboard",
+///    optionIconUrl: "assets/images/collaborative_whiteboard.png",
+///    optionIconUrlPackageName: "my_package",
+///    optionStyle: CollaborativeWhiteboardOptionStyle(
+///    background: Colors.green,
+///    iconTint: Colors.red,
+///    titleStyle: TextStyle(color: Colors.white)
+///    )
+///   );
+/// ```
+///
 class CollaborativeWhiteBoardConfiguration {
   CollaborativeWhiteBoardConfiguration(
       {this.title,
@@ -12,8 +30,7 @@ class CollaborativeWhiteBoardConfiguration {
       this.optionTitle,
       this.optionIconUrl,
       this.optionIconUrlPackageName,
-      this.optionStyle
-      });
+      this.optionStyle});
 
   ///[title] title to be displayed default is 'Collaborative Whiteboard'
   final String? title;
@@ -44,5 +61,4 @@ class CollaborativeWhiteBoardConfiguration {
 
   ///[optionStyle] provides style to the option that generates a collaborative whiteboard
   final CollaborativeWhiteboardOptionStyle? optionStyle;
-
 }

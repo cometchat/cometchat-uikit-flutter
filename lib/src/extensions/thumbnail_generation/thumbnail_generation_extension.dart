@@ -1,13 +1,20 @@
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-class ThumbnailGenerationExtension implements ExtensionsDataSource {
+///[ThumbnailGenerationExtension] is the controller class for enabling and disabling the extension
+///the extension generates thumbnails for images and videos
+class ThumbnailGenerationExtension extends ExtensionsDataSource {
   ThumbnailGenerationConfiguration? configuration;
   ThumbnailGenerationExtension({this.configuration});
 
   @override
-  void enable() {
+  void addExtension() {
     ChatConfigurator.enable((dataSource) =>
         ThumbnailGenerationExtensionDecorator(dataSource,
             configuration: configuration));
+  }
+
+  @override
+  String getExtensionId() {
+    return "thumbnail-generation";
   }
 }

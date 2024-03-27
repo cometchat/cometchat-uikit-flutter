@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[TransferOwnershipStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatTransferOwnership]
 class TransferOwnershipStyle extends BaseStyles {
   const TransferOwnershipStyle(
       {this.memberScopeStyle,

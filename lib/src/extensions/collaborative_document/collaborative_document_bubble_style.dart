@@ -1,6 +1,7 @@
-
 import 'package:flutter/material.dart';
 
+///[DocumentBubbleStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatDocumentBubble]
 class DocumentBubbleStyle {
   ///Style Component for DocumentBubble
   const DocumentBubbleStyle(
@@ -12,8 +13,7 @@ class DocumentBubbleStyle {
       this.webViewAppBarColor,
       this.iconTint,
       this.background,
-      this.dividerColor
-      });
+      this.dividerColor});
 
   ///[titleStyle] title text style
   final TextStyle? titleStyle;
@@ -39,6 +39,6 @@ class DocumentBubbleStyle {
   ///[background] sets background color for the bubble
   final Color? background;
 
-   ///[dividerColor] sets background color for the bubble
+  ///[dividerColor] sets background color for the bubble
   final Color? dividerColor;
 }

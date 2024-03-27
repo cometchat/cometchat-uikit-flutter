@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get.dart';
 // import 'package:get/get_state_manager/get_state_manager.dart';
 // import 'package:get/state_manager.dart';
@@ -10,38 +10,28 @@ import 'package:get/get.dart';
 ///
 /// ```dart
 ///  CometChatMessageComposer(
-///        user: 'user id',
+///        user: User(uid: 'uid', name: 'name'),
+///        group: Group(guid: 'guid', name: 'name', type: 'public'),
+///        messageComposerStyle: MessageComposerStyle(),
 ///        stateCallBack: (CometChatMessageComposerController state) {},
-///        enableTypingIndicator: true,
 ///        customSoundForMessage: 'asset url',
-///        excludeMessageTypes: [MessageTypeConstants.image],
-///        messageTypes: [
-///          TemplateUtils.getAudioMessageTemplate(),
-///          TemplateUtils.getTextMessageTemplate(),
-///          CometChatMessageTemplate(type: 'custom', name: 'custom')
-///        ],
-///        enableSoundForMessages: true,
-///        hideEmoji: false,
-///        hideAttachment: false,
+///        disableSoundForMessages: true,
 ///        hideLiveReaction: false,
-///        showSendButton: true,
 ///        placeholderText: 'Message',
-///        style: MessageComposerStyle(
-///          cornerRadius: 8,
-///          background: Colors.white,
-///          border: Border.all(),
-///          gradient: LinearGradient(colors: []),
-///        ),
-///      )
+///      );
 ///
 /// ```
 ///
+///
+///
 
+
+//ignore: must_be_immutable
 class CometChatMessageComposer extends StatelessWidget {
   CometChatMessageComposer(
       {Key? key,
-      User? user,
-      Group? group,
+     this.user,
+      this.group,
       this.messageComposerStyle = const MessageComposerStyle(),
       this.placeholderText,
       bool hideLiveReaction = false,
@@ -51,12 +41,11 @@ class CometChatMessageComposer extends StatelessWidget {
       String? customSoundForMessage,
       String? customSoundForMessagePackage,
       this.auxiliaryButtonView,
-      Widget? Function(BuildContext, {User? user, Group? group})? headerView,
-      Widget? Function(BuildContext, {User? user, Group? group})? footerView,
+      ComposerWidgetBuilder? headerView,
+      ComposerWidgetBuilder? footerView,
       this.secondaryButtonView,
       this.sendButtonView,
-      this.onSendButtonClick,
-      List<CometChatMessageComposerAction>? attachmentOptions,
+      ComposerActionsBuilder? attachmentOptions,
       this.text,
       this.onChange,
       this.maxLine,
@@ -67,7 +56,22 @@ class CometChatMessageComposer extends StatelessWidget {
       this.theme,
       this.attachmentIcon,
       this.liveReactionIcon,
-      OnError? onError})
+      OnError? onError,
+        this.recordIcon,
+        this.playIcon,
+        this.deleteIcon,
+        this.stopIcon,
+        this.submitIcon,
+        this.mediaRecorderStyle,
+      this.pauseIcon,
+        Function(BuildContext, BaseMessage, PreviewMessageMode?)? onSendButtonTap,
+        this.hideVoiceRecording,
+        this.voiceRecordingIcon,
+        this.aiIcon,
+        this.aiIconURL,
+        this.aiIconPackageName,
+        this.aiOptionStyle
+      })
       : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
@@ -87,17 +91,27 @@ class CometChatMessageComposer extends StatelessWidget {
             stateCallBack: stateCallBack,
             footerView: footerView,
             headerView: headerView,
-            onError: onError),
+            onSendButtonTap: onSendButtonTap,
+            onError: onError,
+            aiOptionStyle: aiOptionStyle
+        ),
         super(key: key);
+
+
+  ///sets [user] for message composer
+  final User? user;
+
+  ///set [group] for message composer
+  final Group? group;
 
   ///[messageComposerStyle] message composer style
   final MessageComposerStyle messageComposerStyle;
 
   ///[auxiliaryButtonView] ui component to be forwarded to message input component
-  final Widget Function({User? user, Group? group})? auxiliaryButtonView;
+  final ComposerWidgetBuilder? auxiliaryButtonView;
 
   ///[secondaryButtonView] ui component to be forwarded to message input component
-  final Widget Function({User? user, Group? group})? secondaryButtonView;
+  final ComposerWidgetBuilder? secondaryButtonView;
 
   ///[sendButtonView] ui component to be forwarded to message input component
   final Widget? sendButtonView;
@@ -110,7 +124,6 @@ class CometChatMessageComposer extends StatelessWidget {
 
   ///[onChange] callback to handle change in value of text in the input field
   final Function(String)? onChange;
-
   ///[maxLine] maximum lines allowed to increase in the input field
   final int? maxLine;
 
@@ -123,9 +136,6 @@ class CometChatMessageComposer extends StatelessWidget {
   ///[attachmentIconURL] path of the icon to show in the attachments button
   final String? attachmentIconURL;
 
-  ///[onSendButtonClick] some task to execute if user presses the primary/send button
-  final Function()? onSendButtonClick;
-
   ///[theme] sets the theme for this component
   final CometChatTheme? theme;
 
@@ -135,12 +145,55 @@ class CometChatMessageComposer extends StatelessWidget {
   ///[liveReactionIcon] custom live reaction icon
   final Widget? liveReactionIcon;
 
+  ///[recordIcon] provides icon to the start Icon/widget
+  final Widget? recordIcon;
+
+  ///[playIcon] provides icon to the play Icon/widget
+  final Widget? playIcon;
+
+  ///[deleteIcon] provides icon to the close Icon/widget
+  final Widget? deleteIcon;
+
+  ///[stopIcon] provides icon to the stop Icon/widget
+  final Widget? stopIcon;
+
+  ///[submitIcon] provides icon to the submit Icon/widget
+  final Widget? submitIcon;
+
+  ///[pauseIcon] provides icon to the play Icon/widget
+  final Widget? pauseIcon;
+
+  ///[mediaRecorderStyle] provides style to the media recorder
+  final MediaRecorderStyle? mediaRecorderStyle;
+
+  ///[hideVoiceRecording] provides option to hide voice recording
+  final bool? hideVoiceRecording;
+
+  ///[voiceRecordingIcon] provides icon to the voice recording Icon/widget
+  final Widget? voiceRecordingIcon;
+
   final int parentMessageId;
+
+  ///[attachmentIcon] custom ai icon
+  final Widget? aiIcon;
+
+  ///[aiIconURL] path of the icon to show in the ai button
+  final String? aiIconURL;
+
+  ///[aiIconPackageName] package name to show icon from
+  final String? aiIconPackageName;
+
+  ///set the style for ai options
+  final AIOptionsStyle? aiOptionStyle;
+
+
+
+
 
   late Map<String, dynamic> composerId = {};
 
   Widget _getSendButton(
-      CometChatTheme _theme, CometChatMessageComposerController value) {
+      CometChatTheme theme, CometChatMessageComposerController value) {
     if (value.textEditingController.text.isEmpty &&
         value.hideLiveReaction != true) {
       return IconButton(
@@ -149,7 +202,7 @@ class CometChatMessageComposer extends StatelessWidget {
         icon: liveReactionIcon ??
             Image.asset(AssetConstants.heart,
                 package: UIConstants.packageName,
-                color: _theme.palette.getError()),
+                color: theme.palette.getError()),
         onPressed: () async {
           if (value.hideLiveReaction != true) {
             try {
@@ -170,17 +223,40 @@ class CometChatMessageComposer extends StatelessWidget {
                     AssetConstants.send,
                     package: UIConstants.packageName,
                     color: value.textEditingController.text.isEmpty
-                        ? _theme.palette.getAccent400()
+                        ? theme.palette.getAccent400()
                         : messageComposerStyle.sendButtonIconTint ??
-                            _theme.palette.getPrimary(),
+                            theme.palette.getPrimary(),
                   ),
-              onPressed: onSendButtonClick ?? value.onSendButtonClick);
+              onPressed: value.onSendButtonClick);
     }
   }
+
+
+
 
   @override
   Widget build(BuildContext context) {
     final CometChatTheme _theme = theme ?? cometChatTheme;
+
+    if (group != null) {
+      composerId['guid'] = group!.guid;
+    } else if (user != null) {
+      composerId['uid'] = user!.uid;
+    }
+
+    final  List<CometChatMessageComposerAction> elementList  = CometChatUIKit.getDataSource()
+        .getAIOptions(
+        user,
+        group,
+      _theme,
+        context,
+        composerId,
+        aiOptionStyle
+        );
+
+
+
+
     return WillPopScope(
       onWillPop: () async {
         return true;
@@ -265,8 +341,8 @@ class CometChatMessageComposer extends StatelessWidget {
                                 primaryButtonView:
                                     _getSendButton(_theme, value),
                                 secondaryButtonView: secondaryButtonView != null
-                                    ? secondaryButtonView!(
-                                        user: value.user, group: value.group)
+                                    ? secondaryButtonView!(context, value.user,
+                                        value.group, value.composerId)
                                     : IconButton(
                                         padding: const EdgeInsets.all(0),
                                         constraints: const BoxConstraints(),
@@ -287,34 +363,87 @@ class CometChatMessageComposer extends StatelessWidget {
                                     auxiliaryButtonsAlignment ??
                                         AuxiliaryButtonsAlignment.right,
                                 auxiliaryButtonView: auxiliaryButtonView != null
-                                    ? auxiliaryButtonView!(
-                                        user: value.user, group: value.group)
+                                    ? auxiliaryButtonView!(context, value.user,
+                                        value.group, value.composerId)
                                     : Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           //-----show emoji keyboard-----
 
-                                          ChatConfigurator.getDataSource()
-                                              .getAuxiliaryOptions(
-                                                  value.user,
-                                                  value.group,
-                                                  context,
-                                                  value.composerId),
-                                          IconButton(
-                                              padding: const EdgeInsets.only(
-                                                  right: 20),
-                                              constraints:
-                                                  const BoxConstraints(),
-                                              icon: Image.asset(
-                                                AssetConstants.smileys,
-                                                package:
-                                                    UIConstants.packageName,
-                                                color: messageComposerStyle
-                                                        .emojiIconTint ??
-                                                    _theme.palette
-                                                        .getAccent700(),
+                                          CometChatUIKit.getDataSource()
+                                                .getAuxiliaryOptions(
+                                                    value.user,
+                                                    value.group,
+                                                    context,
+                                                    value.composerId,
+                                                    _theme)..paddingAll(0.0)..marginAll(0.0),
+
+                                          if(elementList.isNotEmpty)
+                                            IconButton(
+                                              padding: const EdgeInsets.all(0),
+                                              constraints: const BoxConstraints(),
+                                              icon:
+                                              aiIcon ??  Image.asset(
+                                                aiIconURL ?? AssetConstants.ai,
+                                                package: aiIconPackageName?? UIConstants.packageName,
+                                                color:
+                                                messageComposerStyle.aiIconTint ??  _theme.palette.getAccent700(),
+                                                height: 24,
+                                                width: 24,
                                               ),
-                                              onPressed: () => value.useEmojis(
-                                                  context, _theme)),
+                                              onPressed: ()  {
+                                                value.aiButtonTap(_theme, context, value.composerId);
+                                              }).paddingOnly(right: 10.0),
+
+
+                                          //-----show voice recording-----
+                                          if(hideVoiceRecording!=true)
+                                          IconButton(
+                                              padding: const EdgeInsets.all(0),
+                                              constraints: const BoxConstraints(),
+                                              icon:
+                                             voiceRecordingIcon ??  Image.asset(
+                                                    AssetConstants.microphone,
+                                                    package: UIConstants.packageName,
+                                                    color:
+                    messageComposerStyle.voiceRecordingIconTint ??  _theme.palette.getAccent700(),
+                                               height: 24,
+                                                width: 24,
+                                                  ),
+                                              onPressed: ()  {
+                                                showModalBottomSheet<void>(
+                                                  context: context,
+                                                  backgroundColor: Colors.transparent,
+                                                  builder: (BuildContext context) {
+                                                   return CometChatMediaRecorder(
+                                                     submitIcon: submitIcon,
+                                                     startIcon: recordIcon,
+                                                     playIcon: playIcon,
+                                                     pauseIcon: pauseIcon,
+                                                     closeIcon: deleteIcon,
+                                                     stopIcon: stopIcon,
+                                                     mediaRecorderStyle: mediaRecorderStyle,
+                                                     theme: _theme,
+                                                     onSubmit:value.sendMediaRecording,);
+                                                  },
+                                                );
+                                              }).paddingOnly(right: 10.0),
+                                          // IconButton(
+                                          //     padding: const EdgeInsets.only(
+                                          //         right: 20),
+                                          //     constraints:
+                                          //         const BoxConstraints(),
+                                          //     icon: Image.asset(
+                                          //       AssetConstants.smileys,
+                                          //       package:
+                                          //           UIConstants.packageName,
+                                          //       color: messageComposerStyle
+                                          //               .emojiIconTint ??
+                                          //           _theme.palette
+                                          //               .getAccent700(),
+                                          //     ),
+                                          //     onPressed: () => value.useEmojis(
+                                          //         context, _theme)),
                                         ],
                                       ),
                                 style: MessageInputStyle(
@@ -330,6 +459,7 @@ class CometChatMessageComposer extends StatelessWidget {
                                         messageComposerStyle.inputTextStyle,
                                     placeholderTextStyle: messageComposerStyle
                                         .placeholderTextStyle),
+                                focusNode: value.focusNode,
                               ),
                               if (value.footer != null) value.footer!,
                             ],

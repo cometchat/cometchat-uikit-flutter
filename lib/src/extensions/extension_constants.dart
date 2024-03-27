@@ -1,3 +1,4 @@
+///[ExtensionConstants] is a data class for storing String constants related to extension names
 class ExtensionConstants {
   static const String extensions = "extensions";
   static const String linkPreview = "link-preview";
@@ -25,6 +26,7 @@ class ExtensionConstants {
   static const String stickerUrl = "stickerUrl";
 }
 
+///[ExtensionUrls] is a data class for storing String constants related to extension urls
 class ExtensionUrls {
   static const String reaction = '/v1/react';
   static const String stickers = "/v1/fetch";
@@ -35,6 +37,7 @@ class ExtensionUrls {
   static const String translate = '/v2/translate';
 }
 
+///[ExtensionType] is a data class for storing String constants related to extension types
 class ExtensionType {
   static const String extensionPoll = "extension_poll";
   static const String location = "location";

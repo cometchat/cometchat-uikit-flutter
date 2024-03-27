@@ -1,6 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[SmartReplyView] is a widget that is rendered as the content view for [SmartReplyExtension]
+///
+///```dart
+/// SmartReplyView(
+///   replies: ['Yes', 'No', 'Maybe'],
+///   style: SmartReplyStyle(
+///     replyBackgroundColor: Colors.grey[200]!,
+///     replyTextStyle: TextStyle(
+///       color: Colors.black,
+///       fontWeight: FontWeight.bold,
+///       fontSize: 14,
+///     ),
+///   ),
+///   onCloseTap: () {
+///     print('Closing smart reply view');
+///   },
+///   onClick: (reply) {
+///     print('Selected reply: $reply');
+///   },
+///   theme: CometChatTheme(),
+/// );
+/// ```
+///
 class SmartReplyView extends StatelessWidget {
   const SmartReplyView(
       {Key? key,
@@ -10,6 +33,7 @@ class SmartReplyView extends StatelessWidget {
       this.onClick,
       this.theme})
       : super(key: key);
+
   ///[replies] list of replies generated from extension or passed by developer
   final List<String> replies;
 
@@ -61,9 +85,10 @@ class SmartReplyView extends StatelessWidget {
                     label: Text(
                       reply,
                       style: style?.replyTextStyle ??
-                           TextStyle(
+                          TextStyle(
                               fontSize: _theme.typography.subtitle1.fontSize,
-                              fontWeight:  _theme.typography.subtitle1.fontWeight,
+                              fontWeight:
+                                  _theme.typography.subtitle1.fontWeight,
                               color: _theme.palette.getAccent()),
                     ),
                   ),

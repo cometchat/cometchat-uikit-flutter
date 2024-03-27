@@ -1,37 +1,49 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
+///[TransferOwnershipConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatTransferOwnership]
+/// ```dart
+/// TransferOwnershipConfiguration(
+///        avatarStyle: AvatarStyle(),
+///        listItemStyle: ListItemStyle(),
+///        statusIndicatorStyle: StatusIndicatorStyle(),
+///        groupMemberStyle: GroupMembersStyle(),
+///        transferOwnershipStyle:
+///            TransferOwnershipStyle(memberScopeStyle: TextStyle())
+///            );
+/// ```
 class TransferOwnershipConfiguration {
-  const TransferOwnershipConfiguration({
-    this.title,
-    this.searchPlaceholder,
-    this.hideSearch,
-    this.showBackButton,
-    this.backButton,
-    this.onTransferOwnership,
-    this.disableUsersPresence=false,
-    this.searchBoxIcon,
-    this.groupMembersRequestBuilder,
-    this.groupMembersProtocol,
-    this.subtitleView,
-    this.hideSeparator,
-    this.groupMemberStyle,
-    this.emptyStateText,
-    this.errorStateText,
-    this.loadingStateView,
-    this.emptyStateView,
-    this.errorStateView,
-    this.listItemStyle,
-    this.avatarStyle,
-    this.statusIndicatorStyle,
-    this.transferOwnershipStyle,
-    this.selectIcon,
-    this.submitIcon,
-    this.theme,
-    this.onBack,
-    this.onError
-  });
+  const TransferOwnershipConfiguration(
+      {this.title,
+      this.searchPlaceholder,
+      this.hideSearch,
+      this.showBackButton,
+      this.backButton,
+      this.onTransferOwnership,
+      this.disableUsersPresence = false,
+      this.searchBoxIcon,
+      this.groupMembersRequestBuilder,
+      this.groupMembersProtocol,
+      this.subtitleView,
+      this.hideSeparator,
+      this.groupMemberStyle,
+      this.emptyStateText,
+      this.errorStateText,
+      this.loadingStateView,
+      this.emptyStateView,
+      this.errorStateView,
+      this.listItemStyle,
+      this.avatarStyle,
+      this.statusIndicatorStyle,
+      this.transferOwnershipStyle,
+      this.selectIcon,
+      this.submitIcon,
+      this.theme,
+      this.onBack,
+      this.onError,
+      this.listItemView});
 
   ///[onTransferOwnership] overrides default on selection functionality
   final Function(GroupMember, Group)? onTransferOwnership;
@@ -60,7 +72,6 @@ class TransferOwnershipConfiguration {
   ///[groupMembersProtocol] sets custom request builder protocol
   final GroupMembersBuilderProtocol? groupMembersProtocol;
 
-
   ///[subtitleView] to set subtitle for each groupMember
   final Widget? Function(BuildContext, GroupMember)? subtitleView;
 
@@ -69,7 +80,6 @@ class TransferOwnershipConfiguration {
 
   ///[groupMemberStyle] provides style to [CometChatGroupMembers]
   final GroupMembersStyle? groupMemberStyle;
-
 
   ///[searchPlaceholder] placeholder text of search input
   final String? searchPlaceholder;
@@ -101,7 +111,6 @@ class TransferOwnershipConfiguration {
   ///[transferOwnershipStyle] consists of all styling properties
   final TransferOwnershipStyle? transferOwnershipStyle;
 
-
   ///[submitIcon] will override the default selection complete icon
   final Widget? submitIcon;
 
@@ -117,4 +126,6 @@ class TransferOwnershipConfiguration {
   ///[onBack] callback triggered on closing this screen
   final VoidCallback? onBack;
 
+  ///[listItemView] set custom view for each groupMember
+  final Widget Function(GroupMember)? listItemView;
 }

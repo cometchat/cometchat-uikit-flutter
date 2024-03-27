@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[GroupMembersConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatGroupMembers]
+///can be used by a component where [CometChatGroupMembers] is a child component
+/// ```dart
+/// GroupMembersConfiguration(
+///        avatarStyle: AvatarStyle(),
+///        listItemStyle: ListItemStyle(),
+///        statusIndicatorStyle: StatusIndicatorStyle(),
+///        groupScopeStyle: GroupScopeStyle(),
+///        groupMemberStyle: GroupMembersStyle()
+///        );
+/// ```
 class GroupMembersConfiguration {
   const GroupMembersConfiguration(
       {this.groupMembersProtocol,
@@ -41,10 +53,9 @@ class GroupMembersConfiguration {
       this.onBack,
       this.onItemTap,
       this.onItemLongPress,
-      this.activateSelection
-      });
+      this.activateSelection});
 
-  ///property to be set internally by using passed parameters [groupMembersProtocol] ,[selectionMode] ,[options] 
+  ///property to be set internally by using passed parameters [groupMembersProtocol] ,[selectionMode] ,[options]
   ///these are passed to the [CometChatGroupMembersController] which is responsible for the business logic
 
   ///[groupMembersProtocol] set custom request builder protocol
@@ -101,7 +112,6 @@ class GroupMembersConfiguration {
 
   ///[title] sets title for the list
   final String? title;
-
 
   ///[emptyStateText] text to be displayed when the list is empty
   final String? emptyStateText;

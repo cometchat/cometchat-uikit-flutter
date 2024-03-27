@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[CollaborativeDocumentOptionStyle] is a data class that has styling-related properties
+///to customize the appearance of the option in the attachment options menu for the [CollaborativeDocumentExtension]
 class CollaborativeDocumentOptionStyle {
   CollaborativeDocumentOptionStyle({
     this.iconTint,
@@ -27,5 +29,4 @@ class CollaborativeDocumentOptionStyle {
 
   ///[cornerRadius] is the border radius for the option for this extension
   final double? cornerRadius;
-
 }

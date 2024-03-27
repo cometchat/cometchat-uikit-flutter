@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+///[CreatePollsStyle] is a data class that has styling-related properties
+///to customize the appearance of [CometChatCreatePolls]
 class CreatePollsStyle {
   ///create poll style
   const CreatePollsStyle(

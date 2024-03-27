@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-///Collaborative  Web view uses WebView
+///[CometChatCollaborativeWebView] is widget that renders a WebView
 class CometChatCollaborativeWebView extends StatefulWidget {
   const CometChatCollaborativeWebView(
       {Key? key,
@@ -10,8 +10,7 @@ class CometChatCollaborativeWebView extends StatefulWidget {
       this.titleStyle,
       this.backIcon,
       this.appBarColor,
-      this.backIconColor
-      })
+      this.backIconColor})
       : super(key: key);
 
   ///[title] of the page
@@ -66,10 +65,13 @@ class _CometChatCollaborativeWebViewState
                   fontWeight: FontWeight.w500),
         ),
       ),
-      body: WebView(
-        initialUrl: widget.webviewUrl,
-        javascriptMode: JavascriptMode.unrestricted,
-      ),
+      body: WebViewWidget(
+          // initialUrl: widget.webviewUrl,
+          controller: WebViewController()
+            ..loadRequest(Uri.parse(widget.webviewUrl))
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          // javascriptMode: ,
+          ),
     );
   }
 }

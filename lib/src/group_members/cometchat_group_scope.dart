@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///[CometChatGroupScope] is an utility component which gives out scopes that can be changed in form of dropdown
-///and shows simple scope text if cannot be changes
+///[CometChatGroupScope] is an utility component which displays scopes of a group member with respect to the group they are part of
+///if the scope is permitted to be changed then suggestions of possible scopes appear in dropdown
+///else a simple text is shown if it cannot be changed
 class CometChatGroupScope extends StatefulWidget {
   const CometChatGroupScope(
       {Key? key,
@@ -110,11 +111,11 @@ class _CometChatGroupScopeState extends State<CometChatGroupScope> {
               items: _itemList,
               onChanged: (String? newVal) async {
                 if (newVal != null) {
-                  String _oldScope = _scope;
+                  String oldScope = _scope;
                   if (widget.onCLick != null) {
                     try {
                       await widget.onCLick!(
-                          widget.group, widget.member, newVal, _oldScope);
+                          widget.group, widget.member, newVal, oldScope);
                       setState(() {
                         _scope = newVal;
                       });

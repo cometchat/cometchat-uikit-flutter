@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 
+///[GroupsWithMessagesConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatGroupsWithMessages]
+///can be used by a component where [CometChatGroupsWithMessages] is a child component
 class GroupsWithMessagesConfiguration {
   const GroupsWithMessagesConfiguration({
     this.theme,
@@ -10,7 +13,6 @@ class GroupsWithMessagesConfiguration {
     this.createGroupConfiguration,
     this.createGroupIcon,
     this.onCreateGroupIconClick,
-    this.hideCreateGroup = false,
   });
 
   ///[theme] parameter used to pass custom theme to this module
@@ -30,7 +32,4 @@ class GroupsWithMessagesConfiguration {
 
   ///[onCreateGroupIconClick] on click parameter
   final Function(BuildContext context)? onCreateGroupIconClick;
-
-  ///[hideCreateGroup] switch on/off option to create group
-  final bool hideCreateGroup;
 }

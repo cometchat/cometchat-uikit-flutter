@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
-// import '../../flutter_chat_ui_kit.dart' as cc;
 
+///[CometChatTransferOwnershipController] is the view model for [CometChatTransferOwnership]
+///it contains all the business logic involved in changing the state of the UI of [CometChatTransferOwnership]
 class CometChatTransferOwnershipController extends GetxController {
-
-  CometChatTransferOwnershipController({required this.group,this.onTransferOwnership, this.onError});
+  CometChatTransferOwnershipController(
+      {required this.group, this.onTransferOwnership, this.onError});
 
   ///[group] is the group in which ownership is to change
   final Group group;
 
-    ///[onTransferOwnership] overrides default on selection functionality
+  ///[onTransferOwnership] overrides default on selection functionality
   final Function(GroupMember, Group)? onTransferOwnership;
 
   ///[onError] callback triggered in case any error happens when transferring ownership
@@ -18,29 +19,27 @@ class CometChatTransferOwnershipController extends GetxController {
 
   //  User? _loggedInUser;
 
-   Conversation? _conversation;
+  Conversation? _conversation;
 
   String? _conversationId;
 
   @override
   void onInit() {
     initializeInternalDependencies();
-    
+
     super.onInit();
   }
 
   initializeInternalDependencies() async {
     // _loggedInUser = await CometChat.getLoggedInUser();
     _conversation ??= (await CometChat.getConversation(
-        group.guid, ConversationType.group, onSuccess: (_conversation) {
-      if (_conversation.lastMessage != null) {
-       
-      }
+        group.guid, ConversationType.group, onSuccess: (conversation) {
+      if (conversation.lastMessage != null) {}
     }, onError: (_) {}));
     _conversationId ??= _conversation?.conversationId;
   }
 
- void getOnSelection(BuildContext context, List<GroupMember>? members) {
+  void getOnSelection(BuildContext context, List<GroupMember>? members) {
     if (members == null || members.isEmpty) {
       Navigator.of(context).pop();
       return;
@@ -59,5 +58,4 @@ class CometChatTransferOwnershipController extends GetxController {
           onError: onError);
     }
   }
-  
 }

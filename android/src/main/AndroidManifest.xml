@@ -1,13 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.cometchat.flutter_chat_ui_kit">
+    package="com.cometchat.cometchat_chat_uikit">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.VIBRATE" />
-
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <queries>
         <!-- If your app makes calls -->
         <intent>
@@ -28,16 +30,6 @@
 
 
     <application>
-        <provider
-            android:name="com.cometchat.flutter_chat_ui_kit.FileProvider"
-            android:authorities="${applicationId}.fileProvider.com.cometchat.flutter_chat_ui_kit"
-            android:exported="false"
-            android:grantUriPermissions="true"
-            tools:replace="android:authorities">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/filepaths"
-                />
-        </provider>
+
     </application>
 </manifest>

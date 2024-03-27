@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../flutter_chat_ui_kit.dart';
+import '../../cometchat_chat_uikit.dart';
 import '../message_composer/live_reaction_animation.dart';
 
-///[CometChatMessagesController] view model for [CometChatMessages]
+///[CometChatMessagesController] is the view model for [CometChatMessages]
+///it contains all the business logic involved in changing the state of the UI of [CometChatMessages]
 class CometChatMessagesController extends GetxController
     with
         CometChatMessageEventListener,
@@ -15,7 +16,6 @@ class CometChatMessagesController extends GetxController
         CometChatUserEventListener {
   late String _dateString;
   late String _uiMessageListener;
-  late String _messageListener;
   late String _uiGroupListener;
   late String _uiUserListener;
   bool isOverlayOpen = false;
@@ -37,7 +37,6 @@ class CometChatMessagesController extends GetxController
       {this.user, this.group, this.threadedMessagesConfiguration}) {
     _dateString = DateTime.now().millisecondsSinceEpoch.toString();
     _uiMessageListener = "${_dateString}UI_message_listener";
-    _messageListener = "${_dateString}message_listener";
     _uiGroupListener = "${_dateString}UI_group_listener";
     _uiUserListener = "${_dateString}UI_user_listener";
 
@@ -49,7 +48,6 @@ class CometChatMessagesController extends GetxController
   void onInit() {
     super.onInit();
     CometChatMessageEvents.addMessagesListener(_uiMessageListener, this);
-    CometChat.addMessageListener(_messageListener, this);
     CometChatGroupEvents.addGroupsListener(_uiGroupListener, this);
     CometChatUserEvents.addUsersListener(_uiUserListener, this);
     _initializeLoggedInUser();
@@ -58,7 +56,6 @@ class CometChatMessagesController extends GetxController
   @override
   void onClose() {
     CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
-    CometChat.removeMessageListener(_messageListener);
     CometChatGroupEvents.removeGroupsListener(_uiGroupListener);
     CometChatUserEvents.removeUsersListener(_uiUserListener);
     super.onClose();
@@ -70,8 +67,11 @@ class CometChatMessagesController extends GetxController
   void onTransientMessageReceived(TransientMessage message) async {
     if ((message.receiverType == ReceiverTypeConstants.user &&
             message.receiverId == loggedInUser?.uid &&
-            group == null) ||
+            (message.sender != null &&
+                user != null &&
+                message.sender?.uid == user?.uid)) ||
         (message.receiverType == ReceiverTypeConstants.group &&
+            group != null &&
             message.receiverId == group?.guid)) {
       if (message.data["type"] == "live_reaction") {
         isOverlayOpen = true;
@@ -125,8 +125,8 @@ class CometChatMessagesController extends GetxController
 
   _addAnimations(String reaction) async {
     //Counter to add no of live reactions
-    int _counter = 2;
-    for (int i = 0; i < _counter; i++) {
+    int counter = 2;
+    for (int i = 0; i < counter; i++) {
       _addAnimation(reaction);
       await Future.delayed(const Duration(milliseconds: 40));
     }

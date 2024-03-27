@@ -1,15 +1,18 @@
+// import 'package:cometchat_chat_uikit/src/shared/view_models/cometchat_group_members_controller_protocol.dart';
 import 'package:flutter/material.dart';
-import '../../flutter_chat_ui_kit.dart';
-import '../../flutter_chat_ui_kit.dart' as cc;
+import '../../cometchat_chat_uikit.dart';
+import '../../cometchat_chat_uikit.dart' as cc;
 
-///[CometChatGroupMembersController] is the controller class for [CometChatGroupMembers] and includes all the business logic
+///[CometChatGroupMembersController] is the view model for [CometChatGroupMembers]
+///it contains all the business logic involved in changing the state of the UI of [CometChatGroupMembers]
 class CometChatGroupMembersController
     extends CometChatSearchListController<GroupMember, String>
     with
         CometChatSelectable,
         GroupListener,
         UserListener,
-        CometChatGroupEventListener {
+        CometChatGroupEventListener
+    implements CometChatGroupMembersControllerProtocol {
   //Class members
   late GroupMembersBuilderProtocol groupMembersBuilderProtocol;
   late String dateStamp;
@@ -58,8 +61,8 @@ class CometChatGroupMembersController
 
   void initializeInternalDependencies() async {
     _conversation ??= (await CometChat.getConversation(
-        group.guid, ConversationType.group, onSuccess: (_conversation) {
-      if (_conversation.lastMessage != null) {}
+        group.guid, ConversationType.group, onSuccess: (conversation) {
+      if (conversation.lastMessage != null) {}
     }, onError: (_) {}));
     _conversationId ??= _conversation?.conversationId;
   }
@@ -165,8 +168,8 @@ class CometChatGroupMembersController
                 rawData: '{}',
                 oldScope: oldScope,
                 newScope: newScope,
-                id: DateTime.now().microsecondsSinceEpoch,
-                muid: null,
+                id: 0,
+                muid: DateTime.now().microsecondsSinceEpoch.toString(),
                 sender: loggedInUser!,
                 receiver: group,
                 receiverUid: group.guid,
@@ -186,6 +189,7 @@ class CometChatGroupMembersController
                 updatedAt: DateTime.now(),
                 parentMessageId: 0,
                 replyCount: 0,
+                unreadRepliesCount: 0,
               ),
               member,
               newScope,
@@ -237,13 +241,14 @@ class CometChatGroupMembersController
   }
 
   //default functions
+  @override
   List<CometChatOption> defaultFunction(Group group, GroupMember member) {
     List<CometChatOption> optionList = [];
     List<CometChatGroupMemberOption> groupMemberOptions = [];
     debugPrint('group member controller is -> ${loggedInUser?.name}');
 
     groupMemberOptions = DetailUtils.getDefaultGroupMemberOptions(
-        loggedInUser: loggedInUser, group: group, theme: theme);
+        loggedInUser: loggedInUser, group: group, member: member, theme: theme);
 
     for (CometChatGroupMemberOption option in groupMemberOptions) {
       optionList.add(CometChatOption(
@@ -275,8 +280,8 @@ class CometChatGroupMembersController
                       rawData: '{}',
                       oldScope: GroupMemberScope.participant,
                       newScope: '',
-                      id: DateTime.now().microsecondsSinceEpoch,
-                      muid: null,
+                      id: 0,
+                      muid: DateTime.now().microsecondsSinceEpoch.toString(),
                       sender: loggedInUser!,
                       receiver: group,
                       receiverUid: group.guid,
@@ -296,6 +301,7 @@ class CometChatGroupMembersController
                       updatedAt: DateTime.now(),
                       parentMessageId: 0,
                       replyCount: 0,
+                      unreadRepliesCount: 0,
                     ),
                     member,
                     loggedInUser!,
@@ -319,8 +325,8 @@ class CometChatGroupMembersController
                       rawData: '{}',
                       oldScope: GroupMemberScope.participant,
                       newScope: '',
-                      id: DateTime.now().microsecondsSinceEpoch,
-                      muid: null,
+                      id: 0,
+                      muid: DateTime.now().microsecondsSinceEpoch.toString(),
                       sender: loggedInUser!,
                       receiver: group,
                       receiverUid: group.guid,
@@ -340,6 +346,7 @@ class CometChatGroupMembersController
                       updatedAt: DateTime.now(),
                       parentMessageId: 0,
                       replyCount: 0,
+                      unreadRepliesCount: 0,
                     ),
                     member,
                     loggedInUser!,

@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../../../../flutter_chat_ui_kit.dart';
+import '../../../../cometchat_chat_uikit.dart';
 
+///[UsersConfiguration] is a data class that has configuration properties
+///to customize the functionality and appearance of [CometChatUsers]
+///can be used by a component where [CometChatUsers] is a child component
 ///
 ///  ```dart
-///     UsersConfiguration(
-///               hideSearch: false,
-///               showBackButton: true,
-///               searchPlaceholder: "search",
-///               title: "Users",
-///               userListConfiguration: UserListConfiguration(),
-///             )
+/// UsersConfiguration(
+///      usersStyle: UsersStyle(),
+///      avatarStyle: AvatarStyle(),
+///      listItemStyle: ListItemStyle(),
+///      statusIndicatorStyle: StatusIndicatorStyle(),
+///    );
 ///   ```
 ///
 class UsersConfiguration {
   const UsersConfiguration(
       {this.title,
       this.searchPlaceholder,
-      this.showBackButton = true,
-      this.hideSearch = false,
+      this.showBackButton,
+      this.hideSearch,
       this.usersRequestBuilder,
       this.subtitleView,
       this.hideSeparator,
@@ -50,7 +52,10 @@ class UsersConfiguration {
       this.onBack,
       this.onItemTap,
       this.onItemLongPress,
-      this.selectionIcon});
+      this.selectionIcon,
+      this.submitIcon,
+      this.hideAppbar,
+      this.controllerTag});
 
   ///[title] Title of the user list component
   final String? title;
@@ -59,10 +64,10 @@ class UsersConfiguration {
   final String? searchPlaceholder;
 
   ///[showBackButton] switch on/off back button
-  final bool showBackButton;
+  final bool? showBackButton;
 
   ///[hideSearch] switch on/off search input
-  final bool hideSearch;
+  final bool? hideSearch;
 
   ///[usersRequestBuilder] custom request builder
   final UsersRequestBuilder? usersRequestBuilder;
@@ -152,11 +157,66 @@ class UsersConfiguration {
   final VoidCallback? onBack;
 
   ///[onItemTap] callback triggered on tapping a user item
-  final Function(User)? onItemTap;
+  final Function(BuildContext context, User)? onItemTap;
 
   ///[onItemLongPress] callback triggered on pressing for long on a user item
-  final Function(User)? onItemLongPress;
+  final Function(BuildContext context, User)? onItemLongPress;
 
   ///[selectionIcon] will override the default selection complete icon
   final Widget? selectionIcon;
+
+  ///[submitIcon] will override the default selection complete icon
+  final Widget? submitIcon;
+
+  ///[hideAppbar] toggle visibility for app bar
+  final bool? hideAppbar;
+
+  ///Group tag to create from , if this is passed its parent responsibility to close this
+  final String? controllerTag;
+
+  UsersConfiguration merge(UsersConfiguration mergeWith) {
+    return UsersConfiguration(
+        title: title ?? mergeWith.title,
+        searchPlaceholder: searchPlaceholder ?? mergeWith.searchPlaceholder,
+        showBackButton: showBackButton ?? mergeWith.showBackButton,
+        hideSearch: hideSearch ?? mergeWith.hideSearch,
+        usersRequestBuilder:
+            usersRequestBuilder ?? mergeWith.usersRequestBuilder,
+        subtitleView: subtitleView ?? mergeWith.subtitleView,
+        hideSeparator: hideSeparator ?? mergeWith.hideSeparator,
+        listItemView: listItemView ?? mergeWith.listItemView,
+        usersStyle: usersStyle ?? mergeWith.usersStyle,
+        options: options ?? mergeWith.options,
+        backButton: backButton ?? mergeWith.backButton,
+        searchBoxIcon: searchBoxIcon ?? mergeWith.searchBoxIcon,
+        theme: theme ?? mergeWith.theme,
+        selectionMode: selectionMode ?? mergeWith.selectionMode,
+        onSelection: onSelection ?? mergeWith.onSelection,
+        emptyStateText: emptyStateText ?? mergeWith.emptyStateText,
+        errorStateText: errorStateText ?? mergeWith.errorStateText,
+        loadingStateView: loadingStateView ?? mergeWith.loadingStateView,
+        emptyStateView: emptyStateView ?? mergeWith.emptyStateView,
+        errorStateView: errorStateView ?? mergeWith.errorStateView,
+        listItemStyle: listItemStyle ?? mergeWith.listItemStyle,
+        avatarStyle: avatarStyle ?? mergeWith.avatarStyle,
+        statusIndicatorStyle:
+            statusIndicatorStyle ?? mergeWith.statusIndicatorStyle,
+        appBarOptions: appBarOptions ?? mergeWith.appBarOptions,
+        hideSectionSeparator:
+            hideSectionSeparator ?? mergeWith.hideSectionSeparator,
+        disableUsersPresence:
+            disableUsersPresence ?? mergeWith.disableUsersPresence,
+        activateSelection: activateSelection ?? mergeWith.activateSelection,
+        hideError: hideError ?? mergeWith.hideError,
+        stateCallBack: stateCallBack ?? mergeWith.stateCallBack,
+        controller: controller ?? mergeWith.controller,
+        usersProtocol: usersProtocol ?? mergeWith.usersProtocol,
+        onError: onError ?? mergeWith.onError,
+        onBack: onBack ?? mergeWith.onBack,
+        onItemTap: onItemTap ?? mergeWith.onItemTap,
+        onItemLongPress: onItemLongPress ?? mergeWith.onItemLongPress,
+        selectionIcon: selectionIcon ?? mergeWith.selectionIcon,
+        submitIcon: submitIcon ?? mergeWith.submitIcon,
+        controllerTag: controllerTag ?? mergeWith.controllerTag);
+  }
 }

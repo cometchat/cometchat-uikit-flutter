@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart' as material;
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
-import '../../flutter_chat_ui_kit.dart' as cc;
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import '../../cometchat_chat_uikit.dart' as cc;
 
+///[CometChatBannedMembersController] is the view model for [CometChatBannedMembers]
+///it contains all the business logic involved in changing the state of the UI of [CometChatBannedMembers]
 class CometChatBannedMembersController
     extends CometChatSearchListController<GroupMember, String>
     with
@@ -23,13 +25,21 @@ class CometChatBannedMembersController
 
   String? _conversationId;
 
+  ///[unbanIconUrl] is a custom icon for the default option
+  final String? unbanIconUrl;
+
+  ///[unbanIconUrlPackageName] is the package for the asset image to show as custom icon for the default option
+  final String? unbanIconUrlPackageName;
+
   CometChatBannedMembersController(
       {required this.bannedMemberBuilderProtocol,
       SelectionMode? mode,
       required this.group,
       required this.disableUsersPresence,
       required CometChatTheme theme,
-      OnError? onError})
+      OnError? onError,
+      this.unbanIconUrl,
+      this.unbanIconUrlPackageName})
       : super(builderProtocol: bannedMemberBuilderProtocol, onError: onError) {
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
@@ -37,15 +47,13 @@ class CometChatBannedMembersController
     groupSDKListenerID = "${dateStamp}group_sdk_listener";
     userSDKListenerID = "${dateStamp}user_sdk_listener";
     groupUIListenerID = "${dateStamp}_ui_group_listener";
-
   }
 
   @override
   void onInit() {
     CometChat.addGroupListener(groupSDKListenerID, this);
     CometChatGroupEvents.addGroupsListener(groupUIListenerID, this);
-
-    if (disableUsersPresence == false) {
+    if (disableUsersPresence != true) {
       //Adding listener when presence is needed
       CometChat.addUserListener(userSDKListenerID, this);
     }
@@ -55,8 +63,8 @@ class CometChatBannedMembersController
 
   void initializeInternalDependencies() async {
     _conversation ??= (await CometChat.getConversation(
-        group.guid, ConversationType.group, onSuccess: (_conversation) {
-      if (_conversation.lastMessage != null) {}
+        group.guid, ConversationType.group, onSuccess: (conversation) {
+      if (conversation.lastMessage != null) {}
     }, onError: (_) {}));
     _conversationId ??= _conversation?.conversationId;
   }
@@ -187,9 +195,9 @@ class CometChatBannedMembersController
   CometChatOption getUnBanOption(Group group, GroupMember member,
       {CometChatTheme? theme}) {
     return CometChatOption(
-        id: GroupMemberOptionConstants.ban,
-        icon: AssetConstants.close,
-        packageName: UIConstants.packageName,
+        id: GroupMemberOptionConstants.unban,
+        icon: unbanIconUrl ?? AssetConstants.close,
+        packageName: unbanIconUrlPackageName ?? UIConstants.packageName,
         backgroundColor: theme?.palette.getOption() ?? material.Colors.red,
         onClick: () async {
           CometChat.unbanGroupMember(
@@ -204,8 +212,8 @@ class CometChatBannedMembersController
                       rawData: '{}',
                       oldScope: '',
                       newScope: '',
-                      id: DateTime.now().microsecondsSinceEpoch,
-                      muid: null,
+                      id: 0,
+                      muid: DateTime.now().microsecondsSinceEpoch.toString(),
                       sender: loggedInUser!,
                       receiver: group,
                       receiverUid: group.guid,
@@ -225,6 +233,7 @@ class CometChatBannedMembersController
                       updatedAt: DateTime.now(),
                       parentMessageId: 0,
                       replyCount: 0,
+                      unreadRepliesCount: 0,
                     ),
                     member,
                     loggedInUser!,

@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../flutter_chat_ui_kit.dart';
+import '../../../../../cometchat_chat_uikit.dart';
 
+///[ImageModerationFilter] is a widget that renders an overlay filter over an image with graphic content
+///
+/// ```dart
+/// ImageModerationFilter(
+///   message: MediaMessage(),
+///   child: Image.network('https://example.com/image.png'),
+///   warningText: 'Warning: Graphic Content',
+///   style: ImageModerationFilterStyle(),
+///   theme: CometChatTheme(),
+/// );
+///
+/// ```
 class ImageModerationFilter extends StatefulWidget {
   const ImageModerationFilter(
       {required this.message,
@@ -9,20 +21,24 @@ class ImageModerationFilter extends StatefulWidget {
       required this.child,
       Key? key,
       this.warningText,
-      this.style
-      })
+      this.style})
       : super(key: key);
+
   ///[message] the object containing the image
   final MediaMessage message;
+
   ///[theme] sets custom theme
   final CometChatTheme? theme;
+
   ///[child] the image to be shown behind filter
   final Widget child;
+
   ///[warningText] text shown if image has sensitive/graphic content
   final String? warningText;
+
   ///[style] provides styling to this widget
   final ImageModerationFilterStyle? style;
-  
+
   @override
   _ImageModerationFilterState createState() => _ImageModerationFilterState();
 }
@@ -85,9 +101,10 @@ class _ImageModerationFilterState extends State<ImageModerationFilter> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  widget.style?.warningImageUrl ?? AssetConstants.messagesUnsafe,
-                  package:
-                      widget.style?.warningImagePackageName ?? UIConstants.packageName,
+                  widget.style?.warningImageUrl ??
+                      AssetConstants.messagesUnsafe,
+                  package: widget.style?.warningImagePackageName ??
+                      UIConstants.packageName,
                   color: widget.style?.warningImageColor ??
                       _theme.palette.getBackground(),
                 ),
@@ -99,7 +116,7 @@ class _ImageModerationFilterState extends State<ImageModerationFilter> {
                   style: widget.style?.warningTextStyle ??
                       TextStyle(
                           fontSize: _theme.typography.subtitle2.fontSize,
-                          fontWeight:  _theme.typography.subtitle2.fontWeight,
+                          fontWeight: _theme.typography.subtitle2.fontWeight,
                           color: _theme.palette.getBackground()),
                 )
               ],

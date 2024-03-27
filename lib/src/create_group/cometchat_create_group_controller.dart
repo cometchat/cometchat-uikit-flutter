@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../flutter_chat_ui_kit.dart';
-import '../utils/loading_indicator.dart';
+import '../../cometchat_chat_uikit.dart';
 
+///[CometChatCreateGroupController] is the view model for [CometChatCreateGroup]
+///it contains all the business logic involved in changing the state of the UI of [CometChatCreateGroup]
 class CometChatCreateGroupController extends GetxController {
   late CometChatTheme theme;
   BuildContext? context;
@@ -13,7 +15,7 @@ class CometChatCreateGroupController extends GetxController {
   ///[onError] callback triggered in case any error happens when trying to create group
   final Function(Exception)? onError;
 
-  CometChatCreateGroupController(this.theme, {this.onCreateTap,this.onError}) {
+  CometChatCreateGroupController(this.theme, {this.onCreateTap, this.onError}) {
     tag = "tag$counter";
     counter++;
   }
@@ -56,15 +58,14 @@ class CometChatCreateGroupController extends GetxController {
 
   onCreateIconCLick(BuildContext context) {
     if (onCreateTap != null) {
-      String _gUid =
-          "group_${DateTime.now().millisecondsSinceEpoch.toString()}";
-      Group _group = Group(
-          guid: _gUid,
+      String gUid = "group_${DateTime.now().millisecondsSinceEpoch.toString()}";
+      Group group = Group(
+          guid: gUid,
           name: groupName,
           type: groupType,
           password: groupPassword);
 
-      onCreateTap!(_group);
+      onCreateTap!(group);
     } else if (isLoading == false) {
       createGroup(context);
     }
@@ -82,26 +83,29 @@ class CometChatCreateGroupController extends GetxController {
 
     update();
 
-    Group _group = Group(
+    Group group = Group(
         guid: gUid,
         name: groupName,
         type: groupType,
         password:
             groupType == GroupTypeConstants.password ? groupPassword : null);
     CometChat.createGroup(
-        group: _group,
+        group: group,
         onSuccess: (Group group) {
-          debugPrint("Group Created Successfully : $group ");
+          if (kDebugMode) {
+            debugPrint("Group Created Successfully : $group ");
+          }
           Navigator.pop(context); //pop loading indicator
           isLoading = false;
           Navigator.pop(context);
           CometChatGroupEvents.ccGroupCreated(group);
         },
-        onError: onError ?? (CometChatException e) {
-          Navigator.pop(context); //pop loading indicator
-          isLoading = false;
-          update();
-          debugPrint("Group Creation failed with exception: ${e.message}");
-        });
+        onError: onError ??
+            (CometChatException e) {
+              Navigator.pop(context); //pop loading indicator
+              isLoading = false;
+              update();
+              debugPrint("Group Creation failed with exception: ${e.message}");
+            });
   }
 }

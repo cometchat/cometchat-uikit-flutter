@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+///[StickersExtensionDecorator] is a the view model for [StickersExtension] it contains all the relevant business logic
+///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class StickersExtensionDecorator extends DataSourceDecorator {
   String stickerTypeConstant = "extension_sticker";
   StickerConfiguration? configuration;
@@ -22,11 +24,12 @@ class StickersExtensionDecorator extends DataSourceDecorator {
 
   @override
   Widget getAuxiliaryOptions(User? user, Group? group, BuildContext context,
-      Map<String, dynamic>? id) {
+      Map<String, dynamic>? id, CometChatTheme? theme) {
     List<Widget> auxiliaryButtons = [];
 
-    Widget _widget = super.getAuxiliaryOptions(user, group, context, id);
-    auxiliaryButtons.add(_widget);
+    Widget auxiliaryOption =
+        super.getAuxiliaryOptions(user, group, context, id, theme);
+    auxiliaryButtons.add(auxiliaryOption);
     auxiliaryButtons.add(getStickerAuxiliaryButton(user, group, context, id));
 
     return auxiliaryButtons.isEmpty
@@ -72,12 +75,17 @@ class StickersExtensionDecorator extends DataSourceDecorator {
         category: CometChatMessageCategory.custom,
         contentView: (BaseMessage message, BuildContext context,
             BubbleAlignment alignment) {
-          return CometChatStickerBubble(
-            messageObject: (message as CustomMessage),
-          );
+          if (message.deletedAt != null) {
+            return super
+                .getDeleteMessageBubble(message, theme ?? cometChatTheme);
+          } else {
+            return CometChatStickerBubble(
+              messageObject: (message as CustomMessage),
+            );
+          }
         },
-        options: ChatConfigurator.getDataSource().getCommonOptions,
-        bottomView: ChatConfigurator.getDataSource().getBottomView);
+        options: CometChatUIKit.getDataSource().getCommonOptions,
+        bottomView: CometChatUIKit.getDataSource().getBottomView);
   }
 
   getStickerAuxiliaryButton(User? user, Group? group, BuildContext context,
@@ -120,9 +128,12 @@ class StickersExtensionDecorator extends DataSourceDecorator {
       keyboardButtonIcon: configuration?.keyboardButtonIcon,
       stickerButtonIcon: configuration?.stickerButtonIcon,
       theme: configuration?.theme,
+      stickerIconTint: configuration?.stickerIconTint,
+      keyboardIconTint: configuration?.keyboardIconTint,
       onStickerTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
-        CometChatUIEvents.showPanel(id, alignment.composerBottom, (context) {
+        CometChatUIEvents.showPanel(id, CustomUIPosition.composerBottom,
+            (context) {
           return CometChatStickerKeyboard(
             onStickerTap: onStickerTap,
             keyboardStyle: configuration?.stickerKeyboardStyle,
@@ -139,7 +150,7 @@ class StickersExtensionDecorator extends DataSourceDecorator {
       onKeyboardTap: () {
         CometChatUIEvents.hidePanel(
           id,
-          alignment.composerBottom,
+          CustomUIPosition.composerBottom,
         );
       },
     );

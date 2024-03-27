@@ -1,7 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui_kit/flutter_chat_ui_kit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 
+///[CometChatDetails] is a mediator component that provides access to
+///components for viewing, adding, banning group members if the [CometChatDetails] component is being shown for a [Group] and also components for transferring ownership and leaving the group
+///and options for blocking and unblocking a user if the [CometChatDetails] component for a [User]
+/// ```dart
+///
+///  for a User
+///
+///   CometChatDetails(
+///   user: User(uid: 'uid', name: 'name'),
+///   detailsStyle: DetailsStyle(),
+///     addMemberConfiguration: AddMemberConfiguration(),
+///    bannedMemberConfiguration: BannedMemberConfiguration(),
+///    groupMembersConfiguration: GroupMembersConfiguration(),
+///    transferOwnershipConfiguration: TransferOwnershipConfiguration(),
+/// );
+///
+///  for a Group
+///
+/// CometChatDetails(
+///   group: Group(guid: 'guid', name: 'name', type: 'public'),
+///   detailsStyle: DetailsStyle(),
+///     addMemberConfiguration: AddMemberConfiguration(),
+///    bannedMemberConfiguration: BannedMemberConfiguration(),
+///    groupMembersConfiguration: GroupMembersConfiguration(),
+///    transferOwnershipConfiguration: TransferOwnershipConfiguration(),
+/// );
+///
+/// ```
 class CometChatDetails extends StatelessWidget {
   CometChatDetails(
       {Key? key,
@@ -12,7 +40,7 @@ class CometChatDetails extends StatelessWidget {
       this.showCloseButton = true,
       this.closeButtonIcon,
       List<CometChatDetailsTemplate>? Function(Group? group, User? user)? data,
-      GroupMembersConfiguration? viewMembersConfiguration,
+      GroupMembersConfiguration? groupMembersConfiguration,
       AddMemberConfiguration? addMemberConfiguration,
       TransferOwnershipConfiguration? transferOwnershipConfiguration,
       BannedMemberConfiguration? bannedMemberConfiguration,
@@ -29,12 +57,14 @@ class CometChatDetails extends StatelessWidget {
       this.privateGroupIcon,
       this.theme,
       this.onBack,
+      ConfirmDialogStyle? leaveGroupDialogStyle,
       OnError? onError})
       : _cometChatDetailsController = CometChatDetailsController(user, group,
             stateCallBack: stateCallBack,
             addMemberConfiguration: addMemberConfiguration,
             transferOwnershipConfiguration: transferOwnershipConfiguration,
             data: data,
+            leaveGroupDialogStyle: leaveGroupDialogStyle,
             onError: onError),
         super(key: key);
 
@@ -94,15 +124,15 @@ class CometChatDetails extends StatelessWidget {
   //initialization methods--------------
 
   _getProfile(BuildContext context,
-      CometChatDetailsController detailsController, CometChatTheme _theme) {
-    Widget? _subtitle;
+      CometChatDetailsController detailsController, CometChatTheme theme) {
+    Widget? subtitle;
     Color? backgroundColor;
     Widget? icon;
     User? user = detailsController.user;
     Group? group = detailsController.group;
 
     if (subtitleView != null) {
-      _subtitle = subtitleView!(user: user, group: group);
+      subtitle = subtitleView!(user: user, group: group);
     } else {
       String subtitleText;
       if (user != null) {
@@ -111,18 +141,18 @@ class CometChatDetails extends StatelessWidget {
         subtitleText =
             "${detailsController.membersCount} ${Translations.of(context).members}";
       }
-      _subtitle = Text(subtitleText,
+      subtitle = Text(subtitleText,
           style: TextStyle(
-              fontSize: _theme.typography.subtitle1.fontSize,
-              fontWeight: _theme.typography.subtitle1.fontWeight,
-              fontFamily: _theme.typography.subtitle1.fontFamily,
-              color: _theme.palette.getAccent600()));
+              fontSize: theme.typography.subtitle1.fontSize,
+              fontWeight: theme.typography.subtitle1.fontWeight,
+              fontFamily: theme.typography.subtitle1.fontFamily,
+              color: theme.palette.getAccent600()));
     }
     if ((user != null && disableUsersPresence != true) || group != null) {
       StatusIndicatorUtils statusIndicatorUtils =
           StatusIndicatorUtils.getStatusIndicatorFromParams(
               isSelected: false,
-              theme: _theme,
+              theme: theme,
               user: user,
               group: group,
               disableUsersPresence: disableUsersPresence,
@@ -144,7 +174,7 @@ class CometChatDetails extends StatelessWidget {
       avatarName: user?.name ?? group?.name,
       avatarURL: user?.avatar ?? group?.icon,
       title: user?.name ?? group?.name,
-      subtitleView: _subtitle,
+      subtitleView: subtitle,
       statusIndicatorColor:
           disableUsersPresence == false ? backgroundColor : null,
       statusIndicatorStyle:
@@ -166,17 +196,20 @@ class CometChatDetails extends StatelessWidget {
       style: ListItemStyle(
           background: listItemStyle?.background ?? Colors.transparent,
           titleStyle: TextStyle(
-                  fontSize: _theme.typography.name.fontSize,
-                  fontWeight: _theme.typography.name.fontWeight,
-                  fontFamily: _theme.typography.name.fontFamily,
-                  color: _theme.palette.getAccent())
+                  fontSize: theme.typography.name.fontSize,
+                  fontWeight: theme.typography.name.fontWeight,
+                  fontFamily: theme.typography.name.fontFamily,
+                  color: theme.palette.getAccent())
               .merge(listItemStyle?.titleStyle),
           height: listItemStyle?.height ?? 72,
           border: listItemStyle?.border,
           borderRadius: listItemStyle?.borderRadius,
           gradient: listItemStyle?.gradient,
           separatorColor: listItemStyle?.separatorColor,
-          width: listItemStyle?.width),
+          width: listItemStyle?.width,
+          padding: listItemStyle?.padding,
+        margin: listItemStyle?.margin,
+      ),
     );
   }
 
@@ -201,81 +234,79 @@ class CometChatDetails extends StatelessWidget {
 
   // section view components------------------
   Widget _getSectionData(BuildContext context, int index,
-      CometChatDetailsController detailsController, CometChatTheme _theme) {
-    CometChatDetailsTemplate _template = detailsController.templateList[index];
-    String _sectionId = _template.id;
+      CometChatDetailsController detailsController, CometChatTheme theme) {
+    CometChatDetailsTemplate template = detailsController.templateList[index];
+    String sectionId = template.id;
 
-    if (detailsController.optionsMap[_sectionId] == null ||
-        detailsController.optionsMap[_sectionId]!.isEmpty) {
+    if (detailsController.optionsMap[sectionId] == null ||
+        detailsController.optionsMap[sectionId]!.isEmpty) {
       return const SizedBox();
     }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (_template.title != null && _template.title != "")
+      if (template.title != null && template.title != "")
         SizedBox(
           height: 16,
-          child: Text(_template.title!.toUpperCase(),
+          child: Text(template.title!.toUpperCase(),
               style: TextStyle(
-                      color: _theme.palette.getAccent500(),
-                      fontSize: _theme.typography.text2.fontSize,
-                      fontWeight: _theme.typography.text2.fontWeight,
-                      fontFamily: _theme.typography.text2.fontFamily)
-                  .merge(_template.titleStyle)),
+                      color: theme.palette.getAccent500(),
+                      fontSize: theme.typography.text2.fontSize,
+                      fontWeight: theme.typography.text2.fontWeight,
+                      fontFamily: theme.typography.text2.fontFamily)
+                  .merge(template.titleStyle)),
         ),
       ...List.generate(
-          detailsController.optionsMap[_sectionId]!.length,
-          (index) => _getOption(
-              index, context, _sectionId, detailsController, _theme)),
-      if (_template.hideSectionSeparator == true &&
+          detailsController.optionsMap[sectionId]!.length,
+          (index) =>
+              _getOption(index, context, sectionId, detailsController, theme)),
+      if (template.hideSectionSeparator == true &&
           index != detailsController.templateList.length - 1)
         Divider(
           thickness: 1,
-          color: _theme.palette.getAccent100(),
+          color: theme.palette.getAccent100(),
         )
     ]);
   }
 
   Widget _getOption(int index, BuildContext context, String sectionId,
-      CometChatDetailsController detailsController, CometChatTheme _theme) {
-    CometChatDetailsOption _option =
+      CometChatDetailsController detailsController, CometChatTheme theme) {
+    CometChatDetailsOption option =
         detailsController.optionsMap[sectionId]![index];
-    return _option.customView ??
+    return option.customView ??
         SizedBox(
-          height: _option.height ?? 56,
+          height: option.height ?? 56,
           child: Center(
             child: ListTile(
               contentPadding: EdgeInsets.zero,
-              onTap: () => detailsController.useOption(_option, sectionId),
+              onTap: () => detailsController.useOption(option, sectionId),
               title: Text(
-                _option.title ?? "",
-                style: _option.titleStyle ??
+                option.title ?? "",
+                style: option.titleStyle ??
                     TextStyle(
-                        fontFamily: _theme.typography.name.fontFamily,
-                        fontWeight: _theme.typography.name.fontWeight,
+                        fontFamily: theme.typography.name.fontFamily,
+                        fontWeight: theme.typography.name.fontWeight,
                         color: sectionId ==
-                                DetailsTemplateConstants.destructiveActions
-                            ? _theme.palette.getError()
-                            : _theme.palette.getPrimary()),
+                                DetailsTemplateConstants.secondaryActions
+                            ? theme.palette.getError()
+                            : theme.palette.getPrimary()),
               ),
-              trailing: _option.tail,
+              trailing: option.tail,
             ),
           ),
         );
   }
 
   Widget _getListOfSectionData(BuildContext context,
-      CometChatDetailsController detailsController, CometChatTheme _theme) {
+      CometChatDetailsController detailsController, CometChatTheme theme) {
     return Column(children: [
-      ...List.generate(
-          detailsController.templateList.length,
-          (index) =>
-              _getSectionData(context, index, detailsController, _theme)),
+      ...List.generate(detailsController.templateList.length,
+          (index) => _getSectionData(context, index, detailsController, theme)),
       const SizedBox(
         height: 10,
       ),
       Divider(
         thickness: 1,
-        color: _theme.palette.getAccent100(),
+        color: theme.palette.getAccent100(),
       ),
     ]);
   }
