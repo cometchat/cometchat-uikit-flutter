@@ -61,6 +61,7 @@ class MessageListConfiguration {
     this.addReactionIcon,
     this.addReactionIconTap,
     this.emojiKeyboardStyle,
+    this.reactionsConfiguration
   });
 
   ///[messagesRequestBuilder] custom request builder for fetching messages
@@ -190,4 +191,7 @@ class MessageListConfiguration {
 
   ///[emojiKeyboardStyle] is a parameter used to set the style for the emoji keyboard
   final EmojiKeyboardStyle? emojiKeyboardStyle;
+
+  ///[reactionsConfiguration] sets configuration properties for reactions
+  final ReactionsConfiguration? reactionsConfiguration;
 }

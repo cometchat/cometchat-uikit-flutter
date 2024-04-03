@@ -268,6 +268,12 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             dateSeparatorStyle: widget.messageListConfiguration.dateSeparatorStyle,
       disableReactions: widget.messageListConfiguration.disableReactions,
       reactionListConfiguration: widget.messageListConfiguration.reactionListConfiguration,
+      reactionsStyle: widget.messageListConfiguration.reactionsStyle,
+      addReactionIcon: widget.messageListConfiguration.addReactionIcon,
+      addReactionIconTap: widget.messageListConfiguration.addReactionIconTap,
+      emojiKeyboardStyle: widget.messageListConfiguration.emojiKeyboardStyle,
+      favoriteReactions: widget.messageListConfiguration.favoriteReactions ?? [],
+      reactionsConfiguration: widget.messageListConfiguration.reactionsConfiguration,
           );
   }
 

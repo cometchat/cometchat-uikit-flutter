@@ -1,3 +1,13 @@
+## 4.3.1 - 2nd April 2024
+
+### Fixes
+- Addressed an issue with user presence not updating correctly in `CometChatConversations` and `CometChatConversationsWithMessages`, ensuring accurate user status.
+- Resolved render flex overflow issue in the `headerView` of `CometChatMessageBubble` in `CometChatMessageList` for smoother UI experience.
+
+### Enhancements
+
+- Upgraded `cometchat_uikit_shared` to version `4.2.7`
+
 ## 4.3.0 - 21st March 2024
 
 ### New

@@ -226,14 +226,21 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           widget.messageListConfiguration?.customSoundForMessages,
       customSoundForMessagePackage:
           widget.messageListConfiguration?.customSoundForMessagePackage,
-      // snackBarConfiguration: widget.messageListConfiguration?.snackBarConfiguration,
-      // eventStreamController: controller.messageListEventStreamController,
       messageInformationConfiguration:
           widget.messageListConfiguration?.messageInformationConfiguration,
       controller: widget.messageListConfiguration?.controller,
       theme: widget.messageListConfiguration?.theme ?? _theme,
       disableReceipt: widget.messageListConfiguration?.disableReceipt,
       dateSeparatorStyle: widget.messageListConfiguration?.dateSeparatorStyle,
+      reactionsConfiguration: widget.messageListConfiguration?.reactionsConfiguration,
+      emojiKeyboardStyle: widget.messageListConfiguration?.emojiKeyboardStyle,
+      addReactionIconTap: widget.messageListConfiguration?.addReactionIconTap,
+      addReactionIcon: widget.messageListConfiguration?.addReactionIcon,
+      reactionsStyle: widget.messageListConfiguration?.reactionsStyle,
+      disableReactions: widget.messageListConfiguration?.disableReactions,
+      favoriteReactions: widget.messageListConfiguration?.favoriteReactions ?? [],
+      onError: widget.messageListConfiguration?.onError,
+      reactionListConfiguration: widget.messageListConfiguration?.reactionListConfiguration,
     );
   }
 

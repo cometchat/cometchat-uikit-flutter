@@ -593,15 +593,17 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
   }
 
   Widget getName(BaseMessage message, CometChatTheme theme) {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.only(right: 8.0, left: 8.0),
+      width: MediaQuery.of(context).size.width * 0.65,
       child: Text(
         message.sender!.name,
         style: TextStyle(
             fontSize: theme.typography.text2.fontSize,
             color: theme.palette.getAccent600(),
             fontWeight: theme.typography.text2.fontWeight,
-            fontFamily: theme.typography.text2.fontFamily),
+            fontFamily: theme.typography.text2.fontFamily,),
+          overflow: TextOverflow.ellipsis
       ),
     );
   }

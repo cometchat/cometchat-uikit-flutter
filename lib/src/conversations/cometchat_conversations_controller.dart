@@ -25,7 +25,7 @@ class CometChatConversationsController
       required this.theme,
       this.disableSoundForMessages = false,
       this.customSoundForMessages,
-      this.disableUsersPresence,
+      this.disableUsersPresence = false,
       this.disableReceipt = false,
       this.disableTyping,
       this.deleteConversationDialogStyle,
@@ -88,8 +88,7 @@ class CometChatConversationsController
   void onInit() {
     CometChatMessageEvents.addMessagesListener(messageUIListenerID, this);
     CometChatGroupEvents.addGroupsListener(groupUIListenerID, this);
-
-    if (disableUsersPresence == false) {
+    if (!(disableUsersPresence ?? false)) {
       CometChat.addUserListener(userSDKListenerID, this);
     }
     CometChat.addGroupListener(groupSDKListenerID, this);
@@ -106,7 +105,7 @@ class CometChatConversationsController
     CometChatMessageEvents.removeMessagesListener(messageUIListenerID);
     CometChatGroupEvents.removeGroupsListener(groupUIListenerID);
     CometChat.removeMessageListener(messageSDKListenerID);
-    if (disableUsersPresence == false) {
+    if (!(disableUsersPresence ?? false)) {
       CometChat.removeUserListener(userSDKListenerID);
     }
     //CometChat.removeGroupListener(groupSDKListenerID);
