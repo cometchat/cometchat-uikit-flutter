@@ -47,8 +47,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final String appId = "APP_ID"; //Replace with your app id
-  static const String authKey = "AUTH_KEY"; //Replace with your auth key";
+  final String appId = "239314a25d5dac5e"; //Replace with your app id
+  static const String authKey = "4c2a8cf0afcbe7d1706bcd333863e1613645596d"; //Replace with your auth key";
   static const String region = "us"; ////Replace with your Region code ";
 
   bool isLoading = true;

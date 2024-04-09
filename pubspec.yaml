@@ -1,6 +1,6 @@
 name: cometchat_chat_uikit
 description: CometChat's Flutter UI Kit offers custom UI components for streamlined text and chat features in your app, designed with developers in mind to minimize development effort.
-version: 4.3.1
+version: 4.3.2
 homepage: https://www.cometchat.com/
 
 environment:
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cometchat_uikit_shared: ^4.2.7
+  cometchat_uikit_shared: ^4.2.8
   
 
   flutter_localizations: 

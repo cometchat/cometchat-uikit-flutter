@@ -247,8 +247,8 @@ class CometChatConversations extends StatelessWidget {
       subtitle = getDefaultSubtitle(theme,
           context: context,
           conversation: conversation,
-          showTypingIndicator: controller.typingIndicatorMap
-              .contains(conversation.conversationId),
+          showTypingIndicator: controller.typingMap
+              .containsKey(conversation.conversationId),
           hideThreadIndicator: controller.getHideThreadIndicator(conversation),
           controller: controller);
     }
@@ -604,7 +604,10 @@ class CometChatConversations extends StatelessWidget {
                     controller.getHideReceipt(conversation, disableReceipt)),
             if (showTypingIndicator)
               Text(
-                typingIndicatorText ?? cc.Translations.of(context).is_typing,
+                typingIndicatorText ?? (
+        (conversation.conversationWith is User) ?
+              cc.Translations.of(context).is_typing
+                      : "${controller.typingMap[conversation.conversationId]?.sender.name ?? ''} ${cc.Translations.of(context).is_typing}"),
                 style: conversationsStyle.typingIndicatorStyle ??
                     TextStyle(
                         color: theme.palette.getPrimary(),
@@ -673,7 +676,15 @@ class CometChatConversations extends StatelessWidget {
 
     String? text;
 
-    text = controller.getLastMessage(conversation, context);
+    if(conversation.conversationWith is Group) {
+      if(conversation.lastMessage?.sender?.uid != controller.loggedInUser?.uid) {
+        text = "${conversation.lastMessage?.sender?.name}: ${controller.getLastMessage(conversation, context)}";
+      } else {
+        text = "${cc.Translations.of(context).you}: ${controller.getLastMessage(conversation, context)}";
+      }
+    } else {
+      text = controller.getLastMessage(conversation, context);
+    }
 
     return Text(
       text,

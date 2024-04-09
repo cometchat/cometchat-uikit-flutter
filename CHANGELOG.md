@@ -1,3 +1,13 @@
+## 4.3.2 - 9th April 2024
+
+### Fixes
+- Resolved a padding issue with the `CometChatMessageHeader` to improve user experience.
+- Corrected an issue where the user name was missing in the typing indicator for a group in the `CometChatConversations` Component.
+- Fixed an issue where the user name was not displayed before the last message for a group in the `CometChatConversations` Component.
+
+### Enhancements
+- Upgraded `cometchat_uikit_shared` to version `4.2.8`
+
 ## 4.3.1 - 2nd April 2024
 
 ### Fixes

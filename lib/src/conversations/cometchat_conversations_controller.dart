@@ -54,7 +54,7 @@ class CometChatConversationsController
   late String _uiUserListener;
   late String _conversationListenerId;
 
-  Set<String> typingIndicatorMap = {};
+  Map<String, TypingIndicator> typingMap = {};
   User? loggedInUser;
 
   ///[disableSoundForMessages] if true will disable sound for messages
@@ -83,6 +83,7 @@ class CometChatConversationsController
 
   ///[deleteConversationDialogStyle] provides customization for the dialog box that pops up when tapping the delete conversation option
   final ConfirmDialogStyle? deleteConversationDialogStyle;
+
 
   @override
   void onInit() {
@@ -550,12 +551,13 @@ class CometChatConversationsController
               (conversation.conversationWith as Group).guid ==
                   typingIndicator.receiverId));
     }
-
     if (matchingIndex != -1) {
       if (isTypingStarted == true) {
-        typingIndicatorMap.add(list[matchingIndex].conversationId!);
+          typingMap[list[matchingIndex].conversationId!] = typingIndicator;
       } else {
-        typingIndicatorMap.remove(list[matchingIndex].conversationId!);
+        if(typingMap.containsKey(list[matchingIndex].conversationId!)){
+          typingMap.remove(list[matchingIndex].conversationId!);
+        }
       }
       update();
     }

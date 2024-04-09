@@ -332,7 +332,9 @@ class CometChatMessageHeader extends StatelessWidget
                     fontSize: theme.typography.name.fontSize,
                     fontWeight: theme.typography.name.fontWeight,
                     fontFamily: theme.typography.name.fontFamily,
-                    color: theme.palette.getAccent())),
+                    color: theme.palette.getAccent(),
+                  overflow: TextOverflow.ellipsis,
+                )),
       ),
     );
   }

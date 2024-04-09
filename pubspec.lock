@@ -69,10 +69,10 @@ packages:
     dependency: "direct main"
     description:
       name: cometchat_uikit_shared
-      sha256: ec5c789b92d008a11fc9dfc7c8fd24e6e0807e0ae537f24f12097e5915381a91
+      sha256: b0febd296c68073a577445fa69c04d73caec8ff999e0fdd275558dc0a84da44c
       url: "https://pub.dev"
     source: hosted
-    version: "4.2.7"
+    version: "4.2.8"
   cross_file:
     dependency: transitive
     description:
