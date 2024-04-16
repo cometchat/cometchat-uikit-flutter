@@ -1,12 +1,12 @@
 PODS:
-  - cometchat_chat_uikit (4.3.2):
+  - cometchat_chat_uikit (4.3.3):
     - Flutter
-  - cometchat_sdk (4.0.7):
-    - CometChatSDK (= 4.0.43)
+  - cometchat_sdk (4.0.8):
+    - CometChatSDK (= 4.0.44)
     - Flutter
-  - cometchat_uikit_shared (4.2.8):
+  - cometchat_uikit_shared (4.2.9):
     - Flutter
-  - CometChatSDK (4.0.43)
+  - CometChatSDK (4.0.44)
   - Flutter (1.0.0)
   - image_picker_ios (0.0.1):
     - Flutter
@@ -71,10 +71,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/webview_flutter_wkwebview/ios"
 
 SPEC CHECKSUMS:
-  cometchat_chat_uikit: 36c14bf96ee9d7b0683196b439fe729c9a3b503c
-  cometchat_sdk: 0fa3c8e0f0219ed6475bc0e793c81a4077c784a0
-  cometchat_uikit_shared: 7aaabd7e165fd3a9ba4d2c053247a1641714559e
-  CometChatSDK: aef868cd0190b76c2ce352127e9894b7a4f650b4
+  cometchat_chat_uikit: a6adede306eadf4d91b28193ce546705dd558e15
+  cometchat_sdk: 3cfd23c94f93809cc7ca00b17fec2ed25ef9a7a1
+  cometchat_uikit_shared: 5950fdb8902c7a8fec0e49b4b4ffda3a3603c17b
+  CometChatSDK: fd757d30972d283623291546f0c58f3e49e50d17
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
   image_picker_ios: 4a8aadfbb6dc30ad5141a2ce3832af9214a705b5
   integration_test: 13825b8a9334a850581300559b8839134b124670

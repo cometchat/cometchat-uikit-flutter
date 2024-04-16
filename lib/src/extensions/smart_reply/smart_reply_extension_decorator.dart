@@ -46,11 +46,9 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
     return replies;
   }
 
-
-
   @override
   void ccActiveChatChanged(Map<String, dynamic>? id, BaseMessage? lastMessage,
-      User? user, Group? group, int unreadMessageCount ) {
+      User? user, Group? group, int unreadMessageCount) {
     if (lastMessage != null &&
         lastMessage is TextMessage &&
         lastMessage.sender?.uid != loggedInUser?.uid) {
@@ -64,37 +62,129 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
   }
 
   @override
+  void onMediaMessageReceived(MediaMessage mediaMessage) {
+    String? uid;
+    String? guid;
+    if (mediaMessage.receiverType == ReceiverTypeConstants.user) {
+      uid = (mediaMessage.sender as User).uid;
+    } else {
+      guid = (mediaMessage.receiver as Group).guid;
+    }
+    Map<String, dynamic> id =
+        UIEventUtils.createMap(uid, guid, mediaMessage.parentMessageId);
+
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  @override
+  void onCustomMessageReceived(CustomMessage customMessage) {
+    String? uid;
+    String? guid;
+    if (customMessage.receiverType == ReceiverTypeConstants.user) {
+      uid = (customMessage.sender as User).uid;
+    } else {
+      guid = (customMessage.receiver as Group).guid;
+    }
+    Map<String, dynamic> id =
+        UIEventUtils.createMap(uid, guid, customMessage.parentMessageId);
+
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  @override
+  void ccMessageSent(BaseMessage message, MessageStatus messageStatus) {
+    String? uid;
+    String? guid;
+    if (message.receiverType == ReceiverTypeConstants.user) {
+      uid = message.receiverUid;
+    } else {
+      guid = message.receiverUid;
+    }
+    Map<String, dynamic> id =
+        UIEventUtils.createMap(uid, guid, message.parentMessageId);
+
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  @override
   void onSchedulerMessageReceived(SchedulerMessage schedulerMessage) {
-    Map<String, dynamic> id = {};
-
-    if (schedulerMessage.receiver is User) {
-      id['uid'] = (schedulerMessage.sender as User).uid;
-    } else if (schedulerMessage.receiver is Group) {
-      id['guid'] = (schedulerMessage.receiver as Group).guid;
+    String? uid;
+    String? guid;
+    if (schedulerMessage.receiverType == ReceiverTypeConstants.user) {
+      uid = (schedulerMessage.sender as User).uid;
+    } else {
+      guid = (schedulerMessage.receiver as Group).guid;
     }
+    Map<String, dynamic> id =
+        UIEventUtils.createMap(uid, guid, schedulerMessage.parentMessageId);
 
-    if (schedulerMessage.parentMessageId != 0) {
-      id['parentMessageId'] = schedulerMessage.parentMessageId;
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  @override
+  void onFormMessageReceived(FormMessage formMessage) {
+    String? uid;
+    String? guid;
+    if (formMessage.receiverType == ReceiverTypeConstants.user) {
+      uid = (formMessage.sender as User).uid;
+    } else {
+      guid = (formMessage.receiver as Group).guid;
     }
+    Map<String, dynamic> id =
+        UIEventUtils.createMap(uid, guid, formMessage.parentMessageId);
+
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  @override
+  void onCardMessageReceived(CardMessage cardMessage) {
+    String? uid;
+    String? guid;
+    if (cardMessage.receiverType == ReceiverTypeConstants.user) {
+      uid = (cardMessage.sender as User).uid;
+    } else {
+      guid = (cardMessage.receiver as Group).guid;
+    }
+    Map<String, dynamic> id =
+        UIEventUtils.createMap(uid, guid, cardMessage.parentMessageId);
+
+    CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+  }
+
+  @override
+  void onCustomInteractiveMessageReceived(
+      CustomInteractiveMessage customInteractiveMessage) {
+    String? uid;
+    String? guid;
+    if (customInteractiveMessage.receiverType == ReceiverTypeConstants.user) {
+      uid = (customInteractiveMessage.sender as User).uid;
+    } else {
+      guid = (customInteractiveMessage.receiver as Group).guid;
+    }
+    Map<String, dynamic> id = UIEventUtils.createMap(
+        uid, guid, customInteractiveMessage.parentMessageId);
+
     CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
   }
 
   checkAndShowReplies(TextMessage textMessage) {
     List<String> replies = getReplies(textMessage);
 
-    if (replies.isEmpty) return;
-
-    Map<String, dynamic> id = {};
-
+    String? uid;
+    String? guid;
     if (textMessage.receiver is User) {
-      id['uid'] = (textMessage.sender as User).uid;
-    } else if (textMessage.receiver is Group) {
-      id['guid'] = (textMessage.receiver as Group).guid;
+      uid = (textMessage.sender as User).uid;
+    } else {
+      guid = (textMessage.receiver as Group).guid;
     }
 
-    if (textMessage.parentMessageId != 0) {
-      id['parentMessageId'] = textMessage.parentMessageId;
-    }
+    Map<String, dynamic> id =
+    UIEventUtils.createMap(uid, guid, textMessage.parentMessageId);
+
+    if (replies.isEmpty) {
+      CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
+      return;
+    };
 
     onCloseTap() {
       CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);

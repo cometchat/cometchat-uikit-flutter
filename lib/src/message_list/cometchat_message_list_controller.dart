@@ -1359,9 +1359,16 @@ class CometChatMessageListController
                       update();
                     }
                   } else {
+                    for(int i = 0; i < list.length; i++){
+                      if(list[i].muid == message.muid){
+                        list.removeAt(i);
+                        update();
+                        break;
+                      }
+                    }
                     addElement(message);
-                    newUnreadMessageCount++;
-                    update();
+                      newUnreadMessageCount++;
+                      update();
                   }
                 }
                 messageId = fetchedList.last.id;

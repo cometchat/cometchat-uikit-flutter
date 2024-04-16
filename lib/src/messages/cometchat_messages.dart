@@ -272,7 +272,7 @@ class _CometChatMessagesState extends State<CometChatMessages> {
       addReactionIcon: widget.messageListConfiguration.addReactionIcon,
       addReactionIconTap: widget.messageListConfiguration.addReactionIconTap,
       emojiKeyboardStyle: widget.messageListConfiguration.emojiKeyboardStyle,
-      favoriteReactions: widget.messageListConfiguration.favoriteReactions ?? [],
+      favoriteReactions: widget.messageListConfiguration.favoriteReactions,
       reactionsConfiguration: widget.messageListConfiguration.reactionsConfiguration,
           );
   }

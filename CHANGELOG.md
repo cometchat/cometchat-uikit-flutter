@@ -1,3 +1,13 @@
+## 4.3.3 - 16th April 2024
+
+### Fixes
+- Addressed an issue with duplicate messages appearing in CometChatMessageList when a media message was sent.
+- Resolved an issue where smart replies did not disappear after sending or receiving messages.
+
+### Enhancements
+- Upgraded `cometchat_uikit_shared` to version `4.2.9`
+- Upgraded `cometchat_sdk` to version `4.0.8`
+
 ## 4.3.2 - 9th April 2024
 
 ### Fixes
