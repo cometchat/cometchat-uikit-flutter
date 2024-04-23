@@ -501,17 +501,6 @@ class CometChatDetailsController extends GetxController
     }
   }
 
-  _viewProfile(User? user, Group? group, String section,
-      CometChatDetailsControllerProtocol state) async {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => Scaffold(
-                  body: Center(
-                      child: Text(Translations.of(context).view_profile)),
-                )));
-  }
-
   _viewMember(User? user, Group? group, String section,
       CometChatDetailsControllerProtocol state) {
     if (group != null) {
@@ -612,10 +601,6 @@ class CometChatDetailsController extends GetxController
       case UserOptionConstants.unblockUser:
         {
           return _unBlockUser;
-        }
-      case UserOptionConstants.viewProfile:
-        {
-          return _viewProfile;
         }
       case GroupOptionConstants.viewMembers:
         {

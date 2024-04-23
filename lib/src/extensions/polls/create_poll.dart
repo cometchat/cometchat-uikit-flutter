@@ -16,7 +16,6 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 class CreatePoll extends StatefulWidget {
   const CreatePoll(
       {Key? key,
-      // this.onCreatePoll,
       this.title,
       this.user,
       this.group,
@@ -329,80 +328,76 @@ class _CreatePollState extends State<CreatePoll> {
   // getTextFields() => textFields;
 
   getTextKey(int index, String initialText, {FocusNode? focusNode}) {
-    return SwipeTile(
+    return SizedBox(
       key: UniqueKey(),
-      //-----------right swipe menu options-----------
-      menuItems: index < widget.defaultAnswers
-          ? []
-          : [
-              CometChatOption(
-                  id: "0",
-                  title: Translations.of(context).delete,
-                  packageName: UIConstants.packageName,
-                  icon: AssetConstants.delete,
-                  iconTint: widget.style?.deleteIconColor ??
-                      _theme.palette.getBackground(),
-                  backgroundColor: widget.style?.deleteIconBackgroundColor ??
-                      _theme.palette.getError(),
-                  onClick: () {
-                    _answers.removeAt(index);
-                    textFields.removeAt(index);
-                    for (var i = index; i < textFields.length; i++) {
-                      textFields[i] = getTextKey(i, _answers[i]);
-                    }
-                    setState(() {});
-                  }),
-            ],
-      child: SizedBox(
-        child: Center(
-          child: TextFormField(
-            initialValue: initialText,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return Translations.of(context).invalid_poll_option;
-              }
-              return null;
-            },
-            focusNode: focusNode,
-            onChanged: (String val) {
-              _answers[index] = val;
-            },
-            style: TextStyle(
-              color: _theme.palette.getAccent(),
+      child: Center(
+        child: TextFormField(
+          initialValue: initialText,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return Translations.of(context).invalid_poll_option;
+            }
+            return null;
+          },
+          focusNode: focusNode,
+          onChanged: (String val) {
+            _answers[index] = val;
+          },
+          style: TextStyle(
+            color: _theme.palette.getAccent(),
+            fontSize: _theme.typography.body.fontSize,
+            fontFamily: _theme.typography.body.fontFamily,
+            fontWeight: _theme.typography.body.fontWeight,
+          ).merge(widget.style?.inputTextStyle),
+          decoration: InputDecoration(
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: widget.style?.borderColor ??
+                      _theme.palette.getAccent200()),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: widget.style?.borderColor ??
+                      _theme.palette.getAccent200()),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                  color: widget.style?.borderColor ??
+                      _theme.palette.getAccent200()),
+            ),
+            labelText: widget.answerPlaceholderText ??
+                '${Translations.of(context).answer} ${index + 1}',
+            labelStyle: TextStyle(
+              color: _theme.palette.getAccent600(),
               fontSize: _theme.typography.body.fontSize,
               fontFamily: _theme.typography.body.fontFamily,
               fontWeight: _theme.typography.body.fontWeight,
-            ).merge(widget.style?.inputTextStyle),
-            decoration: InputDecoration(
-                border: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.style?.borderColor ??
-                          _theme.palette.getAccent200()),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.style?.borderColor ??
-                          _theme.palette.getAccent200()),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                      color: widget.style?.borderColor ??
-                          _theme.palette.getAccent200()),
-                ),
-                labelText: widget.answerPlaceholderText ??
-                    '${Translations.of(context).answer} ${index + 1}',
-                labelStyle: TextStyle(
-                  color: _theme.palette.getAccent600(),
-                  fontSize: _theme.typography.body.fontSize,
-                  fontFamily: _theme.typography.body.fontFamily,
-                  fontWeight: _theme.typography.body.fontWeight,
-                ).merge(widget.style?.hintTextStyle),
-                hintStyle: TextStyle(
-                  color: _theme.palette.getAccent600(),
-                  fontSize: _theme.typography.body.fontSize,
-                  fontFamily: _theme.typography.body.fontFamily,
-                  fontWeight: _theme.typography.body.fontWeight,
-                ).merge(widget.style?.hintTextStyle)),
+            ).merge(widget.style?.hintTextStyle),
+            hintStyle: TextStyle(
+              color: _theme.palette.getAccent600(),
+              fontSize: _theme.typography.body.fontSize,
+              fontFamily: _theme.typography.body.fontFamily,
+              fontWeight: _theme.typography.body.fontWeight,
+            ).merge(widget.style?.hintTextStyle),
+            suffixIcon: index < widget.defaultAnswers
+                ? const SizedBox()
+                : IconButton(
+                    onPressed: () {
+                      _answers.removeAt(index);
+                      textFields.removeAt(index);
+                      for (var i = index; i < textFields.length; i++) {
+                        textFields[i] = getTextKey(i, _answers[i]);
+                      }
+                      setState(() {});
+                    },
+                    icon: widget.deleteIcon ??
+                        Image.asset(
+                          AssetConstants.delete,
+                          package: UIConstants.packageName,
+                          color: widget.style?.deleteIconColor ??
+                              _theme.palette.getAccent500(),
+                        ),
+                  ),
           ),
         ),
       ),

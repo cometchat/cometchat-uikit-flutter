@@ -30,7 +30,10 @@ class CometChatThreadedMessages extends StatefulWidget {
       this.hideMessageComposer,
       this.bubbleView,
       required this.loggedInUser,
-      this.theme})
+      this.theme,
+        this.messageComposerView,
+        this.messageListView,
+      })
       : super(key: key);
 
   ///[parentMessage] parent message for thread
@@ -66,6 +69,15 @@ class CometChatThreadedMessages extends StatefulWidget {
   ///[theme] can pass custom theme
   final CometChatTheme? theme;
 
+  ///[messageComposerView] to set custom message composer
+  final Widget Function(User? user, Group? group, BuildContext context, BaseMessage parentMessage)?
+  messageComposerView;
+
+  ///[messageListView] to set custom message list
+  final Widget Function(User? user, Group? group, BuildContext context, BaseMessage parentMessage)?
+  messageListView;
+
+
   @override
   State<CometChatThreadedMessages> createState() =>
       _CometChatThreadedMessagesState();
@@ -87,7 +99,10 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
 
   Widget getMessageComposer(
       CometChatThreadedMessageController controller, BuildContext context) {
-    return CometChatMessageComposer(
+    return widget.messageComposerView != null
+        ? widget.messageComposerView!(
+        controller.user, controller.group, context, widget.parentMessage)
+      : CometChatMessageComposer(
       user: controller.user,
       group: controller.group,
       placeholderText: widget.messageComposerConfiguration?.placeholderText,
@@ -183,7 +198,9 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
         ..parentMessageId = widget.parentMessage.id;
     }
 
-    return CometChatMessageList(
+    return widget.messageListView != null
+        ? widget.messageListView!(controller.user, controller.group, context, widget.parentMessage)
+        : CometChatMessageList(
       user: controller.user,
       group: controller.group,
       alignment:

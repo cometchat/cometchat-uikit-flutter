@@ -1,3 +1,15 @@
+## 4.3.4 - 23rd April 2024
+
+### Fixes
+- Addressed a usability issue by removing the View Profile button in User Profile for streamlined navigation.
+- Rectified a functionality issue with the polls, where users were unable to swipe and remove answers.
+- Corrected an issue with the threaded messages count being incremented improperly.
+
+### Enhancements
+- Enhanced `ThreadedMessagesConfiguration` and `CometChatThreadedMessages` by adding `messageComposerView`, `messageListView` and `hideMessageComposer` for better configuration control.
+- Updated the `CreatePoll` functionality by adding a suffix icon to allow users to easily remove answers.
+- Updated `cometchat_uikit_shared` to version `4.2.10`.
+
 ## 4.3.3 - 16th April 2024
 
 ### Fixes

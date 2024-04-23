@@ -1311,6 +1311,7 @@ class CometChatMessageListController
             CometChatUIKit.getDataSource().getAllMessageCategories();
     List<String> types = messagesBuilderProtocol.requestBuilder.types ??
         CometChatUIKit.getDataSource().getAllMessageTypes();
+    bool hideReplies = messagesBuilderProtocol.requestBuilder.hideReplies ?? true;
 
     // used to fetch the old messages from the server starting from the last message in the list that have been edited or deleted
     types.add(MessageTypeConstants.message);
@@ -1322,7 +1323,9 @@ class CometChatMessageListController
         ..guid = group?.guid
         ..categories = categories
         ..types = types
-        ..messageId = messageId)
+        ..messageId = messageId
+        ..hideReplies = hideReplies
+      )
           .build();
       try {
         await messageRequest.fetchNext(

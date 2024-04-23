@@ -190,6 +190,8 @@ class CometChatMessagesController extends GetxController
                       threadedMessagesConfiguration?.threadedMessagesStyle,
                   hideMessageComposer:
                       threadedMessagesConfiguration?.hideMessageComposer,
+              messageComposerView: threadedMessagesConfiguration?.messageComposerView,
+              messageListView: threadedMessagesConfiguration?.messageListView,
                 )),
       );
     }
