@@ -1,3 +1,22 @@
+## 4.4.0 - 2nd May 2024
+
+### New
+- User Mention Support:
+    - Added support for mentioning users in a conversation using the @ symbol in the message composer.
+    - Mentioned users will be highlighted in the message composer, text bubble, and subtitle of conversations in the conversation list if the last message is a text message containing a mention.
+### Enhancements
+- The `cometchat_sdk` dependency has been updated to version `4.0.10` for better performance.
+- The `cometchat_uikit_shared` dependency has been updated to `4.3.0` for better performance
+- Upgraded `CometChatMessageList`, `CometChatMessageComposer`, and `CometChatConversations` components to accept an array of `CometChatTextFormatter`, providing a flexible text formatting system based on various regex patterns. This will help in differentiating between user mentions and URLs within a message.
+### Fixes
+- Fixed an issue that caused the app to crash when trying to open a thread while a message was still in the sending state.
+- Resolved an issue where smart replies were visible in threaded messages even if the last message was not a text message.
+- Real-Time Updates:
+    - The `GroupsWithMessages` Component not updating when the logged-in user is added to a new group.
+    - Members not being removed from the View Members list when kicked, leaving, or being banned from a group.
+    - Ensured visibility of form messages received in real-time.
+    - Updated the conversation list when a form message is received in real-time.
+
 ## 4.3.4 - 23rd April 2024
 
 ### Fixes
