@@ -31,6 +31,7 @@ class CometChatThreadedMessages extends StatefulWidget {
       this.bubbleView,
       required this.loggedInUser,
       this.theme,
+      this.messageComposerKey,
         this.messageComposerView,
         this.messageListView,
       })
@@ -69,6 +70,10 @@ class CometChatThreadedMessages extends StatefulWidget {
   ///[theme] can pass custom theme
   final CometChatTheme? theme;
 
+
+  ///[messageComposerKey] key for message composer, We use this to get  the dimensions of the composer which we then use to set the placeholder for the composer in stack we are using to show the message list
+  final GlobalKey? messageComposerKey;
+
   ///[messageComposerView] to set custom message composer
   final Widget Function(User? user, Group? group, BuildContext context, BaseMessage parentMessage)?
   messageComposerView;
@@ -99,6 +104,15 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
 
   Widget getMessageComposer(
       CometChatThreadedMessageController controller, BuildContext context) {
+
+    GlobalKey key = widget.messageComposerKey ?? controller.messageComposerKey;
+
+    if(controller.composerPlaceHolder==null) {
+      WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+        controller.getComposerPlaceHolder();
+      });
+    }
+
     return widget.messageComposerView != null
         ? widget.messageComposerView!(
         controller.user, controller.group, context, widget.parentMessage)
@@ -177,13 +191,19 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           sendButtonIcon: widget.messageComposerConfiguration?.messageComposerStyle?.sendButtonIcon,
           sendButtonIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.sendButtonIconTint,
           contentPadding: widget.messageComposerConfiguration?.messageComposerStyle?.contentPadding ?? EdgeInsets.zero,
+          messageInputPadding: widget.messageComposerConfiguration?.messageComposerStyle?.messageInputPadding ?? const EdgeInsets.only(left:8.0,right: 8,bottom: 8),
 
       ),
         aiOptionStyle: widget.messageComposerConfiguration?.aiOptionStyle,
         aiIconPackageName: widget.messageComposerConfiguration?.aiIconPackageName,
         aiIconURL: widget.messageComposerConfiguration?.aiIconURL,
-        aiIcon: widget.messageComposerConfiguration?.aiIcon
-
+        aiIcon: widget.messageComposerConfiguration?.aiIcon,
+        messageComposerKey: key,
+      disableMentions: widget.messageComposerConfiguration?.disableMentions,
+      textFormatters: widget.messageComposerConfiguration?.textFormatters,
+      onError: widget.messageComposerConfiguration?.onError,
+      text: widget.messageComposerConfiguration?.text,
+      stateCallBack: widget.messageComposerConfiguration?.stateCallBack,
     );
   }
 
@@ -229,7 +249,7 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           MessageListStyle(
               contentPadding: widget.messageListConfiguration?.messageListStyle
                       ?.contentPadding ??
-                  EdgeInsets.zero),
+                  const EdgeInsets.all(8)),
 
       sentIcon: widget.messageListConfiguration?.sentIcon,
       readIcon: widget.messageListConfiguration?.readIcon,
@@ -249,21 +269,30 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
       theme: widget.messageListConfiguration?.theme ?? _theme,
       disableReceipt: widget.messageListConfiguration?.disableReceipt,
       dateSeparatorStyle: widget.messageListConfiguration?.dateSeparatorStyle,
+
+      disableMentions: widget.messageListConfiguration?.disableMentions,
+      onError: widget.messageListConfiguration?.onError,
+
       reactionsConfiguration: widget.messageListConfiguration?.reactionsConfiguration,
       emojiKeyboardStyle: widget.messageListConfiguration?.emojiKeyboardStyle,
       addReactionIconTap: widget.messageListConfiguration?.addReactionIconTap,
       addReactionIcon: widget.messageListConfiguration?.addReactionIcon,
       reactionsStyle: widget.messageListConfiguration?.reactionsStyle,
-      disableReactions: widget.messageListConfiguration?.disableReactions,
-      favoriteReactions: widget.messageListConfiguration?.favoriteReactions ?? [],
-      onError: widget.messageListConfiguration?.onError,
+
+      textFormatters: widget.messageListConfiguration?.textFormatters,
       reactionListConfiguration: widget.messageListConfiguration?.reactionListConfiguration,
+      disableReactions: widget.messageListConfiguration?.disableReactions,
+      favoriteReactions: widget.messageListConfiguration?.favoriteReactions,
+
     );
   }
 
   getThreadMessageHeader(
       CometChatThreadedMessageController controller, BuildContext context) {
     if (widget.bubbleView != null) {
+      // return SizedBox(
+      //     height: 200,
+      //     child: SingleChildScrollView(child: widget.bubbleView!(controller.parentMessage, context)));
       return widget.bubbleView!(controller.parentMessage, context);
     } else {
       return const SizedBox();
@@ -312,33 +341,56 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
           backIconTint: widget.threadedMessagesStyle?.closeIconTint,
           border: widget.threadedMessagesStyle?.border,
           borderRadius: widget.threadedMessagesStyle?.borderRadius,
+          padding: EdgeInsets.zero,
         ),
         container: GetBuilder(
             init: threadedMessageController,
             tag: threadedMessageController.tag,
             builder: (CometChatThreadedMessageController value) {
-              return Column(
+              return Stack(
                 children: [
-                  //----message list-----
-                  getThreadMessageHeader(value, context),
+                  Column(
+                    children: [
+                      //----message list-----
+                      Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 16),
+                          child:getThreadMessageHeader(value, context)),
 
-                  getActionView(value, context, _theme),
+                      Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 16),
+                          child:getActionView(value, context, _theme)),
 
-                  Expanded(
-                      child: GestureDetector(
-                          onTap: () {
-                            FocusScopeNode currentFocus =
-                                FocusScope.of(context);
+                      Expanded(
+                          child: GestureDetector(
+                              onTap: () {
+                                FocusScopeNode currentFocus =
+                                    FocusScope.of(context);
 
-                            if (!currentFocus.hasPrimaryFocus) {
-                              currentFocus.unfocus();
-                            }
-                          },
-                          child: getMessageList(value, context))),
+                                if (!currentFocus.hasPrimaryFocus) {
+                                  currentFocus.unfocus();
+                                }
+                              },
+                              child: getMessageList(value, context))),
 
-                  //-----message composer-----
-                  if (widget.hideMessageComposer != true)
-                    getMessageComposer(value, context)
+                      //-----message composer-----
+                      // if (widget.hideMessageComposer != true)
+                      //   getMessageComposer(value, context)
+                      if (widget.hideMessageComposer != true && value.composerPlaceHolder != null)
+                        value.composerPlaceHolder ?? const SizedBox(),
+                    ],
+                  ),
+                  Positioned.fill(
+
+                      child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Stack(
+                            children: [
+// Container(color:Colors.red, height: 100),
+
+                              if (widget.hideMessageComposer != true)
+                                getMessageComposer(value, context)
+                            ],
+                          ))),
                 ],
               );
             }));

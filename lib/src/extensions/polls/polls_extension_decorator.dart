@@ -86,7 +86,7 @@ class PollsExtensionDecorator extends DataSourceDecorator {
         type: pollsTypeConstant,
         category: CometChatMessageCategory.custom,
         contentView: (BaseMessage message, BuildContext context,
-            BubbleAlignment alignment) {
+            BubbleAlignment alignment,{AdditionalConfigurations? additionalConfigurations}) {
           return getContentView(message as CustomMessage, _theme, context);
         },
         options: CometChatUIKit.getDataSource().getCommonOptions,

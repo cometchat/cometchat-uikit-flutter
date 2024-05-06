@@ -71,7 +71,9 @@ class ConversationsConfiguration {
       this.onItemLongPress,
       this.disableTyping,
       this.deleteConversationDialogStyle,
-      this.hideAppbar
+      this.hideAppbar,
+        this.disableMentions,
+        this.textFormatters
       });
 
   ///[conversationsProtocol] set custom conversations request builder protocol
@@ -228,4 +230,10 @@ class ConversationsConfiguration {
 
   ///[hideAppbar] toggle visibility for app bar
   final bool? hideAppbar;
+
+  ///[disableMentions] disables formatting of mentions in the subtitle of the conversation
+  final bool? disableMentions;
+
+  ///[textFormatters] is a list of text formatters for message bubbles with type text
+  final List<CometChatTextFormatter>? textFormatters;
 }

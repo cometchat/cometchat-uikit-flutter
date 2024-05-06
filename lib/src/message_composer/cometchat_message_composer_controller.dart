@@ -1,9 +1,11 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
+import 'package:get/get.dart';
 
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
 import 'dart:io';
 
 ///[CometChatMessageComposerController] is the view model for [CometChatMessageComposer]
@@ -27,7 +29,11 @@ class CometChatMessageComposerController extends GetxController
       this.footerView,
       this.onSendButtonTap,
       this.onError,
-      this.aiOptionStyle
+      this.aiOptionStyle,
+      this.disableMentions = false,
+        this.previewView,
+        this.theme,
+        this.textFormatters
       }) {
     tag = "tag$counter";
     counter++;
@@ -69,6 +75,9 @@ class CometChatMessageComposerController extends GetxController
 
   ///[footerView] ui component to be forwarded to message input component
   final ComposerWidgetBuilder? footerView;
+
+  ///[previewView] ui component to be forwarded to message composer component, to be shown in place of the message preview bubble
+  final ComposerWidgetBuilder? previewView;
 
   ///[_actionItems] show up in attachment options
   final List<ActionItem> _actionItems = [];
@@ -113,7 +122,7 @@ class CometChatMessageComposerController extends GetxController
   final Function(BuildContext, BaseMessage, PreviewMessageMode?)?
       onSendButtonTap;
 
-  ///[onError] callback triggered in case any error happens when fetching users
+  ///[onError] callback triggered in case any error happens when sending a message
   final OnError? onError;
 
   ///[_isTyping] state of typing events
@@ -137,19 +146,108 @@ class CometChatMessageComposerController extends GetxController
   ///[footer] shown in footer view
   Widget? footer;
 
+  ///[preview] shown in preview view
+  Widget? preview;
+
   Map<String, dynamic> composerId = {};
 
   AIOptionsStyle? aiOptionStyle;
 
   late FocusNode focusNode;
 
+  // late CometChatMentionsFormatter mentionsFormatter;
+
+  List<SuggestionListItem> suggestions = [];
+  late StreamSubscription<List<SuggestionListItem>> _subscription;
+
+  // Create a stream controller
+  final StreamController<List<SuggestionListItem>> _suggestionListController =
+      StreamController<List<SuggestionListItem>>();
+
+  // Create a stream from the controller
+  late Stream<List<SuggestionListItem>> _suggestionListStream;
+
+  // Create a stream controller
+  final StreamController<String> _previousTextController =
+  StreamController<String>();
+
+  // Create a stream from the controller
+  late Stream<String> _previousTextStream;
+
+  String? _currentSearchKeyword;
+  bool _searcKeywordChanged = true;
+  bool disableMentions;
+  // String? _currentTrackingCharacter;
+
+  CometChatTheme? theme;
+
+
+  List<CometChatTextFormatter> _formatters = [];
+  ///[textFormatters] is a list of [CometChatTextFormatter] which is used to format the text
+  List<CometChatTextFormatter>? textFormatters;
+
+
+
+
   //-------------------------LifeCycle Methods-----------------------------
   @override
   void onInit() {
+    populateComposerId();
+    _suggestionListStream = _suggestionListController.stream;
+    _previousTextStream = _previousTextController.stream;
+
     _dateString = DateTime.now().millisecondsSinceEpoch.toString();
     _uiMessageListener = "${_dateString}UI_message_listener";
     _uiEventListener = "${_dateString}UI_event_listener";
-    textEditingController = TextEditingController(text: text);
+
+    // Subscribe to the stream
+    _subscription = _suggestionListStream.listen((List<SuggestionListItem> value) {
+      bool shouldScrollDown = false;
+      if (value.isNotEmpty && _currentSearchKeyword!=null) {
+        if (_searcKeywordChanged) {
+          suggestions = value;
+          _searcKeywordChanged=false;
+        } else {
+          // suggestions.addAll(value);
+          for (var element in value) {
+            if(!suggestions.contains(element)) {
+              suggestions.add(element);
+            }
+          }
+
+          shouldScrollDown = true;
+        }
+        hasMore = true;
+        update();
+
+        CometChatUIEvents.showPanel(composerId, CustomUIPosition.composerPreview,
+            (context) => getList(context, textEditingController));
+        if(shouldScrollDown){
+          _scrollDown();
+        }
+
+
+      } else {
+        if(_searcKeywordChanged){
+          CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
+          suggestions.clear();
+
+        }
+        // suggestions.clear();
+        // CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
+        hasMore = false;
+        update();
+      }
+      // _subscription.pause();
+    });
+
+    _previousTextStream.listen((String value) {
+      _previousText = value;
+    });
+
+    initializeFormatters();
+    textEditingController = CustomTextEditingController(
+        text: text, theme: cometChatTheme, formatters: _formatters);
 
     CometChatMessageEvents.addMessagesListener(_uiMessageListener, this);
     CometChatUIEvents.addUiListener(_uiEventListener, this);
@@ -167,13 +265,57 @@ class CometChatMessageComposerController extends GetxController
     }
 
     _getLoggedInUser();
-    populateComposerId();
 
     focusNode = FocusNode();
 
     focusNode.addListener(_onFocusChange);
 
     super.onInit();
+  }
+
+  void initializeFormatters() {
+    _formatters = textFormatters ?? [];
+
+    if((_formatters.isEmpty || _formatters.indexWhere((element) => element is CometChatMentionsFormatter)==-1) && disableMentions!=true){
+      _formatters.add(CometChatMentionsFormatter());
+    }
+
+    for(var element in _formatters){
+      element.theme = theme ?? cometChatTheme;
+      element.composerId = composerId;
+      element.suggestionListEventSink = _suggestionListController.sink;
+      element.previousTextEventSink = _previousTextController.sink;
+      element.onSearch = _onFormatterSearch;
+      element.user = user;
+      element.group = group;
+      element.init();
+    }
+
+  }
+
+  void _onFormatterSearch(String? searchKeyword) {
+    _searcKeywordChanged = _currentSearchKeyword!= searchKeyword;
+    _currentSearchKeyword = searchKeyword;
+
+    if(_currentSearchKeyword==null){
+
+      CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
+      suggestions.clear();
+    }
+    update();
+
+    return;
+  }
+
+  final ScrollController _controller = ScrollController();
+
+// This is what you're looking for!
+  void _scrollDown() {
+    _controller.animateTo(
+      _controller.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.fastOutSlowIn,
+    );
   }
 
   populateComposerId() {
@@ -194,8 +336,85 @@ class CometChatMessageComposerController extends GetxController
     textEditingController.dispose();
     focusNode.removeListener(_onFocusChange);
     focusNode.dispose();
-
+    // Cancel the subscription
+    _subscription.cancel();
     super.onClose();
+  }
+
+  bool hasMore = true;
+
+  Widget getList(
+      BuildContext context, TextEditingController textEditingController) {
+    CometChatTheme _theme = cometChatTheme;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight:suggestions.length>4? 220: suggestions.isEmpty?50:suggestions.length * 55.0,
+      ),
+      decoration: BoxDecoration(
+        color: _theme.palette.backGroundColor.light,
+        border: Border(
+            top: BorderSide(
+                color: _theme.palette.getAccent100(), width: .72)),
+      ),
+      child: ListView.separated(
+        controller: _controller,
+        itemCount: hasMore ? suggestions.length + 1 : suggestions.length,
+        itemBuilder: (context, index) {
+          if (hasMore && index >= suggestions.length) {
+
+            for(var element in _formatters){
+              if(_currentSearchKeyword!=null && _currentSearchKeyword!.isNotEmpty && element.trackingCharacter==_currentSearchKeyword![0]) {
+                element.onScrollToBottom(textEditingController);
+              }
+            }
+
+            return const SizedBox();
+          }
+
+          return index<suggestions.length? getListItem(suggestions[index], _theme):const SizedBox();
+        },
+        separatorBuilder: (BuildContext context, int index) {
+          if (index >= suggestions.length - 1) {
+            return const SizedBox();
+          }
+          return Divider(
+            height: 1,
+            thickness: 1,
+            color: _theme.palette.getAccent100(),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget getListItem(SuggestionListItem item, CometChatTheme theme) {
+
+    ListTile tile = ListTile(
+      onTap: () {
+        if (item.onTap != null) {
+          item.onTap!();
+        }
+        suggestions.clear();
+        _currentSearchKeyword=null;
+        _searcKeywordChanged = true;
+
+      },
+      title: Text(
+        item.title ?? "",
+        style: TextStyle(
+            fontSize: theme.typography.body.fontSize,
+            fontWeight: theme.typography.body.fontWeight,
+            fontFamily: theme.typography.body.fontFamily,
+            color: theme.palette.getAccent()),
+      ),
+      leading: item.avatarName ==null && item.avatarUrl==null? null :  CometChatAvatar(
+        name: item.avatarName,
+        image: item.avatarUrl,
+      ),
+    );
+
+    return tile;
   }
 
   //------------------------Message UI Event Listeners------------------------------
@@ -215,12 +434,6 @@ class CometChatMessageComposerController extends GetxController
     update();
   }
 
-  // @override
-  // void onMessageReply(BaseMessage message) {
-  //   if (message.parentMessageId==parentMessageId) {
-  //     previewMessage(message, PreviewMessageMode.reply);
-  //   }
-  // }
 
   @override
   void showPanel(Map<String, dynamic>? id, CustomUIPosition uiPosition,
@@ -231,6 +444,8 @@ class CometChatMessageComposerController extends GetxController
       footer = child(context);
     } else if (uiPosition == CustomUIPosition.composerTop) {
       header = child(context);
+    } else if (uiPosition == CustomUIPosition.composerPreview) {
+      preview = child(context);
     }
     update();
   }
@@ -242,6 +457,8 @@ class CometChatMessageComposerController extends GetxController
       footer = null;
     } else if (uiPosition == CustomUIPosition.composerTop) {
       header = null;
+    } else if (uiPosition == CustomUIPosition.composerPreview) {
+      preview = null;
     }
     update();
   }
@@ -318,17 +535,41 @@ class CometChatMessageComposerController extends GetxController
 
   //-----------------------methods performing API calls-----------------------------
 
+  _checkFormatter(){
+
+      for (var element in _formatters) {
+        if(_currentSearchKeyword==null || (_currentSearchKeyword!=null && _currentSearchKeyword!.isNotEmpty && element.trackingCharacter==_currentSearchKeyword![0])) {
+
+          try{
+            element.onChange(textEditingController, _previousText);
+          }catch (err){
+            if(kDebugMode) {
+            print("error caught in message composer onchange $err");
+          }
+        }
+      }
+      }
+  }
   _onTyping() {
     if ((_previousText.isEmpty && textEditingController.text.isNotEmpty) ||
         (_previousText.isNotEmpty && textEditingController.text.isEmpty)) {
       update();
     }
+
     if (_previousText.length > textEditingController.text.length) {
+
+      _checkFormatter();
       _previousText = textEditingController.text;
       return;
     }
 
+
+_checkFormatter();
+    // mentionsFormatter.onChange(textEditingController, _previousText);
+
+
     _previousText = textEditingController.text;
+
     //emits typing events
     if (disableTypingEvents == false) {
       if (_isTyping == false) {
@@ -347,20 +588,30 @@ class CometChatMessageComposerController extends GetxController
     }
   }
 
+  handlePreMessageSend(BaseMessage baseMessage) {
+    for (var element in _formatters) {
+      element.handlePreMessageSend(context, baseMessage);
+    }
+  }
+
   sendTextMessage({Map<String, dynamic>? metadata}) {
     String messagesText = textEditingController.text;
     String type = MessageTypeConstants.text;
 
     TextMessage textMessage = TextMessage(
-        sender: loggedInUser,
-        text: messagesText,
-        receiverUid: receiverID,
-        receiverType: receiverType,
-        type: type,
-        metadata: metadata,
-        parentMessageId: parentMessageId,
-        muid: DateTime.now().microsecondsSinceEpoch.toString(),
-        category: CometChatMessageCategory.message);
+      sender: loggedInUser,
+      text: messagesText,
+      receiverUid: receiverID,
+      receiverType: receiverType,
+      type: type,
+      metadata: metadata,
+      parentMessageId: parentMessageId,
+      muid: DateTime.now().microsecondsSinceEpoch.toString(),
+      category: CometChatMessageCategory.message,
+    );
+
+    // textMessage = mentionsFormatter.handlePreMessageSend(context, textMessage);
+    handlePreMessageSend(textMessage);
 
     oldMessage = null;
     messagePreviewTitle = '';
@@ -481,12 +732,15 @@ class CometChatMessageComposerController extends GetxController
   editTextMessage() {
     TextMessage editedMessage = oldMessage as TextMessage;
     editedMessage.text = textEditingController.text;
+    handlePreMessageSend(editedMessage);
     messagePreviewTitle = '';
     messagePreviewSubtitle = '';
     previewMessageMode = PreviewMessageMode.none;
     textEditingController.clear();
     _previousText = '';
     update();
+    editedMessage.reactions = [];
+    editedMessage.mentionedUsers = [];
 
     CometChat.editMessage(editedMessage,
         onSuccess: (BaseMessage updatedMessage) {
@@ -504,6 +758,11 @@ class CometChatMessageComposerController extends GetxController
               }
               CometChatMessageEvents.ccMessageSent(
                   editedMessage, MessageStatus.error);
+
+              if (kDebugMode) {
+                debugPrint(
+                    "Message editing failed with exception: ${e.message}");
+              }
             });
 
     update();
@@ -577,12 +836,16 @@ class CometChatMessageComposerController extends GetxController
   //triggers message preview view of the message composer view
   previewMessage(BaseMessage message, PreviewMessageMode mode) {
     if (mode == PreviewMessageMode.edit) {
-      messagePreviewTitle = Translations.of(context).edit_message;
+      messagePreviewTitle = cc.Translations.of(context).edit_message;
     } else if (mode == PreviewMessageMode.reply) {
       messagePreviewTitle = message.sender?.name;
     }
     if (message is TextMessage) {
-      messagePreviewSubtitle = message.text;
+      String previewText = message.text;
+      if (message.mentionedUsers.isNotEmpty) {
+        previewText = CometChatMentionsFormatter.getTextWithMentions(message.text, message.mentionedUsers);
+      }
+      messagePreviewSubtitle = previewText;
     } else {
       messagePreviewSubtitle = CometChatUIKit.getDataSource()
           .getMessageTypeToSubtitle(message.type, context);
@@ -590,7 +853,18 @@ class CometChatMessageComposerController extends GetxController
 
     if (mode == PreviewMessageMode.edit && message is TextMessage) {
       textEditingController.text = message.text;
+
       _previousText = message.text;
+
+      if (message.mentionedUsers.isNotEmpty) {
+
+        int mentionFormatterIndex = _formatters.indexWhere((element) => element.trackingCharacter=='@');
+        if(mentionFormatterIndex!=-1) {
+          CometChatMentionsFormatter mentionsFormatter = _formatters[mentionFormatterIndex] as CometChatMentionsFormatter;
+          mentionsFormatter.onMessageEdit(
+              textEditingController, mentionedUsers: message.mentionedUsers);
+        }
+      }
     }
     previewMessageMode = mode;
     oldMessage = message;
@@ -793,54 +1067,45 @@ class CometChatMessageComposerController extends GetxController
     }
   }
 
+  aiButtonTap(
+    CometChatTheme theme,
+    BuildContext context,
+    id,
+  ) async {
+    List<CometChatMessageComposerAction> aiFeatureList =
+        CometChatUIKit.getDataSource()
+            .getAIOptions(user, group, theme, context, id, aiOptionStyle);
 
-  aiButtonTap(CometChatTheme theme,BuildContext context ,id,  ) async {
-
-    List<CometChatMessageComposerAction> aiFeatureList =  CometChatUIKit.getDataSource().
-    getAIOptions(user, group, theme, context, id, aiOptionStyle);
-
-
-
-    if(aiFeatureList.isNotEmpty ){
-
+    if (aiFeatureList.isNotEmpty) {
       List<CometChatMessageComposerAction> actionList = [];
 
-
-      for (int i = 0; i < aiFeatureList.length ; i++) {
-
+      for (int i = 0; i < aiFeatureList.length; i++) {
         actionList.add(CometChatMessageComposerAction(
             id: aiFeatureList[i].id,
-            title:  aiFeatureList[i].title,
-            titleStyle: aiFeatureList[i].titleStyle?? aiOptionStyle?.itemTextStyle,
-            background: aiFeatureList[i].background?? aiOptionStyle?.background,
-            cornerRadius: aiFeatureList[i].cornerRadius?? aiOptionStyle?.borderRadius,
-
-            onItemClick: (BuildContext context,  User? user, Group? group){
-              if(aiFeatureList[i].onItemClick!=null){
-                aiFeatureList[i].onItemClick!(context,user, group);
+            title: aiFeatureList[i].title,
+            titleStyle:
+                aiFeatureList[i].titleStyle ?? aiOptionStyle?.itemTextStyle,
+            background:
+                aiFeatureList[i].background ?? aiOptionStyle?.background,
+            cornerRadius:
+                aiFeatureList[i].cornerRadius ?? aiOptionStyle?.borderRadius,
+            onItemClick: (BuildContext context, User? user, Group? group) {
+              if (aiFeatureList[i].onItemClick != null) {
+                aiFeatureList[i].onItemClick!(context, user, group);
               }
-            }
-        ));
+            }));
       }
 
-
-
-
-      showCometChatAiOptionSheet(context: context,
-          theme: theme,
-          user: user,
-          group: group,
-          actionItems: actionList,
-          backgroundColor:theme.palette.getBackground(),
-
+      showCometChatAiOptionSheet(
+        context: context,
+        theme: theme,
+        user: user,
+        group: group,
+        actionItems: actionList,
+        backgroundColor: theme.palette.getBackground(),
       );
 
       return;
     }
-
-
-
-
   }
-
 }

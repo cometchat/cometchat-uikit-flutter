@@ -14,8 +14,8 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
 
   @override
   Widget getTextMessageContentView(TextMessage message, BuildContext context,
-      BubbleAlignment _alignment, CometChatTheme theme) {
-    return getContentView(message, context, _alignment, theme);
+      BubbleAlignment _alignment, CometChatTheme theme,{AdditionalConfigurations? additionalConfigurations}) {
+    return getContentView(message, context, _alignment, theme,additionalConfigurations:additionalConfigurations);
   }
 
   @override
@@ -93,13 +93,19 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
   }
 
   Widget getContentView(TextMessage message, BuildContext context,
-      BubbleAlignment alignment, CometChatTheme theme) {
+      BubbleAlignment alignment, CometChatTheme theme, {AdditionalConfigurations? additionalConfigurations}) {
     Widget? child =
-        super.getTextMessageContentView(message, context, alignment, theme);
+        super.getTextMessageContentView(message, context, alignment, theme,additionalConfigurations: additionalConfigurations);
     if (message.metadata != null &&
         message.metadata!.containsKey('translated_message')) {
+      String? translatedText = message.metadata?['translated_message'];
+      if(message.mentionedUsers.isNotEmpty && translatedText!=null && translatedText.isNotEmpty){
+        translatedText = CometChatMentionsFormatter.getTextWithMentions(translatedText, message.mentionedUsers);
+      }
+
+
       return MessageTranslationBubble(
-        translatedText: message.metadata?['translated_message'],
+        translatedText: translatedText ?? "",
         theme: configuration?.theme ?? theme,
         alignment: alignment,
         style: configuration?.style,

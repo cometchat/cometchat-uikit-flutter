@@ -29,7 +29,10 @@ class CometChatConversationsController
       this.disableReceipt = false,
       this.disableTyping,
       this.deleteConversationDialogStyle,
-      OnError? onError})
+      OnError? onError,
+      this.textFormatters,
+      this.disableMentions
+      })
       : super(conversationsBuilderProtocol.getRequest(), onError: onError) {
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
@@ -84,6 +87,12 @@ class CometChatConversationsController
   ///[deleteConversationDialogStyle] provides customization for the dialog box that pops up when tapping the delete conversation option
   final ConfirmDialogStyle? deleteConversationDialogStyle;
 
+  ///[textFormatters] is a list of [CometChatTextFormatter] which is used to format the text
+  List<CometChatTextFormatter>? textFormatters;
+
+  ///[disableMentions] if true will disable mentions in the conversation
+  bool? disableMentions;
+
 
   @override
   void onInit() {
@@ -98,6 +107,7 @@ class CometChatConversationsController
     CometChatCallEvents.addCallEventsListener(_conversationListenerId, this);
     CometChat.addCallListener(_conversationListenerId, this);
     CometChat.addConnectionListener(_conversationListenerId, this);
+    initializeTextFormatters();
     super.onInit();
   }
 
@@ -676,21 +686,31 @@ class CometChatConversationsController
   }
 
   //----------- get last message text-----------
-  @override
-  String getLastMessage(Conversation conversation, BuildContext context) {
-    BaseMessage? lastMessage = conversation.lastMessage;
-    String? messageCategory = lastMessage?.category;
 
-    if (messageCategory == null || lastMessage == null) {
-      return '';
-    } else if (lastMessage.deletedBy != null &&
-        lastMessage.deletedBy!.trim() != '') {
-      return cc.Translations.of(context).this_message_deleted;
-    } else {
-      return CometChatUIKit.getDataSource()
-          .getLastConversationMessage(conversation, context);
+  void initializeTextFormatters(){
+    List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
+
+    if((textFormatters.isEmpty || textFormatters.indexWhere((element) => element is CometChatMentionsFormatter)==-1) && disableMentions!=true){
+      textFormatters.add(CometChatMentionsFormatter());
     }
+
+    this.textFormatters = textFormatters;
+
   }
+
+  List<CometChatTextFormatter> getTextFormatters(BaseMessage message, CometChatTheme theme){
+    List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
+    if(message is TextMessage){
+      for(CometChatTextFormatter textFormatter in textFormatters){
+        textFormatter.message = message;
+        textFormatter.theme = theme;
+      }
+    }
+    return textFormatters;
+  }
+
+
+  /// ----------------------------EVENT LISTENERS -----------------------------------
 
   @override
   void onConnected() {

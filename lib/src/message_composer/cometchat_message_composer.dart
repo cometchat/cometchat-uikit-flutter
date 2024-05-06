@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get.dart';
+
 // import 'package:get/get_state_manager/get_state_manager.dart';
 // import 'package:get/state_manager.dart';
 
@@ -25,12 +28,11 @@ import 'package:get/get.dart';
 ///
 ///
 
-
 //ignore: must_be_immutable
 class CometChatMessageComposer extends StatelessWidget {
   CometChatMessageComposer(
       {Key? key,
-     this.user,
+      this.user,
       this.group,
       this.messageComposerStyle = const MessageComposerStyle(),
       this.placeholderText,
@@ -57,20 +59,24 @@ class CometChatMessageComposer extends StatelessWidget {
       this.attachmentIcon,
       this.liveReactionIcon,
       OnError? onError,
-        this.recordIcon,
-        this.playIcon,
-        this.deleteIcon,
-        this.stopIcon,
-        this.submitIcon,
-        this.mediaRecorderStyle,
+      this.recordIcon,
+      this.playIcon,
+      this.deleteIcon,
+      this.stopIcon,
+      this.submitIcon,
+      this.mediaRecorderStyle,
       this.pauseIcon,
-        Function(BuildContext, BaseMessage, PreviewMessageMode?)? onSendButtonTap,
-        this.hideVoiceRecording,
-        this.voiceRecordingIcon,
-        this.aiIcon,
-        this.aiIconURL,
-        this.aiIconPackageName,
-        this.aiOptionStyle
+      Function(BuildContext, BaseMessage, PreviewMessageMode?)? onSendButtonTap,
+      this.hideVoiceRecording,
+      this.voiceRecordingIcon,
+      this.aiIcon,
+      this.aiIconURL,
+      this.aiIconPackageName,
+      this.aiOptionStyle,
+      List<CometChatTextFormatter>?
+          textFormatters,
+      this.disableMentions,
+        this.messageComposerKey
       })
       : assert(user != null || group != null,
             "One of user or group should be passed"),
@@ -93,10 +99,10 @@ class CometChatMessageComposer extends StatelessWidget {
             headerView: headerView,
             onSendButtonTap: onSendButtonTap,
             onError: onError,
-            aiOptionStyle: aiOptionStyle
-        ),
+            aiOptionStyle: aiOptionStyle,
+            theme: theme,
+            textFormatters: textFormatters),
         super(key: key);
-
 
   ///sets [user] for message composer
   final User? user;
@@ -124,6 +130,7 @@ class CometChatMessageComposer extends StatelessWidget {
 
   ///[onChange] callback to handle change in value of text in the input field
   final Function(String)? onChange;
+
   ///[maxLine] maximum lines allowed to increase in the input field
   final int? maxLine;
 
@@ -186,11 +193,15 @@ class CometChatMessageComposer extends StatelessWidget {
   ///set the style for ai options
   final AIOptionsStyle? aiOptionStyle;
 
+  ///[disableMentions] disables mentions in the composer
+  final bool? disableMentions;
 
-
-
+  ///[messageComposerKey] key to identify the message composer
+  final GlobalKey? messageComposerKey;
 
   late Map<String, dynamic> composerId = {};
+
+
 
   Widget _getSendButton(
       CometChatTheme theme, CometChatMessageComposerController value) {
@@ -244,24 +255,17 @@ class CometChatMessageComposer extends StatelessWidget {
       composerId['uid'] = user!.uid;
     }
 
-    final  List<CometChatMessageComposerAction> elementList  = CometChatUIKit.getDataSource()
-        .getAIOptions(
-        user,
-        group,
-      _theme,
-        context,
-        composerId,
-        aiOptionStyle
-        );
-
-
-
+    final List<CometChatMessageComposerAction> elementList =
+        CometChatUIKit.getDataSource().getAIOptions(
+            user, group, _theme, context, composerId, aiOptionStyle);
 
     return WillPopScope(
       onWillPop: () async {
         return true;
       },
       child: Column(
+        key: messageComposerKey,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
               decoration: BoxDecoration(
@@ -270,9 +274,10 @@ class CometChatMessageComposer extends StatelessWidget {
                           _theme.palette.getBackground()
                       : null,
                   gradient: messageComposerStyle.gradient),
+
+
               padding: messageComposerStyle.contentPadding ??
-                  const EdgeInsets.only(
-                      left: 16, right: 16, top: 10, bottom: 10),
+                  const EdgeInsets.only(bottom: 10),
               child: GetBuilder(
                   init: cometChatMessageComposerController,
                   tag: cometChatMessageComposerController.tag,
@@ -290,36 +295,54 @@ class CometChatMessageComposer extends StatelessWidget {
                     return Column(
                       children: [
                         //-----message preview container-----
-                        if (value.messagePreviewTitle != null &&
-                            value.messagePreviewTitle!.isNotEmpty)
-                          CometChatMessagePreview(
-                            messagePreviewTitle: value.messagePreviewTitle!,
-                            messagePreviewSubtitle:
-                                value.messagePreviewSubtitle ?? '',
-                            onCloseClick: value.onMessagePreviewClose,
-                            style: CometChatMessagePreviewStyle(
-                                messagePreviewTitleStyle: TextStyle(
-                                    color: _theme.palette.getAccent600(),
-                                    fontSize: _theme.typography.text2.fontSize,
-                                    fontWeight:
-                                        _theme.typography.text2.fontWeight,
-                                    fontFamily:
-                                        _theme.typography.text2.fontFamily),
-                                messagePreviewSubtitleStyle: TextStyle(
-                                    color: _theme.palette.getAccent600(),
-                                    fontSize: _theme.typography.text2.fontSize,
-                                    fontWeight:
-                                        _theme.typography.text2.fontWeight,
-                                    fontFamily:
-                                        _theme.typography.text2.fontFamily),
-                                closeIconColor:
-                                    messageComposerStyle.closeIconTint ??
-                                        _theme.palette.getAccent500(),
-                                messagePreviewBorder: Border(
-                                    left: BorderSide(
-                                        color: _theme.palette.getAccent100(),
-                                        width: 3))),
-                          ),
+
+                        Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            if (value.messagePreviewTitle != null &&
+                                value.messagePreviewTitle!.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    left: 16,
+                                    right: 16,
+                                    bottom: (value.preview != null ? 8 : 0)),
+                                child: CometChatMessagePreview(
+                                  messagePreviewTitle:
+                                      value.messagePreviewTitle!,
+                                  messagePreviewSubtitle:
+                                      value.messagePreviewSubtitle ?? '',
+                                  onCloseClick: value.onMessagePreviewClose,
+                                  style: CometChatMessagePreviewStyle(
+                                      messagePreviewTitleStyle: TextStyle(
+                                          color: _theme.palette.getAccent600(),
+                                          fontSize:
+                                              _theme.typography.text2.fontSize,
+                                          fontWeight: _theme
+                                              .typography.text2.fontWeight,
+                                          fontFamily: _theme
+                                              .typography.text2.fontFamily),
+                                      messagePreviewSubtitleStyle: TextStyle(
+                                          color: _theme.palette.getAccent600(),
+                                          fontSize:
+                                              _theme.typography.text2.fontSize,
+                                          fontWeight: _theme
+                                              .typography.text2.fontWeight,
+                                          fontFamily: _theme
+                                              .typography.text2.fontFamily),
+                                      closeIconColor:
+                                          messageComposerStyle.closeIconTint ??
+                                              _theme.palette.getAccent500(),
+                                      messagePreviewBorder: Border(
+                                          left: BorderSide(
+                                              color:
+                                                  _theme.palette.getAccent100(),
+                                              width: 3))),
+                                ),
+                              ),
+                            if (value.preview != null) value.preview!,
+                          ],
+                        ),
 
                         //-----
                         Container(
@@ -331,135 +354,159 @@ class CometChatMessageComposer extends StatelessWidget {
                           child: Column(
                             children: [
                               if (value.header != null) value.header!,
-                              CometChatMessageInput(
-                                text: text,
-                                textEditingController:
-                                    value.textEditingController,
-                                placeholderText: placeholderText,
-                                maxLine: maxLine,
-                                onChange: onChange ?? value.onChange,
-                                primaryButtonView:
-                                    _getSendButton(_theme, value),
-                                secondaryButtonView: secondaryButtonView != null
-                                    ? secondaryButtonView!(context, value.user,
-                                        value.group, value.composerId)
-                                    : IconButton(
-                                        padding: const EdgeInsets.all(0),
-                                        constraints: const BoxConstraints(),
-                                        icon: attachmentIcon ??
-                                            Image.asset(
-                                              attachmentIconURL ??
-                                                  AssetConstants.add,
-                                              package: UIConstants.packageName,
-                                              color: messageComposerStyle
-                                                      .attachmentIconTint ??
-                                                  _theme.palette.getAccent700(),
-                                            ),
-                                        onPressed: () async {
-                                          value.showBottomActionSheet(
-                                              _theme, context);
-                                        }),
-                                auxiliaryButtonsAlignment:
-                                    auxiliaryButtonsAlignment ??
-                                        AuxiliaryButtonsAlignment.right,
-                                auxiliaryButtonView: auxiliaryButtonView != null
-                                    ? auxiliaryButtonView!(context, value.user,
-                                        value.group, value.composerId)
-                                    : Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          //-----show emoji keyboard-----
+                              Padding(
+                                padding: messageComposerStyle
+                                        ?.messageInputPadding ??
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: CometChatMessageInput(
+                                  text: text,
+                                  textEditingController:
+                                      value.textEditingController,
+                                  placeholderText: placeholderText,
+                                  maxLine: maxLine,
+                                  onChange: onChange ?? value.onChange,
+                                  primaryButtonView:
+                                      _getSendButton(_theme, value),
+                                  secondaryButtonView: secondaryButtonView !=
+                                          null
+                                      ? secondaryButtonView!(
+                                          context,
+                                          value.user,
+                                          value.group,
+                                          value.composerId)
+                                      : IconButton(
+                                          padding: const EdgeInsets.all(0),
+                                          constraints: const BoxConstraints(),
+                                          icon: attachmentIcon ??
+                                              Image.asset(
+                                                attachmentIconURL ??
+                                                    AssetConstants.add,
+                                                package:
+                                                    UIConstants.packageName,
+                                                color: messageComposerStyle
+                                                        .attachmentIconTint ??
+                                                    _theme.palette
+                                                        .getAccent700(),
+                                              ),
+                                          onPressed: () async {
+                                            value.showBottomActionSheet(
+                                                _theme, context);
+                                          }),
+                                  auxiliaryButtonsAlignment:
+                                      auxiliaryButtonsAlignment ??
+                                          AuxiliaryButtonsAlignment.right,
+                                  auxiliaryButtonView: auxiliaryButtonView !=
+                                          null
+                                      ? auxiliaryButtonView!(
+                                          context,
+                                          value.user,
+                                          value.group,
+                                          value.composerId)
+                                      : Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            //-----show emoji keyboard-----
 
-                                          CometChatUIKit.getDataSource()
+                                            CometChatUIKit.getDataSource()
                                                 .getAuxiliaryOptions(
                                                     value.user,
                                                     value.group,
                                                     context,
                                                     value.composerId,
-                                                    _theme)..paddingAll(0.0)..marginAll(0.0),
+                                                    _theme)
+                                              ..paddingAll(0.0)
+                                              ..marginAll(0.0),
 
-                                          if(elementList.isNotEmpty)
-                                            IconButton(
-                                              padding: const EdgeInsets.all(0),
-                                              constraints: const BoxConstraints(),
-                                              icon:
-                                              aiIcon ??  Image.asset(
-                                                aiIconURL ?? AssetConstants.ai,
-                                                package: aiIconPackageName?? UIConstants.packageName,
-                                                color:
-                                                messageComposerStyle.aiIconTint ??  _theme.palette.getAccent700(),
-                                                height: 24,
-                                                width: 24,
-                                              ),
-                                              onPressed: ()  {
-                                                value.aiButtonTap(_theme, context, value.composerId);
-                                              }).paddingOnly(right: 10.0),
+                                            if (elementList.isNotEmpty)
+                                              IconButton(
+                                                  padding:
+                                                      const EdgeInsets.all(0),
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  icon: aiIcon ??
+                                                      Image.asset(
+                                                        aiIconURL ??
+                                                            AssetConstants.ai,
+                                                        package:
+                                                            aiIconPackageName ??
+                                                                UIConstants
+                                                                    .packageName,
+                                                        color: messageComposerStyle
+                                                                .aiIconTint ??
+                                                            _theme.palette
+                                                                .getAccent700(),
+                                                        height: 24,
+                                                        width: 24,
+                                                      ),
+                                                  onPressed: () {
+                                                    value.aiButtonTap(
+                                                        _theme,
+                                                        context,
+                                                        value.composerId);
+                                                  }).paddingOnly(right: 10.0),
 
-
-                                          //-----show voice recording-----
-                                          if(hideVoiceRecording!=true)
-                                          IconButton(
-                                              padding: const EdgeInsets.all(0),
-                                              constraints: const BoxConstraints(),
-                                              icon:
-                                             voiceRecordingIcon ??  Image.asset(
-                                                    AssetConstants.microphone,
-                                                    package: UIConstants.packageName,
-                                                    color:
-                    messageComposerStyle.voiceRecordingIconTint ??  _theme.palette.getAccent700(),
-                                               height: 24,
-                                                width: 24,
-                                                  ),
-                                              onPressed: ()  {
-                                                showModalBottomSheet<void>(
-                                                  context: context,
-                                                  backgroundColor: Colors.transparent,
-                                                  builder: (BuildContext context) {
-                                                   return CometChatMediaRecorder(
-                                                     submitIcon: submitIcon,
-                                                     startIcon: recordIcon,
-                                                     playIcon: playIcon,
-                                                     pauseIcon: pauseIcon,
-                                                     closeIcon: deleteIcon,
-                                                     stopIcon: stopIcon,
-                                                     mediaRecorderStyle: mediaRecorderStyle,
-                                                     theme: _theme,
-                                                     onSubmit:value.sendMediaRecording,);
-                                                  },
-                                                );
-                                              }).paddingOnly(right: 10.0),
-                                          // IconButton(
-                                          //     padding: const EdgeInsets.only(
-                                          //         right: 20),
-                                          //     constraints:
-                                          //         const BoxConstraints(),
-                                          //     icon: Image.asset(
-                                          //       AssetConstants.smileys,
-                                          //       package:
-                                          //           UIConstants.packageName,
-                                          //       color: messageComposerStyle
-                                          //               .emojiIconTint ??
-                                          //           _theme.palette
-                                          //               .getAccent700(),
-                                          //     ),
-                                          //     onPressed: () => value.useEmojis(
-                                          //         context, _theme)),
-                                        ],
-                                      ),
-                                style: MessageInputStyle(
-                                    dividerTint:
-                                        messageComposerStyle.dividerTint ??
-                                            _theme.palette.getAccent500(),
-                                    background:
-                                        messageComposerStyle.inputBackground ??
-                                            _theme.palette.getAccent100(),
-                                    gradient:
-                                        messageComposerStyle.inputGradient,
-                                    textStyle:
-                                        messageComposerStyle.inputTextStyle,
-                                    placeholderTextStyle: messageComposerStyle
-                                        .placeholderTextStyle),
-                                focusNode: value.focusNode,
+                                            //-----show voice recording-----
+                                            if (hideVoiceRecording != true)
+                                              IconButton(
+                                                  padding:
+                                                      const EdgeInsets.all(0),
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  icon: voiceRecordingIcon ??
+                                                      Image.asset(
+                                                        AssetConstants
+                                                            .microphone,
+                                                        package: UIConstants
+                                                            .packageName,
+                                                        color: messageComposerStyle
+                                                                .voiceRecordingIconTint ??
+                                                            _theme.palette
+                                                                .getAccent700(),
+                                                        height: 24,
+                                                        width: 24,
+                                                      ),
+                                                  onPressed: () {
+                                                    showModalBottomSheet<void>(
+                                                      context: context,
+                                                      backgroundColor:
+                                                          Colors.transparent,
+                                                      builder: (BuildContext
+                                                          context) {
+                                                        return CometChatMediaRecorder(
+                                                          submitIcon:
+                                                              submitIcon,
+                                                          startIcon: recordIcon,
+                                                          playIcon: playIcon,
+                                                          pauseIcon: pauseIcon,
+                                                          closeIcon: deleteIcon,
+                                                          stopIcon: stopIcon,
+                                                          mediaRecorderStyle:
+                                                              mediaRecorderStyle,
+                                                          theme: _theme,
+                                                          onSubmit: value
+                                                              .sendMediaRecording,
+                                                        );
+                                                      },
+                                                    );
+                                                  }).paddingOnly(right: 10.0),
+                                          ],
+                                        ),
+                                  style: MessageInputStyle(
+                                      dividerTint:
+                                          messageComposerStyle.dividerTint ??
+                                              _theme.palette.getAccent500(),
+                                      background: messageComposerStyle
+                                              .inputBackground ??
+                                          _theme.palette.getAccent100(),
+                                      gradient:
+                                          messageComposerStyle.inputGradient,
+                                      textStyle:
+                                          messageComposerStyle.inputTextStyle,
+                                      placeholderTextStyle: messageComposerStyle
+                                          .placeholderTextStyle),
+                                  focusNode: value.focusNode,
+                                ),
                               ),
                               if (value.footer != null) value.footer!,
                             ],

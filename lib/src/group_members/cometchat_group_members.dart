@@ -370,7 +370,7 @@ class CometChatGroupMembers extends StatelessWidget {
       error = Utils.getErrorTranslatedText(
           context, (controller.error as CometChatException).code);
     } else {
-      error = cc.Translations.of(context).cant_load_chats;
+      error = cc.Translations.of(context).error;
     }
     if (errorStateView != null) {}
     _showErrorDialog(error, context, theme, controller);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
@@ -51,6 +53,8 @@ class MessageComposerConfiguration {
         this.aiIconPackageName,
         this.aiIcon,
         this.aiIconURL,
+      this.textFormatters,
+        this.disableMentions
       });
 
   ///[messageComposerStyle] message composer style
@@ -167,4 +171,10 @@ class MessageComposerConfiguration {
 
   ///[aiIconPackageName] package name to show icon from
   final String? aiIconPackageName;
+
+  ///[textFormatters] is a list of [CometChatTextFormatter] which is used to format the text
+  final  List<CometChatTextFormatter>? textFormatters;
+
+  ///[disableMentions] disables mentions in the composer
+  final bool? disableMentions;
 }

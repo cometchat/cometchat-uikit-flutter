@@ -73,7 +73,9 @@ class CometChatMessageList extends StatefulWidget {
         this.addReactionIconTap,
         this.reactionsStyle,
         this.favoriteReactions,
-        this.emojiKeyboardStyle
+        this.emojiKeyboardStyle,
+        this.textFormatters,
+        this.disableMentions,
       })
       : assert(user != null || group != null,
             "One of user or group should be passed"),
@@ -219,6 +221,12 @@ class CometChatMessageList extends StatefulWidget {
   ///[emojiKeyboardStyle] is a parameter used to set the style for the emoji keyboard
   final EmojiKeyboardStyle? emojiKeyboardStyle;
 
+  ///[textFormatters] is a list of text formatters for message bubbles with type text
+  final List<CometChatTextFormatter>? textFormatters;
+
+  ///[disableMentions] disables formatting of mentions in the subtitle of the conversation
+  final bool? disableMentions;
+
   @override
   State<CometChatMessageList> createState() => _CometChatMessageListState();
 }
@@ -275,7 +283,9 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
         // snackBarConfiguration: widget.snackBarConfiguration,
         messageInformationConfiguration: widget.messageInformationConfiguration,
       emojiKeyboardStyle: widget.emojiKeyboardStyle,
-      disableReactions: widget.disableReactions ?? false
+      disableReactions: widget.disableReactions ?? false,
+      disableMentions: widget.disableMentions ?? false,
+      textFormatters: widget.textFormatters,
     );
 
     _theme = widget.theme ?? cometChatTheme;
@@ -363,10 +373,10 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
             context);
       }
 
-      if (contentVerifier.showStatusInfoView != false) {
+      if (contentVerifier.showTime != false || contentVerifier.showReadReceipt != false) {
         statusInfoView = _getStatusInfoView(contentVerifier.alignment, theme,
             messageObject, contentVerifier.showReadReceipt, controller,
-            context);
+            context,contentVerifier.showTime);
       }
 
       contentView = _getSuitableContentView(messageObject, theme, context,
@@ -375,8 +385,7 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
       if (contentView != null && statusInfoView != null) {
         if (messageObject.category == MessageCategoryConstants.message &&
             (messageObject.type == MessageTypeConstants.image ||
-                messageObject.type == MessageTypeConstants.video) &&
-            (contentView != null && statusInfoView != null)) {
+                messageObject.type == MessageTypeConstants.video)) {
           contentView = Stack(
             children: [
               contentView,
@@ -442,8 +451,11 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
         children: [
           GestureDetector(
             onLongPress: () async {
+
               if (hideOptions == true) return;
-              await _showOptions(messageObject, theme, controller, context);
+              if(messageObject.id > 0) {
+                await _showOptions(messageObject, theme, controller, context);
+              }
             },
             child: bubbleView,
           )
@@ -765,12 +777,20 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
             .templateMap["${messageObject.category}_${messageObject.type}"]
             ?.contentView !=
         null) {
+      AdditionalConfigurations? additionalConfigurations;
+
+
+      additionalConfigurations = AdditionalConfigurations(
+        textFormatters: controller.getTextFormatters(messageObject,theme),
+      );
+
       return controller
           .templateMap["${messageObject.category}_${messageObject.type}"]
           ?.contentView!(
         messageObject,
         context,
         alignment,
+        additionalConfigurations: additionalConfigurations
       );
     } else {
       return null;
@@ -1040,7 +1060,9 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
       BaseMessage message,
       bool readReceipt,
       CometChatMessageListController controller,
-      BuildContext context){
+      BuildContext context,
+      bool showTime
+      ){
     if (controller
         .templateMap["${message.category}_${message.type}"]?.statusInfoView !=
         null) {
@@ -1072,14 +1094,14 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
               //     : MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.timestampAlignment == TimeAlignment.bottom &&
-                    widget.hideTimestamp != true)
+                if ((widget.timestampAlignment == TimeAlignment.bottom &&
+                    widget.hideTimestamp != true)|| showTime)
                   getTime(
                       theme,
                       message,
                       dateStyle: DateStyle(
                         textStyle: TextStyle(
-                            color: message.sender?.uid == controller.loggedInUser?.uid && message.category == MessageCategoryConstants.message && message.type == MessageTypeConstants.text ? theme.palette.backGroundColor.light : theme.palette.getAccent500(),
+                            color: _getDateColor(message,controller,theme),
                             fontSize: theme.typography.caption1.fontSize,
                             fontWeight: theme.typography.caption1.fontWeight,
                             fontFamily: theme.typography.caption1.fontFamily)
@@ -1094,11 +1116,22 @@ class _CometChatMessageListState extends State<CometChatMessageList> {
     }
   }
 
+  Color _getDateColor(BaseMessage message, CometChatMessageListController controller,CometChatTheme theme){
+
+    if(message.deletedAt!=null) {
+      return theme.palette.getAccent500();
+    }else if(message.sender?.uid == controller.loggedInUser?.uid && message.category == MessageCategoryConstants.message && message.type == MessageTypeConstants.text) {
+      return theme.palette.backGroundColor.light;
+    }else{
+      return _theme.palette.getAccent500();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: widget.messageListStyle.contentPadding ??
-          const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          const EdgeInsets.fromLTRB(16, 0, 16, 10),
       height: widget.messageListStyle.height,
       width: widget.messageListStyle.width,
       decoration: BoxDecoration(

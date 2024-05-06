@@ -13,9 +13,9 @@ class LinkPreviewExtensionDecorator extends DataSourceDecorator {
 
   @override
   Widget getTextMessageContentView(TextMessage message, BuildContext context,
-      BubbleAlignment _alignment, CometChatTheme theme) {
+      BubbleAlignment _alignment, CometChatTheme theme, {AdditionalConfigurations? additionalConfigurations}) {
     Widget? child =
-        super.getTextMessageContentView(message, context, _alignment, theme);
+        super.getTextMessageContentView(message, context, _alignment, theme,additionalConfigurations: additionalConfigurations);
     return LinkPreviewBubble(
       theme: configuration?.theme ?? theme,
       onTapUrl: onTapUrl,

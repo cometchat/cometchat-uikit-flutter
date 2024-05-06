@@ -194,6 +194,9 @@ class _CometChatConversationsWithMessagesState
             deleteConversationDialogStyle: widget
                 .conversationsConfiguration?.deleteConversationDialogStyle,
             hideAppbar: widget.conversationsConfiguration?.hideAppbar,
+            disableMentions: widget.conversationsConfiguration?.disableMentions,
+            textFormatters: widget
+                .conversationsConfiguration?.textFormatters,
           );
         });
   }

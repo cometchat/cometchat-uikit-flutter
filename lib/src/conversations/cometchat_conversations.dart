@@ -75,6 +75,8 @@ class CometChatConversations extends StatelessWidget {
       ConfirmDialogStyle? deleteConversationDialogStyle,
       OnError? onError,
         this.hideAppbar = false,
+  this.disableMentions,
+  this.textFormatters,
       })
       : conversationsController = CometChatConversationsController(
             conversationsBuilderProtocol: conversationsProtocol ??
@@ -89,7 +91,10 @@ class CometChatConversations extends StatelessWidget {
             disableReceipt: disableReceipt,
             disableTyping: disableTyping,
             deleteConversationDialogStyle: deleteConversationDialogStyle,
-            onError: onError),
+            onError: onError,
+  textFormatters: textFormatters,
+    disableMentions: disableMentions,
+  ),
         super(key: key);
 
   ///property to be set internally by using passed parameters [conversationsProtocol] ,[selectionMode] ,[options]
@@ -228,6 +233,12 @@ class CometChatConversations extends StatelessWidget {
 
   ///[hideAppbar] toggle visibility for app bar
   final bool? hideAppbar;
+
+  ///[disableMentions] disables formatting of mentions in the subtitle of the conversation
+  final bool? disableMentions;
+
+  ///[textFormatters] is a list of text formatters for message bubbles with type text
+  final List<CometChatTextFormatter>? textFormatters;
 
   final RxBool _isSelectionOn = false.obs;
 
@@ -674,24 +685,21 @@ class CometChatConversations extends StatelessWidget {
             fontWeight: theme.typography.subtitle1.fontWeight,
             fontFamily: theme.typography.subtitle1.fontFamily);
 
-    String? text;
 
-    if(conversation.conversationWith is Group) {
-      if(conversation.lastMessage?.sender?.uid != controller.loggedInUser?.uid) {
-        text = "${conversation.lastMessage?.sender?.name}: ${controller.getLastMessage(conversation, context)}";
-      } else {
-        text = "${cc.Translations.of(context).you}: ${controller.getLastMessage(conversation, context)}";
-      }
-    } else {
-      text = controller.getLastMessage(conversation, context);
+    AdditionalConfigurations? configurations;
+
+    if(conversation.lastMessage!=null) {
+
+      configurations = AdditionalConfigurations(
+        textFormatters: controller.getTextFormatters(conversation.lastMessage!, theme),
+      );
     }
 
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: subtitleStyle,
-    );
+    Widget subtitle = CometChatUIKit.getDataSource()
+        .getConversationSubtitle(conversation, context,theme,subtitleStyle,additionalConfigurations: configurations);
+
+    return subtitle;
+
   }
 
 //----------- last message update time and unread message count -----------

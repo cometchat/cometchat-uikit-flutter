@@ -74,7 +74,7 @@ class StickersExtensionDecorator extends DataSourceDecorator {
         type: stickerTypeConstant,
         category: CometChatMessageCategory.custom,
         contentView: (BaseMessage message, BuildContext context,
-            BubbleAlignment alignment) {
+            BubbleAlignment alignment,{AdditionalConfigurations? additionalConfigurations}) {
           if (message.deletedAt != null) {
             return super
                 .getDeleteMessageBubble(message, theme ?? cometChatTheme);

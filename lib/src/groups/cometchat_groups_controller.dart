@@ -80,7 +80,7 @@ class CometChatGroupsController
   @override
   void ccGroupMemberAdded(List<kit.Action> messages, List<User> usersAdded,
       Group groupAddedIn, User addedBy) {
-    updateElement(groupAddedIn);
+      updateElement(groupAddedIn);
   }
 
   @override
@@ -131,7 +131,15 @@ class CometChatGroupsController
   @override
   onMemberAddedToGroup(
       kit.Action action, User addedby, User userAdded, Group addedTo) {
-    updateElement(addedTo);
+    int matchedIndex;
+    matchedIndex = getMatchingIndex(addedTo);
+    if(matchedIndex == -1) {
+      //TODO: once hasJoined has been fixed in sdk the following override will be removed
+      addedTo.hasJoined = true;
+      addElement(addedTo);
+    }else {
+      updateElement(addedTo);
+    }
   }
 
   @override

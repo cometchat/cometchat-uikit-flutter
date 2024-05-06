@@ -1,5 +1,6 @@
 // import 'package:cometchat_chat_uikit/src/shared/view_models/cometchat_group_members_controller_protocol.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import '../../cometchat_chat_uikit.dart';
 import '../../cometchat_chat_uikit.dart' as cc;
 
@@ -111,18 +112,35 @@ class CometChatGroupMembersController
     }
   }
 
+  GroupMember? getGroupMemberFromUser(User user) {
+    try{
+      return list.firstWhereOrNull((element) => element.uid == user.uid);
+    } catch(e) {
+      if(kDebugMode) {
+        debugPrint('Error in getGroupMemberFromUser: $e');
+      }
+      return null;
+    }
+  }
+
   @override
   void onGroupMemberKicked(
       cc.Action action, User kickedUser, User kickedBy, Group kickedFrom) {
     if (kickedFrom.guid == group.guid) {
-      removeElement(kickedUser as GroupMember);
+      GroupMember? member = getGroupMemberFromUser(kickedUser);
+      if(member != null) {
+        removeElement(member);
+      }
     }
   }
 
   @override
   void onGroupMemberLeft(cc.Action action, User leftUser, Group leftGroup) {
     if (leftGroup.guid == group.guid) {
-      removeElement(leftUser as GroupMember);
+      GroupMember? member = getGroupMemberFromUser(leftUser);
+      if(member != null) {
+        removeElement(member);
+      }
     }
   }
 
@@ -130,7 +148,10 @@ class CometChatGroupMembersController
   void onGroupMemberBanned(
       cc.Action action, User bannedUser, User bannedBy, Group bannedFrom) {
     if (bannedFrom.guid == group.guid) {
-      removeElement(bannedUser as GroupMember);
+      GroupMember? member = getGroupMemberFromUser(bannedUser);
+      if(member != null) {
+        removeElement(member);
+      }
     }
   }
 

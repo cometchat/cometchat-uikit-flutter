@@ -17,6 +17,7 @@ class MessageComposerStyle extends BaseStyles {
     this.voiceRecordingIconTint,
     this.contentPadding,
     this.aiIconTint,
+    this.messageInputPadding,
     double? width,
     double? height,
     Color? background,
@@ -66,4 +67,7 @@ class MessageComposerStyle extends BaseStyles {
 
   ///[aiIconTint] sets the tint to ai icon
   final Color? aiIconTint;
+
+  ///[messageInputPadding] sets the padding to the message input field
+  final EdgeInsets? messageInputPadding;
 }

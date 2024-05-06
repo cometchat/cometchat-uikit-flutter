@@ -44,6 +44,22 @@ class CometChatMessagesController extends GetxController
     counter++;
   }
 
+  final GlobalKey messageComposerKey = GlobalKey();
+
+  Widget? composerPlaceHolder;
+  void getComposerPlaceHolder(){
+    BuildContext? context = messageComposerKey.currentContext;
+    if (context == null) {
+      composerPlaceHolder= const SizedBox();
+    } else {
+      RenderBox renderBox = context.findRenderObject() as RenderBox;
+
+      var size = renderBox.size;
+      composerPlaceHolder = SizedBox(height: size.height,);
+    }
+    update();
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -60,6 +76,7 @@ class CometChatMessagesController extends GetxController
     CometChatUserEvents.removeUsersListener(_uiUserListener);
     super.onClose();
   }
+
 
   //-----MessageComposerListener methods-----
 

@@ -18,7 +18,8 @@ class ThreadedMessageStyle extends BaseStyles {
       double? borderRadius,
       Gradient? gradient,
       this.titleStyle,
-      this.closeIconTint})
+      this.closeIconTint,
+      })
       : super(
             width: width,
             height: height,

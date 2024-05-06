@@ -17,10 +17,15 @@ class TextModerationExtensionDecorator extends DataSourceDecorator {
       BuildContext context,
       BubbleAlignment alignment,
       CometChatTheme theme,
-      TextBubbleStyle? style) {
+      TextBubbleStyle? style,
+      {AdditionalConfigurations? additionalConfigurations}) {
+
+
+
     String filteredText = getContentText(message);
+
     return super.getTextMessageBubble(filteredText, message, context, alignment,
-        configuration?.theme ?? theme, configuration?.style ?? style);
+        configuration?.theme ?? theme, configuration?.style ?? style, additionalConfigurations:additionalConfigurations);
   }
 
   @override
@@ -30,7 +35,12 @@ class TextModerationExtensionDecorator extends DataSourceDecorator {
     if (message != null &&
         message.type == MessageTypeConstants.text &&
         message.category == MessageCategoryConstants.message) {
-      return getContentText(message as TextMessage);
+      TextMessage textMessage = message as TextMessage;
+      String subtitle = getContentText(textMessage);
+      if(message.mentionedUsers.isNotEmpty) {
+        return CometChatMentionsFormatter.getTextWithMentions(subtitle,textMessage.mentionedUsers);
+      }
+      return subtitle;
     } else {
       return super.getLastConversationMessage(conversation, context);
     }

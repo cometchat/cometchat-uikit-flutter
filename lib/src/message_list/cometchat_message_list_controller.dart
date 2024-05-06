@@ -40,7 +40,9 @@ class CometChatMessageListController
     // this.snackBarConfiguration,
     this.messageInformationConfiguration,
     this.emojiKeyboardStyle,
-    this.disableReactions
+    this.disableReactions,
+    this.textFormatters,
+    this.disableMentions
   }) : super(
       builderProtocol: user != null
           ? (messagesBuilderProtocol
@@ -94,6 +96,8 @@ class CometChatMessageListController
     if (threadMessageParentId > 0) {
       messageListId['parentMessageId'] = threadMessageParentId;
     }
+
+    initializeTextFormatters();
   }
 
   //-------------------------Variable Declaration-----------------------------
@@ -163,6 +167,9 @@ class CometChatMessageListController
   Widget? footer;
 
   int? initialUnreadCount;
+
+  List<CometChatTextFormatter>? textFormatters;
+  bool? disableMentions;
 
   void _scrollControllerListener() {
     double offset = messageListScrollController.offset;
@@ -315,8 +322,8 @@ class CometChatMessageListController
               list.add(element);
             }
           }
-          if (inInitialized == false) {
-            lastMessage = fetchedList[0];
+          if (inInitialized == false && list.isNotEmpty) {
+              lastMessage = list[0];
           }
           // update();
         }
@@ -812,9 +819,14 @@ class CometChatMessageListController
     // List<String> types = CometChatUIKit.getDataSource().getAllMessageTypes();
     //share
     if (message is TextMessage) {
+      String text = message.text;
+      //if message has mentions we need to send the text with mentions and not the original text
+      if(message.mentionedUsers.isNotEmpty) {
+        text = CometChatMentionsFormatter.getTextWithMentions(message.text,message.mentionedUsers);
+      }
       await UIConstants.channel.invokeMethod(
         "shareMessage",
-        {'message': message.text, "type": "text"},
+        {'message': text, "type": "text"},
       );
     } else if (message is MediaMessage) {
       await UIConstants.channel.invokeMethod(
@@ -834,7 +846,11 @@ class CometChatMessageListController
   _copyMessage(
       BaseMessage message, CometChatMessageListControllerProtocol state) {
     if (message is TextMessage) {
-      Clipboard.setData(ClipboardData(text: message.text));
+      String text = message.text;
+      if(message.mentionedUsers.isNotEmpty) {
+        text = CometChatMentionsFormatter.getTextWithMentions(message.text,message.mentionedUsers);
+      }
+      Clipboard.setData(ClipboardData(text: text));
     }
   }
 
@@ -1048,7 +1064,7 @@ class CometChatMessageListController
     bool thumbnail = false;
     bool name = false;
     bool readReceipt = true;
-    bool enableStatusInfoView = true;
+    bool showTime = true;
 
     if (alignment == ChatAlignment.standard) {
       //-----if message is group action-----
@@ -1058,8 +1074,8 @@ class CometChatMessageListController
         thumbnail = false;
         name = false;
         readReceipt = false;
+        showTime=false;
         alignment0 = BubbleAlignment.center;
-        enableStatusInfoView = false;
       }
       //-----if message sent by me-----
       else if (isMessageSentByMe) {
@@ -1091,7 +1107,7 @@ class CometChatMessageListController
         name = false;
         readReceipt = false;
         alignment0 = BubbleAlignment.center;
-        enableStatusInfoView = false;
+        showTime=false;
       }
       //-----if message sent by me-----
       else if (isMessageSentByMe) {
@@ -1116,14 +1132,14 @@ class CometChatMessageListController
       }
     }
 
-    if (disableReceipt == true) {
+    if (disableReceipt == true || messageObject.deletedAt!=null) {
       readReceipt = false;
     }
 
 
     return BubbleContentVerifier(
         showThumbnail: thumbnail,
-        showStatusInfoView: enableStatusInfoView,
+        showTime: showTime,
         showName: name,
         showReadReceipt: readReceipt,
         alignment: alignment0,
@@ -1436,6 +1452,7 @@ class CometChatMessageListController
               message, messageReaction, reactionAction)
           .then((reactedMessage) {
         if (reactedMessage == null) return;
+
         updateElement(reactedMessage);
       });
     }
@@ -1447,18 +1464,18 @@ class CometChatMessageListController
     if(reactionIndex!=-1) {
       updateElement(updateReactionsOnMessage(message, reaction, false));
       // remove reaction
-      CometChatUIKit.removeReaction(message.id, reaction,
+      CometChat.removeReaction(message.id, reaction,
       onError: (error) {
         updateElement(updateReactionsOnMessage(message, reaction, true));
-      },
+      }, onSuccess: (BaseMessage ) {  },
       );
     }else{
       // add reaction
       updateElement(updateReactionsOnMessage(message, reaction, true));
-      CometChatUIKit.addReaction(message.id, reaction,
+      CometChat.addReaction(message.id, reaction,
         onError: (error) {
           updateElement(updateReactionsOnMessage(message, reaction, false));
-        },
+        }, onSuccess: (BaseMessage ) {  },
       );
     }
   }
@@ -1491,12 +1508,13 @@ class CometChatMessageListController
   }
 
   BaseMessage updateReactionsOnMessage(BaseMessage message, String reaction, bool add){
+
     ReactionCount reactionCount = ReactionCount(
       reaction: reaction,
       count: 1,
       reactedByMe: true
     );
-    int match = message.reactions.indexWhere((element) => element?.reaction==reaction);
+    int match = message.reactions.indexWhere((element) => element.reaction==reaction);
     if(add){
       if(match==-1){
         message.reactions.add(reactionCount);
@@ -1508,13 +1526,16 @@ class CometChatMessageListController
       }
     }else{
       if(match!=-1 && message.reactions[match].reactedByMe==true) {
+
         if(message.reactions[match].count==1) {
-          message.reactions.remove(reactionCount);
+          message.reactions.removeAt(match);
+
         } else {
           message.reactions[match].reactedByMe = false;
           if (message.reactions[match].count != null) {
             message.reactions[match].count =
                 message.reactions[match].count! - 1;
+
           }
         }
       }
@@ -1538,6 +1559,38 @@ class CometChatMessageListController
 
     return categories.contains(message.category) && types.contains(message.type);
   }
+
+
+  void initializeTextFormatters(){
+    List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
+
+    if(textFormatters.isEmpty){
+      textFormatters = CometChatUIKit.getDataSource().getDefaultTextFormatters();
+    }else if(textFormatters.indexWhere((element) => element is CometChatMentionsFormatter)==-1 && disableMentions!=true){
+      textFormatters.add(CometChatMentionsFormatter());
+    }
+
+
+    if (disableMentions == true) {
+      textFormatters.removeWhere((
+          element) => element is CometChatMentionsFormatter);
+    }
+
+    this.textFormatters = textFormatters;
+
+  }
+
+  List<CometChatTextFormatter> getTextFormatters(BaseMessage message, CometChatTheme theme){
+    List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
+    if(message is TextMessage){
+      for(CometChatTextFormatter textFormatter in textFormatters){
+        textFormatter.message = message;
+        textFormatter.theme = theme;
+      }
+    }
+    return textFormatters;
+  }
+
 }
 
 class BubbleContentVerifier {
@@ -1546,7 +1599,7 @@ class BubbleContentVerifier {
   bool showReadReceipt;
   bool showFooterView;
   BubbleAlignment alignment;
-  bool showStatusInfoView;
+  bool showTime;
 
   BubbleContentVerifier(
       {this.showThumbnail = false,
@@ -1554,7 +1607,7 @@ class BubbleContentVerifier {
       this.showReadReceipt = true,
       this.showFooterView = true,
       this.alignment = BubbleAlignment.right,
-      this.showStatusInfoView = true
+      this.showTime = true
       });
 }
 

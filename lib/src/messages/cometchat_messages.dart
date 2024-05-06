@@ -40,7 +40,9 @@ class CometChatMessages extends StatefulWidget {
       this.disableSoundForMessages,
       this.theme,
       this.threadedMessagesConfiguration,
-      this.hideDetails})
+      this.hideDetails,
+      this.messageComposerKey
+      })
       : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
@@ -112,6 +114,9 @@ class CometChatMessages extends StatefulWidget {
 
   ///[hideDetails] toggle visibility for details icons
   final bool? hideDetails;
+
+  ///[messageComposerKey] key for message composer, We use this to get  the dimensions of the composer which we then use to set the placeholder for the composer in stack we are using to show the message list
+  final GlobalKey? messageComposerKey;
 
   @override
   State<CometChatMessages> createState() => _CometChatMessagesState();
@@ -268,20 +273,39 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             dateSeparatorStyle: widget.messageListConfiguration.dateSeparatorStyle,
       disableReactions: widget.messageListConfiguration.disableReactions,
       reactionListConfiguration: widget.messageListConfiguration.reactionListConfiguration,
+
+      textFormatters: widget.messageListConfiguration.textFormatters,
+      disableMentions: widget.messageListConfiguration.disableMentions,
+
       reactionsStyle: widget.messageListConfiguration.reactionsStyle,
       addReactionIcon: widget.messageListConfiguration.addReactionIcon,
       addReactionIconTap: widget.messageListConfiguration.addReactionIconTap,
       emojiKeyboardStyle: widget.messageListConfiguration.emojiKeyboardStyle,
-      favoriteReactions: widget.messageListConfiguration.favoriteReactions,
+
       reactionsConfiguration: widget.messageListConfiguration.reactionsConfiguration,
+      favoriteReactions: widget.messageListConfiguration.favoriteReactions,
+
           );
   }
 
+
+
   Widget getMessageComposer(
       CometChatMessagesController controller, BuildContext context) {
+    GlobalKey key = widget.messageComposerKey ?? controller.messageComposerKey;
+
+    if(controller.composerPlaceHolder==null) {
+      WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+        controller.getComposerPlaceHolder();
+      });
+    }
+
     return widget.messageComposerView != null
-        ? widget.messageComposerView!(
-            controller.user, controller.group, context)
+        ? Container(
+      key: key,
+          child: widget.messageComposerView!(
+              controller.user, controller.group, context),
+        )
         : CometChatMessageComposer(
             user: controller.user,
             group: controller.group,
@@ -384,7 +408,10 @@ class _CometChatMessagesState extends State<CometChatMessages> {
       aiOptionStyle: widget.messageComposerConfiguration.aiOptionStyle,
       aiIconPackageName: widget.messageComposerConfiguration.aiIconPackageName,
       aiIconURL: widget.messageComposerConfiguration.aiIconURL,
-      aiIcon: widget.messageComposerConfiguration.aiIcon
+      aiIcon: widget.messageComposerConfiguration.aiIcon,
+      textFormatters: widget.messageComposerConfiguration.textFormatters,
+      messageComposerKey: controller.messageComposerKey,
+      disableMentions: widget.messageComposerConfiguration.disableMentions,
           );
   }
 
@@ -498,6 +525,7 @@ class _CometChatMessagesState extends State<CometChatMessages> {
                               onBack: widget.messageHeaderConfiguration.onBack,
                             ),
                   body: Stack(
+                    // alignment: AlignmentDirectional.topCenter,
                     children: [
                       Column(
                         children: [
@@ -515,10 +543,21 @@ class _CometChatMessagesState extends State<CometChatMessages> {
                                   child: getMessageList(value, context))),
 
                           //-----message composer-----
-                          if (widget.hideMessageComposer == false)
-                            getMessageComposer(value, context)
+                          if (widget.hideMessageComposer == false && value.composerPlaceHolder != null)
+                            value.composerPlaceHolder ?? const SizedBox(),
                         ],
                       ),
+                      Positioned.fill(
+
+                          child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Stack(
+                                children: [
+
+                                  if (widget.hideMessageComposer == false)
+                                    getMessageComposer(value, context)
+                                ],
+                              ))),
                       if (value.isOverlayOpen == true)
                         ...value.liveAnimationList
                     ],
@@ -527,4 +566,6 @@ class _CometChatMessagesState extends State<CometChatMessages> {
               })),
     );
   }
+
+
 }
