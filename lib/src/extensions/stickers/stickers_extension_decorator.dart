@@ -7,17 +7,16 @@ class StickersExtensionDecorator extends DataSourceDecorator {
   String stickerTypeConstant = "extension_sticker";
   StickerConfiguration? configuration;
 
-  StickersExtensionDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource);
+  StickersExtensionDecorator(super.dataSource, {this.configuration});
 
   @override
   List<CometChatMessageTemplate> getAllMessageTemplates(
       {CometChatTheme? theme}) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme0 = theme ?? cometChatTheme;
 
     List<CometChatMessageTemplate> templateList =
-        super.getAllMessageTemplates(theme: _theme);
-    templateList.add(getTemplate(theme: _theme));
+        super.getAllMessageTemplates(theme: theme0);
+    templateList.add(getTemplate(theme: theme0));
 
     return templateList;
   }
@@ -63,7 +62,7 @@ class StickersExtensionDecorator extends DataSourceDecorator {
     if (message != null &&
         message.type == stickerTypeConstant &&
         message.category == MessageCategoryConstants.custom) {
-      return Translations.of(context).custom_message_sticker;
+      return Translations.of(context).customMessageSticker;
     } else {
       return super.getLastConversationMessage(conversation, context);
     }
@@ -74,7 +73,8 @@ class StickersExtensionDecorator extends DataSourceDecorator {
         type: stickerTypeConstant,
         category: CometChatMessageCategory.custom,
         contentView: (BaseMessage message, BuildContext context,
-            BubbleAlignment alignment,{AdditionalConfigurations? additionalConfigurations}) {
+            BubbleAlignment alignment,
+            {AdditionalConfigurations? additionalConfigurations}) {
           if (message.deletedAt != null) {
             return super
                 .getDeleteMessageBubble(message, theme ?? cometChatTheme);

@@ -21,11 +21,22 @@ rootProject.allprojects {
     }
 }
 
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 32
+    if (project.android.hasProperty("namespace")) {
+        namespace 'com.cometchat.cometchat_chat_uikit'
+    }
+
+    compileSdk 33
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -40,17 +51,20 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
     buildFeatures {
         buildConfig = true
     }
 
     defaultConfig {
         minSdkVersion 21
-        buildConfigField("String", "SDK_VERSION", "\"4.4.0\"")
+        buildConfigField("String", "SDK_VERSION", "\"4.5.0\"")
     }
-}
 
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.appcompat:appcompat:1.4.1'
+    dependencies {
+        implementation 'androidx.appcompat:appcompat:1.4.1'
+    }
 }

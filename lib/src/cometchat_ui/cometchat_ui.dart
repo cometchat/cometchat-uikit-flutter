@@ -9,7 +9,7 @@ enum Visibility { onTap, always }
 
 class CometChatUI extends StatefulWidget {
   const CometChatUI(
-      {Key? key,
+      {super.key,
       this.tabAlignment,
       this.tabSeparatorColor,
       this.style,
@@ -21,8 +21,7 @@ class CometChatUI extends StatefulWidget {
           const GroupsWithMessagesConfiguration(),
       this.showTitle,
       this.tabs,
-      this.theme})
-      : super(key: key);
+      this.theme});
 
   ///[tabAlignment] sets the alignment of the tab navigation bar. By default it is set to bottom
   final TabAlignment? tabAlignment;
@@ -53,7 +52,7 @@ class CometChatUI extends StatefulWidget {
   final CometChatTheme? theme;
 
   @override
-  _CometChatUIState createState() => _CometChatUIState();
+  State<CometChatUI> createState() => _CometChatUIState();
 }
 
 class _CometChatUIState extends State<CometChatUI> {
@@ -188,19 +187,18 @@ class _CometChatUIState extends State<CometChatUI> {
 
 class BottomBar extends StatefulWidget {
   const BottomBar(
-      {Key? key,
+      {super.key,
       required this.tabItems,
       this.style,
       this.theme,
-      this.tabSeparatorColor})
-      : super(key: key);
+      this.tabSeparatorColor});
   final List<TabItem> tabItems;
   final UIStyle? style;
   final CometChatTheme? theme;
   final Color? tabSeparatorColor;
 
   @override
-  _BottomBarState createState() => _BottomBarState();
+  State<BottomBar> createState() => _BottomBarState();
 }
 
 class _BottomBarState extends State<BottomBar> {
@@ -271,19 +269,18 @@ class _BottomBarState extends State<BottomBar> {
 
 class TopTab extends StatefulWidget {
   const TopTab(
-      {Key? key,
+      {super.key,
       required this.tabItems,
       this.style,
       this.theme,
-      this.tabSeparatorColor})
-      : super(key: key);
+      this.tabSeparatorColor});
   final List<TabItem> tabItems;
   final UIStyle? style;
   final CometChatTheme? theme;
   final Color? tabSeparatorColor;
 
   @override
-  _TopTabState createState() => _TopTabState();
+  State<TopTab> createState() => _TopTabState();
 }
 
 class _TopTabState extends State<TopTab> {

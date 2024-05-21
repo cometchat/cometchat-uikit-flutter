@@ -4,13 +4,12 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 ///It provides a generic [requestBuilder] property and methods [getRequest] and [getSearchRequest] that needs to be overridden.
 abstract class MessagesBuilderProtocol
     extends BuilderProtocol<MessagesRequestBuilder, MessagesRequest> {
-  const MessagesBuilderProtocol(MessagesRequestBuilder _builder)
-      : super(_builder);
+  const MessagesBuilderProtocol(super._builder);
 }
 
 ///[UIMessagesBuilder] is the default [MessagesBuilderProtocol] used when a custom builder protocol is not passed
 class UIMessagesBuilder extends MessagesBuilderProtocol {
-  const UIMessagesBuilder(MessagesRequestBuilder _builder) : super(_builder);
+  const UIMessagesBuilder(super._builder);
 
   @override
   MessagesRequest getRequest() {

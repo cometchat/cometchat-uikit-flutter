@@ -18,7 +18,7 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
 
 class CometChatContacts extends StatefulWidget {
   const CometChatContacts(
-      {Key? key,
+      {super.key,
       this.usersConfiguration,
       this.onItemTap,
       this.groupsConfiguration,
@@ -35,8 +35,7 @@ class CometChatContacts extends StatefulWidget {
       this.selectionLimit = 5,
       this.selectionMode,
       this.submitIcon,
-      this.snackBarConfiguration})
-      : super(key: key);
+      this.snackBarConfiguration});
 
   ///[usersConfiguration] set custom users request builder protocol
   final UsersConfiguration? usersConfiguration;
@@ -146,7 +145,7 @@ class _CometChatContactsState extends State<CometChatContacts>
           int selectionLimit = widget.selectionLimit ?? 5;
           if (total > selectionLimit) {
             SnackBarUtils.show(
-                "${cc.Translations.of(context).max_selection_limit_is} $selectionLimit",
+                "${cc.Translations.of(context).maxSelectionLimitIs} $selectionLimit",
                 context);
             return;
           }
@@ -168,7 +167,7 @@ class _CometChatContactsState extends State<CometChatContacts>
         builder: (CometChatContactsController value) {
           value.context = context;
           return CometChatListBase(
-            title: widget.title ?? cc.Translations.of(context).new_message,
+            title: widget.title ?? cc.Translations.of(context).newMessage,
             theme: theme,
             backIcon: widget.closeIcon ??
                 Image.asset(

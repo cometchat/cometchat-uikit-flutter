@@ -8,14 +8,14 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
   String translateMessage = "translateMessage";
   MessageTranslationConfiguration? configuration;
 
-  MessageExtensionTranslationDecorator(DataSource dataSource,
-      {this.configuration})
-      : super(dataSource);
+  MessageExtensionTranslationDecorator(super.dataSource, {this.configuration});
 
   @override
   Widget getTextMessageContentView(TextMessage message, BuildContext context,
-      BubbleAlignment _alignment, CometChatTheme theme,{AdditionalConfigurations? additionalConfigurations}) {
-    return getContentView(message, context, _alignment, theme,additionalConfigurations:additionalConfigurations);
+      BubbleAlignment alignment, CometChatTheme theme,
+      {AdditionalConfigurations? additionalConfigurations}) {
+    return getContentView(message, context, alignment, theme,
+        additionalConfigurations: additionalConfigurations);
   }
 
   @override
@@ -41,7 +41,7 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
     return CometChatMessageOption(
         id: translateMessage,
         title: configuration?.optionTitle ??
-            Translations.of(context).translate_message,
+            Translations.of(context).translateMessage,
         icon: configuration?.optionIconUrl ?? AssetConstants.translate,
         packageName:
             configuration?.optionIconUrlPackageName ?? UIConstants.packageName,
@@ -93,16 +93,20 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
   }
 
   Widget getContentView(TextMessage message, BuildContext context,
-      BubbleAlignment alignment, CometChatTheme theme, {AdditionalConfigurations? additionalConfigurations}) {
-    Widget? child =
-        super.getTextMessageContentView(message, context, alignment, theme,additionalConfigurations: additionalConfigurations);
+      BubbleAlignment alignment, CometChatTheme theme,
+      {AdditionalConfigurations? additionalConfigurations}) {
+    Widget? child = super.getTextMessageContentView(
+        message, context, alignment, theme,
+        additionalConfigurations: additionalConfigurations);
     if (message.metadata != null &&
         message.metadata!.containsKey('translated_message')) {
       String? translatedText = message.metadata?['translated_message'];
-      if(message.mentionedUsers.isNotEmpty && translatedText!=null && translatedText.isNotEmpty){
-        translatedText = CometChatMentionsFormatter.getTextWithMentions(translatedText, message.mentionedUsers);
+      if (message.mentionedUsers.isNotEmpty &&
+          translatedText != null &&
+          translatedText.isNotEmpty) {
+        translatedText = CometChatMentionsFormatter.getTextWithMentions(
+            translatedText, message.mentionedUsers);
       }
-
 
       return MessageTranslationBubble(
         translatedText: translatedText ?? "",
@@ -118,10 +122,10 @@ class MessageExtensionTranslationDecorator extends DataSourceDecorator {
 
   String getErrorTranslatedText(BuildContext context, String errorCode) {
     if (errorCode == "ERROR_INTERNET_UNAVAILABLE") {
-      return Translations.of(context).error_internet_unavailable;
+      return Translations.of(context).errorInternetUnavailable;
     } else {}
 
-    return Translations.of(context).something_went_wrong_error;
+    return Translations.of(context).somethingWentWrongError;
   }
 
   _showDialogPopUp(String message, CometChatTheme theme, BuildContext context) {

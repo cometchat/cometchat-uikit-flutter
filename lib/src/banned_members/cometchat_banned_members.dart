@@ -15,7 +15,7 @@ import '../../../cometchat_chat_uikit.dart' as cc;
 /// ```
 class CometChatBannedMembers extends StatelessWidget {
   CometChatBannedMembers(
-      {Key? key,
+      {super.key,
       required this.group,
       this.bannedMemberProtocol,
       this.subtitleView,
@@ -65,8 +65,7 @@ class CometChatBannedMembers extends StatelessWidget {
             disableUsersPresence: disableUsersPresence,
             onError: onError,
             unbanIconUrl: unbanIconUrl,
-            unbanIconUrlPackageName: unbanIconUrlPackageName),
-        super(key: key);
+            unbanIconUrlPackageName: unbanIconUrlPackageName);
 
   ///[group] stores a reference to the group for which banned members will be shown
   final Group group;
@@ -312,7 +311,7 @@ class CometChatBannedMembers extends StatelessWidget {
     } else {
       return Center(
         child: Text(
-          emptyStateText ?? cc.Translations.of(context).no_banned_members_found,
+          emptyStateText ?? cc.Translations.of(context).noBannedMembersFound,
           style: bannedMembersStyle.emptyTextStyle ??
               TextStyle(
                   fontSize: theme.typography.title1.fontSize,
@@ -361,8 +360,8 @@ class CometChatBannedMembers extends StatelessWidget {
                   color: theme.palette.getAccent(),
                   fontFamily: theme.typography.title2.fontFamily),
         ),
-        confirmButtonText: cc.Translations.of(context).try_again,
-        cancelButtonText: cc.Translations.of(context).cancel_capital,
+        confirmButtonText: cc.Translations.of(context).tryAgain,
+        cancelButtonText: cc.Translations.of(context).cancelCapital,
         style: ConfirmDialogStyle(
             backgroundColor: theme.palette.mode == PaletteThemeModes.light
                 ? theme.palette.getBackground()
@@ -395,16 +394,16 @@ class CometChatBannedMembers extends StatelessWidget {
       error = Utils.getErrorTranslatedText(
           context, (controller.error as CometChatException).code);
     } else {
-      error = cc.Translations.of(context).no_banned_members_found;
+      error = cc.Translations.of(context).noBannedMembersFound;
     }
     if (errorStateView != null) {}
     _showErrorDialog(error, context, theme, controller);
   }
 
-  Widget _getList(CometChatBannedMembersController _controller,
+  Widget _getList(CometChatBannedMembersController bannedMemberController,
       BuildContext context, CometChatTheme theme) {
     return GetBuilder(
-      init: _controller,
+      init: bannedMemberController,
       global: false,
       dispose: (GetBuilderState<CometChatBannedMembersController> state) =>
           state.controller?.onClose(),
@@ -473,7 +472,7 @@ class CometChatBannedMembers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
 
     if (stateCallBack != null) {
       WidgetsBinding.instance
@@ -481,7 +480,7 @@ class CometChatBannedMembers extends StatelessWidget {
     }
 
     return CometChatListBase(
-        title: title ?? cc.Translations.of(context).banned_members,
+        title: title ?? cc.Translations.of(context).bannedMembers,
         hideSearch: hideSearch,
         backIcon: backButton,
         onBack: onBack,
@@ -489,11 +488,11 @@ class CometChatBannedMembers extends StatelessWidget {
         showBackButton: showBackButton,
         searchBoxIcon: searchBoxIcon,
         onSearch: bannedMembersController.onSearch,
-        theme: _theme,
+        theme: theme,
         menuOptions: [
           if (appBarOptions != null && appBarOptions!.isNotEmpty)
             ...appBarOptions!,
-          Obx(() => getSelectionWidget(bannedMembersController, _theme))
+          Obx(() => getSelectionWidget(bannedMembersController, theme))
         ],
         style: ListBaseStyle(
             background: bannedMembersStyle.gradient == null
@@ -513,6 +512,6 @@ class CometChatBannedMembers extends StatelessWidget {
             searchBoxRadius: bannedMembersStyle.searchBorderRadius,
             searchBoxBackground: bannedMembersStyle.searchBackground,
             searchBorderWidth: bannedMembersStyle.searchBorderWidth),
-        container: _getList(bannedMembersController, context, _theme));
+        container: _getList(bannedMembersController, context, theme));
   }
 }

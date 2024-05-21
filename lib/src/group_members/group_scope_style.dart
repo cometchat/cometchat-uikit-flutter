@@ -19,15 +19,10 @@ class GroupScopeStyle extends BaseStyles {
     this.dropDownItemStyle,
     this.scopeTextStyle,
     this.selectedItemTextStyle,
-    double? width,
-    double? height,
-    BoxBorder? border,
-    double? borderRadius,
+    super.width,
+    super.height,
+    super.border,
+    super.borderRadius,
     Color? backgroundColor,
-  }) : super(
-          width: width,
-          height: height,
-          border: border,
-          borderRadius: borderRadius,
-        );
+  });
 }

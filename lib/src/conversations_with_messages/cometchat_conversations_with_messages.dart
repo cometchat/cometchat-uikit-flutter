@@ -41,14 +41,14 @@ import '../../cometchat_chat_uikit.dart';
 ///
 class CometChatConversationsWithMessages extends StatefulWidget {
   const CometChatConversationsWithMessages({
-    Key? key,
+    super.key,
     this.user,
     this.group,
     this.theme,
     this.conversationsConfiguration,
     this.messageConfiguration,
     this.startConversationConfiguration,
-  }) : super(key: key);
+  });
 
   ///[user] if null will return [CometChatConversations] screen else will navigate to [CometChatMessages]
   final User? user;
@@ -195,8 +195,7 @@ class _CometChatConversationsWithMessagesState
                 .conversationsConfiguration?.deleteConversationDialogStyle,
             hideAppbar: widget.conversationsConfiguration?.hideAppbar,
             disableMentions: widget.conversationsConfiguration?.disableMentions,
-            textFormatters: widget
-                .conversationsConfiguration?.textFormatters,
+            textFormatters: widget.conversationsConfiguration?.textFormatters,
           );
         });
   }

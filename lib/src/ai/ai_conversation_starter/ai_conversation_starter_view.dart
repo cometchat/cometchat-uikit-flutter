@@ -15,27 +15,26 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 /// ```
 
 class AIConversationStarterView extends StatefulWidget {
-  const AIConversationStarterView({
-    Key? key,
-    this.user,
-    this.group,
-    this.aiConversationStarterStyle,
-    this.emptyStateText,
-    this.errorStateText,
-    this.theme,
-    this.customView,
-    this.loadingStateText,
-    this.loadingIconUrl,
-    this.loadingStateView,
-    this.errorIconUrl,
-    this.errorStateView,
-    this.emptyStateView,
-    this.emptyIconUrl,
-    this.loadingIconPackageName,
-    this.emptyIconPackageName,
-    this.errorIconPackageName,
-    this.apiConfiguration
-  }) : super(key: key);
+  const AIConversationStarterView(
+      {super.key,
+      this.user,
+      this.group,
+      this.aiConversationStarterStyle,
+      this.emptyStateText,
+      this.errorStateText,
+      this.theme,
+      this.customView,
+      this.loadingStateText,
+      this.loadingIconUrl,
+      this.loadingStateView,
+      this.errorIconUrl,
+      this.errorStateView,
+      this.emptyStateView,
+      this.emptyIconUrl,
+      this.loadingIconPackageName,
+      this.emptyIconPackageName,
+      this.errorIconPackageName,
+      this.apiConfiguration});
 
   /// set [User] object, one is mandatory either [user] or [group]
   final User? user;
@@ -67,7 +66,6 @@ class AIConversationStarterView extends StatefulWidget {
   ///[emptyIconPackageName] package name for empty icon to be displayed when empty state
   final String? emptyIconPackageName;
 
-
   ///[customView] gives conversation starter view
   final Widget Function(List<String> replies, BuildContext context)? customView;
 
@@ -90,7 +88,7 @@ class AIConversationStarterView extends StatefulWidget {
   final String? loadingIconUrl;
 
   ///[apiConfiguration] sets the api call configuration for ai conversation starter
-  final Map<String , dynamic>? apiConfiguration;
+  final Map<String, dynamic>? apiConfiguration;
 
   @override
   State<AIConversationStarterView> createState() =>
@@ -152,8 +150,8 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
       receiverId = widget.group!.guid;
       receiverType = CometChatReceiverType.group;
     }
-    await CometChat.getConversationStarter(receiverId, receiverType,configuration: widget.apiConfiguration,
-        onSuccess: (reply) {
+    await CometChat.getConversationStarter(receiverId, receiverType,
+        configuration: widget.apiConfiguration, onSuccess: (reply) {
       _replies = reply;
       setState(() {});
     }, onError: (error) {
@@ -173,14 +171,14 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
         child: widget.errorStateView!(context),
       );
     } else {
-      return AIUtils.getOnError(context, theme, backgroundColor:
-      widget.aiConversationStarterStyle?.backgroundColor, shadowColor:
-      widget.aiConversationStarterStyle?.shadowColor , errorIconUrl:  widget.errorIconUrl,
+      return AIUtils.getOnError(context, theme,
+          backgroundColor: widget.aiConversationStarterStyle?.backgroundColor,
+          shadowColor: widget.aiConversationStarterStyle?.shadowColor,
+          errorIconUrl: widget.errorIconUrl,
           errorIconTint: widget.aiConversationStarterStyle?.errorIconTint,
           errorStateText: widget.errorStateText,
           errorTextStyle: widget.aiConversationStarterStyle?.errorTextStyle,
-          errorIconPackageName: widget.errorIconPackageName
-      );
+          errorIconPackageName: widget.errorIconPackageName);
     }
   }
 
@@ -188,14 +186,14 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
     if (widget.emptyStateView != null) {
       return widget.emptyStateView!(context);
     } else {
-      return AIUtils.getEmptyView(context, theme, backgroundColor:
-      widget.aiConversationStarterStyle?.backgroundColor, shadowColor:
-      widget.aiConversationStarterStyle?.shadowColor , emptyIconUrl:  widget.emptyIconUrl,
+      return AIUtils.getEmptyView(context, theme,
+          backgroundColor: widget.aiConversationStarterStyle?.backgroundColor,
+          shadowColor: widget.aiConversationStarterStyle?.shadowColor,
+          emptyIconUrl: widget.emptyIconUrl,
           emptyIconTint: widget.aiConversationStarterStyle?.emptyIconTint,
           emptyStateText: widget.emptyStateText,
           emptyTextStyle: widget.aiConversationStarterStyle?.emptyTextStyle,
-          emptyIconPackageName: widget.emptyIconPackageName
-      );
+          emptyIconPackageName: widget.emptyIconPackageName);
     }
   }
 
@@ -203,14 +201,15 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
     if (widget.loadingStateView != null) {
       return widget.loadingStateView!(context);
     } else {
-      return AIUtils.getLoadingIndicator(context, theme, backgroundColor:
-      widget.aiConversationStarterStyle?.backgroundColor, shadowColor:
-      widget.aiConversationStarterStyle?.shadowColor , loadingIconUrl:  widget.loadingIconUrl,
+      return AIUtils.getLoadingIndicator(context, theme,
+          backgroundColor: widget.aiConversationStarterStyle?.backgroundColor,
+          shadowColor: widget.aiConversationStarterStyle?.shadowColor,
+          loadingIconUrl: widget.loadingIconUrl,
           loadingIconTint: widget.aiConversationStarterStyle?.loadingIconTint,
-      loadingStateText: widget.loadingStateText??Translations.of(context).generating_ice_breakers,
-        loadingTextStyle: widget.aiConversationStarterStyle?.loadingTextStyle,
-        loadingIconPackageName: widget.loadingIconPackageName
-      );
+          loadingStateText: widget.loadingStateText ??
+              Translations.of(context).generatingIceBreakers,
+          loadingTextStyle: widget.aiConversationStarterStyle?.loadingTextStyle,
+          loadingIconPackageName: widget.loadingIconPackageName);
     }
   }
 
@@ -233,16 +232,13 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
   Widget build(BuildContext context) {
     return (!isKeyboardOpen)
         ? isLoading
-            // --- on Loading ---
             ? _getLoadingIndicator(_theme)
             :
-            // ---on error---
             isError
                 ? _getOnError(context, _theme)
                 :
-                // --- empty replies state ----
                 _replies.isEmpty
-                    ? _getEmptyView(context,_theme)
+                    ? _getEmptyView(context, _theme)
                     : (widget.customView != null)
                         ? widget.customView!(_replies, context)
                         : SizedBox(
@@ -263,17 +259,24 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
                                         },
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color: widget.aiConversationStarterStyle?.background ??
+                                            color: widget
+                                                    .aiConversationStarterStyle
+                                                    ?.background ??
                                                 _theme.palette.getBackground(),
-                                            gradient: widget.aiConversationStarterStyle?.gradient,
-                                            border: widget.aiConversationStarterStyle?.border ??
+                                            gradient: widget
+                                                .aiConversationStarterStyle
+                                                ?.gradient,
+                                            border: widget
+                                                    .aiConversationStarterStyle
+                                                    ?.border ??
                                                 Border.all(
                                                     color: _theme.palette
                                                         .getAccent700(),
                                                     width: 1),
                                             borderRadius: BorderRadius.all(
                                                 Radius.circular(widget
-                                                        .aiConversationStarterStyle?.borderRadius ??
+                                                        .aiConversationStarterStyle
+                                                        ?.borderRadius ??
                                                     8)),
                                           ),
                                           child: Padding(
@@ -281,7 +284,8 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
                                             child: Text(
                                               _replies[item],
                                               style: widget
-                                                      .aiConversationStarterStyle?.replyTextStyle ??
+                                                      .aiConversationStarterStyle
+                                                      ?.replyTextStyle ??
                                                   TextStyle(
                                                     fontSize: _theme.typography
                                                         .title2.fontSize,

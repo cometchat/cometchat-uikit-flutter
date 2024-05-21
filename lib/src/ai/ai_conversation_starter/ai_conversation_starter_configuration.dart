@@ -11,24 +11,23 @@ import 'package:flutter/material.dart';
 ///  );
 /// ```
 class AIConversationStarterConfiguration {
-  AIConversationStarterConfiguration({
-    this.conversationStarterStyle,
-    this.theme,
-    this.loadingStateText,
-    this.errorStateText,
-    this.emptyStateText,
-    this.customView,
-    this.loadingIconUrl,
-    this.loadingStateView,
-    this.errorIconUrl,
-    this.errorStateView,
-    this.emptyStateView,
-    this.emptyIconUrl,
-    this.loadingIconPackageName,
-    this.emptyIconPackageName,
-    this.errorIconPackageName,
-    this.apiConfiguration
-  });
+  AIConversationStarterConfiguration(
+      {this.conversationStarterStyle,
+      this.theme,
+      this.loadingStateText,
+      this.errorStateText,
+      this.emptyStateText,
+      this.customView,
+      this.loadingIconUrl,
+      this.loadingStateView,
+      this.errorIconUrl,
+      this.errorStateView,
+      this.emptyStateView,
+      this.emptyIconUrl,
+      this.loadingIconPackageName,
+      this.emptyIconPackageName,
+      this.errorIconPackageName,
+      this.apiConfiguration});
 
   ///[conversationStarterStyle] provides styling to the reply view
   final AIConversationStarterStyle? conversationStarterStyle;
@@ -48,7 +47,6 @@ class AIConversationStarterConfiguration {
   ///[customView] gives conversation starter view
   final Widget Function(List<String> replies, BuildContext context)? customView;
 
-
   ///[emptyStateView] returns view for empty state
   final WidgetBuilder? emptyStateView;
 
@@ -67,7 +65,6 @@ class AIConversationStarterConfiguration {
   ///[loadingIconUrl] used to set the loading icon
   final String? loadingIconUrl;
 
-
   ///[loadingIconPackageName] package name for loading icon to be displayed when in loading state
   final String? loadingIconPackageName;
 
@@ -78,31 +75,30 @@ class AIConversationStarterConfiguration {
   final String? emptyIconPackageName;
 
   ///[apiConfiguration] set the configuration
-  final Future<Map<String, dynamic>> Function(User? user,  Group? group)? apiConfiguration;
-
-
+  final Future<Map<String, dynamic>> Function(User? user, Group? group)?
+      apiConfiguration;
 
   /// Copies current [AIConversationStarterConfiguration] with some changes
-  AIConversationStarterConfiguration copyWith({
-    AIConversationStarterStyle? conversationStarterStyle,
-    CometChatTheme? theme,
-    String? emptyStateText,
-    String? loadingStateText,
-    String? errorStateText,
-    Widget Function(List<String> replies, BuildContext context)? customView,
-    Widget Function(List<String> replies, BuildContext context)?
-        conversationStarterEmptyView,
-    WidgetBuilder? emptyStateView,
-    WidgetBuilder? loadingStateView,
-    WidgetBuilder? errorStateView,
-    String? errorIconUrl,
-    String? emptyIconUrl,
-    String? loadingIconUrl,
-    String? loadingIconPackageName,
-    String? emptyIconPackageName,
-    String? errorIconPackageName,
-    Future<Map<String, dynamic>> Function(User? user,  Group? group)? apiConfiguration
-  }) {
+  AIConversationStarterConfiguration copyWith(
+      {AIConversationStarterStyle? conversationStarterStyle,
+      CometChatTheme? theme,
+      String? emptyStateText,
+      String? loadingStateText,
+      String? errorStateText,
+      Widget Function(List<String> replies, BuildContext context)? customView,
+      Widget Function(List<String> replies, BuildContext context)?
+          conversationStarterEmptyView,
+      WidgetBuilder? emptyStateView,
+      WidgetBuilder? loadingStateView,
+      WidgetBuilder? errorStateView,
+      String? errorIconUrl,
+      String? emptyIconUrl,
+      String? loadingIconUrl,
+      String? loadingIconPackageName,
+      String? emptyIconPackageName,
+      String? errorIconPackageName,
+      Future<Map<String, dynamic>> Function(User? user, Group? group)?
+          apiConfiguration}) {
     return AIConversationStarterConfiguration(
       conversationStarterStyle:
           conversationStarterStyle ?? this.conversationStarterStyle,
@@ -117,11 +113,11 @@ class AIConversationStarterConfiguration {
       errorIconUrl: errorIconUrl ?? this.errorIconUrl,
       emptyIconUrl: emptyIconUrl ?? this.emptyIconUrl,
       loadingIconUrl: loadingIconUrl ?? this.loadingIconUrl,
-      loadingIconPackageName: loadingIconPackageName ?? this.loadingIconPackageName,
+      loadingIconPackageName:
+          loadingIconPackageName ?? this.loadingIconPackageName,
       emptyIconPackageName: emptyIconPackageName ?? this.emptyIconPackageName,
       errorIconPackageName: errorIconPackageName ?? this.errorIconPackageName,
       apiConfiguration: apiConfiguration ?? this.apiConfiguration,
-
     );
   }
 

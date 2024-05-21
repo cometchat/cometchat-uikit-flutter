@@ -2,13 +2,11 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
 abstract class BannedMemberBuilderProtocol extends BuilderProtocol<
     BannedGroupMembersRequestBuilder, BannedGroupMembersRequest> {
-  const BannedMemberBuilderProtocol(BannedGroupMembersRequestBuilder builder)
-      : super(builder);
+  const BannedMemberBuilderProtocol(super.builder);
 }
 
 class UIBannedMemberBuilder extends BannedMemberBuilderProtocol {
-  const UIBannedMemberBuilder(BannedGroupMembersRequestBuilder builder)
-      : super(builder);
+  const UIBannedMemberBuilder(super.builder);
 
   @override
   BannedGroupMembersRequest getRequest() {

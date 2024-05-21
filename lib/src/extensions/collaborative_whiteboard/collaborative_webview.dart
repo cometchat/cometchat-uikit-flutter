@@ -4,14 +4,13 @@ import 'package:webview_flutter/webview_flutter.dart';
 ///[CometChatCollaborativeWebView] is widget that renders a WebView
 class CometChatCollaborativeWebView extends StatefulWidget {
   const CometChatCollaborativeWebView(
-      {Key? key,
+      {super.key,
       required this.title,
       required this.webviewUrl,
       this.titleStyle,
       this.backIcon,
       this.appBarColor,
-      this.backIconColor})
-      : super(key: key);
+      this.backIconColor});
 
   ///[title] of the page
   final String title;
@@ -32,7 +31,7 @@ class CometChatCollaborativeWebView extends StatefulWidget {
   final Color? backIconColor;
 
   @override
-  _CometChatCollaborativeWebViewState createState() =>
+  State<CometChatCollaborativeWebView> createState() =>
       _CometChatCollaborativeWebViewState();
 }
 
@@ -66,11 +65,9 @@ class _CometChatCollaborativeWebViewState
         ),
       ),
       body: WebViewWidget(
-          // initialUrl: widget.webviewUrl,
           controller: WebViewController()
             ..loadRequest(Uri.parse(widget.webviewUrl))
             ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          // javascriptMode: ,
           ),
     );
   }

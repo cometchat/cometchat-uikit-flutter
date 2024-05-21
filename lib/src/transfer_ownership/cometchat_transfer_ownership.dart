@@ -18,7 +18,7 @@ import 'package:get/get_state_manager/get_state_manager.dart';
 ///
 class CometChatTransferOwnership extends StatelessWidget {
   CometChatTransferOwnership(
-      {Key? key,
+      {super.key,
       required Group group,
       this.title,
       this.searchPlaceholder,
@@ -52,8 +52,7 @@ class CometChatTransferOwnership extends StatelessWidget {
             CometChatTransferOwnershipController(
                 group: group,
                 onTransferOwnership: onTransferOwnership,
-                onError: onError),
-        super(key: key);
+                onError: onError);
 
   ///[disableUsersPresence] controls visibility of user online status indicator
   final bool? disableUsersPresence;

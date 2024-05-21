@@ -26,8 +26,8 @@ class CometChatGroupsController
       {required this.groupsBuilderProtocol,
       SelectionMode? mode,
       required this.theme,
-      OnError? onError})
-      : super(builderProtocol: groupsBuilderProtocol, onError: onError) {
+      super.onError})
+      : super(builderProtocol: groupsBuilderProtocol) {
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
 
@@ -80,7 +80,7 @@ class CometChatGroupsController
   @override
   void ccGroupMemberAdded(List<kit.Action> messages, List<User> usersAdded,
       Group groupAddedIn, User addedBy) {
-      updateElement(groupAddedIn);
+    updateElement(groupAddedIn);
   }
 
   @override
@@ -133,11 +133,11 @@ class CometChatGroupsController
       kit.Action action, User addedby, User userAdded, Group addedTo) {
     int matchedIndex;
     matchedIndex = getMatchingIndex(addedTo);
-    if(matchedIndex == -1) {
+    if (matchedIndex == -1) {
       //TODO: once hasJoined has been fixed in sdk the following override will be removed
       addedTo.hasJoined = true;
       addElement(addedTo);
-    }else {
+    } else {
       updateElement(addedTo);
     }
   }

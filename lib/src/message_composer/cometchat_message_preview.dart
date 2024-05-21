@@ -5,14 +5,13 @@ import 'package:flutter/material.dart';
 ///the appearance is similar to quote block of markdown files
 class CometChatMessagePreview extends StatelessWidget {
   const CometChatMessagePreview(
-      {Key? key,
+      {super.key,
       required this.messagePreviewTitle,
       required this.messagePreviewSubtitle,
       this.messagePreviewCloseButtonIcon,
       this.style = const CometChatMessagePreviewStyle(),
       this.onCloseClick,
-      this.hideCloseButton = false})
-      : super(key: key);
+      this.hideCloseButton = false});
 
   ///[messagePreviewTitle]
   final String messagePreviewTitle;
@@ -34,8 +33,6 @@ class CometChatMessagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // CometChatTheme _theme = cometChatTheme;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 7, 12, 3),
       child: ClipRRect(

@@ -6,11 +6,11 @@
 The CometChat <a href="https://pub.dev/packages/cometchat_chat_uikit"><strong>CometChat Chat UIKit</strong></a>. provides a pre-built user interface kit that developers can use to quickly integrate a reliable & fully-featured chat experience into an existing or a new app. <br/>
 
 ### Prerequisites
-- Flutter 3.10.5
-- Dart 3.0.5
+- Flutter >=3.10.5
+- Dart >=3.0.5
 - Android Studio 2022.2
-- Xcode 14.3
-- Android 9, API 28 and above
+- Android 5.0, API 21 and above
+- Xcode 15
 - iOS 12.0
 
 ## Getting Started

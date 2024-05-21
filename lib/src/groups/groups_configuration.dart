@@ -183,49 +183,6 @@ class GroupsConfiguration {
   ///Group tag to create from , if this is passed its parent responsibility to close this
   final String? controllerTag;
 
-  //
-  // GroupsConfiguration merge(GroupsConfiguration mergeWith) {
-  //   return GroupsConfiguration(
-  //     groupsRequestBuilder: mergeWith.groupsRequestBuilder ?? groupsRequestBuilder,
-  //     subtitleView: mergeWith.subtitleView ?? subtitleView,
-  //     listItemView: mergeWith.listItemView ?? listItemView,
-  //     groupsStyle: mergeWith.groupsStyle ?? groupsStyle,
-  //     controller: mergeWith.controller ?? controller,
-  //     options: mergeWith.options ?? options,
-  //     searchPlaceholder: mergeWith.searchPlaceholder ?? searchPlaceholder,
-  //     backButton: mergeWith.backButton ?? backButton,
-  //     showBackButton: mergeWith.showBackButton ?? showBackButton,
-  //     searchBoxIcon: mergeWith.searchBoxIcon ?? searchBoxIcon,
-  //     hideSearch: mergeWith.hideSearch ?? hideSearch,
-  //     theme: mergeWith.theme ?? theme,
-  //     selectionMode: mergeWith.selectionMode ?? selectionMode,
-  //     onSelection: mergeWith.onSelection ?? onSelection,
-  //     title: mergeWith.title ?? title,
-  //     emptyStateText: mergeWith.emptyStateText ?? emptyStateText,
-  //     errorStateText: mergeWith.errorStateText ?? errorStateText,
-  //     loadingStateView: mergeWith.loadingStateView ?? loadingStateView,
-  //     emptyStateView: mergeWith.emptyStateView ?? emptyStateView,
-  //     errorStateView: mergeWith.errorStateView ?? errorStateView,
-  //     listItemStyle: mergeWith.listItemStyle ?? listItemStyle,
-  //     avatarStyle: mergeWith.avatarStyle ?? avatarStyle,
-  //     statusIndicatorStyle: mergeWith.statusIndicatorStyle ?? statusIndicatorStyle,
-  //     createGroupIcon: mergeWith.createGroupIcon ?? createGroupIcon,
-  //     joinProtectedGroupConfiguration: mergeWith.joinProtectedGroupConfiguration ?? joinProtectedGroupConfiguration,
-  //     hideSeparator: mergeWith.hideSeparator ?? hideSeparator,
-  //     passwordGroupIcon: mergeWith.passwordGroupIcon ?? passwordGroupIcon,
-  //     privateGroupIcon: mergeWith.privateGroupIcon ?? privateGroupIcon,
-  //     activateSelection: mergeWith.activateSelection ?? activateSelection,
-  //     hideError: mergeWith.hideError ?? hideError,
-  //     stateCallBack: mergeWith.stateCallBack ?? stateCallBack,
-  //     groupsProtocol: mergeWith.groupsProtocol ?? groupsProtocol,
-  //     appBarOptions: mergeWith.appBarOptions ?? appBarOptions,
-  //     onBack: mergeWith.onBack ?? onBack,
-  //     onItemTap: mergeWith.onItemTap ?? onItemTap,
-  //     onItemLongPress: mergeWith.onItemLongPress ?? onItemLongPress,
-  //     onError: mergeWith.onError ?? onError,
-  //   );
-  // }
-
   GroupsConfiguration merge(GroupsConfiguration mergeWith) {
     return GroupsConfiguration(
         groupsRequestBuilder:

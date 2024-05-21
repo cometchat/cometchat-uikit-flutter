@@ -8,9 +8,7 @@ class ThumbnailGenerationExtensionDecorator extends DataSourceDecorator {
       ExtensionConstants.thumbnailGeneration;
   ThumbnailGenerationConfiguration? configuration;
 
-  ThumbnailGenerationExtensionDecorator(DataSource dataSource,
-      {this.configuration})
-      : super(dataSource);
+  ThumbnailGenerationExtensionDecorator(super.dataSource, {this.configuration});
 
   @override
   Widget getVideoMessageBubble(

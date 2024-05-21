@@ -20,7 +20,7 @@ import '../../cometchat_chat_uikit.dart' as cc;
 
 class CometChatMessageInformation extends StatefulWidget {
   const CometChatMessageInformation({
-    Key? key,
+    super.key,
     required this.message,
     this.title,
     this.closeIcon,
@@ -42,7 +42,7 @@ class CometChatMessageInformation extends StatefulWidget {
     this.loadingIconUrl,
     this.loadingStateView,
     this.errorStateView,
-  }) : super(key: key);
+  });
 
   ///[message] parent message for message information
   final BaseMessage message;
@@ -126,9 +126,9 @@ class _CometChatMessageInformationState
   void initState() {
     super.initState();
     _theme = widget.theme ?? cometChatTheme;
-    List<CometChatMessageTemplate> _template =
+    List<CometChatMessageTemplate> template =
         CometChatUIKit.getDataSource().getAllMessageTemplates();
-    for (var element in _template) {
+    for (var element in template) {
       if (widget.message.category == element.category &&
           widget.message.type == element.type) {
         _messageTemplate = element;
@@ -146,7 +146,7 @@ class _CometChatMessageInformationState
   @override
   Widget build(BuildContext context) {
     return CometChatListBase(
-      title: widget.title ?? cc.Translations.of(context).message_information,
+      title: widget.title ?? cc.Translations.of(context).messageInformation,
       hideSearch: true,
       backIcon: widget.closeIcon ??
           Image.asset(
@@ -221,7 +221,7 @@ class _CometChatMessageInformationState
                   height: 10,
                 ),
                 Text(
-                  cc.Translations.of(context).receipt_information,
+                  cc.Translations.of(context).receiptInformation,
                   style: widget.messageInformationStyle?.titleStyle ??
                       TextStyle(
                           fontSize: _theme.typography.text1.fontSize,
@@ -424,7 +424,7 @@ class _CometChatMessageInformationState
     } else {
       return Center(
         child: Text(
-          widget.emptyStateText ?? cc.Translations.of(context).no_recipient,
+          widget.emptyStateText ?? cc.Translations.of(context).noRecipient,
           style: widget.messageInformationStyle?.emptyTextStyle ??
               TextStyle(
                   fontSize: theme.typography.title1.fontSize,
@@ -458,7 +458,7 @@ class _CometChatMessageInformationState
           Utils.getErrorTranslatedText(
               context, (controller.error as CometChatException).code);
     } else {
-      error = widget.errorStateText ?? cc.Translations.of(context).no_recipient;
+      error = widget.errorStateText ?? cc.Translations.of(context).noRecipient;
     }
     if (widget.errorStateView != null) {}
     _showErrorDialog(error, context, theme, controller);

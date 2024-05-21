@@ -8,9 +8,8 @@ class AIAssistBotExtension extends AIExtension {
 
   @override
   void addExtension() {
-    ChatConfigurator.enable((dataSource) => AIAssistBotDecorator(
-        dataSource,
-        configuration: configuration));
+    ChatConfigurator.enable((dataSource) =>
+        AIAssistBotDecorator(dataSource, configuration: configuration));
   }
 
   @override

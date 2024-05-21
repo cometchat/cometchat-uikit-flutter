@@ -21,19 +21,13 @@ class GroupMembersStyle extends BaseStyles {
     this.separatorColor,
     this.memberScopeTextStyle,
     this.listPadding,
-    double? width,
-    double? height,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
-  }) : super(
-            width: width,
-            height: height,
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
+    super.width,
+    super.height,
+    super.background,
+    super.border,
+    super.borderRadius,
+    super.gradient,
+  });
 
   ///[titleStyle] provides styling for title text
   final TextStyle? titleStyle;

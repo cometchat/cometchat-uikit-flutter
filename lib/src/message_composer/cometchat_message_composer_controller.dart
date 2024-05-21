@@ -31,10 +31,9 @@ class CometChatMessageComposerController extends GetxController
       this.onError,
       this.aiOptionStyle,
       this.disableMentions = false,
-        this.previewView,
-        this.theme,
-        this.textFormatters
-      }) {
+      this.previewView,
+      this.theme,
+      this.textFormatters}) {
     tag = "tag$counter";
     counter++;
   }
@@ -155,39 +154,33 @@ class CometChatMessageComposerController extends GetxController
 
   late FocusNode focusNode;
 
-  // late CometChatMentionsFormatter mentionsFormatter;
-
   List<SuggestionListItem> suggestions = [];
   late StreamSubscription<List<SuggestionListItem>> _subscription;
 
-  // Create a stream controller
+  /// Create a stream controller
   final StreamController<List<SuggestionListItem>> _suggestionListController =
       StreamController<List<SuggestionListItem>>();
 
-  // Create a stream from the controller
+  /// Create a stream from the controller
   late Stream<List<SuggestionListItem>> _suggestionListStream;
 
-  // Create a stream controller
+  /// Create a stream controller
   final StreamController<String> _previousTextController =
-  StreamController<String>();
+      StreamController<String>();
 
-  // Create a stream from the controller
+  /// Create a stream from the controller
   late Stream<String> _previousTextStream;
 
   String? _currentSearchKeyword;
   bool _searcKeywordChanged = true;
   bool disableMentions;
-  // String? _currentTrackingCharacter;
 
   CometChatTheme? theme;
 
-
   List<CometChatTextFormatter> _formatters = [];
+
   ///[textFormatters] is a list of [CometChatTextFormatter] which is used to format the text
   List<CometChatTextFormatter>? textFormatters;
-
-
-
 
   //-------------------------LifeCycle Methods-----------------------------
   @override
@@ -200,17 +193,17 @@ class CometChatMessageComposerController extends GetxController
     _uiMessageListener = "${_dateString}UI_message_listener";
     _uiEventListener = "${_dateString}UI_event_listener";
 
-    // Subscribe to the stream
-    _subscription = _suggestionListStream.listen((List<SuggestionListItem> value) {
+    /// Subscribe to the stream
+    _subscription =
+        _suggestionListStream.listen((List<SuggestionListItem> value) {
       bool shouldScrollDown = false;
-      if (value.isNotEmpty && _currentSearchKeyword!=null) {
+      if (value.isNotEmpty && _currentSearchKeyword != null) {
         if (_searcKeywordChanged) {
           suggestions = value;
-          _searcKeywordChanged=false;
+          _searcKeywordChanged = false;
         } else {
-          // suggestions.addAll(value);
           for (var element in value) {
-            if(!suggestions.contains(element)) {
+            if (!suggestions.contains(element)) {
               suggestions.add(element);
             }
           }
@@ -220,25 +213,24 @@ class CometChatMessageComposerController extends GetxController
         hasMore = true;
         update();
 
-        CometChatUIEvents.showPanel(composerId, CustomUIPosition.composerPreview,
+        CometChatUIEvents.showPanel(
+            composerId,
+            CustomUIPosition.composerPreview,
             (context) => getList(context, textEditingController));
-        if(shouldScrollDown){
+        if (shouldScrollDown) {
           _scrollDown();
         }
-
-
       } else {
-        if(_searcKeywordChanged){
-          CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
+        if (_searcKeywordChanged) {
+          CometChatUIEvents.hidePanel(
+              composerId, CustomUIPosition.composerPreview);
           suggestions.clear();
-
         }
-        // suggestions.clear();
-        // CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
+        /// suggestions.clear();
+        /// CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
         hasMore = false;
         update();
       }
-      // _subscription.pause();
     });
 
     _previousTextStream.listen((String value) {
@@ -276,11 +268,15 @@ class CometChatMessageComposerController extends GetxController
   void initializeFormatters() {
     _formatters = textFormatters ?? [];
 
-    if((_formatters.isEmpty || _formatters.indexWhere((element) => element is CometChatMentionsFormatter)==-1) && disableMentions!=true){
+    if ((_formatters.isEmpty ||
+            _formatters.indexWhere(
+                    (element) => element is CometChatMentionsFormatter) ==
+                -1) &&
+        disableMentions != true) {
       _formatters.add(CometChatMentionsFormatter());
     }
 
-    for(var element in _formatters){
+    for (var element in _formatters) {
       element.theme = theme ?? cometChatTheme;
       element.composerId = composerId;
       element.suggestionListEventSink = _suggestionListController.sink;
@@ -290,15 +286,13 @@ class CometChatMessageComposerController extends GetxController
       element.group = group;
       element.init();
     }
-
   }
 
   void _onFormatterSearch(String? searchKeyword) {
-    _searcKeywordChanged = _currentSearchKeyword!= searchKeyword;
+    _searcKeywordChanged = _currentSearchKeyword != searchKeyword;
     _currentSearchKeyword = searchKeyword;
 
-    if(_currentSearchKeyword==null){
-
+    if (_currentSearchKeyword == null) {
       CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
       suggestions.clear();
     }
@@ -309,7 +303,7 @@ class CometChatMessageComposerController extends GetxController
 
   final ScrollController _controller = ScrollController();
 
-// This is what you're looking for!
+  /// This is what you're looking for!
   void _scrollDown() {
     _controller.animateTo(
       _controller.position.maxScrollExtent,
@@ -336,7 +330,6 @@ class CometChatMessageComposerController extends GetxController
     textEditingController.dispose();
     focusNode.removeListener(_onFocusChange);
     focusNode.dispose();
-    // Cancel the subscription
     _subscription.cancel();
     super.onClose();
   }
@@ -345,26 +338,30 @@ class CometChatMessageComposerController extends GetxController
 
   Widget getList(
       BuildContext context, TextEditingController textEditingController) {
-    CometChatTheme _theme = cometChatTheme;
+    CometChatTheme theme = cometChatTheme;
 
     return Container(
       constraints: BoxConstraints(
-        maxHeight:suggestions.length>4? 220: suggestions.isEmpty?50:suggestions.length * 55.0,
+        maxHeight: suggestions.length > 4
+            ? 220
+            : suggestions.isEmpty
+                ? 50
+                : suggestions.length * 55.0,
       ),
       decoration: BoxDecoration(
-        color: _theme.palette.backGroundColor.light,
+        color: theme.palette.backGroundColor.light,
         border: Border(
-            top: BorderSide(
-                color: _theme.palette.getAccent100(), width: .72)),
+            top: BorderSide(color: theme.palette.getAccent100(), width: .72)),
       ),
       child: ListView.separated(
         controller: _controller,
         itemCount: hasMore ? suggestions.length + 1 : suggestions.length,
         itemBuilder: (context, index) {
           if (hasMore && index >= suggestions.length) {
-
-            for(var element in _formatters){
-              if(_currentSearchKeyword!=null && _currentSearchKeyword!.isNotEmpty && element.trackingCharacter==_currentSearchKeyword![0]) {
+            for (var element in _formatters) {
+              if (_currentSearchKeyword != null &&
+                  _currentSearchKeyword!.isNotEmpty &&
+                  element.trackingCharacter == _currentSearchKeyword![0]) {
                 element.onScrollToBottom(textEditingController);
               }
             }
@@ -372,7 +369,9 @@ class CometChatMessageComposerController extends GetxController
             return const SizedBox();
           }
 
-          return index<suggestions.length? getListItem(suggestions[index], _theme):const SizedBox();
+          return index < suggestions.length
+              ? getListItem(suggestions[index], theme)
+              : const SizedBox();
         },
         separatorBuilder: (BuildContext context, int index) {
           if (index >= suggestions.length - 1) {
@@ -381,7 +380,7 @@ class CometChatMessageComposerController extends GetxController
           return Divider(
             height: 1,
             thickness: 1,
-            color: _theme.palette.getAccent100(),
+            color: theme.palette.getAccent100(),
           );
         },
       ),
@@ -389,16 +388,14 @@ class CometChatMessageComposerController extends GetxController
   }
 
   Widget getListItem(SuggestionListItem item, CometChatTheme theme) {
-
     ListTile tile = ListTile(
       onTap: () {
         if (item.onTap != null) {
           item.onTap!();
         }
         suggestions.clear();
-        _currentSearchKeyword=null;
+        _currentSearchKeyword = null;
         _searcKeywordChanged = true;
-
       },
       title: Text(
         item.title ?? "",
@@ -408,10 +405,12 @@ class CometChatMessageComposerController extends GetxController
             fontFamily: theme.typography.body.fontFamily,
             color: theme.palette.getAccent()),
       ),
-      leading: item.avatarName ==null && item.avatarUrl==null? null :  CometChatAvatar(
-        name: item.avatarName,
-        image: item.avatarUrl,
-      ),
+      leading: item.avatarName == null && item.avatarUrl == null
+          ? null
+          : CometChatAvatar(
+              name: item.avatarName,
+              image: item.avatarUrl,
+            ),
     );
 
     return tile;
@@ -434,11 +433,12 @@ class CometChatMessageComposerController extends GetxController
     update();
   }
 
-
   @override
   void showPanel(Map<String, dynamic>? id, CustomUIPosition uiPosition,
       WidgetBuilder child) {
-    print("is for this ID ${id} ${isForThisWidget(id)}");
+    if (kDebugMode) {
+      print("is for this ID $id ${isForThisWidget(id)}");
+    }
     if (isForThisWidget(id) == false) return;
     if (uiPosition == CustomUIPosition.composerBottom) {
       footer = child(context);
@@ -535,21 +535,23 @@ class CometChatMessageComposerController extends GetxController
 
   //-----------------------methods performing API calls-----------------------------
 
-  _checkFormatter(){
-
-      for (var element in _formatters) {
-        if(_currentSearchKeyword==null || (_currentSearchKeyword!=null && _currentSearchKeyword!.isNotEmpty && element.trackingCharacter==_currentSearchKeyword![0])) {
-
-          try{
-            element.onChange(textEditingController, _previousText);
-          }catch (err){
-            if(kDebugMode) {
+  _checkFormatter() {
+    for (var element in _formatters) {
+      if (_currentSearchKeyword == null ||
+          (_currentSearchKeyword != null &&
+              _currentSearchKeyword!.isNotEmpty &&
+              element.trackingCharacter == _currentSearchKeyword![0])) {
+        try {
+          element.onChange(textEditingController, _previousText);
+        } catch (err) {
+          if (kDebugMode) {
             print("error caught in message composer onchange $err");
           }
         }
       }
-      }
+    }
   }
+
   _onTyping() {
     if ((_previousText.isEmpty && textEditingController.text.isNotEmpty) ||
         (_previousText.isNotEmpty && textEditingController.text.isEmpty)) {
@@ -557,20 +559,14 @@ class CometChatMessageComposerController extends GetxController
     }
 
     if (_previousText.length > textEditingController.text.length) {
-
       _checkFormatter();
       _previousText = textEditingController.text;
       return;
     }
 
-
-_checkFormatter();
-    // mentionsFormatter.onChange(textEditingController, _previousText);
-
-
+    _checkFormatter();
     _previousText = textEditingController.text;
 
-    //emits typing events
     if (disableTypingEvents == false) {
       if (_isTyping == false) {
         CometChat.startTyping(
@@ -610,14 +606,12 @@ _checkFormatter();
       category: CometChatMessageCategory.message,
     );
 
-    // textMessage = mentionsFormatter.handlePreMessageSend(context, textMessage);
     handlePreMessageSend(textMessage);
 
     oldMessage = null;
     messagePreviewTitle = '';
     messagePreviewSubtitle = '';
     previewMessageMode = PreviewMessageMode.none;
-    // textEditingController.text = '';
     textEditingController.clear();
     _previousText = '';
     update();
@@ -836,14 +830,15 @@ _checkFormatter();
   //triggers message preview view of the message composer view
   previewMessage(BaseMessage message, PreviewMessageMode mode) {
     if (mode == PreviewMessageMode.edit) {
-      messagePreviewTitle = cc.Translations.of(context).edit_message;
+      messagePreviewTitle = cc.Translations.of(context).editMessage;
     } else if (mode == PreviewMessageMode.reply) {
       messagePreviewTitle = message.sender?.name;
     }
     if (message is TextMessage) {
       String previewText = message.text;
       if (message.mentionedUsers.isNotEmpty) {
-        previewText = CometChatMentionsFormatter.getTextWithMentions(message.text, message.mentionedUsers);
+        previewText = CometChatMentionsFormatter.getTextWithMentions(
+            message.text, message.mentionedUsers);
       }
       messagePreviewSubtitle = previewText;
     } else {
@@ -857,12 +852,13 @@ _checkFormatter();
       _previousText = message.text;
 
       if (message.mentionedUsers.isNotEmpty) {
-
-        int mentionFormatterIndex = _formatters.indexWhere((element) => element.trackingCharacter=='@');
-        if(mentionFormatterIndex!=-1) {
-          CometChatMentionsFormatter mentionsFormatter = _formatters[mentionFormatterIndex] as CometChatMentionsFormatter;
-          mentionsFormatter.onMessageEdit(
-              textEditingController, mentionedUsers: message.mentionedUsers);
+        int mentionFormatterIndex = _formatters
+            .indexWhere((element) => element.trackingCharacter == '@');
+        if (mentionFormatterIndex != -1) {
+          CometChatMentionsFormatter mentionsFormatter =
+              _formatters[mentionFormatterIndex] as CometChatMentionsFormatter;
+          mentionsFormatter.onMessageEdit(textEditingController,
+              mentionedUsers: message.mentionedUsers);
         }
       }
     }

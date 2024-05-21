@@ -49,7 +49,6 @@ class CometChatDetailsController extends GetxController
   ///[leaveGroupDialogStyle] used to customize the dialog box that pops up when trying to leave group
   final ConfirmDialogStyle? leaveGroupDialogStyle;
 
-  // class variables-----------------
   late CometChatTheme theme;
   late String _dateString;
   late String _userListener;
@@ -169,7 +168,8 @@ class CometChatDetailsController extends GetxController
       String scopeChangedTo,
       String scopeChangedFrom,
       Group group) {
-    if (group.guid == this.group?.guid) {
+    if (group.guid == this.group?.guid && updatedUser.uid == loggedInUser?.uid) {
+      this.group?.scope = scopeChangedTo;
       update();
     }
   }
@@ -526,7 +526,7 @@ class CometChatDetailsController extends GetxController
       CometChatDetailsControllerProtocol state) {
     if (group != null && (group.owner == loggedInUser?.uid)) {
       _showConfirmationDialog(
-          messageText: Translations.of(context).delete_confirm,
+          messageText: Translations.of(context).deleteConfirm,
           confirmButtonText: Translations.of(context).delete.toUpperCase(),
           confirmButtonTextStyle: TextStyle(
               fontSize: theme.typography.text2.fontSize,
@@ -542,15 +542,15 @@ class CometChatDetailsController extends GetxController
 
       if (group.owner == loggedInUser?.uid) {
         _showConfirmationDialog(
-            messageText: Translations.of(context).transfer_confirm,
+            messageText: Translations.of(context).transferOwnership,
             confirmButtonText: "TRANSFER OWNERSHIP",
             confirmButtonTextStyle:
                 TextStyle(fontSize: theme.typography.text2.fontSize),
             onConfirm: _onTransferOwnershipConfirmed);
       } else {
         _showConfirmationDialog(
-          messageText: Translations.of(context).leave_confirm,
-          confirmButtonText: Translations.of(context).leave_group.toUpperCase(),
+          messageText: Translations.of(context).leaveConfirm,
+          confirmButtonText: Translations.of(context).leaveGroup.toUpperCase(),
           confirmButtonTextStyle: TextStyle(
               fontSize: theme.typography.text2.fontSize,
               color: theme.palette.error.light),
@@ -684,11 +684,11 @@ class CometChatDetailsController extends GetxController
   }
 
   @override
-  useOption(CometChatDetailsOption _option, String sectionId) {
-    if (_option.onClick != null) {
+  useOption(CometChatDetailsOption option, String sectionId) {
+    if (option.onClick != null) {
       debugPrint(
-          "option clicked on ID is ${_option.id} and title is ${_option.title}");
-      _option.onClick!(user, group, sectionId, this);
+          "option clicked on ID is ${option.id} and title is ${option.title}");
+      option.onClick!(user, group, sectionId, this);
     }
   }
 

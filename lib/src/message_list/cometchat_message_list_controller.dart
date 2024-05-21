@@ -21,37 +21,35 @@ class CometChatMessageListController
         ConnectionListener
     implements CometChatMessageListControllerProtocol {
   //--------------------Constructor-----------------------
-  CometChatMessageListController({
-    required this.messagesBuilderProtocol,
-    this.user,
-    this.group,
-    this.customIncomingMessageSound,
-    this.customIncomingMessageSoundPackage,
-    this.disableSoundForMessages = false,
-    this.hideDeletedMessage = false,
-    this.scrollToBottomOnNewMessage = false,
-    ScrollController? scrollController,
-    this.stateCallBack,
-    OnError? onError,
-    this.onThreadRepliesClick,
-    this.messageTypes,
-    this.disableReceipt,
-    this.theme,
-    // this.snackBarConfiguration,
-    this.messageInformationConfiguration,
-    this.emojiKeyboardStyle,
-    this.disableReactions,
-    this.textFormatters,
-    this.disableMentions
-  }) : super(
-      builderProtocol: user != null
-          ? (messagesBuilderProtocol
-        ..requestBuilder.uid = user.uid
-        ..requestBuilder.guid = '')
-          : (messagesBuilderProtocol
-        ..requestBuilder.guid = group!.guid
-        ..requestBuilder.uid = ''),
-      onError: onError) {
+  CometChatMessageListController(
+      {required this.messagesBuilderProtocol,
+      this.user,
+      this.group,
+      this.customIncomingMessageSound,
+      this.customIncomingMessageSoundPackage,
+      this.disableSoundForMessages = false,
+      this.hideDeletedMessage = false,
+      this.scrollToBottomOnNewMessage = false,
+      ScrollController? scrollController,
+      this.stateCallBack,
+      super.onError,
+      this.onThreadRepliesClick,
+      this.messageTypes,
+      this.disableReceipt,
+      this.theme,
+      this.messageInformationConfiguration,
+      this.emojiKeyboardStyle,
+      this.disableReactions,
+      this.textFormatters,
+      this.disableMentions})
+      : super(
+            builderProtocol: user != null
+                ? (messagesBuilderProtocol
+                  ..requestBuilder.uid = user.uid
+                  ..requestBuilder.guid = '')
+                : (messagesBuilderProtocol
+                  ..requestBuilder.guid = group!.guid
+                  ..requestBuilder.uid = '')) {
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
     _messageListenerId = "${dateStamp}user_listener";
     _groupListenerId = "${dateStamp}group_listener";
@@ -135,8 +133,6 @@ class CometChatMessageListController
 
   late Map<String, dynamic> messageListId;
 
-  // final SnackBarConfiguration? snackBarConfiguration;
-
   MessageInformationConfiguration? messageInformationConfiguration;
 
   bool inInitialized = false;
@@ -182,7 +178,7 @@ class CometChatMessageListController
 
   createTemplateMap() {
     List<CometChatMessageTemplate> localTypes =
-    CometChatUIKit.getDataSource().getAllMessageTemplates(theme: theme);
+        CometChatUIKit.getDataSource().getAllMessageTemplates(theme: theme);
 
     messageTypes?.forEach((element) {
       templateMap["${element.category}_${element.type}"] = element;
@@ -247,7 +243,6 @@ class CometChatMessageListController
     CometChatCallEvents.removeCallEventsListener(_uiCallListener);
     CometChat.removeCallListener(_sdkCallListenerId);
     CometChat.removeConnectionListener(_messageListenerId);
-    // removing listeners
     super.onClose();
   }
 
@@ -262,10 +257,10 @@ class CometChatMessageListController
     return element.id;
   }
 
-  Future<Null> getUnreadCount() async {
+  Future<void> getUnreadCount() async {
     if (initialUnreadCount == null) {
       Map<String, Map<String, int>>? resultMap =
-      await CometChat.getUnreadMessageCount();
+          await CometChat.getUnreadMessageCount();
 
       if (resultMap != null) {
         Map<String, int> countMap = {};
@@ -276,7 +271,7 @@ class CometChatMessageListController
           countMap = resultMap["group"] ?? {};
         }
         if (countMap[user?.uid ?? group?.guid] != null) {
-          initialUnreadCount = (countMap[user?.uid ?? group?.guid] as int) ?? 0;
+          initialUnreadCount = (countMap[user?.uid ?? group?.guid] as int);
         } else {
           initialUnreadCount = 0;
         }
@@ -286,7 +281,7 @@ class CometChatMessageListController
 
   @override
   loadMoreElements({bool Function(BaseMessage element)? isIncluded}) async {
-    // "Fetching again"
+    /// "Fetching again"
     isLoading = true;
     BaseMessage? lastMessage;
     loggedInUser ??= await CometChat.getLoggedInUser();
@@ -294,7 +289,7 @@ class CometChatMessageListController
     conversation ??= (await CometChat.getConversation(
         conversationWithId, conversationType, onSuccess: (conversation) {
       if (conversation.lastMessage != null) {
-        // "Marking as read"
+        /// "Marking as read"
         if (kDebugMode) {
           debugPrint("Marking as read from here");
         }
@@ -323,9 +318,8 @@ class CometChatMessageListController
             }
           }
           if (inInitialized == false && list.isNotEmpty) {
-              lastMessage = list[0];
+            lastMessage = list[0];
           }
-          // update();
         }
         update();
       }, onError: (CometChatException e) {
@@ -452,15 +446,15 @@ class CometChatMessageListController
 
   @override
   void onCustomInteractiveMessageReceived(
-      CustomInteractiveMessage cardMessage) {
-    if (_messageCategoryTypeCheck(cardMessage)) {
-      _onMessageReceived(cardMessage);
+      CustomInteractiveMessage customInteractiveMessage) {
+    if (_messageCategoryTypeCheck(customInteractiveMessage)) {
+      _onMessageReceived(customInteractiveMessage);
     }
   }
 
   @override
   void onInteractionGoalCompleted(InteractionReceipt receipt) {
-    debugPrint("interaction completed ${receipt}");
+    debugPrint("interaction completed $receipt");
     if (receipt.sender.uid == loggedInUser?.uid) {
       for (int i = 0; i < list.length; i++) {
         if (list[i].id == receipt.messageId) {
@@ -591,8 +585,7 @@ class CometChatMessageListController
           //TODO: use scopeChangedTo instead of scopeChangedFrom when the bug in SDK is fixed
           this.group?.scope = scopeChangedFrom;
           debugPrint(
-              'scope of ${updatedUser
-                  .name} changed to $scopeChangedFrom from $scopeChangedTo');
+              'scope of ${updatedUser.name} changed to $scopeChangedFrom from $scopeChangedTo');
         }
         _onMessageReceived(action);
       }
@@ -627,7 +620,8 @@ class CometChatMessageListController
 
   @override
   void ccMessageEdited(BaseMessage message, MessageEditStatus status) {
-    if ((_checkIfSameConversationForReceivedMessage(message) || _checkIfSameConversationForSenderMessage(message)) &&
+    if ((_checkIfSameConversationForReceivedMessage(message) ||
+            _checkIfSameConversationForSenderMessage(message)) &&
         status == MessageEditStatus.success) {
       updateElement(message);
     }
@@ -660,7 +654,7 @@ class CometChatMessageListController
   @override
   updateMessageWithMuid(BaseMessage message) {
     int matchingIndex =
-    list.indexWhere((element) => (element.muid == message.muid));
+        list.indexWhere((element) => (element.muid == message.muid));
     if (matchingIndex != -1) {
       list[matchingIndex] = message;
       update();
@@ -671,8 +665,6 @@ class CometChatMessageListController
   deleteMessage(BaseMessage message) async {
     await CometChat.deleteMessage(message.id, onSuccess: (updatedMessage) {
       updatedMessage.deletedAt ??= DateTime.now();
-      // CometChatMessageEvents.ccMessageDeleted(
-      //     updatedMessage, EventStatus.success);
       message.deletedAt = DateTime.now();
       message.deletedBy = loggedInUser?.uid;
       CometChatMessageEvents.ccMessageDeleted(
@@ -695,7 +687,7 @@ class CometChatMessageListController
           sound: Sound.incomingMessage,
           customSound: customIncomingMessageSound,
           packageName: customIncomingMessageSound == null ||
-              customIncomingMessageSound == ""
+                  customIncomingMessageSound == ""
               ? UIConstants.packageName
               : customIncomingMessageSoundPackage);
     }
@@ -714,8 +706,8 @@ class CometChatMessageListController
   _onMessageReceived(BaseMessage message,
       {bool playSound = true, bool markRead = true}) {
     if ((message.conversationId == conversationId ||
-        _checkIfSameConversationForReceivedMessage(message) ||
-        _checkIfSameConversationForSenderMessage(message)) &&
+            _checkIfSameConversationForReceivedMessage(message) ||
+            _checkIfSameConversationForSenderMessage(message)) &&
         message.parentMessageId == threadMessageParentId) {
       addElement(message);
       if (playSound) {
@@ -742,7 +734,7 @@ class CometChatMessageListController
         _playSound();
       }
       int matchingIndex =
-      list.indexWhere((element) => (element.id == message.parentMessageId));
+          list.indexWhere((element) => (element.id == message.parentMessageId));
       if (matchingIndex != -1) {
         list[matchingIndex].replyCount++;
       }
@@ -753,7 +745,7 @@ class CometChatMessageListController
   _onMessageFromLoggedInUser(BaseMessage message,
       {bool playSound = true, bool markRead = true}) {
     if ((message.conversationId == conversationId ||
-        _checkIfSameConversationForSenderMessage(message)) &&
+            _checkIfSameConversationForSenderMessage(message)) &&
         message.parentMessageId == threadMessageParentId) {
       addElement(message);
       debugPrint("playSound  = $playSound");
@@ -785,7 +777,7 @@ class CometChatMessageListController
       }
 
       int matchingIndex =
-      list.indexWhere((element) => (element.id == message.parentMessageId));
+          list.indexWhere((element) => (element.id == message.parentMessageId));
       if (matchingIndex != -1) {
         list[matchingIndex].replyCount++;
       }
@@ -810,19 +802,15 @@ class CometChatMessageListController
     }
   }
 
-  // _replyMessage(BaseMessage message, CometChatMessageListControllerProtocol state) {
-  //   CometChatMessageEvents.onMessageReply(message);
-  // }
-
   _shareMessage(
       BaseMessage message, CometChatMessageListControllerProtocol state) async {
-    // List<String> types = CometChatUIKit.getDataSource().getAllMessageTypes();
     //share
     if (message is TextMessage) {
       String text = message.text;
       //if message has mentions we need to send the text with mentions and not the original text
-      if(message.mentionedUsers.isNotEmpty) {
-        text = CometChatMentionsFormatter.getTextWithMentions(message.text,message.mentionedUsers);
+      if (message.mentionedUsers.isNotEmpty) {
+        text = CometChatMentionsFormatter.getTextWithMentions(
+            message.text, message.mentionedUsers);
       }
       await UIConstants.channel.invokeMethod(
         "shareMessage",
@@ -847,8 +835,9 @@ class CometChatMessageListController
       BaseMessage message, CometChatMessageListControllerProtocol state) {
     if (message is TextMessage) {
       String text = message.text;
-      if(message.mentionedUsers.isNotEmpty) {
-        text = CometChatMentionsFormatter.getTextWithMentions(message.text,message.mentionedUsers);
+      if (message.mentionedUsers.isNotEmpty) {
+        text = CometChatMentionsFormatter.getTextWithMentions(
+            message.text, message.mentionedUsers);
       }
       Clipboard.setData(ClipboardData(text: text));
     }
@@ -865,7 +854,7 @@ class CometChatMessageListController
           template: templateMap["${message.category}_${message.type}"],
           title: messageInformationConfiguration?.title,
           receiptDatePattern:
-          messageInformationConfiguration?.receiptDatePattern,
+              messageInformationConfiguration?.receiptDatePattern,
           readIcon: messageInformationConfiguration?.readIcon,
           listItemView: messageInformationConfiguration?.listItemView,
           listItemStyle: messageInformationConfiguration?.listItemStyle,
@@ -875,7 +864,7 @@ class CometChatMessageListController
           onClose: messageInformationConfiguration?.onClose,
           theme: messageInformationConfiguration?.theme ?? theme,
           messageInformationStyle:
-          messageInformationConfiguration?.messageInformationStyle,
+              messageInformationConfiguration?.messageInformationStyle,
           subTitleView: messageInformationConfiguration?.subTitleView,
           emptyStateText: messageInformationConfiguration?.emptyStateText,
           emptyStateView: messageInformationConfiguration?.emptyStateView,
@@ -929,8 +918,7 @@ class CometChatMessageListController
       await CometChatUIKit.sendTextMessage(message,
           onSuccess: (BaseMessage returnedMessage) {},
           onError: (CometChatException excep) {
-            // Get.showSnackbar(snackbar)
-          });
+      });
     } else if (copyFromMessage is MediaMessage) {
       if (copyFromMessage.attachment == null) return;
 
@@ -940,7 +928,7 @@ class CometChatMessageListController
       String fileMimeType = copyFromMessage.attachment!.fileMimeType;
 
       Attachment attachment =
-      Attachment(fileUrl, fileName, fileExtension, fileMimeType, null);
+          Attachment(fileUrl, fileName, fileExtension, fileMimeType, null);
 
       MediaMessage message = MediaMessage(
           receiverUid: user?.uid ?? group?.guid ?? "",
@@ -957,8 +945,7 @@ class CometChatMessageListController
       await CometChatUIKit.sendMediaMessage(message,
           onSuccess: (BaseMessage returnedMessage) {},
           onError: (CometChatException excep) {
-            // Get.showSnackbar(snackbar)
-          });
+      });
     } else if (copyFromMessage is CustomMessage) {
       CustomMessage message = CustomMessage(
         customData: copyFromMessage.customData,
@@ -976,14 +963,12 @@ class CometChatMessageListController
       await CometChatUIKit.sendCustomMessage(message,
           onSuccess: (BaseMessage returnedMessage) {},
           onError: (CometChatException excep) {
-            // Get.showSnackbar(snackbar)
-          });
+      });
     }
   }
 
-
   Function(BaseMessage message, CometChatMessageListControllerProtocol state)?
-  getActionFunction(String id) {
+      getActionFunction(String id) {
     switch (id) {
       case MessageOptionConstants.editMessage:
         {
@@ -993,10 +978,6 @@ class CometChatMessageListController
         {
           return _delete;
         }
-    // case MessageOptionConstants.replyMessage:
-    //   {
-    //     return _replyMessage;
-    //   }
       case MessageOptionConstants.shareMessage:
         {
           return _shareMessage;
@@ -1005,14 +986,6 @@ class CometChatMessageListController
         {
           return _copyMessage;
         }
-    // case MessageOptionConstants.forwardMessage:
-    //   {
-    //     return _forwardMessage;
-    //   }
-    // case MessageOptionConstants.replyInThreadMessage:
-    //   {
-    //     return _replyInThread;
-    //   }
       case MessageOptionConstants.messageInformation:
         {
           return _messageInformation;
@@ -1044,14 +1017,14 @@ class CometChatMessageListController
 
   bool _checkIfSameConversationForReceivedMessage(BaseMessage message) {
     return (message.receiverType == CometChatReceiverType.user &&
-        user?.uid == message.sender?.uid) ||
+            user?.uid == message.sender?.uid) ||
         (message.receiverType == CometChatReceiverType.group &&
             group?.guid == message.receiverUid);
   }
 
   bool _checkIfSameConversationForSenderMessage(BaseMessage message) {
     return (message.receiverType == CometChatReceiverType.user &&
-        user?.uid == message.receiverUid) ||
+            user?.uid == message.receiverUid) ||
         (message.receiverType == CometChatReceiverType.group &&
             group?.guid == message.receiverUid);
   }
@@ -1074,7 +1047,7 @@ class CometChatMessageListController
         thumbnail = false;
         name = false;
         readReceipt = false;
-        showTime=false;
+        showTime = false;
         alignment0 = BubbleAlignment.center;
       }
       //-----if message sent by me-----
@@ -1107,7 +1080,7 @@ class CometChatMessageListController
         name = false;
         readReceipt = false;
         alignment0 = BubbleAlignment.center;
-        showTime=false;
+        showTime = false;
       }
       //-----if message sent by me-----
       else if (isMessageSentByMe) {
@@ -1132,17 +1105,16 @@ class CometChatMessageListController
       }
     }
 
-    if (disableReceipt == true || messageObject.deletedAt!=null) {
+    if (disableReceipt == true || messageObject.deletedAt != null) {
       readReceipt = false;
     }
 
-
     return BubbleContentVerifier(
-        showThumbnail: thumbnail,
-        showTime: showTime,
-        showName: name,
-        showReadReceipt: readReceipt,
-        alignment: alignment0,
+      showThumbnail: thumbnail,
+      showTime: showTime,
+      showName: name,
+      showReadReceipt: readReceipt,
+      alignment: alignment0,
     );
   }
 
@@ -1185,8 +1157,8 @@ class CometChatMessageListController
       return true; //if passed id is null , that means for all composer
     }
     if ((id['uid'] != null &&
-        id['uid'] ==
-            user?.uid) //checking if uid or guid match composer's uid or guid
+            id['uid'] ==
+                user?.uid) //checking if uid or guid match composer's uid or guid
         ||
         (id['guid'] != null && id['guid'] == group?.guid)) {
       if (id['parentMessageId'] != null) {
@@ -1327,76 +1299,76 @@ class CometChatMessageListController
             CometChatUIKit.getDataSource().getAllMessageCategories();
     List<String> types = messagesBuilderProtocol.requestBuilder.types ??
         CometChatUIKit.getDataSource().getAllMessageTypes();
-    bool hideReplies = messagesBuilderProtocol.requestBuilder.hideReplies ?? true;
+    bool hideReplies =
+        messagesBuilderProtocol.requestBuilder.hideReplies ?? true;
 
-    // used to fetch the old messages from the server starting from the last message in the list that have been edited or deleted
+    /// used to fetch the old messages from the server starting from the last message in the list that have been edited or deleted
     types.add(MessageTypeConstants.message);
 
     while (hasMoreItems) {
-      //the following message request fetches the new messages received after the last message sent or received recorded in the list.
+      ///The following message request fetches the new messages received after the last message sent or received recorded in the list.
       MessagesRequest messageRequest = (MessagesRequestBuilder()
-        ..uid = user?.uid
-        ..guid = group?.guid
-        ..categories = categories
-        ..types = types
-        ..messageId = messageId
-        ..hideReplies = hideReplies
-      )
+            ..uid = user?.uid
+            ..guid = group?.guid
+            ..categories = categories
+            ..types = types
+            ..messageId = messageId
+            ..hideReplies = hideReplies)
           .build();
       try {
         await messageRequest.fetchNext(
             onSuccess: (List<BaseMessage> fetchedList) {
-              //if fetched messages list is empty, it means there are no new messages and hence stop proceeding.
-              if (fetchedList.isNotEmpty) {
-                hasMoreItems = true;
-                for (BaseMessage message in fetchedList) {
-                  if (message is InteractiveMessage) {
-                    message = InteractiveMessageUtils
-                        .getSpecificMessageFromInteractiveMessage(message);
-                  }
-                  if (message.parentMessageId != 0) {
-                    updateMessageThreadCount(message.parentMessageId);
-                  } else if (message is cc.Action) {
-                    if (message.type == MessageTypeConstants.message &&
-                        (message.action == ActionMessageTypeConstants.edited ||
-                            message.action == ActionMessageTypeConstants.deleted) &&
-                        message.actionOn is BaseMessage) {
-                      BaseMessage actionOn = message.actionOn as BaseMessage;
-                      int matchingIndex =
+          //if fetched messages list is empty, it means there are no new messages and hence stop proceeding.
+          if (fetchedList.isNotEmpty) {
+            hasMoreItems = true;
+            for (BaseMessage message in fetchedList) {
+              if (message is InteractiveMessage) {
+                message = InteractiveMessageUtils
+                    .getSpecificMessageFromInteractiveMessage(message);
+              }
+              if (message.parentMessageId != 0) {
+                updateMessageThreadCount(message.parentMessageId);
+              } else if (message is cc.Action) {
+                if (message.type == MessageTypeConstants.message &&
+                    (message.action == ActionMessageTypeConstants.edited ||
+                        message.action == ActionMessageTypeConstants.deleted) &&
+                    message.actionOn is BaseMessage) {
+                  BaseMessage actionOn = message.actionOn as BaseMessage;
+                  int matchingIndex =
                       list.indexWhere((element) => (element.id == actionOn.id));
-                      if (matchingIndex != -1) {
-                        list[matchingIndex] = actionOn;
-                        update();
-                      }
-                    } else if (message.sender?.uid != null &&
-                        loggedInUser?.uid != null &&
-                        message.sender?.uid == loggedInUser?.uid) {
-                      updateMessageWithMuid(message);
-                    } else {
-                      addElement(message);
-                      newUnreadMessageCount++;
-                      update();
-                    }
-                  } else {
-                    for(int i = 0; i < list.length; i++){
-                      if(list[i].muid == message.muid){
-                        list.removeAt(i);
-                        update();
-                        break;
-                      }
-                    }
-                    addElement(message);
-                      newUnreadMessageCount++;
-                      update();
+                  if (matchingIndex != -1) {
+                    list[matchingIndex] = actionOn;
+                    update();
+                  }
+                } else if (message.sender?.uid != null &&
+                    loggedInUser?.uid != null &&
+                    message.sender?.uid == loggedInUser?.uid) {
+                  updateMessageWithMuid(message);
+                } else {
+                  addElement(message);
+                  newUnreadMessageCount++;
+                  update();
+                }
+              } else {
+                for (int i = 0; i < list.length; i++) {
+                  if (list[i].muid == message.muid) {
+                    list.removeAt(i);
+                    update();
+                    break;
                   }
                 }
-                messageId = fetchedList.last.id;
-                return;
-              } else {
-                hasMoreItems = false;
+                addElement(message);
+                newUnreadMessageCount++;
                 update();
               }
-            }, onError: (CometChatException e) {
+            }
+            messageId = fetchedList.last.id;
+            return;
+          } else {
+            hasMoreItems = false;
+            update();
+          }
+        }, onError: (CometChatException e) {
           hasMoreItems = false;
         });
       } catch (e, _) {
@@ -1428,21 +1400,21 @@ class CometChatMessageListController
 
   @override
   void onMessageReactionAdded(ReactionEvent reactionEvent) {
-    if(disableReactions!=true){
+    if (disableReactions != true) {
       _updateMessageOnReaction(reactionEvent, ReactionAction.reactionAdded);
     }
   }
 
   @override
   void onMessageReactionRemoved(ReactionEvent reactionEvent) {
-    if(disableReactions!=true) {
+    if (disableReactions != true) {
       _updateMessageOnReaction(reactionEvent, ReactionAction.reactionRemoved);
     }
   }
 
-  _updateMessageOnReaction(ReactionEvent reactionEvent,String reactionAction){
+  _updateMessageOnReaction(ReactionEvent reactionEvent, String reactionAction) {
     Reaction? messageReaction = reactionEvent.reaction;
-    if(messageReaction!=null){
+    if (messageReaction != null) {
       int? messageId = messageReaction.messageId;
       if (messageId == null) return;
       BaseMessage? message =
@@ -1458,84 +1430,85 @@ class CometChatMessageListController
     }
   }
 
-  handleReactionPress(BaseMessage message, String? reaction, List<ReactionCount> reactionList){
-    if(reaction==null || reaction.isEmpty) return;
-    int reactionIndex = reactionList.indexWhere((reactionCount) => reactionCount.reaction==reaction && reactionCount.reactedByMe==true);
-    if(reactionIndex!=-1) {
+  handleReactionPress(
+      BaseMessage message, String? reaction, List<ReactionCount> reactionList) {
+    if (reaction == null || reaction.isEmpty) return;
+    int reactionIndex = reactionList.indexWhere((reactionCount) =>
+        reactionCount.reaction == reaction &&
+        reactionCount.reactedByMe == true);
+    if (reactionIndex != -1) {
       updateElement(updateReactionsOnMessage(message, reaction, false));
-      // remove reaction
-      CometChat.removeReaction(message.id, reaction,
-      onError: (error) {
-        updateElement(updateReactionsOnMessage(message, reaction, true));
-      }, onSuccess: (BaseMessage ) {  },
+      /// remove reaction
+      CometChat.removeReaction(
+        message.id,
+        reaction,
+        onError: (error) {
+          updateElement(updateReactionsOnMessage(message, reaction, true));
+        },
+        onSuccess: (message) {},
       );
-    }else{
-      // add reaction
+    } else {
+      /// add reaction
       updateElement(updateReactionsOnMessage(message, reaction, true));
-      CometChat.addReaction(message.id, reaction,
+      CometChat.addReaction(
+        message.id,
+        reaction,
         onError: (error) {
           updateElement(updateReactionsOnMessage(message, reaction, false));
-        }, onSuccess: (BaseMessage ) {  },
+        },
+        onSuccess: (message) {},
       );
     }
   }
 
-  void addReactionIconTap(BaseMessage message) async{
+  void addReactionIconTap(BaseMessage message) async {
     Navigator.of(context).pop();
-    String? reaction =
-        await showCometChatEmojiKeyboard(
-      context: context,
-          unselectedCategoryIconColor: emojiKeyboardStyle?.unselectedCategoryIconColor,
-          selectedCategoryIconColor: emojiKeyboardStyle?.selectedCategoryIconColor,
-          dividerColor: emojiKeyboardStyle?.dividerColor,
-          categoryLabel: emojiKeyboardStyle?.categoryLabelStyle,
-          titleStyle: emojiKeyboardStyle?.titleStyle,
-          backgroundColor: emojiKeyboardStyle?.backgroundColor
-    );
+    String? reaction = await showCometChatEmojiKeyboard(
+        context: context,
+        unselectedCategoryIconColor:
+            emojiKeyboardStyle?.unselectedCategoryIconColor,
+        selectedCategoryIconColor:
+            emojiKeyboardStyle?.selectedCategoryIconColor,
+        dividerColor: emojiKeyboardStyle?.dividerColor,
+        categoryLabel: emojiKeyboardStyle?.categoryLabelStyle,
+        titleStyle: emojiKeyboardStyle?.titleStyle,
+        backgroundColor: emojiKeyboardStyle?.backgroundColor);
 
     if (reaction != null) {
-
       handleReactionPress(message, reaction, message.reactions);
     }
   }
 
+  void onReactionTap(BaseMessage message, String? reaction) async {
+    if (reaction == null || reaction.isEmpty) return;
 
-
-  void onReactionTap(BaseMessage message, String? reaction) async{
-  if(reaction==null ||reaction.isEmpty) return;
-
-  handleReactionPress(message, reaction, message.reactions);
+    handleReactionPress(message, reaction, message.reactions);
   }
 
-  BaseMessage updateReactionsOnMessage(BaseMessage message, String reaction, bool add){
-
-    ReactionCount reactionCount = ReactionCount(
-      reaction: reaction,
-      count: 1,
-      reactedByMe: true
-    );
-    int match = message.reactions.indexWhere((element) => element.reaction==reaction);
-    if(add){
-      if(match==-1){
+  BaseMessage updateReactionsOnMessage(
+      BaseMessage message, String reaction, bool add) {
+    ReactionCount reactionCount =
+        ReactionCount(reaction: reaction, count: 1, reactedByMe: true);
+    int match =
+        message.reactions.indexWhere((element) => element.reaction == reaction);
+    if (add) {
+      if (match == -1) {
         message.reactions.add(reactionCount);
-      } else if(message.reactions[match].reactedByMe==false){
-        message.reactions[match].reactedByMe =true;
-        if(message.reactions[match].count!=null) {
+      } else if (message.reactions[match].reactedByMe == false) {
+        message.reactions[match].reactedByMe = true;
+        if (message.reactions[match].count != null) {
           message.reactions[match].count = message.reactions[match].count! + 1;
         }
       }
-    }else{
-      if(match!=-1 && message.reactions[match].reactedByMe==true) {
-
-        if(message.reactions[match].count==1) {
+    } else {
+      if (match != -1 && message.reactions[match].reactedByMe == true) {
+        if (message.reactions[match].count == 1) {
           message.reactions.removeAt(match);
-
         } else {
           message.reactions[match].reactedByMe = false;
           if (message.reactions[match].count != null) {
             message.reactions[match].count =
                 message.reactions[match].count! - 1;
-
           }
         }
       }
@@ -1544,12 +1517,11 @@ class CometChatMessageListController
     return message;
   }
 
-
-  // Validates if the message's category and type match allowed values.
-  // This method checks against categories and types from the request builder,
-  // falling back to default values from the data source if none are provided.
-  // @param message The message to validate.
-  // @return True if both category and type are allowed, false otherwise.
+  /// Validates if the message's category and type match allowed values.
+  /// This method checks against categories and types from the request builder,
+  /// falling back to default values from the data source if none are provided.
+  /// @param message The message to validate.
+  /// @return True if both category and type are allowed, false otherwise.
   bool _messageCategoryTypeCheck(BaseMessage message) {
     List<String> categories =
         messagesBuilderProtocol.requestBuilder.categories ??
@@ -1557,40 +1529,42 @@ class CometChatMessageListController
     List<String> types = messagesBuilderProtocol.requestBuilder.types ??
         CometChatUIKit.getDataSource().getAllMessageTypes();
 
-    return categories.contains(message.category) && types.contains(message.type);
+    return categories.contains(message.category) &&
+        types.contains(message.type);
   }
 
-
-  void initializeTextFormatters(){
+  void initializeTextFormatters() {
     List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
 
-    if(textFormatters.isEmpty){
-      textFormatters = CometChatUIKit.getDataSource().getDefaultTextFormatters();
-    }else if(textFormatters.indexWhere((element) => element is CometChatMentionsFormatter)==-1 && disableMentions!=true){
+    if (textFormatters.isEmpty) {
+      textFormatters =
+          CometChatUIKit.getDataSource().getDefaultTextFormatters();
+    } else if (textFormatters.indexWhere(
+                (element) => element is CometChatMentionsFormatter) ==
+            -1 &&
+        disableMentions != true) {
       textFormatters.add(CometChatMentionsFormatter());
     }
 
-
     if (disableMentions == true) {
-      textFormatters.removeWhere((
-          element) => element is CometChatMentionsFormatter);
+      textFormatters
+          .removeWhere((element) => element is CometChatMentionsFormatter);
     }
 
     this.textFormatters = textFormatters;
-
   }
 
-  List<CometChatTextFormatter> getTextFormatters(BaseMessage message, CometChatTheme theme){
+  List<CometChatTextFormatter> getTextFormatters(
+      BaseMessage message, CometChatTheme theme) {
     List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
-    if(message is TextMessage){
-      for(CometChatTextFormatter textFormatter in textFormatters){
+    if (message is TextMessage) {
+      for (CometChatTextFormatter textFormatter in textFormatters) {
         textFormatter.message = message;
         textFormatter.theme = theme;
       }
     }
     return textFormatters;
   }
-
 }
 
 class BubbleContentVerifier {
@@ -1607,7 +1581,5 @@ class BubbleContentVerifier {
       this.showReadReceipt = true,
       this.showFooterView = true,
       this.alignment = BubbleAlignment.right,
-      this.showTime = true
-      });
+      this.showTime = true});
 }
-

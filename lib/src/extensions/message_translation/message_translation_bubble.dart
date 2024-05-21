@@ -19,13 +19,12 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 /// ```
 class MessageTranslationBubble extends StatelessWidget {
   const MessageTranslationBubble(
-      {Key? key,
+      {super.key,
       this.translatedText = "",
       this.theme,
       required this.alignment,
       this.child,
-      this.style})
-      : super(key: key);
+      this.style});
 
   ///[translatedText] translated version of messageText
   final String translatedText;
@@ -44,7 +43,7 @@ class MessageTranslationBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,10 +56,10 @@ class MessageTranslationBubble extends StatelessWidget {
                 TextStyle(
                     color: alignment == BubbleAlignment.right
                         ? Colors.white.withOpacity(.8)
-                        : _theme.palette.getAccent600(),
-                    fontWeight: _theme.typography.subtitle2.fontWeight,
-                    fontSize: _theme.typography.subtitle2.fontSize,
-                    fontFamily: _theme.typography.subtitle2.fontFamily),
+                        : theme.palette.getAccent600(),
+                    fontWeight: theme.typography.subtitle2.fontWeight,
+                    fontSize: theme.typography.subtitle2.fontSize,
+                    fontFamily: theme.typography.subtitle2.fontFamily),
           ),
         ),
         Padding(
@@ -71,14 +70,13 @@ class MessageTranslationBubble extends StatelessWidget {
                 TextStyle(
                     color: alignment == BubbleAlignment.right
                         ? Colors.white.withOpacity(.6)
-                        : _theme.palette.getAccent400(),
+                        : theme.palette.getAccent400(),
                     fontWeight: FontWeight.w400,
-                    fontSize: _theme.typography.caption2.fontSize,
-                    fontFamily: _theme.typography.caption2.fontFamily),
+                    fontSize: theme.typography.caption2.fontSize,
+                    fontFamily: theme.typography.caption2.fontFamily),
           ),
         ),
       ],
-      // ),
     );
   }
 }

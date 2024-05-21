@@ -29,15 +29,14 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 /// ```
 class CometChatCollaborativeDocumentBubble extends StatelessWidget {
   const CometChatCollaborativeDocumentBubble(
-      {Key? key,
+      {super.key,
       required this.url,
       this.title,
       this.subtitle,
       this.icon,
       this.buttonText,
       this.style,
-      this.theme})
-      : super(key: key);
+      this.theme});
 
   ///[url] url should be passed to open web view
   final String? url;
@@ -62,7 +61,7 @@ class CometChatCollaborativeDocumentBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
     return Container(
       color: style?.background ?? Colors.transparent,
       constraints: BoxConstraints(
@@ -71,35 +70,35 @@ class CometChatCollaborativeDocumentBubble extends StatelessWidget {
         children: [
           ListTile(
             title: Text(
-              title ?? Translations.of(context).collaborative_document,
+              title ?? Translations.of(context).collaborativeDocument,
               style: style?.titleStyle ??
                   TextStyle(
-                      color: _theme.palette.getAccent(),
-                      fontSize: _theme.typography.text1.fontSize,
-                      fontWeight: _theme.typography.text1.fontWeight),
+                      color: theme.palette.getAccent(),
+                      fontSize: theme.typography.text1.fontSize,
+                      fontWeight: theme.typography.text1.fontWeight),
             ),
             subtitle: Text(
-              subtitle ?? Translations.of(context).open_document_subtitle,
+              subtitle ?? Translations.of(context).openDocumentSubtitle,
               style: style?.subtitleStyle ??
                   TextStyle(
-                      color: _theme.palette.getAccent600(),
-                      fontSize: _theme.typography.subtitle2.fontSize,
-                      fontWeight: _theme.typography.subtitle2.fontWeight),
+                      color: theme.palette.getAccent600(),
+                      fontSize: theme.typography.subtitle2.fontSize,
+                      fontWeight: theme.typography.subtitle2.fontWeight),
             ),
             trailing: icon ??
                 Image.asset(
                   AssetConstants.collaborativeDocument,
                   package: UIConstants.packageName,
-                  color: style?.iconTint ?? _theme.palette.getAccent700(),
+                  color: style?.iconTint ?? theme.palette.getAccent700(),
                 ),
-            tileColor: style?.background ?? _theme.palette.getAccent50(),
+            tileColor: style?.background ?? theme.palette.getAccent50(),
           ),
           const SizedBox(
             height: 9,
           ),
           Divider(
             height: 0,
-            color: style?.dividerColor ?? _theme.palette.getAccent500(),
+            color: style?.dividerColor ?? theme.palette.getAccent500(),
           ),
           GestureDetector(
             onTap: () {
@@ -108,22 +107,22 @@ class CometChatCollaborativeDocumentBubble extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                         builder: (context) => CometChatWebView(
-                              title: title ??
-                                  Translations.of(context)
-                                      .collaborative_document,
-                              webViewUrl: url!,
-                              appBarColor: style?.webViewAppBarColor ??
-                                  _theme.palette.getBackground(),
+                            title: title ??
+                                Translations.of(context).collaborativeDocument,
+                            webViewUrl: url!,
+                            appBarColor: style?.webViewAppBarColor ??
+                                theme.palette.getBackground(),
                             webViewStyle: WebViewStyle(
-                            backIconColor: style?.webViewBackIconColor ??
-                            _theme.palette.getPrimary(),
-                      titleStyle: style?.webViewTitleStyle??TextStyle(
-                          color: _theme.palette.getAccent(),
-                          fontSize: _theme.typography.heading.fontSize,
-                          fontWeight:
-                          _theme.typography.heading.fontWeight),
-                    )
-                            )));
+                              backIconColor: style?.webViewBackIconColor ??
+                                  theme.palette.getPrimary(),
+                              titleStyle: style?.webViewTitleStyle ??
+                                  TextStyle(
+                                      color: theme.palette.getAccent(),
+                                      fontSize:
+                                          theme.typography.heading.fontSize,
+                                      fontWeight:
+                                          theme.typography.heading.fontWeight),
+                            ))));
               }
             },
             child: SizedBox(
@@ -131,12 +130,12 @@ class CometChatCollaborativeDocumentBubble extends StatelessWidget {
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Text(
-                  buttonText ?? Translations.of(context).open_document,
+                  buttonText ?? Translations.of(context).openDocument,
                   style: style?.buttonTextStyle ??
                       TextStyle(
-                          color: _theme.palette.getPrimary(),
-                          fontSize: _theme.typography.name.fontSize,
-                          fontWeight: _theme.typography.name.fontWeight),
+                          color: theme.palette.getPrimary(),
+                          fontSize: theme.typography.name.fontSize,
+                          fontWeight: theme.typography.name.fontWeight),
                 ),
               ),
             ),

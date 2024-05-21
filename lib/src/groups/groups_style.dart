@@ -17,24 +17,18 @@ class GroupsStyle extends BaseStyles {
     this.loadingIconTint,
     this.emptyTextStyle,
     this.errorTextStyle,
-    double? width,
-    double? height,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
+    super.width,
+    super.height,
+    super.background,
+    super.border,
+    super.borderRadius,
+    super.gradient,
     this.subtitleTextStyle,
     this.privateGroupIconBackground,
     this.passwordGroupIconBackground,
     this.selectionIconTint,
     this.submitIconTint,
-  }) : super(
-            width: width,
-            height: height,
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
+  });
 
   ///[titleStyle] provides styling for title text
   final TextStyle? titleStyle;

@@ -21,7 +21,7 @@ import '../../../../../../cometchat_chat_uikit.dart';
 /// ```
 class CometChatStickerKeyboard extends StatefulWidget {
   const CometChatStickerKeyboard(
-      {Key? key,
+      {super.key,
       this.theme,
       this.onStickerTap,
       this.keyboardStyle,
@@ -30,8 +30,7 @@ class CometChatStickerKeyboard extends StatefulWidget {
       this.errorStateText,
       this.emptyStateView,
       this.emptyStateText,
-      this.errorIcon})
-      : super(key: key);
+      this.errorIcon});
 
   ///[theme] sets custom theme
   final CometChatTheme? theme;
@@ -170,7 +169,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                 ),
           ),
           Text(
-            widget.errorStateText ?? Translations.of(context).no_stickers_found,
+            widget.errorStateText ?? Translations.of(context).noStickersFound,
             style: widget.keyboardStyle?.errorTextStyle ??
                 TextStyle(
                     fontSize: 20,
@@ -188,7 +187,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
     } else {
       return Center(
         child: Text(
-          widget.emptyStateText ?? Translations.of(context).no_stickers_found,
+          widget.emptyStateText ?? Translations.of(context).noStickersFound,
           style: widget.keyboardStyle?.emptyTextStyle ??
               TextStyle(
                   fontSize: theme.typography.title1.fontSize,
@@ -304,7 +303,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                                               return Center(
                                                   child: Text(
                                                       Translations.of(context)
-                                                          .something_wrong));
+                                                          .somethingWrong));
                                             },
                                             image: NetworkImage(
                                               sticker.stickerUrl,

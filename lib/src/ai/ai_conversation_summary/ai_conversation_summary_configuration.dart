@@ -4,40 +4,27 @@ import 'package:flutter/material.dart';
 ///[AIConversationSummaryConfiguration] is a data class that has configuration properties
 ///to customize the functionality and appearance of [AIConversationSummaryConfiguration]
 ///
-// title // mobile-only
-// apiConfiguration?: (user?: CometChat.User, group?: CometChat.Group) { };
-// conversationSummaryStyle?: AIConversationSummaryStyle;
-// customView?: (response: Object, closeCallback?: () => void) => Promise<Object>;
-// loadingStateView?: any;
-// errorStateView?:any;
-// emptyStateView?: any;
-// loadingIconURL?:string = loadingIcon;
-// errorIconURL?:string = errorIcon;
-// emptyIconURL?:string = emptyIcon;
-// unreadMessageThreshold?: number = 30;
-// closeIconURL?: string = closeIcon;
 class AIConversationSummaryConfiguration {
-
-  AIConversationSummaryConfiguration({
-      this.customView, this.conversationSummaryStyle,
-    this.title,
-    this.apiConfiguration,
-    this.unreadMessageThreshold = 30,
-    this.theme,
-    this.loadingStateText,
-    this.errorStateText,
-    this.emptyStateText,
-    this.loadingIconUrl,
-    this.loadingStateView,
-    this.errorIconUrl,
-    this.errorStateView,
-    this.emptyStateView,
-    this.emptyIconUrl,
-    this.onCloseIconTap,
-    this.emptyIconPackageName,
-    this.errorIconPackageName,
-    this.loadingIconPackageName
-  });
+  AIConversationSummaryConfiguration(
+      {this.customView,
+      this.conversationSummaryStyle,
+      this.title,
+      this.apiConfiguration,
+      this.unreadMessageThreshold = 30,
+      this.theme,
+      this.loadingStateText,
+      this.errorStateText,
+      this.emptyStateText,
+      this.loadingIconUrl,
+      this.loadingStateView,
+      this.errorIconUrl,
+      this.errorStateView,
+      this.emptyStateView,
+      this.emptyIconUrl,
+      this.onCloseIconTap,
+      this.emptyIconPackageName,
+      this.errorIconPackageName,
+      this.loadingIconPackageName});
 
   ///[conversationStarterStyle] provides styling to the reply view
   final AIConversationSummaryStyle? conversationSummaryStyle;
@@ -53,7 +40,6 @@ class AIConversationSummaryConfiguration {
 
   ///[errorStateText] text to be displayed when error occur
   final String? errorStateText;
-
 
   ///[emptyStateView] returns view for empty state
   final WidgetBuilder? emptyStateView;
@@ -76,7 +62,6 @@ class AIConversationSummaryConfiguration {
   ///[onCloseIconTap] used to set the close icon function
   final Function(Map<String, dynamic> id)? onCloseIconTap;
 
-
   ///[errorIconPackageName] used to set the error icon package name
   final String? errorIconPackageName;
 
@@ -90,7 +75,8 @@ class AIConversationSummaryConfiguration {
   final String? title;
 
   ///[apiConfiguration] set the api configuration
-  final Future<Map<String, dynamic>> Function(User? user,  Group? group)? apiConfiguration;
+  final Future<Map<String, dynamic>> Function(User? user, Group? group)?
+      apiConfiguration;
 
   ///[unreadMessageThreshold] set the unread message count threshold
   final int? unreadMessageThreshold;
@@ -98,36 +84,34 @@ class AIConversationSummaryConfiguration {
   ///[customView] set the custom view
   final Widget Function(String summary, BuildContext context)? customView;
 
-
   /// Copies current [AIConversationSummaryConfiguration] with some changes
-  AIConversationSummaryConfiguration copyWith({
-    AIConversationSummaryStyle? conversationSummaryStyle,
-    CometChatTheme? theme,
-    String? emptyStateText,
-    String? loadingStateText,
-    String? errorStateText,
-    Widget Function(List<String> replies, BuildContext context)? customView,
-    Widget Function(List<String> replies, BuildContext context)?
-        conversationStarterEmptyView,
-    WidgetBuilder? emptyStateView,
-    WidgetBuilder? loadingStateView,
-    WidgetBuilder? errorStateView,
-    String? errorIconUrl,
-    String? emptyIconUrl,
-    String? loadingIconUrl,
-    final String? errorIconPackageName,
-    final String? loadingIconPackageName,
-    final String? emptyIconPackageName,
-    Future<Map<String, dynamic>> Function(User? user,  Group? group)? apiConfiguration
-  }) {
+  AIConversationSummaryConfiguration copyWith(
+      {AIConversationSummaryStyle? conversationSummaryStyle,
+      CometChatTheme? theme,
+      String? emptyStateText,
+      String? loadingStateText,
+      String? errorStateText,
+      Widget Function(List<String> replies, BuildContext context)? customView,
+      Widget Function(List<String> replies, BuildContext context)?
+          conversationStarterEmptyView,
+      WidgetBuilder? emptyStateView,
+      WidgetBuilder? loadingStateView,
+      WidgetBuilder? errorStateView,
+      String? errorIconUrl,
+      String? emptyIconUrl,
+      String? loadingIconUrl,
+      final String? errorIconPackageName,
+      final String? loadingIconPackageName,
+      final String? emptyIconPackageName,
+      Future<Map<String, dynamic>> Function(User? user, Group? group)?
+          apiConfiguration}) {
     return AIConversationSummaryConfiguration(
       conversationSummaryStyle:
-      conversationSummaryStyle ?? this.conversationSummaryStyle,
+          conversationSummaryStyle ?? this.conversationSummaryStyle,
       theme: theme ?? this.theme,
       emptyStateText: emptyStateText ?? this.emptyStateText,
       loadingStateText: loadingStateText ?? this.loadingStateText,
       errorStateText: errorStateText ?? this.errorStateText,
-     // customView: customView ?? this.customView,
       emptyStateView: emptyStateView ?? this.emptyStateView,
       loadingStateView: loadingStateView ?? this.loadingStateView,
       errorStateView: errorStateView ?? this.errorStateView,
@@ -136,7 +120,8 @@ class AIConversationSummaryConfiguration {
       loadingIconUrl: loadingIconUrl ?? this.loadingIconUrl,
       errorIconPackageName: errorIconPackageName ?? this.errorIconPackageName,
       emptyIconPackageName: emptyIconPackageName ?? this.emptyIconPackageName,
-      loadingIconPackageName: loadingIconPackageName ?? this.loadingIconPackageName,
+      loadingIconPackageName:
+          loadingIconPackageName ?? this.loadingIconPackageName,
       apiConfiguration: apiConfiguration ?? this.apiConfiguration,
     );
   }

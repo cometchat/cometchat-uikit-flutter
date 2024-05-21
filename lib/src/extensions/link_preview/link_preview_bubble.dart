@@ -23,14 +23,13 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 /// ```
 class LinkPreviewBubble extends StatelessWidget {
   const LinkPreviewBubble(
-      {Key? key,
+      {super.key,
       this.theme,
       required this.onTapUrl,
       required this.links,
       this.child,
       this.defaultImage,
-      this.style})
-      : super(key: key);
+      this.style});
 
   ///[theme] sets custom theme
   final CometChatTheme? theme;
@@ -52,7 +51,7 @@ class LinkPreviewBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,15 +69,12 @@ class LinkPreviewBubble extends StatelessWidget {
             },
             child: DecoratedBox(
               decoration: BoxDecoration(
-                  color: style?.backgroundColor ?? _theme.palette.getAccent50(),
+                  color: style?.backgroundColor ?? theme.palette.getAccent50(),
                   borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(8),
                       bottomRight: Radius.circular(8))),
               child: Column(
-                // crossAxisAlignment: CrossAxisAlignment.start,
-                // mainAxisSize: MainAxisSize.min,
                 children: [
-                  //-----link preview image-----
                   if (links.isNotEmpty &&
                       links[0]["image"] != null &&
                       links[0]["image"].toString().isNotEmpty)
@@ -96,7 +92,6 @@ class LinkPreviewBubble extends StatelessWidget {
                       }),
                     ),
 
-                  //-----link preview title-----
                   if (links.isNotEmpty &&
                       (links[0]["title"] != null ||
                           links[0]["url"] != null ||
@@ -113,10 +108,10 @@ class LinkPreviewBubble extends StatelessWidget {
                                 links[0]["title"],
                                 style: TextStyle(
                                         fontSize:
-                                            _theme.typography.text1.fontSize,
+                                            theme.typography.text1.fontSize,
                                         fontWeight:
-                                            _theme.typography.text1.fontWeight,
-                                        color: _theme.palette.getAccent())
+                                            theme.typography.text1.fontWeight,
+                                        color: theme.palette.getAccent())
                                     .merge(style?.titleStyle),
                               )
                             : null,
@@ -124,11 +119,11 @@ class LinkPreviewBubble extends StatelessWidget {
                             ? Text(
                                 links[0]["url"],
                                 style: TextStyle(
-                                        fontSize: _theme
-                                            .typography.subtitle2.fontSize,
-                                        fontWeight: _theme
+                                        fontSize:
+                                            theme.typography.subtitle2.fontSize,
+                                        fontWeight: theme
                                             .typography.subtitle2.fontWeight,
-                                        color: _theme.palette.getAccent())
+                                        color: theme.palette.getAccent())
                                     .merge(style?.urlStyle),
                               )
                             : null,

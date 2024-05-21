@@ -15,7 +15,7 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 /// ```
 class CreatePoll extends StatefulWidget {
   const CreatePoll(
-      {Key? key,
+      {super.key,
       this.title,
       this.user,
       this.group,
@@ -29,8 +29,7 @@ class CreatePoll extends StatefulWidget {
       this.closeIcon,
       this.createPollIcon,
       this.theme,
-      this.style})
-      : super(key: key);
+      this.style});
 
   ///[title] title default is 'Create Poll'
   final String? title;
@@ -75,7 +74,7 @@ class CreatePoll extends StatefulWidget {
   final CometChatTheme? theme;
 
   @override
-  _CreatePollState createState() => _CreatePollState();
+  State<CreatePoll> createState() => _CreatePollState();
 }
 
 class _CreatePollState extends State<CreatePoll> {
@@ -151,15 +150,15 @@ class _CreatePollState extends State<CreatePoll> {
           ),
           context: context,
           messageText: Text(
-            Translations.of(context).something_wrong,
+            Translations.of(context).somethingWrong,
             style: TextStyle(
                 fontSize: _theme.typography.title2.fontSize,
                 fontWeight: _theme.typography.title2.fontWeight,
                 color: _theme.palette.getAccent(),
                 fontFamily: _theme.typography.title2.fontFamily),
           ),
-          cancelButtonText: Translations.of(context).cancel_capital,
-          confirmButtonText: Translations.of(context).try_again,
+          cancelButtonText: Translations.of(context).cancelCapital,
+          confirmButtonText: Translations.of(context).tryAgain,
           onCancel: () {
             Navigator.pop(context);
             Navigator.pop(context);
@@ -193,7 +192,7 @@ class _CreatePollState extends State<CreatePoll> {
               },
         ),
         title: Text(
-          widget.title ?? Translations.of(context).create_poll,
+          widget.title ?? Translations.of(context).createPoll,
           style: TextStyle(
                   color: _theme.palette.getAccent(),
                   fontSize: _theme.typography.title1.fontSize,
@@ -204,11 +203,7 @@ class _CreatePollState extends State<CreatePoll> {
           IconButton(
               onPressed: () async {
                 if (formKey.currentState!.validate() && _answers.isNotEmpty) {
-                  // if (widget.onCreatePoll != null) {
-                  //   await widget.onCreatePoll!(_question, _answers);
-                  // } else {
                   createPoll();
-                  // }
                 }
               },
               icon: widget.createPollIcon ??
@@ -233,7 +228,7 @@ class _CreatePollState extends State<CreatePoll> {
                 TextFormField(
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return Translations.of(context).invalid_poll_question;
+                      return Translations.of(context).invalidPollQuestion;
                     }
                     return null;
                   },
@@ -262,7 +257,6 @@ class _CreatePollState extends State<CreatePoll> {
                             color: widget.style?.borderColor ??
                                 _theme.palette.getAccent200()),
                       ),
-                      // labelText: 'Question',
                       hintText: widget.questionPlaceholderText ??
                           Translations.of(context).question,
                       labelStyle: TextStyle(
@@ -283,7 +277,7 @@ class _CreatePollState extends State<CreatePoll> {
                 ),
                 Text(
                   widget.answerHelpText ??
-                      Translations.of(context).set_the_answers,
+                      Translations.of(context).setTheAnswers,
                   style: TextStyle(
                           color: _theme.palette.getAccent600(),
                           fontSize: _theme.typography.text2.fontSize,
@@ -308,7 +302,7 @@ class _CreatePollState extends State<CreatePoll> {
                     focusNode.requestFocus();
                   },
                   child: Text(
-                    Translations.of(context).add_another_answer,
+                    Translations.of(context).addAnotherAnswer,
                     style: TextStyle(
                             color: _theme.palette.getPrimary(),
                             fontSize: _theme.typography.body.fontSize,
@@ -325,8 +319,6 @@ class _CreatePollState extends State<CreatePoll> {
     );
   }
 
-  // getTextFields() => textFields;
-
   getTextKey(int index, String initialText, {FocusNode? focusNode}) {
     return SizedBox(
       key: UniqueKey(),
@@ -335,7 +327,7 @@ class _CreatePollState extends State<CreatePoll> {
           initialValue: initialText,
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return Translations.of(context).invalid_poll_option;
+              return Translations.of(context).invalidPollQuestion;
             }
             return null;
           },

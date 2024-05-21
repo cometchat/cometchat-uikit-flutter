@@ -8,19 +8,12 @@ class TransferOwnershipStyle extends BaseStyles {
       {this.memberScopeStyle,
       this.submitIconTint,
       this.selectIconTint,
-      double? width,
-      double? height,
-      Color? background,
-      Gradient? gradient,
-      BoxBorder? border,
-      double? borderRadius})
-      : super(
-            width: width,
-            height: height,
-            background: background,
-            gradient: gradient,
-            border: border,
-            borderRadius: borderRadius);
+      super.width,
+      super.height,
+      super.background,
+      super.gradient,
+      super.border,
+      super.borderRadius});
 
   ///[memberScopeStyle] is used to customize the appearance of the text in trailing widget
   final TextStyle? memberScopeStyle;

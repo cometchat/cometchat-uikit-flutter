@@ -19,7 +19,7 @@ import '../../cometchat_chat_uikit.dart';
 /// ```
 class CometChatMessages extends StatefulWidget {
   const CometChatMessages(
-      {Key? key,
+      {super.key,
       this.user,
       this.group,
       this.hideMessageComposer = false,
@@ -41,13 +41,11 @@ class CometChatMessages extends StatefulWidget {
       this.theme,
       this.threadedMessagesConfiguration,
       this.hideDetails,
-      this.messageComposerKey
-      })
+      this.messageComposerKey})
       : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
-            "Only one of user or group should be passed"),
-        super(key: key);
+            "Only one of user or group should be passed");
 
   ///[hideMessageComposer] hides the composer , default false
   final bool hideMessageComposer;
@@ -263,49 +261,50 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             timestampAlignment:
                 widget.messageListConfiguration.timestampAlignment ??
                     TimeAlignment.bottom,
-            // eventStreamController: controller.messageListEventStreamController,
             onError: widget.messageListConfiguration.onError,
             theme: widget.messageListConfiguration.theme ?? _theme,
             disableReceipt: widget.messageListConfiguration.disableReceipt,
-            // snackBarConfiguration: widget.messageListConfiguration.snackBarConfiguration,
             messageInformationConfiguration:
                 widget.messageListConfiguration.messageInformationConfiguration,
-            dateSeparatorStyle: widget.messageListConfiguration.dateSeparatorStyle,
-      disableReactions: widget.messageListConfiguration.disableReactions,
-      reactionListConfiguration: widget.messageListConfiguration.reactionListConfiguration,
+            dateSeparatorStyle:
+                widget.messageListConfiguration.dateSeparatorStyle,
+            disableReactions: widget.messageListConfiguration.disableReactions,
+            reactionListConfiguration:
+                widget.messageListConfiguration.reactionListConfiguration,
 
-      textFormatters: widget.messageListConfiguration.textFormatters,
-      disableMentions: widget.messageListConfiguration.disableMentions,
+            textFormatters: widget.messageListConfiguration.textFormatters,
+            disableMentions: widget.messageListConfiguration.disableMentions,
 
-      reactionsStyle: widget.messageListConfiguration.reactionsStyle,
-      addReactionIcon: widget.messageListConfiguration.addReactionIcon,
-      addReactionIconTap: widget.messageListConfiguration.addReactionIconTap,
-      emojiKeyboardStyle: widget.messageListConfiguration.emojiKeyboardStyle,
+            reactionsStyle: widget.messageListConfiguration.reactionsStyle,
+            addReactionIcon: widget.messageListConfiguration.addReactionIcon,
+            addReactionIconTap:
+                widget.messageListConfiguration.addReactionIconTap,
+            emojiKeyboardStyle:
+                widget.messageListConfiguration.emojiKeyboardStyle,
 
-      reactionsConfiguration: widget.messageListConfiguration.reactionsConfiguration,
-      favoriteReactions: widget.messageListConfiguration.favoriteReactions,
-
+            reactionsConfiguration:
+                widget.messageListConfiguration.reactionsConfiguration,
+            favoriteReactions:
+                widget.messageListConfiguration.favoriteReactions,
           );
   }
-
-
 
   Widget getMessageComposer(
       CometChatMessagesController controller, BuildContext context) {
     GlobalKey key = widget.messageComposerKey ?? controller.messageComposerKey;
 
-    if(controller.composerPlaceHolder==null) {
-      WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+    if (controller.composerPlaceHolder == null) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
         controller.getComposerPlaceHolder();
       });
     }
 
     return widget.messageComposerView != null
         ? Container(
-      key: key,
-          child: widget.messageComposerView!(
-              controller.user, controller.group, context),
-        )
+            key: key,
+            child: widget.messageComposerView!(
+                controller.user, controller.group, context),
+          )
         : CometChatMessageComposer(
             user: controller.user,
             group: controller.group,
@@ -327,7 +326,6 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             maxLine: widget.messageComposerConfiguration.maxLine,
             auxiliaryButtonsAlignment:
                 widget.messageComposerConfiguration.auxiliaryButtonsAlignment,
-            // stateCallBack: composerStateCallBack,
             stateCallBack: widget.messageComposerConfiguration.stateCallBack,
             attachmentIcon: widget.messageComposerConfiguration.attachmentIcon,
             liveReactionIcon:
@@ -405,13 +403,15 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             theme: widget.messageComposerConfiguration.theme ?? _theme,
             liveReactionIconURL:
                 widget.messageComposerConfiguration.liveReactionIconURL,
-      aiOptionStyle: widget.messageComposerConfiguration.aiOptionStyle,
-      aiIconPackageName: widget.messageComposerConfiguration.aiIconPackageName,
-      aiIconURL: widget.messageComposerConfiguration.aiIconURL,
-      aiIcon: widget.messageComposerConfiguration.aiIcon,
-      textFormatters: widget.messageComposerConfiguration.textFormatters,
-      messageComposerKey: controller.messageComposerKey,
-      disableMentions: widget.messageComposerConfiguration.disableMentions,
+            aiOptionStyle: widget.messageComposerConfiguration.aiOptionStyle,
+            aiIconPackageName:
+                widget.messageComposerConfiguration.aiIconPackageName,
+            aiIconURL: widget.messageComposerConfiguration.aiIconURL,
+            aiIcon: widget.messageComposerConfiguration.aiIcon,
+            textFormatters: widget.messageComposerConfiguration.textFormatters,
+            messageComposerKey: controller.messageComposerKey,
+            disableMentions:
+                widget.messageComposerConfiguration.disableMentions,
           );
   }
 
@@ -525,7 +525,6 @@ class _CometChatMessagesState extends State<CometChatMessages> {
                               onBack: widget.messageHeaderConfiguration.onBack,
                             ),
                   body: Stack(
-                    // alignment: AlignmentDirectional.topCenter,
                     children: [
                       Column(
                         children: [
@@ -543,17 +542,16 @@ class _CometChatMessagesState extends State<CometChatMessages> {
                                   child: getMessageList(value, context))),
 
                           //-----message composer-----
-                          if (widget.hideMessageComposer == false && value.composerPlaceHolder != null)
+                          if (widget.hideMessageComposer == false &&
+                              value.composerPlaceHolder != null)
                             value.composerPlaceHolder ?? const SizedBox(),
                         ],
                       ),
                       Positioned.fill(
-
                           child: Align(
                               alignment: Alignment.bottomCenter,
                               child: Stack(
                                 children: [
-
                                   if (widget.hideMessageComposer == false)
                                     getMessageComposer(value, context)
                                 ],
@@ -566,6 +564,4 @@ class _CometChatMessagesState extends State<CometChatMessages> {
               })),
     );
   }
-
-
 }

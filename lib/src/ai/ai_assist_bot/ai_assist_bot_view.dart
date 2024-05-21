@@ -15,26 +15,25 @@ import 'package:get/get.dart';
 /// ```
 
 class AIAssistBotView extends StatefulWidget {
-  const AIAssistBotView({
-    Key? key,
-    this.user,
-    this.group,
-    this.assistBotStyle,
-    this.title,
-    this.errorIconUrl,
-    this.theme,
-    this.loadingStateText,
-    this.loadingIconUrl,
-    this.loadingStateView,
-    this.errorStateView,
-    this.emptyStateView,
-    this.emptyIconUrl,
-    this.onCloseIconTap,
-    required this.aiBot,
-     this.controllerTag,
-    required this.loggedInUser,
-    this.apiConfiguration
-  }) : super(key: key);
+  const AIAssistBotView(
+      {super.key,
+      this.user,
+      this.group,
+      this.assistBotStyle,
+      this.title,
+      this.errorIconUrl,
+      this.theme,
+      this.loadingStateText,
+      this.loadingIconUrl,
+      this.loadingStateView,
+      this.errorStateView,
+      this.emptyStateView,
+      this.emptyIconUrl,
+      this.onCloseIconTap,
+      required this.aiBot,
+      this.controllerTag,
+      required this.loggedInUser,
+      this.apiConfiguration});
 
   /// set [User] object, one is mandatory either [user] or [group]
   final User? user;
@@ -84,18 +83,14 @@ class AIAssistBotView extends StatefulWidget {
   ///[assistBotStyle] passes style
   final AIAssistBotStyle? assistBotStyle;
 
-
   ///[apiConfiguration] sets the configuration for ask bot api call
-  final Map<String , dynamic>? apiConfiguration;
-
+  final Map<String, dynamic>? apiConfiguration;
 
   @override
-  State<AIAssistBotView> createState() =>
-      _AIAssistBotViewState();
+  State<AIAssistBotView> createState() => _AIAssistBotViewState();
 }
 
 class _AIAssistBotViewState extends State<AIAssistBotView> {
-
   late AIAssistBotController aiBotController;
   late String dateString;
   late String tag;
@@ -105,20 +100,16 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
   void initState() {
     super.initState();
     _theme = widget.theme ?? cometChatTheme;
-    dateString = DateTime
-        .now()
-        .microsecondsSinceEpoch
-        .toString();
-
-
-
-
+    dateString = DateTime.now().microsecondsSinceEpoch.toString();
 
     tag = widget.controllerTag ?? "default_tag_for_bots_$dateString";
-      aiBotController = Get.put<AIAssistBotController>(
-          AIAssistBotController(
-              aiBot: widget.aiBot, user: widget.user, group: widget.group, apiConfiguration: widget.apiConfiguration),
-          tag: tag);
+    aiBotController = Get.put<AIAssistBotController>(
+        AIAssistBotController(
+            aiBot: widget.aiBot,
+            user: widget.user,
+            group: widget.group,
+            apiConfiguration: widget.apiConfiguration),
+        tag: tag);
   }
 
   @override
@@ -127,49 +118,45 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
     super.dispose();
   }
 
-
-
-
-  Widget getHeaderView(){
+  Widget getHeaderView() {
     return Padding(
-     padding: const EdgeInsets.only(right: 8.0, left: 8.0),
-     child: Text(
-       widget.aiBot.name,
-       style: TextStyle(
-           fontSize: _theme.typography.text2.fontSize,
-           color: _theme.palette.getAccent600(),
-           fontWeight: _theme.typography.text2.fontWeight,
-           fontFamily: _theme.typography.text2.fontFamily),
-     ),
-   );
+      padding: const EdgeInsets.only(right: 8.0, left: 8.0),
+      child: Text(
+        widget.aiBot.name,
+        style: TextStyle(
+            fontSize: _theme.typography.text2.fontSize,
+            color: _theme.palette.getAccent600(),
+            fontWeight: _theme.typography.text2.fontWeight,
+            fontFamily: _theme.typography.text2.fontFamily),
+      ),
+    );
   }
-
 
   Widget getAvatar() {
     return CometChatAvatar(
       image: widget.aiBot.avatar,
       name: widget.aiBot.name,
       style: AvatarStyle(
-              width: 36,
-              height: 36,
-              background: _theme.palette.getAccent700(),
-              nameTextStyle: TextStyle(
-                  color: _theme.palette.getBackground(),
-                  fontSize: _theme.typography.name.fontSize,
-                  fontWeight: _theme.typography.name.fontWeight,
-                  fontFamily: _theme.typography.name.fontFamily)),
+          width: 36,
+          height: 36,
+          background: _theme.palette.getAccent700(),
+          nameTextStyle: TextStyle(
+              color: _theme.palette.getBackground(),
+              fontSize: _theme.typography.name.fontSize,
+              fontWeight: _theme.typography.name.fontWeight,
+              fontFamily: _theme.typography.name.fontFamily)),
     );
   }
 
-  Widget _getSuitableContentView(AIAssistBotMessage botMessage){
-     return CometChatTextBubble(
+  Widget _getSuitableContentView(AIAssistBotMessage botMessage) {
+    return CometChatTextBubble(
       text: botMessage.message,
-      alignment: botMessage.isSentByMe==true?BubbleAlignment.right:BubbleAlignment.left,
+      alignment: botMessage.isSentByMe == true
+          ? BubbleAlignment.right
+          : BubbleAlignment.left,
       theme: _theme,
     );
-
   }
-
 
   Widget getTime(CometChatTheme theme, AIAssistBotMessage messageObject) {
     if (messageObject.sentAt == null) {
@@ -195,34 +182,28 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
     );
   }
 
-
   Widget _getReceiptIcon(AIAssistBotMessage message) {
-    if(message.sentStatus == AIMessageStatus.sent){
-      return getTime(_theme , message);
+    if (message.sentStatus == AIMessageStatus.sent) {
+      return getTime(_theme, message);
     }
-    ReceiptStatus status = message.sentStatus == AIMessageStatus.inProgress ?
-    ReceiptStatus.waiting : ReceiptStatus.error;
-    return CometChatReceipt(
-        status: status
-    );
+    ReceiptStatus status = message.sentStatus == AIMessageStatus.inProgress
+        ? ReceiptStatus.waiting
+        : ReceiptStatus.error;
+    return CometChatReceipt(status: status);
   }
 
-
-
-
-
-  Widget _getMessageWidget(
-      AIAssistBotMessage botMessage,
-      AIAssistBotController controller,
-      CometChatTheme theme) {
-
-    BubbleContentVerifier contentVerifier =  BubbleContentVerifier(
-     showFooterView:  true,
-      showName: !botMessage.isSentByMe,
-      showThumbnail:  !botMessage.isSentByMe,
-      alignment: botMessage.isSentByMe? BubbleAlignment.right:BubbleAlignment.left
-    );
-    Color backgroundColor =  botMessage.isSentByMe==true? theme.palette.getPrimary():theme.palette.getAccent100();
+  Widget _getMessageWidget(AIAssistBotMessage botMessage,
+      AIAssistBotController controller, CometChatTheme theme) {
+    BubbleContentVerifier contentVerifier = BubbleContentVerifier(
+        showFooterView: true,
+        showName: !botMessage.isSentByMe,
+        showThumbnail: !botMessage.isSentByMe,
+        alignment: botMessage.isSentByMe
+            ? BubbleAlignment.right
+            : BubbleAlignment.left);
+    Color backgroundColor = botMessage.isSentByMe == true
+        ? theme.palette.getPrimary()
+        : theme.palette.getAccent100();
     Widget? headerView;
     Widget? contentView;
 
@@ -245,7 +226,8 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
       children: [
         GestureDetector(
           child: CometChatMessageBubble(
-            style: MessageBubbleStyle(background: backgroundColor, widthFlex: 0.8),
+            style:
+                MessageBubbleStyle(background: backgroundColor, widthFlex: 0.8),
             headerView: headerView,
             alignment: contentVerifier.alignment,
             contentView: contentView,
@@ -257,47 +239,36 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
     );
   }
 
-
-  Widget _getList(AIAssistBotController value,
-      BuildContext context, CometChatTheme listTheme) {
-        value.context = context;
-          return ListView.builder(
-            itemCount: value.list.length,
-            shrinkWrap: true,
-
-            reverse: true,
-            itemBuilder: (context, index) {
-              return _getMessageWidget(
-                      value.list[index], value, listTheme);
-            },
-          );
-
+  Widget _getList(AIAssistBotController value, BuildContext context,
+      CometChatTheme listTheme) {
+    value.context = context;
+    return ListView.builder(
+      itemCount: value.list.length,
+      shrinkWrap: true,
+      reverse: true,
+      itemBuilder: (context, index) {
+        return _getMessageWidget(value.list[index], value, listTheme);
+      },
+    );
   }
 
-
-
-
-  Widget getMessageInput( AIAssistBotController controller) {
+  Widget getMessageInput(AIAssistBotController controller) {
     return Row(
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only( right: 5.0),
+            padding: const EdgeInsets.only(right: 5.0),
             child: CometChatMessageInput(
-                textEditingController:
-                controller.textEditingController,
+                textEditingController: controller.textEditingController,
                 hideBottomView: true,
                 style: MessageInputStyle(
-                  background:   _theme.palette.getAccent100(),
-                  borderRadius: 20.0
-                ),
+                    background: _theme.palette.getAccent100(),
+                    borderRadius: 20.0),
                 onChange: (String val) {
                   controller.onChanged(val);
-                }
-            ),
+                }),
           ),
         ),
-
         Transform.scale(
           scale: 1.4,
           child: IconButton(
@@ -310,8 +281,8 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
                     ? _theme.palette.getAccent400()
                     : _theme.palette.getPrimary(),
               ),
-              onPressed: (){
-                if(controller.textEditingController.text.isNotEmpty){
+              onPressed: () {
+                if (controller.textEditingController.text.isNotEmpty) {
                   controller.sendTextMessage();
                 }
               }),
@@ -323,75 +294,82 @@ class _AIAssistBotViewState extends State<AIAssistBotView> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          color: widget.assistBotStyle?.background??_theme.palette.getBackground(),
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-              children: [
-               GetBuilder(
-                        tag: tag,
-                        builder: (AIAssistBotController value) {
-                          return  Column(
-                              mainAxisSize: MainAxisSize.min,
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        color:
+            widget.assistBotStyle?.background ?? _theme.palette.getBackground(),
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GetBuilder(
+                tag: tag,
+                builder: (AIAssistBotController value) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Row(
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    mainAxisSize: MainAxisSize.max,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          getAvatar(),
-                                          const SizedBox(width: 10,),
-                                          Column(
-                                            children: [
-                                              Text(widget.aiBot.name,
-                                              style: TextStyle(
-                                                fontSize: _theme.typography.heading.fontSize,
-                                                fontFamily: _theme.typography.heading.fontFamily,
-                                                fontWeight: _theme.typography.heading.fontWeight,
-                                                color: _theme.palette.getAccent()
-                                              ).merge(widget.assistBotStyle?.titleStyle),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      IconButton(onPressed: (){
-                                        if(widget.onCloseIconTap!=null){
-                                          widget.onCloseIconTap!();
-                                        }else{
-                                          Navigator.of(context).pop();
-                                        }
-
-
-                                      }, icon: Icon(Icons.close ,color: widget.assistBotStyle?.closeIconTint??_theme.palette.getAccent() ,))
-                                    ],
-                                  ),
+                                getAvatar(),
+                                const SizedBox(
+                                  width: 10,
                                 ),
-                                Container(
-                                    alignment: Alignment.topCenter,
-                                    height: MediaQuery.of(context).size.height/3,
-                                    child: _getList(value, context, _theme)),
-
-                                Divider( color: _theme.palette.getAccent200(),  ),
-                                getMessageInput(value)
+                                Column(
+                                  children: [
+                                    Text(
+                                      widget.aiBot.name,
+                                      style: TextStyle(
+                                              fontSize: _theme
+                                                  .typography.heading.fontSize,
+                                              fontFamily: _theme.typography
+                                                  .heading.fontFamily,
+                                              fontWeight: _theme.typography
+                                                  .heading.fontWeight,
+                                              color: _theme.palette.getAccent())
+                                          .merge(widget
+                                              .assistBotStyle?.titleStyle),
+                                    ),
+                                  ],
+                                ),
                               ],
-                            );
-                        }
-                    ),
-
-
-
-              ],
-            ),
+                            ),
+                            IconButton(
+                                onPressed: () {
+                                  if (widget.onCloseIconTap != null) {
+                                    widget.onCloseIconTap!();
+                                  } else {
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                                icon: Icon(
+                                  Icons.close,
+                                  color: widget.assistBotStyle?.closeIconTint ??
+                                      _theme.palette.getAccent(),
+                                ))
+                          ],
+                        ),
+                      ),
+                      Container(
+                          alignment: Alignment.topCenter,
+                          height: MediaQuery.of(context).size.height / 3,
+                          child: _getList(value, context, _theme)),
+                      Divider(
+                        color: _theme.palette.getAccent200(),
+                      ),
+                      getMessageInput(value)
+                    ],
+                  );
+                }),
+          ],
         ),
+      ),
     );
-
-
   }
 }

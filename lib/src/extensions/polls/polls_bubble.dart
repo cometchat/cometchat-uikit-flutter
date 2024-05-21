@@ -22,17 +22,16 @@ enum CometChatPollsBubbleType { result, poll }
 /// ```
 class CometChatPollsBubble extends StatelessWidget {
   const CometChatPollsBubble(
-      {Key? key,
-      this.loggedInUser,
-      this.pollQuestion,
-      this.options,
-      this.pollId,
-      this.theme,
-      required this.choosePoll,
-      this.senderUid,
-      this.metadata,
-      this.style})
-      : super(key: key);
+      {super.key,
+        this.loggedInUser,
+        this.pollQuestion,
+        this.options,
+        this.pollId,
+        this.theme,
+        required this.choosePoll,
+        this.senderUid,
+        this.metadata,
+        this.style});
 
   ///[pollQuestion] if poll question is passed then that is used instead of poll question from message Object
   final String? pollQuestion;
@@ -78,13 +77,6 @@ class CometChatPollsBubble extends StatelessWidget {
                   theme.palette.getBackground(),
               borderRadius: const BorderRadius.all(Radius.circular(6.0))),
           height: 42,
-          // width: style.width,
-          // decoration: BoxDecoration(
-          //   border: style.border,
-          //   borderRadius: BorderRadius.circular(style.borderRadius??0),
-          //   color: style.gradient==null?style.background??Colors.transparent:null,
-          //   gradient: style.gradient
-          // ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
@@ -95,15 +87,15 @@ class CometChatPollsBubble extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(11),
                     color:
-                        style?.radioButtonColor ?? theme.palette.getAccent100(),
+                    style?.radioButtonColor ?? theme.palette.getAccent100(),
                   )),
               Flexible(
                 child: Text(
                   value,
                   maxLines: 2,
                   style:
-                      TextStyle(color: theme.palette.getAccent(), fontSize: 13)
-                          .merge(style?.pollOptionsTextStyle),
+                  TextStyle(color: theme.palette.getAccent(), fontSize: 13)
+                      .merge(style?.pollOptionsTextStyle),
                 ),
               )
             ],
@@ -184,12 +176,12 @@ class CometChatPollsBubble extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                                fontSize: theme.typography.subtitle1.fontSize,
-                                fontWeight:
-                                    theme.typography.subtitle1.fontWeight,
-                                fontFamily:
-                                    theme.typography.subtitle1.fontFamily,
-                                color: theme.palette.getAccent())
+                            fontSize: theme.typography.subtitle1.fontSize,
+                            fontWeight:
+                            theme.typography.subtitle1.fontWeight,
+                            fontFamily:
+                            theme.typography.subtitle1.fontFamily,
+                            color: theme.palette.getAccent())
                             .merge(style?.pollOptionsTextStyle),
                       ),
                     )),
@@ -201,12 +193,12 @@ class CometChatPollsBubble extends StatelessWidget {
                         "${percentage.toStringAsFixed(1)}%",
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                                fontSize: theme.typography.subtitle2.fontSize,
-                                fontWeight:
-                                    theme.typography.subtitle2.fontWeight,
-                                fontFamily:
-                                    theme.typography.subtitle2.fontFamily,
-                                color: theme.palette.getAccent600())
+                            fontSize: theme.typography.subtitle2.fontSize,
+                            fontWeight:
+                            theme.typography.subtitle2.fontWeight,
+                            fontFamily:
+                            theme.typography.subtitle2.fontFamily,
+                            color: theme.palette.getAccent600())
                             .merge(style?.pollResultTextStyle),
                       ),
                     )),
@@ -234,17 +226,12 @@ class CometChatPollsBubble extends StatelessWidget {
     String chosenId = "";
     int totalVote = 0;
     CometChatPollsBubbleType bubbleType = CometChatPollsBubbleType.poll;
-    List<PollOptions> _options = [];
-    // String? _pollId;
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    List<PollOptions> options = [];
+    CometChatTheme theme = this.theme ?? cometChatTheme;
 
-    if (options != null) {
-      _options = options!;
+    if (this.options != null) {
+      options = this.options!;
     } else if (metadata != null) {
-      // Map<String, dynamic>? metadata =
-      //     Extensions.getPollsResult(messageObject!);
-      // _pollId = messageObject?.customData?["id"];
-
       if (metadata != null && metadata!.isNotEmpty) {
         totalVote = metadata?["total"];
         Map<String, dynamic> opt = metadata?["options"] ?? {};
@@ -256,33 +243,25 @@ class CometChatPollsBubble extends StatelessWidget {
               optionText: opt[item]["text"],
               voteCount: opt[item]["count"],
               votersUid: votersUid.keys.toList());
-          _options.add(optionModel);
+          options.add(optionModel);
         }
       }
     }
 
-    for (PollOptions opt in _options) {
+    for (PollOptions opt in options) {
       if (opt.votersUid.contains(loggedInUser)) {
         chosenId = opt.id;
       }
     }
 
-    // if (totalVoteCount != null) {
-    //   _totalVote = totalVoteCount!;
-    // }
-
     if (totalVote > 0) {
       bubbleType = CometChatPollsBubbleType.result;
     }
 
-    // if (pollId != null) {
-    //   _pollId = pollId;
-    // }
-
     return Container(
       constraints: BoxConstraints(
-        minWidth: MediaQuery.of(context).size.width*.618,
-        maxWidth: MediaQuery.of(context).size.width*.75
+          minWidth: MediaQuery.of(context).size.width*.618,
+          maxWidth: MediaQuery.of(context).size.width*.75
       ),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
@@ -295,27 +274,27 @@ class CometChatPollsBubble extends StatelessWidget {
             child: Text(
               pollQuestion ?? '',
               style: TextStyle(
-                      fontSize: _theme.typography.name.fontSize,
-                      fontWeight: _theme.typography.name.fontWeight,
-                      fontFamily: _theme.typography.name.fontFamily,
-                      color: _theme.palette.getAccent())
+                  fontSize: theme.typography.name.fontSize,
+                  fontWeight: theme.typography.name.fontWeight,
+                  fontFamily: theme.typography.name.fontFamily,
+                  color: theme.palette.getAccent())
                   .merge(style?.questionTextStyle),
             ),
           ),
           if (bubbleType == CometChatPollsBubbleType.poll)
-            getPollWidget(_options, chosenId, pollId ?? '', _theme),
+            getPollWidget(options, chosenId, pollId ?? '', theme),
           if (bubbleType == CometChatPollsBubbleType.result)
             getPollResultWidget(
-                _options, totalVote, chosenId, pollId ?? '', _theme),
+                options, totalVote, chosenId, pollId ?? '', theme),
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0, right: 12, left: 12),
             child: Text(
               "$totalVote ${Translations.of(context).peopleVoted}",
               style: TextStyle(
-                      fontSize: _theme.typography.subtitle1.fontSize,
-                      fontWeight: _theme.typography.subtitle1.fontWeight,
-                      fontFamily: _theme.typography.subtitle1.fontFamily,
-                      color: _theme.palette.getAccent600())
+                  fontSize: theme.typography.subtitle1.fontSize,
+                  fontWeight: theme.typography.subtitle1.fontWeight,
+                  fontFamily: theme.typography.subtitle1.fontFamily,
+                  color: theme.palette.getAccent600())
                   .merge(style?.voteCountTextStyle),
             ),
           )
@@ -329,9 +308,9 @@ class PollOptions {
   ///creates model for poll options and result
   PollOptions(
       {required this.optionText,
-      required this.voteCount,
-      required this.id,
-      required this.votersUid});
+        required this.voteCount,
+        required this.id,
+        required this.votersUid});
 
   ///[id] poll option id
   final String id;

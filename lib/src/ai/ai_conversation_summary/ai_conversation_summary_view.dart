@@ -16,29 +16,28 @@ import '../ai_utils.dart';
 /// ```
 
 class AIConversationSummaryView extends StatefulWidget {
-  const AIConversationSummaryView({
-    Key? key,
-    this.user,
-    this.group,
-    this.aiConversationSummaryStyle,
-    this.title,
-    this.customView,
-    this.errorIconUrl,
-    this.theme,
-    this.loadingStateText,
-    this.loadingIconUrl,
-    this.loadingStateView,
-    this.errorStateView,
-    this.emptyStateView,
-    this.emptyIconUrl,
-    this.onCloseIconTap,
-    this.emptyStateText,
-    this.errorStateText,
-    this.errorIconPackageName,
-    this.emptyIconPackageName,
-    this.loadingIconPackageName,
-    this.apiConfiguration
-  }) : super(key: key);
+  const AIConversationSummaryView(
+      {super.key,
+      this.user,
+      this.group,
+      this.aiConversationSummaryStyle,
+      this.title,
+      this.customView,
+      this.errorIconUrl,
+      this.theme,
+      this.loadingStateText,
+      this.loadingIconUrl,
+      this.loadingStateView,
+      this.errorStateView,
+      this.emptyStateView,
+      this.emptyIconUrl,
+      this.onCloseIconTap,
+      this.emptyStateText,
+      this.errorStateText,
+      this.errorIconPackageName,
+      this.emptyIconPackageName,
+      this.loadingIconPackageName,
+      this.apiConfiguration});
 
   /// set [User] object, one is mandatory either [user] or [group]
   final User? user;
@@ -97,9 +96,7 @@ class AIConversationSummaryView extends StatefulWidget {
   final String? emptyIconPackageName;
 
   ///[apiConfiguration] sets the api configuration for ai summary view
-  final Map<String , dynamic>? apiConfiguration;
-
-
+  final Map<String, dynamic>? apiConfiguration;
 
   @override
   State<AIConversationSummaryView> createState() =>
@@ -120,11 +117,9 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
 
   late DecoratedContainerStyle defaultContainerStyle;
 
-
   @override
   void initState() {
-
-    _theme = widget.theme??cometChatTheme;
+    _theme = widget.theme ?? cometChatTheme;
     getSummary();
     super.initState();
     WidgetsBinding.instance.addObserver(this);
@@ -132,18 +127,17 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
     defaultContainerStyle = DecoratedContainerStyle(
         background: _theme.palette.getBackground(),
         titleStyle: TextStyle(
-          color:_theme.palette.getAccent(),
-          fontWeight:_theme.typography.name.fontWeight,
+          color: _theme.palette.getAccent(),
+          fontWeight: _theme.typography.name.fontWeight,
           fontSize: _theme.typography.name.fontSize,
           fontFamily: _theme.typography.name.fontFamily,
         ),
         contentStyle: TextStyle(
           color: _theme.palette.getAccent700(),
-          fontWeight:_theme.typography.body.fontWeight,
+          fontWeight: _theme.typography.body.fontWeight,
           fontSize: _theme.typography.body.fontSize,
           fontFamily: _theme.typography.body.fontFamily,
-        )
-    );
+        ));
   }
 
   @override
@@ -183,8 +177,7 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
       receiverType = CometChatReceiverType.group;
     }
     await CometChat.getConversationSummary(receiverId, receiverType,
-        configuration: widget.apiConfiguration,
-        onSuccess: (summary2) {
+        configuration: widget.apiConfiguration, onSuccess: (summary2) {
       _summary = summary2;
       setState(() {});
     }, onError: (error) {
@@ -198,21 +191,20 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
     setState(() {});
   }
 
-
   Widget _getOnError(BuildContext context, CometChatTheme theme) {
     if (widget.errorStateView != null) {
       return Center(
         child: widget.errorStateView!(context),
       );
     } else {
-      return AIUtils.getOnError(context, theme, backgroundColor:
-      widget.aiConversationSummaryStyle?.backgroundColor, shadowColor:
-      widget.aiConversationSummaryStyle?.shadowColor , errorIconUrl:  widget.errorIconUrl,
+      return AIUtils.getOnError(context, theme,
+          backgroundColor: widget.aiConversationSummaryStyle?.backgroundColor,
+          shadowColor: widget.aiConversationSummaryStyle?.shadowColor,
+          errorIconUrl: widget.errorIconUrl,
           errorIconTint: widget.aiConversationSummaryStyle?.errorIconTint,
           errorStateText: widget.errorStateText,
           errorTextStyle: widget.aiConversationSummaryStyle?.errorTextStyle,
-          errorIconPackageName: widget.errorIconPackageName
-      );
+          errorIconPackageName: widget.errorIconPackageName);
     }
   }
 
@@ -220,14 +212,14 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
     if (widget.emptyStateView != null) {
       return widget.emptyStateView!(context);
     } else {
-      return AIUtils.getEmptyView(context, theme, backgroundColor:
-      widget.aiConversationSummaryStyle?.backgroundColor, shadowColor:
-      widget.aiConversationSummaryStyle?.shadowColor , emptyIconUrl:  widget.emptyIconUrl,
+      return AIUtils.getEmptyView(context, theme,
+          backgroundColor: widget.aiConversationSummaryStyle?.backgroundColor,
+          shadowColor: widget.aiConversationSummaryStyle?.shadowColor,
+          emptyIconUrl: widget.emptyIconUrl,
           emptyIconTint: widget.aiConversationSummaryStyle?.emptyIconTint,
           emptyStateText: widget.emptyStateText,
           emptyTextStyle: widget.aiConversationSummaryStyle?.emptyTextStyle,
-          emptyIconPackageName: widget.emptyIconPackageName
-      );
+          emptyIconPackageName: widget.emptyIconPackageName);
     }
   }
 
@@ -235,14 +227,15 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
     if (widget.loadingStateView != null) {
       return widget.loadingStateView!(context);
     } else {
-      return AIUtils.getLoadingIndicator(context, theme, backgroundColor:
-      widget.aiConversationSummaryStyle?.backgroundColor, shadowColor:
-      widget.aiConversationSummaryStyle?.shadowColor , loadingIconUrl:  widget.loadingIconUrl,
+      return AIUtils.getLoadingIndicator(context, theme,
+          backgroundColor: widget.aiConversationSummaryStyle?.backgroundColor,
+          shadowColor: widget.aiConversationSummaryStyle?.shadowColor,
+          loadingIconUrl: widget.loadingIconUrl,
           loadingIconTint: widget.aiConversationSummaryStyle?.loadingIconTint,
-          loadingStateText: widget.loadingStateText??Translations.of(context).generating_summary,
+          loadingStateText: widget.loadingStateText ??
+              Translations.of(context).generatingSummary,
           loadingTextStyle: widget.aiConversationSummaryStyle?.loadingTextStyle,
-          loadingIconPackageName: widget.loadingIconPackageName
-      );
+          loadingIconPackageName: widget.loadingIconPackageName);
     }
   }
 
@@ -263,36 +256,39 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
 
   @override
   Widget build(BuildContext context) {
-
-
-
     return (!isKeyboardOpen)
         ? isLoading
-            // --- on Loading ---
-            ? _getLoadingIndicator( context, _theme)
+            ? _getLoadingIndicator(context, _theme)
             :
-            // ---on error---
             isError
                 ? _getOnError(context, _theme)
                 :
-                // --- empty replies state ----
                 _summary.isEmpty
                     ? _getEmptyView(context, _theme)
                     : (widget.customView != null)
                         ? widget.customView!(_summary, context)
                         : SizedBox(
                             child: CometChatDecoratedContainer(
-                              title: Translations.of(context).conversation_summary,
+                              title:
+                                  Translations.of(context).conversationSummary,
                               content: _summary,
                               closeIconTint: _theme.palette.getAccent(),
-                              style: widget.aiConversationSummaryStyle?.decoratedContainerSummaryStyle!=null?
-                              widget.aiConversationSummaryStyle?.decoratedContainerSummaryStyle!.merge(defaultContainerStyle): defaultContainerStyle,
-                              onCloseIconTap: (){
-                                Map<String, dynamic> idMap =  UIEventUtils.createMap(widget.user?.uid,widget.group?.guid, 0);
-                                if(widget.onCloseIconTap!=null){
+                              style: widget.aiConversationSummaryStyle
+                                          ?.decoratedContainerSummaryStyle !=
+                                      null
+                                  ? widget.aiConversationSummaryStyle
+                                      ?.decoratedContainerSummaryStyle!
+                                      .merge(defaultContainerStyle)
+                                  : defaultContainerStyle,
+                              onCloseIconTap: () {
+                                Map<String, dynamic> idMap =
+                                    UIEventUtils.createMap(widget.user?.uid,
+                                        widget.group?.guid, 0);
+                                if (widget.onCloseIconTap != null) {
                                   widget.onCloseIconTap!(idMap);
-                                }else{
-                                  CometChatUIEvents.hidePanel(idMap, CustomUIPosition.composerTop);
+                                } else {
+                                  CometChatUIEvents.hidePanel(
+                                      idMap, CustomUIPosition.composerTop);
                                 }
                               },
                             ),

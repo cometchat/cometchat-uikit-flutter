@@ -9,8 +9,7 @@ class PollsExtensionDecorator extends DataSourceDecorator {
 
   User? loggedInUser;
 
-  PollsExtensionDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource) {
+  PollsExtensionDecorator(super.dataSource, {this.configuration}) {
     getLoggedInUser();
   }
 
@@ -43,12 +42,12 @@ class PollsExtensionDecorator extends DataSourceDecorator {
   @override
   List<CometChatMessageTemplate> getAllMessageTemplates(
       {CometChatTheme? theme}) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme0 = theme ?? cometChatTheme;
 
     List<CometChatMessageTemplate> templateList =
-        super.getAllMessageTemplates(theme: _theme);
+        super.getAllMessageTemplates(theme: theme0);
 
-    templateList.add(getTemplate(theme: _theme));
+    templateList.add(getTemplate(theme: theme0));
 
     return templateList;
   }
@@ -73,21 +72,22 @@ class PollsExtensionDecorator extends DataSourceDecorator {
     if (message != null &&
         message.type == pollsTypeConstant &&
         message.category == MessageCategoryConstants.custom) {
-      return Translations.of(context).custom_message_poll;
+      return Translations.of(context).customMessagePoll;
     } else {
       return super.getLastConversationMessage(conversation, context);
     }
   }
 
   CometChatMessageTemplate getTemplate({CometChatTheme? theme}) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme0 = theme ?? cometChatTheme;
 
     return CometChatMessageTemplate(
         type: pollsTypeConstant,
         category: CometChatMessageCategory.custom,
         contentView: (BaseMessage message, BuildContext context,
-            BubbleAlignment alignment,{AdditionalConfigurations? additionalConfigurations}) {
-          return getContentView(message as CustomMessage, _theme, context);
+            BubbleAlignment alignment,
+            {AdditionalConfigurations? additionalConfigurations}) {
+          return getContentView(message as CustomMessage, theme0, context);
         },
         options: CometChatUIKit.getDataSource().getCommonOptions,
         bottomView: CometChatUIKit.getDataSource().getBottomView);

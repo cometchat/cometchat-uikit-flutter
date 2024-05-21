@@ -48,19 +48,20 @@ class CometChatThreadedMessageController extends GetxController
   final GlobalKey messageComposerKey = GlobalKey();
 
   Widget? composerPlaceHolder;
-  void getComposerPlaceHolder(){
+  void getComposerPlaceHolder() {
     BuildContext? context = messageComposerKey.currentContext;
     if (context == null) {
-      composerPlaceHolder= const SizedBox();
+      composerPlaceHolder = const SizedBox();
     } else {
       RenderBox renderBox = context.findRenderObject() as RenderBox;
       var size = renderBox.size;
 
-      composerPlaceHolder = SizedBox(height: size.height,);
+      composerPlaceHolder = SizedBox(
+        height: size.height,
+      );
     }
     update();
   }
-
 
   //-------------------------LifeCycle Methods-----------------------------
   @override

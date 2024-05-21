@@ -7,9 +7,12 @@ class AIAssistBotController
     extends CometChatListController<AIAssistBotMessage, int> {
   //--------------------Constructor-----------------------
   AIAssistBotController(
-      {OnError? onError , this.user, this.group , required this.aiBot ,  this.apiConfiguration})
-      : super( null, onError: onError);
-
+      {OnError? onError,
+      this.user,
+      this.group,
+      required this.aiBot,
+      this.apiConfiguration})
+      : super(null, onError: onError);
 
   static int messageId = 1;
 
@@ -17,8 +20,7 @@ class AIAssistBotController
   User? user;
   Group? group;
   User aiBot;
-  Map<String , dynamic>? apiConfiguration;
-
+  Map<String, dynamic>? apiConfiguration;
 
   ///[textEditingController] controls the state of the text field
   late TextEditingController textEditingController;
@@ -26,12 +28,10 @@ class AIAssistBotController
   ///[_previousText] holds the state of the last typed text
   String _previousText = "";
 
-
-  int getUniqueMessageId(){
+  int getUniqueMessageId() {
     messageId++;
     return messageId;
   }
-
 
   //-------------------------Variable Declaration-----------------------------
   late UsersBuilderProtocol usersBuilderProtocol;
@@ -39,17 +39,16 @@ class AIAssistBotController
   //-------------------------LifeCycle Methods-----------------------------
   @override
   void onInit() {
-
-   const String constText  = "How can I help you with this conversation? Please ask me a question, and I will give advice to you 😄.";
+    const String constText =
+        "How can I help you with this conversation? Please ask me a question, and I will give advice to you 😄.";
 
     super.onInit();
-    AIAssistBotMessage  message= AIAssistBotMessage(
-      id:  messageId,
-      message: constText,
-      sentStatus: AIMessageStatus.sent,
-      isSentByMe: false,
-      sentAt: DateTime.now()
-    );
+    AIAssistBotMessage message = AIAssistBotMessage(
+        id: messageId,
+        message: constText,
+        sentStatus: AIMessageStatus.sent,
+        isSentByMe: false,
+        sentAt: DateTime.now());
     messageId++;
     list.add(message);
     update();
@@ -60,10 +59,7 @@ class AIAssistBotController
   void onClose() {
     textEditingController.dispose();
     super.onClose();
-
   }
-
-
 
   @override
   loadMoreElements({bool Function(AIAssistBotMessage element)? isIncluded}) {
@@ -81,10 +77,9 @@ class AIAssistBotController
     return element.id;
   }
 
-  onChanged(val){
+  onChanged(val) {
     _onTyping();
   }
-
 
   _onTyping() {
     if ((_previousText.isEmpty && textEditingController.text.isNotEmpty) ||
@@ -98,43 +93,37 @@ class AIAssistBotController
   }
 
   sendTextMessage() {
-      String  controllerText = textEditingController.text;
-      AIAssistBotMessage botMessage  =
-      AIAssistBotMessage(
-          message: textEditingController.text,
-          sentStatus: AIMessageStatus.inProgress,
+    String controllerText = textEditingController.text;
+    AIAssistBotMessage botMessage = AIAssistBotMessage(
+        message: textEditingController.text,
+        sentStatus: AIMessageStatus.inProgress,
+        id: getUniqueMessageId(),
+        isSentByMe: true,
+        sentAt: DateTime.now());
+
+    textEditingController.clear();
+    update();
+
+    addElement(botMessage);
+
+    CometChat.askBot(
+        user != null ? user!.uid : group!.guid,
+        user != null ? ReceiverTypeConstants.user : ReceiverTypeConstants.group,
+        aiBot.uid,
+        controllerText,
+        configuration: apiConfiguration, onSuccess: (String val) {
+      botMessage.sentStatus = AIMessageStatus.sent;
+      updateElement(botMessage);
+      AIAssistBotMessage retMessage = AIAssistBotMessage(
+          message: val,
+          sentStatus: AIMessageStatus.sent,
           id: getUniqueMessageId(),
-          isSentByMe: true,sentAt: DateTime.now()
-      );
-
-      textEditingController.clear();
-      update();
-
-      addElement(botMessage);
-
-
-      CometChat.askBot( user!=null?user!.uid: group!.guid ,
-          user!=null?ReceiverTypeConstants.user: ReceiverTypeConstants.group,
-          aiBot.uid, controllerText,
-          configuration: apiConfiguration,
-          onSuccess: (String val){
-            botMessage.sentStatus = AIMessageStatus.sent;
-            updateElement(botMessage);
-            AIAssistBotMessage retMessage  = AIAssistBotMessage(
-                message: val,
-                sentStatus: AIMessageStatus.sent,
-                id: getUniqueMessageId(),
-                isSentByMe: false,
-              sentAt: DateTime.now()
-            );
-            addElement(retMessage);
-
-          }, onError: (_){
-            botMessage.sentStatus = AIMessageStatus.error;
-            updateElement(botMessage);
-          });
-
+          isSentByMe: false,
+          sentAt: DateTime.now());
+      addElement(retMessage);
+    }, onError: (_) {
+      botMessage.sentStatus = AIMessageStatus.error;
+      updateElement(botMessage);
+    });
   }
-
-
 }

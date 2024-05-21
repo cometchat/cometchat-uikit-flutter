@@ -26,13 +26,12 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 ///
 class SmartReplyView extends StatelessWidget {
   const SmartReplyView(
-      {Key? key,
+      {super.key,
       required this.replies,
       this.style,
       required this.onCloseTap,
       this.onClick,
-      this.theme})
-      : super(key: key);
+      this.theme});
 
   ///[replies] list of replies generated from extension or passed by developer
   final List<String> replies;
@@ -51,10 +50,10 @@ class SmartReplyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<String> _replies = replies;
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    List<String> replies = this.replies;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
 
-    if (_replies.isEmpty) {
+    if (replies.isEmpty) {
       return const SizedBox(
         height: 0,
         width: 0,
@@ -67,7 +66,7 @@ class SmartReplyView extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            for (String reply in _replies)
+            for (String reply in replies)
               Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: GestureDetector(
@@ -78,18 +77,17 @@ class SmartReplyView extends StatelessWidget {
                   },
                   child: Chip(
                     backgroundColor: style?.replyBackgroundColor ??
-                        _theme.palette.getBackground(),
+                        theme.palette.getBackground(),
                     elevation: 4,
                     shadowColor: style?.shadowColor ??
-                        _theme.palette.getBackground().withOpacity(0.8),
+                        theme.palette.getBackground().withOpacity(0.8),
                     label: Text(
                       reply,
                       style: style?.replyTextStyle ??
                           TextStyle(
-                              fontSize: _theme.typography.subtitle1.fontSize,
-                              fontWeight:
-                                  _theme.typography.subtitle1.fontWeight,
-                              color: _theme.palette.getAccent()),
+                              fontSize: theme.typography.subtitle1.fontSize,
+                              fontWeight: theme.typography.subtitle1.fontWeight,
+                              color: theme.palette.getAccent()),
                     ),
                   ),
                 ),
@@ -104,7 +102,7 @@ class SmartReplyView extends StatelessWidget {
                   AssetConstants.close,
                   package: UIConstants.packageName,
                   color: style?.closeIconColor ??
-                      _theme.palette.getAccent().withOpacity(0.40),
+                      theme.palette.getAccent().withOpacity(0.40),
                 ),
               ),
             )

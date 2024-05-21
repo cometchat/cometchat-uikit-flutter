@@ -21,7 +21,6 @@ class CometChatMessagesController extends GetxController
   bool isOverlayOpen = false;
   List<Widget> liveAnimationList = [];
   CometChatMessageComposerController? composerState;
-  // late StreamController<MessageListEvent> messageListEventStreamController;
   CometChatDetailsController? detailsState;
   User? user;
   Group? group;
@@ -47,15 +46,17 @@ class CometChatMessagesController extends GetxController
   final GlobalKey messageComposerKey = GlobalKey();
 
   Widget? composerPlaceHolder;
-  void getComposerPlaceHolder(){
+  void getComposerPlaceHolder() {
     BuildContext? context = messageComposerKey.currentContext;
     if (context == null) {
-      composerPlaceHolder= const SizedBox();
+      composerPlaceHolder = const SizedBox();
     } else {
       RenderBox renderBox = context.findRenderObject() as RenderBox;
 
       var size = renderBox.size;
-      composerPlaceHolder = SizedBox(height: size.height,);
+      composerPlaceHolder = SizedBox(
+        height: size.height,
+      );
     }
     update();
   }
@@ -76,7 +77,6 @@ class CometChatMessagesController extends GetxController
     CometChatUserEvents.removeUsersListener(_uiUserListener);
     super.onClose();
   }
-
 
   //-----MessageComposerListener methods-----
 
@@ -103,23 +103,6 @@ class CometChatMessagesController extends GetxController
     isOverlayOpen = true;
     _addAnimations(reaction);
   }
-
-  //-----MessageListListener methods-----
-
-  // @override
-  // void onMessageReply(BaseMessage message) {
-  //   composerState?.previewMessage(message, PreviewMessageMode.reply);
-  // }
-
-  // @override
-  // onReplyInThread(BaseMessage parentMessage) async {
-  //   loggedInUser ??= await CometChat.getLoggedInUser();
-  //   Navigator.push(
-  //       context,
-  //       MaterialPageRoute(
-  //           builder: (context) => CometChatThreadedMessages(
-  //               parentMessage: parentMessage, loggedInUser: loggedInUser!)));
-  // }
 
   //----------User Event Listeners--------------
   @override
@@ -176,12 +159,12 @@ class CometChatMessagesController extends GetxController
     }
   }
 
-  composerStateCallBack(CometChatMessageComposerController _composerState) {
-    composerState = _composerState;
+  composerStateCallBack(CometChatMessageComposerController composerState) {
+    composerState = composerState;
   }
 
-  detailsStateCallBack(CometChatDetailsController _detailsState) {
-    detailsState = _detailsState;
+  detailsStateCallBack(CometChatDetailsController detailsState) {
+    detailsState = detailsState;
   }
 
   onThreadRepliesClick(BaseMessage message, BuildContext context,
@@ -207,8 +190,10 @@ class CometChatMessagesController extends GetxController
                       threadedMessagesConfiguration?.threadedMessagesStyle,
                   hideMessageComposer:
                       threadedMessagesConfiguration?.hideMessageComposer,
-              messageComposerView: threadedMessagesConfiguration?.messageComposerView,
-              messageListView: threadedMessagesConfiguration?.messageListView,
+                  messageComposerView:
+                      threadedMessagesConfiguration?.messageComposerView,
+                  messageListView:
+                      threadedMessagesConfiguration?.messageListView,
                 )),
       );
     }

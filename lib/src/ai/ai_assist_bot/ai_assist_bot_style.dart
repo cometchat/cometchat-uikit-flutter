@@ -14,16 +14,11 @@ class AIAssistBotStyle extends BaseStyles {
     this.shadowColor,
     this.titleStyle,
     this.closeIconTint,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
-  }) : super(
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
-
+    super.background,
+    super.border,
+    super.borderRadius,
+    super.gradient,
+  });
 
   ///[loadingTextStyle] changes style of suggested loading text
   final TextStyle? loadingTextStyle;

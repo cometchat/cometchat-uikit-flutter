@@ -13,8 +13,7 @@ class PollsBubbleStyle {
       this.pollOptionsBackgroundColor,
       this.selectedOptionColor,
       this.unSelectedOptionColor,
-      this.backgroundColor
-      });
+      this.backgroundColor});
 
   ///[questionTextStyle] question text style
   final TextStyle? questionTextStyle;

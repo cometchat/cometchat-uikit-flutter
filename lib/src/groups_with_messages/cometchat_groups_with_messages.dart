@@ -19,7 +19,7 @@ import 'package:get/get_state_manager/get_state_manager.dart';
 /// ```
 class CometChatGroupsWithMessages extends StatefulWidget {
   const CometChatGroupsWithMessages({
-    Key? key,
+    super.key,
     this.group,
     this.theme,
     this.groupsConfiguration = const GroupsConfiguration(),
@@ -28,7 +28,7 @@ class CometChatGroupsWithMessages extends StatefulWidget {
     this.createGroupConfiguration = const CreateGroupConfiguration(),
     this.createGroupIcon,
     this.onCreateGroupIconClick,
-  }) : super(key: key);
+  });
 
   ///[group] if null will return [CometChatGroups] screen else will navigate to [CometChatMessages]
   final Group? group;

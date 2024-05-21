@@ -42,7 +42,7 @@ class CometChatJoinProtectedGroupController extends GetxController {
     if (groupName.isNotEmpty) {
       return '$groupName ${Translations.of(context).group}';
     } else {
-      return Translations.of(context).protected_group;
+      return Translations.of(context).protectedGroup;
     }
   }
 
@@ -87,7 +87,7 @@ class CometChatJoinProtectedGroupController extends GetxController {
                           fontSize: theme.typography.text2.fontSize,
                           fontWeight: theme.typography.text2.fontWeight,
                           color: theme.palette.getPrimary())),
-                  title: Text(Translations.of(context).incorrect_password,
+                  title: Text(Translations.of(context).incorrectPassword,
                       style: TextStyle(
                           fontSize: theme.typography.name.fontSize,
                           fontWeight: theme.typography.name.fontWeight,
@@ -95,7 +95,7 @@ class CometChatJoinProtectedGroupController extends GetxController {
                           fontFamily: theme.typography.name.fontFamily)),
                   messageText: Text(
                     errorStateText ??
-                        Translations.of(context).please_try_another_password,
+                        Translations.of(context).pleaseTryAnotherPassword,
                     style: TextStyle(
                             fontSize: theme.typography.title2.fontSize,
                             fontWeight: theme.typography.title2.fontWeight,
@@ -128,7 +128,7 @@ class CometChatJoinProtectedGroupController extends GetxController {
 
   String? validatePassword(String? value, BuildContext context) {
     if (value == null || value.isEmpty) {
-      return Translations.of(context).enter_group_password;
+      return Translations.of(context).enterGroupPassword;
     }
     return null;
   }

@@ -31,8 +31,7 @@ class CometChatConversationsController
       this.deleteConversationDialogStyle,
       OnError? onError,
       this.textFormatters,
-      this.disableMentions
-      })
+      this.disableMentions})
       : super(conversationsBuilderProtocol.getRequest(), onError: onError) {
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
@@ -92,7 +91,6 @@ class CometChatConversationsController
 
   ///[disableMentions] if true will disable mentions in the conversation
   bool? disableMentions;
-
 
   @override
   void onInit() {
@@ -273,8 +271,9 @@ class CometChatConversationsController
   }
 
   @override
-  void onCustomInteractiveMessageReceived(CustomInteractiveMessage cardMessage) {
-    _onMessageReceived(cardMessage, false);
+  void onCustomInteractiveMessageReceived(
+      CustomInteractiveMessage customInteractiveMessage) {
+    _onMessageReceived(customInteractiveMessage, false);
   }
 
   //----------------Message Listeners end----------------------------------------------
@@ -417,10 +416,11 @@ class CometChatConversationsController
       removeElementAt(matchingIndex);
       addElement(conversation);
     } else {
-      CometChat.getConversationFromMessage(message,
-          onSuccess: (Conversation conversation) {
+      final conversation =
+          await CometChatHelper.getConversationFromMessage(message);
+      if (conversation != null) {
         addElement(conversation);
-      }, onError: (_) {});
+      }
     }
   }
 
@@ -462,8 +462,9 @@ class CometChatConversationsController
   @override
   refreshSingleConversation(BaseMessage message, bool isActionMessage,
       {bool? remove}) async {
-    CometChat.getConversationFromMessage(message,
-        onSuccess: (Conversation conversation) {
+    final conversation =
+        await CometChatHelper.getConversationFromMessage(message);
+    if (conversation != null) {
       conversation.lastMessage = message;
       conversation.updatedAt = message.updatedAt;
       if (remove == true) {
@@ -471,7 +472,7 @@ class CometChatConversationsController
       } else {
         updateConversation(conversation);
       }
-    }, onError: (_) {});
+    }
   }
 
   ///Update the conversation with new conversation Object matched according to conversation id ,  if not matched inserted at top
@@ -481,8 +482,10 @@ class CometChatConversationsController
 
     Map<String, dynamic>? metaData = conversation.lastMessage!.metadata;
     bool incrementUnreadCount = false;
-    bool isCategoryMessage = (conversation.lastMessage!.category == MessageCategoryConstants.message) ||
-        (conversation.lastMessage!.category == MessageCategoryConstants.interactive);
+    bool isCategoryMessage = (conversation.lastMessage!.category ==
+            MessageCategoryConstants.message) ||
+        (conversation.lastMessage!.category ==
+            MessageCategoryConstants.interactive);
     if (metaData != null) {
       if (metaData.containsKey("incrementUnreadCount")) {
         incrementUnreadCount = metaData["incrementUnreadCount"] as bool;
@@ -563,9 +566,9 @@ class CometChatConversationsController
     }
     if (matchingIndex != -1) {
       if (isTypingStarted == true) {
-          typingMap[list[matchingIndex].conversationId!] = typingIndicator;
+        typingMap[list[matchingIndex].conversationId!] = typingIndicator;
       } else {
-        if(typingMap.containsKey(list[matchingIndex].conversationId!)){
+        if (typingMap.containsKey(list[matchingIndex].conversationId!)) {
           typingMap.remove(list[matchingIndex].conversationId!);
         }
       }
@@ -588,10 +591,10 @@ class CometChatConversationsController
     if (context != null) {
       showCometChatConfirmDialog(
           context: context!,
-          confirmButtonText: Translations.of(context!).delete_capital,
-          cancelButtonText: Translations.of(context!).cancel_capital,
+          confirmButtonText: Translations.of(context!).deleteCapital,
+          cancelButtonText: Translations.of(context!).cancelCapital,
           messageText: Text(
-            Translations.of(context!).delete_confirm,
+            Translations.of(context!).deleteConfirm,
             style: TextStyle(
                 fontSize: theme?.typography.title2.fontSize,
                 fontWeight: theme?.typography.title2.fontWeight,
@@ -687,21 +690,25 @@ class CometChatConversationsController
 
   //----------- get last message text-----------
 
-  void initializeTextFormatters(){
+  void initializeTextFormatters() {
     List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
 
-    if((textFormatters.isEmpty || textFormatters.indexWhere((element) => element is CometChatMentionsFormatter)==-1) && disableMentions!=true){
+    if ((textFormatters.isEmpty ||
+            textFormatters.indexWhere(
+                    (element) => element is CometChatMentionsFormatter) ==
+                -1) &&
+        disableMentions != true) {
       textFormatters.add(CometChatMentionsFormatter());
     }
 
     this.textFormatters = textFormatters;
-
   }
 
-  List<CometChatTextFormatter> getTextFormatters(BaseMessage message, CometChatTheme theme){
+  List<CometChatTextFormatter> getTextFormatters(
+      BaseMessage message, CometChatTheme theme) {
     List<CometChatTextFormatter> textFormatters = this.textFormatters ?? [];
-    if(message is TextMessage){
-      for(CometChatTextFormatter textFormatter in textFormatters){
+    if (message is TextMessage) {
+      for (CometChatTextFormatter textFormatter in textFormatters) {
         textFormatter.message = message;
         textFormatter.theme = theme;
       }
@@ -709,12 +716,11 @@ class CometChatConversationsController
     return textFormatters;
   }
 
-
   /// ----------------------------EVENT LISTENERS -----------------------------------
 
   @override
   void onConnected() {
-    if(!isLoading) {
+    if (!isLoading) {
       request = conversationsBuilderProtocol.getRequest();
       list = [];
       loadMoreElements(

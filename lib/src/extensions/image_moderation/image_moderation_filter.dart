@@ -19,10 +19,9 @@ class ImageModerationFilter extends StatefulWidget {
       {required this.message,
       this.theme,
       required this.child,
-      Key? key,
+      super.key,
       this.warningText,
-      this.style})
-      : super(key: key);
+      this.style});
 
   ///[message] the object containing the image
   final MediaMessage message;
@@ -40,7 +39,7 @@ class ImageModerationFilter extends StatefulWidget {
   final ImageModerationFilterStyle? style;
 
   @override
-  _ImageModerationFilterState createState() => _ImageModerationFilterState();
+  State<ImageModerationFilter> createState() => _ImageModerationFilterState();
 }
 
 class _ImageModerationFilterState extends State<ImageModerationFilter> {
@@ -80,7 +79,7 @@ class _ImageModerationFilterState extends State<ImageModerationFilter> {
         onTap: () {
           showCometChatConfirmDialog(
             context: context,
-            title: Text(Translations.of(context).are_you_sure_unsafe_content),
+            title: Text(Translations.of(context).areYouSureUnsafeContent),
             messageText: const Text("Do image change"),
             confirmButtonText: Translations.of(context).yes,
             cancelButtonText: Translations.of(context).cancel,
@@ -112,7 +111,7 @@ class _ImageModerationFilterState extends State<ImageModerationFilter> {
                   height: 12,
                 ),
                 Text(
-                  widget.warningText ?? Translations.of(context).unsafe_content,
+                  widget.warningText ?? Translations.of(context).unsafeContent,
                   style: widget.style?.warningTextStyle ??
                       TextStyle(
                           fontSize: _theme.typography.subtitle2.fontSize,

@@ -7,8 +7,7 @@ class ImageModerationExtensionDecorator extends DataSourceDecorator {
   User? loggedInUser;
   ImageModerationConfiguration? configuration;
 
-  ImageModerationExtensionDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource) {
+  ImageModerationExtensionDecorator(super.dataSource, {this.configuration}) {
     getLoggedInUser();
   }
 
@@ -18,9 +17,9 @@ class ImageModerationExtensionDecorator extends DataSourceDecorator {
 
   @override
   Widget getImageMessageContentView(MediaMessage message, BuildContext context,
-      BubbleAlignment _alignment, CometChatTheme theme) {
+      BubbleAlignment alignment, CometChatTheme theme) {
     Widget child =
-        super.getImageMessageContentView(message, context, _alignment, theme);
+        super.getImageMessageContentView(message, context, alignment, theme);
     if (message.sender?.uid == loggedInUser?.uid) {
       return child;
     }

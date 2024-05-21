@@ -34,14 +34,13 @@ Future<String?> showCometChatEmojiKeyboard(
 
 class CometChatEmojiKeyboard extends StatefulWidget {
   const CometChatEmojiKeyboard(
-      {Key? key,
+      {super.key,
       this.backgroundColor,
       this.titleStyle,
       this.dividerColor,
       this.categoryLabel,
       this.selectedCategoryIconColor,
-      this.unselectedCategoryIconColor})
-      : super(key: key);
+      this.unselectedCategoryIconColor});
 
   final Color? backgroundColor;
   final TextStyle? titleStyle;
@@ -134,7 +133,7 @@ class _CometChatEmojiKeyboardState extends State<CometChatEmojiKeyboard> {
                       Align(
                         alignment: Alignment.bottomLeft,
                         child: Text(
-                          Translations.of(context).select_reaction,
+                          Translations.of(context).selectReaction,
                           style: widget.titleStyle ??
                               const TextStyle(
                                   fontSize: 17,
@@ -174,34 +173,27 @@ class _CometChatEmojiKeyboardState extends State<CometChatEmojiKeyboard> {
                             key: data.key,
                             alignment: Alignment.center,
                             child: Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 6.0, bottom: 12),
-                              child:
-
-                              RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                    style: const TextStyle(
-                                        fontSize: 30,
-                                        fontWeight: FontWeight.w400,
-                                        letterSpacing: 10,
-                                        // wordSpacing: 16,
-                                        height: 1.6),
-                                    children: [
-                                      for (Emoji emoji in data.emojies)
-                                        TextSpan(
-                                            text: emoji.emoji,
-                                            // children: [WidgetSpan(child: SizedBox(width: 20,))],
-                                            recognizer:
-                                                TapGestureRecognizer()
-                                                  ..onTap = () async {
-                                                    Navigator.pop(context,
-                                                        emoji.emoji);
-                                                  })
-                                    ]),
-                              )
-
-                            ),
+                                padding:
+                                    const EdgeInsets.only(top: 6.0, bottom: 12),
+                                child: RichText(
+                                  textAlign: TextAlign.center,
+                                  text: TextSpan(
+                                      style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w400,
+                                          letterSpacing: 10,
+                                          height: 1.6),
+                                      children: [
+                                        for (Emoji emoji in data.emojies)
+                                          TextSpan(
+                                              text: emoji.emoji,
+                                              recognizer: TapGestureRecognizer()
+                                                ..onTap = () async {
+                                                  Navigator.pop(
+                                                      context, emoji.emoji);
+                                                })
+                                      ]),
+                                )),
                           ),
                       ],
                     ),

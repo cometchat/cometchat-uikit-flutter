@@ -5,8 +5,7 @@ import '../../../../../cometchat_chat_uikit.dart';
 ///[TextModerationExtensionDecorator] is a the view model for [TextModerationExtension] it contains all the relevant business logic
 ///it is also a sub-class of [DataSourceDecorator] which allows any extension to override the default methods provided by [MessagesDataSource]
 class TextModerationExtensionDecorator extends DataSourceDecorator {
-  TextModerationExtensionDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource);
+  TextModerationExtensionDecorator(super.dataSource, {this.configuration});
 
   TextModerationConfiguration? configuration;
 
@@ -19,13 +18,11 @@ class TextModerationExtensionDecorator extends DataSourceDecorator {
       CometChatTheme theme,
       TextBubbleStyle? style,
       {AdditionalConfigurations? additionalConfigurations}) {
-
-
-
     String filteredText = getContentText(message);
 
     return super.getTextMessageBubble(filteredText, message, context, alignment,
-        configuration?.theme ?? theme, configuration?.style ?? style, additionalConfigurations:additionalConfigurations);
+        configuration?.theme ?? theme, configuration?.style ?? style,
+        additionalConfigurations: additionalConfigurations);
   }
 
   @override
@@ -37,8 +34,9 @@ class TextModerationExtensionDecorator extends DataSourceDecorator {
         message.category == MessageCategoryConstants.message) {
       TextMessage textMessage = message as TextMessage;
       String subtitle = getContentText(textMessage);
-      if(message.mentionedUsers.isNotEmpty) {
-        return CometChatMentionsFormatter.getTextWithMentions(subtitle,textMessage.mentionedUsers);
+      if (message.mentionedUsers.isNotEmpty) {
+        return CometChatMentionsFormatter.getTextWithMentions(
+            subtitle, textMessage.mentionedUsers);
       }
       return subtitle;
     } else {

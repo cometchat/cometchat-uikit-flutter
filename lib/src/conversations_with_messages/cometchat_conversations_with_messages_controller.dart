@@ -7,7 +7,8 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 class CometChatConversationsWithMessagesController extends GetxController
     with
         CometChatConversationEventListener,
-        CometChatUIEventListener {
+        CometChatUIEventListener,
+        CometChatMessageEventListener {
   CometChatConversationsWithMessagesController(
       {this.messageConfiguration,
       this.theme,
@@ -45,7 +46,6 @@ class CometChatConversationsWithMessagesController extends GetxController
 
   @override
   void onClose() {
-
     CometChatConversationEvents.removeConversationListListener(
         conversationEventListenerId);
     CometChatUIEvents.removeUiListener(

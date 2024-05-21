@@ -10,8 +10,7 @@ class AISmartRepliesDecorator extends DataSourceDecorator
   User? loggedInUser;
   AISmartRepliesConfiguration? configuration;
 
-  AISmartRepliesDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource) {
+  AISmartRepliesDecorator(super.dataSource, {this.configuration}) {
     CometChatUIEvents.removeUiListener(_listenerId);
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
     _listenerId = "AiSmartReply$dateStamp";
@@ -30,32 +29,37 @@ class AISmartRepliesDecorator extends DataSourceDecorator
     CometChatUIEvents.removeUiListener(_listenerId);
   }
 
-
   @override
-  List<CometChatMessageComposerAction> getAIOptions(User? user, Group? group, CometChatTheme theme, BuildContext context, Map<String, dynamic>? id, AIOptionsStyle? aiOptionStyle) {
-    List<CometChatMessageComposerAction> actionList = super.getAIOptions(user, group, theme, context, id ,aiOptionStyle );
+  List<CometChatMessageComposerAction> getAIOptions(
+      User? user,
+      Group? group,
+      CometChatTheme theme,
+      BuildContext context,
+      Map<String, dynamic>? id,
+      AIOptionsStyle? aiOptionStyle) {
+    List<CometChatMessageComposerAction> actionList =
+        super.getAIOptions(user, group, theme, context, id, aiOptionStyle);
     actionList.add(getAIComposerButton(context, theme));
     return actionList;
   }
 
-  CometChatMessageComposerAction getAIComposerButton(BuildContext context, CometChatTheme theme){
-   return  CometChatMessageComposerAction(
-     id:  getId(),
-     title: Translations.of(context).smart_replies,
-     onItemClick: (BuildContext context , User? user, Group? group){
-       checkAndShowReplies(user, group);
-    },
-     background: theme.palette.getAccent50(),
-   );
+  CometChatMessageComposerAction getAIComposerButton(
+      BuildContext context, CometChatTheme theme) {
+    return CometChatMessageComposerAction(
+      id: getId(),
+      title: Translations.of(context).smartReplies,
+      onItemClick: (BuildContext context, User? user, Group? group) {
+        checkAndShowReplies(user, group);
+      },
+      background: theme.palette.getAccent50(),
+    );
   }
 
-
   checkAndShowReplies(User? user, Group? group) async {
+    Map<String, dynamic>? apiMap;
 
-    Map<String, dynamic>?  apiMap;
-
-    if(configuration!=null && configuration?.apiConfiguration!=null){
-      apiMap =  await configuration?.apiConfiguration!(user, group);
+    if (configuration != null && configuration?.apiConfiguration != null) {
+      apiMap = await configuration?.apiConfiguration!(user, group);
     }
 
     Map<String, dynamic> id = {};
@@ -88,7 +92,6 @@ class AISmartRepliesDecorator extends DataSourceDecorator
         emptyStateView: configuration?.emptyStateView,
         errorIconUrl: configuration?.errorIconUrl,
         apiConfiguration: apiMap,
-
       ),
     );
   }

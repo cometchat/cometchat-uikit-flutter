@@ -18,24 +18,23 @@ import '../../cometchat_chat_uikit.dart' as cc;
 ///      );
 /// ```
 class CometChatThreadedMessages extends StatefulWidget {
-  const CometChatThreadedMessages(
-      {Key? key,
-      required this.parentMessage,
-      this.title,
-      this.closeIcon,
-      this.messageActionView,
-      this.messageComposerConfiguration,
-      this.messageListConfiguration,
-      this.threadedMessagesStyle,
-      this.hideMessageComposer,
-      this.bubbleView,
-      required this.loggedInUser,
-      this.theme,
-      this.messageComposerKey,
-        this.messageComposerView,
-        this.messageListView,
-      })
-      : super(key: key);
+  const CometChatThreadedMessages({
+    super.key,
+    required this.parentMessage,
+    this.title,
+    this.closeIcon,
+    this.messageActionView,
+    this.messageComposerConfiguration,
+    this.messageListConfiguration,
+    this.threadedMessagesStyle,
+    this.hideMessageComposer,
+    this.bubbleView,
+    required this.loggedInUser,
+    this.theme,
+    this.messageComposerKey,
+    this.messageComposerView,
+    this.messageListView,
+  });
 
   ///[parentMessage] parent message for thread
   final BaseMessage parentMessage;
@@ -70,18 +69,16 @@ class CometChatThreadedMessages extends StatefulWidget {
   ///[theme] can pass custom theme
   final CometChatTheme? theme;
 
-
   ///[messageComposerKey] key for message composer, We use this to get  the dimensions of the composer which we then use to set the placeholder for the composer in stack we are using to show the message list
   final GlobalKey? messageComposerKey;
 
   ///[messageComposerView] to set custom message composer
-  final Widget Function(User? user, Group? group, BuildContext context, BaseMessage parentMessage)?
-  messageComposerView;
+  final Widget Function(User? user, Group? group, BuildContext context,
+      BaseMessage parentMessage)? messageComposerView;
 
   ///[messageListView] to set custom message list
-  final Widget Function(User? user, Group? group, BuildContext context, BaseMessage parentMessage)?
-  messageListView;
-
+  final Widget Function(User? user, Group? group, BuildContext context,
+      BaseMessage parentMessage)? messageListView;
 
   @override
   State<CometChatThreadedMessages> createState() =>
@@ -104,107 +101,131 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
 
   Widget getMessageComposer(
       CometChatThreadedMessageController controller, BuildContext context) {
-
     GlobalKey key = widget.messageComposerKey ?? controller.messageComposerKey;
 
-    if(controller.composerPlaceHolder==null) {
-      WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+    if (controller.composerPlaceHolder == null) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
         controller.getComposerPlaceHolder();
       });
     }
 
     return widget.messageComposerView != null
         ? widget.messageComposerView!(
-        controller.user, controller.group, context, widget.parentMessage)
-      : CometChatMessageComposer(
-      user: controller.user,
-      group: controller.group,
-      placeholderText: widget.messageComposerConfiguration?.placeholderText,
-      parentMessageId: widget.parentMessage.id,
-      hideLiveReaction: true,
-      attachmentIcon: widget.messageComposerConfiguration?.attachmentIcon,
-      liveReactionIcon: widget.messageComposerConfiguration?.liveReactionIcon,
-      deleteIcon: widget.messageComposerConfiguration?.deleteIcon,
-      playIcon: widget.messageComposerConfiguration?.playIcon,
-      recordIcon: widget.messageComposerConfiguration?.recordIcon,
-      stopIcon: widget.messageComposerConfiguration?.stopIcon,
-      pauseIcon: widget.messageComposerConfiguration?.pauseIcon,
-      submitIcon: widget.messageComposerConfiguration?.submitIcon,
-      disableTypingEvents:
-          widget.messageComposerConfiguration?.disableTypingEvents ?? false,
-      mediaRecorderStyle:
-          widget.messageComposerConfiguration?.mediaRecorderStyle,
-      hideVoiceRecording:
-          widget.messageComposerConfiguration?.hideVoiceRecording ?? false,
-      voiceRecordingIcon:
-          widget.messageComposerConfiguration?.voiceRecordingIcon,
-      theme: widget.messageComposerConfiguration?.theme ?? _theme,
-      attachmentOptions: widget.messageComposerConfiguration?.attachmentOptions,
-      attachmentIconURL: widget.messageComposerConfiguration?.attachmentIconURL,
-      auxiliaryButtonsAlignment:
-          widget.messageComposerConfiguration?.auxiliaryButtonsAlignment,
-      customSoundForMessage:
-          widget.messageComposerConfiguration?.customSoundForMessage,
-      customSoundForMessagePackage:
-          widget.messageComposerConfiguration?.customSoundForMessagePackage,
-      disableSoundForMessages:
-          widget.messageComposerConfiguration?.disableSoundForMessages ?? false,
-      onChange: widget.messageComposerConfiguration?.onChange,
-      onSendButtonTap: widget.messageComposerConfiguration?.onSendButtonTap,
-      sendButtonView: widget.messageComposerConfiguration?.sendButtonView,
-      auxiliaryButtonView:
-          widget.messageComposerConfiguration?.auxiliaryButtonView,
-      secondaryButtonView:
-          widget.messageComposerConfiguration?.secondaryButtonView,
-      liveReactionIconURL:
-          widget.messageComposerConfiguration?.liveReactionIconURL,
-      maxLine: widget.messageComposerConfiguration?.maxLine,
-      footerView: widget.messageComposerConfiguration?.footerView,
-      headerView: widget.messageComposerConfiguration?.headerView,
-      messageComposerStyle: MessageComposerStyle(
-          background: widget.messageComposerConfiguration?.messageComposerStyle
-                  ?.background ??
-              (widget.threadedMessagesStyle?.gradient != null
-                  ? Colors.transparent
-                  : widget.threadedMessagesStyle?.background),
-          border: widget.messageComposerConfiguration?.messageComposerStyle?.border ??
-              (widget.threadedMessagesStyle?.background != null ||
-                      widget.threadedMessagesStyle?.gradient != null
-                  ? null
-                  : widget.threadedMessagesStyle?.border),
-          borderRadius: widget.messageComposerConfiguration
-                  ?.messageComposerStyle?.borderRadius ??
-              widget.threadedMessagesStyle?.borderRadius,
-          inputBackground: widget.messageComposerConfiguration
-                  ?.messageComposerStyle?.inputBackground ??
-              _theme.palette.getAccent100(),
-          gradient:
-              widget.messageComposerConfiguration?.messageComposerStyle?.gradient,
-          height: widget.messageComposerConfiguration?.messageComposerStyle?.height,
-          width: widget.messageComposerConfiguration?.messageComposerStyle?.width,
-          attachmentIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.attachmentIconTint,
-          closeIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.closeIconTint,
-          dividerTint: widget.messageComposerConfiguration?.messageComposerStyle?.dividerTint ?? _theme.palette.getAccent500(),
-          voiceRecordingIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.voiceRecordingIconTint,
-          inputTextStyle: widget.messageComposerConfiguration?.messageComposerStyle?.inputTextStyle,
-          placeholderTextStyle: widget.messageComposerConfiguration?.messageComposerStyle?.placeholderTextStyle,
-          sendButtonIcon: widget.messageComposerConfiguration?.messageComposerStyle?.sendButtonIcon,
-          sendButtonIconTint: widget.messageComposerConfiguration?.messageComposerStyle?.sendButtonIconTint,
-          contentPadding: widget.messageComposerConfiguration?.messageComposerStyle?.contentPadding ?? EdgeInsets.zero,
-          messageInputPadding: widget.messageComposerConfiguration?.messageComposerStyle?.messageInputPadding ?? const EdgeInsets.only(left:8.0,right: 8,bottom: 8),
-
-      ),
-        aiOptionStyle: widget.messageComposerConfiguration?.aiOptionStyle,
-        aiIconPackageName: widget.messageComposerConfiguration?.aiIconPackageName,
-        aiIconURL: widget.messageComposerConfiguration?.aiIconURL,
-        aiIcon: widget.messageComposerConfiguration?.aiIcon,
-        messageComposerKey: key,
-      disableMentions: widget.messageComposerConfiguration?.disableMentions,
-      textFormatters: widget.messageComposerConfiguration?.textFormatters,
-      onError: widget.messageComposerConfiguration?.onError,
-      text: widget.messageComposerConfiguration?.text,
-      stateCallBack: widget.messageComposerConfiguration?.stateCallBack,
-    );
+            controller.user, controller.group, context, widget.parentMessage)
+        : CometChatMessageComposer(
+            user: controller.user,
+            group: controller.group,
+            placeholderText:
+                widget.messageComposerConfiguration?.placeholderText,
+            parentMessageId: widget.parentMessage.id,
+            hideLiveReaction: true,
+            attachmentIcon: widget.messageComposerConfiguration?.attachmentIcon,
+            liveReactionIcon:
+                widget.messageComposerConfiguration?.liveReactionIcon,
+            deleteIcon: widget.messageComposerConfiguration?.deleteIcon,
+            playIcon: widget.messageComposerConfiguration?.playIcon,
+            recordIcon: widget.messageComposerConfiguration?.recordIcon,
+            stopIcon: widget.messageComposerConfiguration?.stopIcon,
+            pauseIcon: widget.messageComposerConfiguration?.pauseIcon,
+            submitIcon: widget.messageComposerConfiguration?.submitIcon,
+            disableTypingEvents:
+                widget.messageComposerConfiguration?.disableTypingEvents ??
+                    false,
+            mediaRecorderStyle:
+                widget.messageComposerConfiguration?.mediaRecorderStyle,
+            hideVoiceRecording:
+                widget.messageComposerConfiguration?.hideVoiceRecording ??
+                    false,
+            voiceRecordingIcon:
+                widget.messageComposerConfiguration?.voiceRecordingIcon,
+            theme: widget.messageComposerConfiguration?.theme ?? _theme,
+            attachmentOptions:
+                widget.messageComposerConfiguration?.attachmentOptions,
+            attachmentIconURL:
+                widget.messageComposerConfiguration?.attachmentIconURL,
+            auxiliaryButtonsAlignment:
+                widget.messageComposerConfiguration?.auxiliaryButtonsAlignment,
+            customSoundForMessage:
+                widget.messageComposerConfiguration?.customSoundForMessage,
+            customSoundForMessagePackage: widget
+                .messageComposerConfiguration?.customSoundForMessagePackage,
+            disableSoundForMessages:
+                widget.messageComposerConfiguration?.disableSoundForMessages ??
+                    false,
+            onChange: widget.messageComposerConfiguration?.onChange,
+            onSendButtonTap:
+                widget.messageComposerConfiguration?.onSendButtonTap,
+            sendButtonView: widget.messageComposerConfiguration?.sendButtonView,
+            auxiliaryButtonView:
+                widget.messageComposerConfiguration?.auxiliaryButtonView,
+            secondaryButtonView:
+                widget.messageComposerConfiguration?.secondaryButtonView,
+            liveReactionIconURL:
+                widget.messageComposerConfiguration?.liveReactionIconURL,
+            maxLine: widget.messageComposerConfiguration?.maxLine,
+            footerView: widget.messageComposerConfiguration?.footerView,
+            headerView: widget.messageComposerConfiguration?.headerView,
+            messageComposerStyle: MessageComposerStyle(
+              background: widget.messageComposerConfiguration
+                      ?.messageComposerStyle?.background ??
+                  (widget.threadedMessagesStyle?.gradient != null
+                      ? Colors.transparent
+                      : widget.threadedMessagesStyle?.background),
+              border: widget.messageComposerConfiguration?.messageComposerStyle
+                      ?.border ??
+                  (widget.threadedMessagesStyle?.background != null ||
+                          widget.threadedMessagesStyle?.gradient != null
+                      ? null
+                      : widget.threadedMessagesStyle?.border),
+              borderRadius: widget.messageComposerConfiguration
+                      ?.messageComposerStyle?.borderRadius ??
+                  widget.threadedMessagesStyle?.borderRadius,
+              inputBackground: widget.messageComposerConfiguration
+                      ?.messageComposerStyle?.inputBackground ??
+                  _theme.palette.getAccent100(),
+              gradient: widget
+                  .messageComposerConfiguration?.messageComposerStyle?.gradient,
+              height: widget
+                  .messageComposerConfiguration?.messageComposerStyle?.height,
+              width: widget
+                  .messageComposerConfiguration?.messageComposerStyle?.width,
+              attachmentIconTint: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.attachmentIconTint,
+              closeIconTint: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.closeIconTint,
+              dividerTint: widget.messageComposerConfiguration
+                      ?.messageComposerStyle?.dividerTint ??
+                  _theme.palette.getAccent500(),
+              voiceRecordingIconTint: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.voiceRecordingIconTint,
+              inputTextStyle: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.inputTextStyle,
+              placeholderTextStyle: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.placeholderTextStyle,
+              sendButtonIcon: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.sendButtonIcon,
+              sendButtonIconTint: widget.messageComposerConfiguration
+                  ?.messageComposerStyle?.sendButtonIconTint,
+              contentPadding: widget.messageComposerConfiguration
+                      ?.messageComposerStyle?.contentPadding ??
+                  EdgeInsets.zero,
+              messageInputPadding: widget.messageComposerConfiguration
+                      ?.messageComposerStyle?.messageInputPadding ??
+                  const EdgeInsets.only(left: 8.0, right: 8, bottom: 8),
+            ),
+            aiOptionStyle: widget.messageComposerConfiguration?.aiOptionStyle,
+            aiIconPackageName:
+                widget.messageComposerConfiguration?.aiIconPackageName,
+            aiIconURL: widget.messageComposerConfiguration?.aiIconURL,
+            aiIcon: widget.messageComposerConfiguration?.aiIcon,
+            messageComposerKey: key,
+            disableMentions:
+                widget.messageComposerConfiguration?.disableMentions,
+            textFormatters: widget.messageComposerConfiguration?.textFormatters,
+            onError: widget.messageComposerConfiguration?.onError,
+            text: widget.messageComposerConfiguration?.text,
+            stateCallBack: widget.messageComposerConfiguration?.stateCallBack,
+          );
   }
 
   Widget getMessageList(
@@ -219,80 +240,84 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
     }
 
     return widget.messageListView != null
-        ? widget.messageListView!(controller.user, controller.group, context, widget.parentMessage)
+        ? widget.messageListView!(
+            controller.user, controller.group, context, widget.parentMessage)
         : CometChatMessageList(
-      user: controller.user,
-      group: controller.group,
-      alignment:
-          widget.messageListConfiguration?.alignment ?? ChatAlignment.standard,
-      templates: widget.messageListConfiguration?.templates,
-      // stateCallBack: messageListStateCallBack,
-      messagesRequestBuilder: requestBuilder,
-      footerView: widget.messageListConfiguration?.footerView,
-      headerView: widget.messageListConfiguration?.headerView,
-      datePattern: widget.messageListConfiguration?.datePattern,
-      avatarStyle: widget.messageListConfiguration?.avatarStyle,
-      dateSeparatorPattern:
-          widget.messageListConfiguration?.dateSeparatorPattern,
-      deliveredIcon: widget.messageListConfiguration?.deliveredIcon,
-      emptyStateText: widget.messageListConfiguration?.emptyStateText,
-      emptyStateView: widget.messageListConfiguration?.emptyStateView,
-      errorStateText: widget.messageListConfiguration?.errorStateText,
-      errorStateView: widget.messageListConfiguration?.errorStateView,
-      hideError: widget.messageListConfiguration?.hideError,
-      hideTimestamp: widget.messageListConfiguration?.hideTimestamp,
-      waitIcon: widget.messageListConfiguration?.waitIcon,
-      showAvatar: widget.messageListConfiguration?.showAvatar,
-      loadingStateView: widget.messageListConfiguration?.loadingStateView,
-      disableSoundForMessages: true,
-      messageListStyle: widget.messageListConfiguration?.messageListStyle ??
-          MessageListStyle(
-              contentPadding: widget.messageListConfiguration?.messageListStyle
-                      ?.contentPadding ??
-                  const EdgeInsets.all(8)),
+            user: controller.user,
+            group: controller.group,
+            alignment: widget.messageListConfiguration?.alignment ??
+                ChatAlignment.standard,
+            templates: widget.messageListConfiguration?.templates,
+            messagesRequestBuilder: requestBuilder,
+            footerView: widget.messageListConfiguration?.footerView,
+            headerView: widget.messageListConfiguration?.headerView,
+            datePattern: widget.messageListConfiguration?.datePattern,
+            avatarStyle: widget.messageListConfiguration?.avatarStyle,
+            dateSeparatorPattern:
+                widget.messageListConfiguration?.dateSeparatorPattern,
+            deliveredIcon: widget.messageListConfiguration?.deliveredIcon,
+            emptyStateText: widget.messageListConfiguration?.emptyStateText,
+            emptyStateView: widget.messageListConfiguration?.emptyStateView,
+            errorStateText: widget.messageListConfiguration?.errorStateText,
+            errorStateView: widget.messageListConfiguration?.errorStateView,
+            hideError: widget.messageListConfiguration?.hideError,
+            hideTimestamp: widget.messageListConfiguration?.hideTimestamp,
+            waitIcon: widget.messageListConfiguration?.waitIcon,
+            showAvatar: widget.messageListConfiguration?.showAvatar,
+            loadingStateView: widget.messageListConfiguration?.loadingStateView,
+            disableSoundForMessages: true,
+            messageListStyle:
+                widget.messageListConfiguration?.messageListStyle ??
+                    MessageListStyle(
+                        contentPadding: widget.messageListConfiguration
+                                ?.messageListStyle?.contentPadding ??
+                            const EdgeInsets.all(8)),
 
-      sentIcon: widget.messageListConfiguration?.sentIcon,
-      readIcon: widget.messageListConfiguration?.readIcon,
-      scrollToBottomOnNewMessages:
-          widget.messageListConfiguration?.scrollToBottomOnNewMessages,
-      newMessageIndicatorText:
-          widget.messageListConfiguration?.newMessageIndicatorText,
-      timestampAlignment: widget.messageListConfiguration?.timestampAlignment ??
-          TimeAlignment.bottom,
-      customSoundForMessages:
-          widget.messageListConfiguration?.customSoundForMessages,
-      customSoundForMessagePackage:
-          widget.messageListConfiguration?.customSoundForMessagePackage,
-      messageInformationConfiguration:
-          widget.messageListConfiguration?.messageInformationConfiguration,
-      controller: widget.messageListConfiguration?.controller,
-      theme: widget.messageListConfiguration?.theme ?? _theme,
-      disableReceipt: widget.messageListConfiguration?.disableReceipt,
-      dateSeparatorStyle: widget.messageListConfiguration?.dateSeparatorStyle,
+            sentIcon: widget.messageListConfiguration?.sentIcon,
+            readIcon: widget.messageListConfiguration?.readIcon,
+            scrollToBottomOnNewMessages:
+                widget.messageListConfiguration?.scrollToBottomOnNewMessages,
+            newMessageIndicatorText:
+                widget.messageListConfiguration?.newMessageIndicatorText,
+            timestampAlignment:
+                widget.messageListConfiguration?.timestampAlignment ??
+                    TimeAlignment.bottom,
+            customSoundForMessages:
+                widget.messageListConfiguration?.customSoundForMessages,
+            customSoundForMessagePackage:
+                widget.messageListConfiguration?.customSoundForMessagePackage,
+            messageInformationConfiguration: widget
+                .messageListConfiguration?.messageInformationConfiguration,
+            controller: widget.messageListConfiguration?.controller,
+            theme: widget.messageListConfiguration?.theme ?? _theme,
+            disableReceipt: widget.messageListConfiguration?.disableReceipt,
+            dateSeparatorStyle:
+                widget.messageListConfiguration?.dateSeparatorStyle,
 
-      disableMentions: widget.messageListConfiguration?.disableMentions,
-      onError: widget.messageListConfiguration?.onError,
+            disableMentions: widget.messageListConfiguration?.disableMentions,
+            onError: widget.messageListConfiguration?.onError,
 
-      reactionsConfiguration: widget.messageListConfiguration?.reactionsConfiguration,
-      emojiKeyboardStyle: widget.messageListConfiguration?.emojiKeyboardStyle,
-      addReactionIconTap: widget.messageListConfiguration?.addReactionIconTap,
-      addReactionIcon: widget.messageListConfiguration?.addReactionIcon,
-      reactionsStyle: widget.messageListConfiguration?.reactionsStyle,
+            reactionsConfiguration:
+                widget.messageListConfiguration?.reactionsConfiguration,
+            emojiKeyboardStyle:
+                widget.messageListConfiguration?.emojiKeyboardStyle,
+            addReactionIconTap:
+                widget.messageListConfiguration?.addReactionIconTap,
+            addReactionIcon: widget.messageListConfiguration?.addReactionIcon,
+            reactionsStyle: widget.messageListConfiguration?.reactionsStyle,
 
-      textFormatters: widget.messageListConfiguration?.textFormatters,
-      reactionListConfiguration: widget.messageListConfiguration?.reactionListConfiguration,
-      disableReactions: widget.messageListConfiguration?.disableReactions,
-      favoriteReactions: widget.messageListConfiguration?.favoriteReactions,
-
-    );
+            textFormatters: widget.messageListConfiguration?.textFormatters,
+            reactionListConfiguration:
+                widget.messageListConfiguration?.reactionListConfiguration,
+            disableReactions: widget.messageListConfiguration?.disableReactions,
+            favoriteReactions:
+                widget.messageListConfiguration?.favoriteReactions,
+          );
   }
 
   getThreadMessageHeader(
       CometChatThreadedMessageController controller, BuildContext context) {
     if (widget.bubbleView != null) {
-      // return SizedBox(
-      //     height: 200,
-      //     child: SingleChildScrollView(child: widget.bubbleView!(controller.parentMessage, context)));
       return widget.bubbleView!(controller.parentMessage, context);
     } else {
       return const SizedBox();
@@ -354,11 +379,11 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
                       //----message list-----
                       Padding(
                           padding: const EdgeInsets.only(left: 16, right: 16),
-                          child:getThreadMessageHeader(value, context)),
+                          child: getThreadMessageHeader(value, context)),
 
                       Padding(
                           padding: const EdgeInsets.only(left: 16, right: 16),
-                          child:getActionView(value, context, _theme)),
+                          child: getActionView(value, context, _theme)),
 
                       Expanded(
                           child: GestureDetector(
@@ -372,21 +397,16 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
                               },
                               child: getMessageList(value, context))),
 
-                      //-----message composer-----
-                      // if (widget.hideMessageComposer != true)
-                      //   getMessageComposer(value, context)
-                      if (widget.hideMessageComposer != true && value.composerPlaceHolder != null)
+                      if (widget.hideMessageComposer != true &&
+                          value.composerPlaceHolder != null)
                         value.composerPlaceHolder ?? const SizedBox(),
                     ],
                   ),
                   Positioned.fill(
-
                       child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Stack(
                             children: [
-// Container(color:Colors.red, height: 100),
-
                               if (widget.hideMessageComposer != true)
                                 getMessageComposer(value, context)
                             ],

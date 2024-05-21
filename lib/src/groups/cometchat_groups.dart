@@ -15,8 +15,8 @@ import '../../../cometchat_chat_uikit.dart' as cc;
 ///
 
 class CometChatGroups extends StatefulWidget {
-  CometChatGroups(
-      {Key? key,
+  const CometChatGroups(
+      {super.key,
       this.groupsProtocol,
       this.subtitleView,
       this.listItemView,
@@ -55,8 +55,7 @@ class CometChatGroups extends StatefulWidget {
       this.submitIcon,
       this.selectionIcon,
       this.hideAppbar = false,
-      this.controllerTag})
-      : super(key: key);
+      this.controllerTag});
 
   ///[groupsProtocol] set custom groups request builder protocol
   final GroupsBuilderProtocol? groupsProtocol;
@@ -189,7 +188,6 @@ class _CometChatGroupsState extends State<CometChatGroups> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _currentDateTime = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -310,20 +308,20 @@ class _CometChatGroupsState extends State<CometChatGroups> {
             ? widget.options!(group, controller, context)
             : null,
         style: ListItemStyle(
-            background: widget.listItemStyle?.background ?? Colors.transparent,
-            titleStyle: TextStyle(
-                    fontSize: theme.typography.name.fontSize,
-                    fontWeight: theme.typography.name.fontWeight,
-                    fontFamily: theme.typography.name.fontFamily,
-                    color: theme.palette.getAccent())
-                .merge(widget.listItemStyle?.titleStyle),
-            height: widget.listItemStyle?.height ?? 72,
-            border: widget.listItemStyle?.border,
-            borderRadius: widget.listItemStyle?.borderRadius,
-            gradient: widget.listItemStyle?.gradient,
-            separatorColor: widget.listItemStyle?.separatorColor,
-            width: widget.listItemStyle?.width,
-            padding: widget.listItemStyle?.padding,
+          background: widget.listItemStyle?.background ?? Colors.transparent,
+          titleStyle: TextStyle(
+                  fontSize: theme.typography.name.fontSize,
+                  fontWeight: theme.typography.name.fontWeight,
+                  fontFamily: theme.typography.name.fontFamily,
+                  color: theme.palette.getAccent())
+              .merge(widget.listItemStyle?.titleStyle),
+          height: widget.listItemStyle?.height ?? 72,
+          border: widget.listItemStyle?.border,
+          borderRadius: widget.listItemStyle?.borderRadius,
+          gradient: widget.listItemStyle?.gradient,
+          separatorColor: widget.listItemStyle?.separatorColor,
+          width: widget.listItemStyle?.width,
+          padding: widget.listItemStyle?.padding,
           margin: widget.listItemStyle?.margin,
         ),
         hideSeparator: widget.hideSeparator,
@@ -340,7 +338,7 @@ class _CometChatGroupsState extends State<CometChatGroups> {
     }
   }
 
-  Widget _getLoadingIndicator(BuildContext context, CometChatTheme _theme) {
+  Widget _getLoadingIndicator(BuildContext context, CometChatTheme theme) {
     if (widget.loadingStateView != null) {
       return Center(child: widget.loadingStateView!(context));
     } else {
@@ -349,65 +347,65 @@ class _CometChatGroupsState extends State<CometChatGroups> {
           AssetConstants.spinner,
           package: UIConstants.packageName,
           color: widget.groupsStyle.loadingIconTint ??
-              _theme.palette.getAccent600(),
+              theme.palette.getAccent600(),
         ),
       );
     }
   }
 
-  Widget _getNoGroupIndicator(BuildContext context, CometChatTheme _theme) {
+  Widget _getNoGroupIndicator(BuildContext context, CometChatTheme theme) {
     if (widget.emptyStateView != null) {
       return Center(child: widget.emptyStateView!(context));
     } else {
       return Center(
         child: Text(
-          widget.emptyStateText ?? cc.Translations.of(context).no_groups_found,
+          widget.emptyStateText ?? cc.Translations.of(context).noGroupsFound,
           style: widget.groupsStyle.emptyTextStyle ??
               TextStyle(
-                  fontSize: _theme.typography.title1.fontSize,
-                  fontWeight: _theme.typography.title1.fontWeight,
-                  color: _theme.palette.getAccent400()),
+                  fontSize: theme.typography.title1.fontSize,
+                  fontWeight: theme.typography.title1.fontWeight,
+                  color: theme.palette.getAccent400()),
         ),
       );
     }
   }
 
-  _showErrorDialog(String _errorText, BuildContext context,
-      CometChatTheme _theme, CometChatGroupsController _controller) {
+  _showErrorDialog(String errorText, BuildContext context, CometChatTheme theme,
+      CometChatGroupsController controller) {
     showCometChatConfirmDialog(
         context: context,
         messageText: Text(
-          widget.errorStateText ?? _errorText,
+          widget.errorStateText ?? errorText,
           style: widget.groupsStyle.errorTextStyle ??
               TextStyle(
-                  fontSize: _theme.typography.title2.fontSize,
-                  fontWeight: _theme.typography.title2.fontWeight,
-                  color: _theme.palette.getAccent(),
-                  fontFamily: _theme.typography.title2.fontFamily),
+                  fontSize: theme.typography.title2.fontSize,
+                  fontWeight: theme.typography.title2.fontWeight,
+                  color: theme.palette.getAccent(),
+                  fontFamily: theme.typography.title2.fontFamily),
         ),
-        confirmButtonText: cc.Translations.of(context).try_again,
-        cancelButtonText: cc.Translations.of(context).cancel_capital,
+        confirmButtonText: cc.Translations.of(context).tryAgain,
+        cancelButtonText: cc.Translations.of(context).cancelCapital,
         style: ConfirmDialogStyle(
-            backgroundColor: _theme.palette.mode == PaletteThemeModes.light
-                ? _theme.palette.getBackground()
-                : Color.alphaBlend(_theme.palette.getAccent200(),
-                    _theme.palette.getBackground()),
-            shadowColor: _theme.palette.getAccent300(),
+            backgroundColor: theme.palette.mode == PaletteThemeModes.light
+                ? theme.palette.getBackground()
+                : Color.alphaBlend(theme.palette.getAccent200(),
+                    theme.palette.getBackground()),
+            shadowColor: theme.palette.getAccent300(),
             confirmButtonTextStyle: TextStyle(
-                fontSize: _theme.typography.text2.fontSize,
-                fontWeight: _theme.typography.text2.fontWeight,
-                color: _theme.palette.getPrimary()),
+                fontSize: theme.typography.text2.fontSize,
+                fontWeight: theme.typography.text2.fontWeight,
+                color: theme.palette.getPrimary()),
             cancelButtonTextStyle: TextStyle(
-                fontSize: _theme.typography.text2.fontSize,
-                fontWeight: _theme.typography.text2.fontWeight,
-                color: _theme.palette.getPrimary())),
+                fontSize: theme.typography.text2.fontSize,
+                fontWeight: theme.typography.text2.fontWeight,
+                color: theme.palette.getPrimary())),
         onCancel: () {
           Navigator.pop(context);
           Navigator.pop(context);
         },
         onConfirm: () {
           Navigator.pop(context);
-          _controller.loadMoreElements();
+          controller.loadMoreElements();
         });
   }
 
@@ -419,31 +417,31 @@ class _CometChatGroupsState extends State<CometChatGroups> {
       error = Utils.getErrorTranslatedText(
           context, (controller.error as CometChatException).code);
     } else {
-      error = cc.Translations.of(context).no_groups_found;
+      error = cc.Translations.of(context).noGroupsFound;
     }
     if (widget.errorStateView != null) {}
     _showErrorDialog(error, context, theme, controller);
   }
 
-  Widget _getList(BuildContext context, CometChatTheme _theme) {
+  Widget _getList(BuildContext context, CometChatTheme theme) {
     return GetBuilder<CometChatGroupsController>(
       tag: widget.controllerTag ?? "default_tag_for_groups_$_currentDateTime",
       builder: (CometChatGroupsController value) {
         value.context = context;
         if (value.hasError == true) {
           WidgetsBinding.instance
-              .addPostFrameCallback((_) => _showError(value, context, _theme));
+              .addPostFrameCallback((_) => _showError(value, context, theme));
 
           if (widget.errorStateView != null) {
             return widget.errorStateView!(context);
           }
 
-          return _getLoadingIndicator(context, _theme);
+          return _getLoadingIndicator(context, theme);
         } else if (value.isLoading == true && (value.list.isEmpty)) {
-          return _getLoadingIndicator(context, _theme);
+          return _getLoadingIndicator(context, theme);
         } else if (value.list.isEmpty) {
           //----------- empty list widget-----------
-          return _getNoGroupIndicator(context, _theme);
+          return _getNoGroupIndicator(context, theme);
         } else {
           return ListView.builder(
             controller: widget.controller,
@@ -452,12 +450,12 @@ class _CometChatGroupsState extends State<CometChatGroups> {
             itemBuilder: (context, index) {
               if (index >= value.list.length) {
                 value.loadMoreElements();
-                return _getLoadingIndicator(context, _theme);
+                return _getLoadingIndicator(context, theme);
               }
 
               return Column(
                 children: [
-                  getListItem(value.list[index], value, _theme, index, context),
+                  getListItem(value.list[index], value, theme, index, context),
                 ],
               );
             },
@@ -492,7 +490,7 @@ class _CometChatGroupsState extends State<CometChatGroups> {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = widget.theme ?? cometChatTheme;
+    CometChatTheme theme = widget.theme ?? cometChatTheme;
 
     if (widget.stateCallBack != null) {
       WidgetsBinding.instance
@@ -513,7 +511,7 @@ class _CometChatGroupsState extends State<CometChatGroups> {
         menuOptions: [
           if (widget.appBarOptions != null) ...widget.appBarOptions!(context),
           Obx(
-            () => getSubmitWidget(groupsController, _theme),
+            () => getSubmitWidget(groupsController, theme),
           )
         ],
         style: ListBaseStyle(
@@ -534,6 +532,6 @@ class _CometChatGroupsState extends State<CometChatGroups> {
             searchBoxRadius: widget.groupsStyle.searchBorderRadius,
             searchBoxBackground: widget.groupsStyle.searchBackground,
             searchBorderWidth: widget.groupsStyle.searchBorderWidth),
-        container: _getList(context, _theme));
+        container: _getList(context, theme));
   }
 }

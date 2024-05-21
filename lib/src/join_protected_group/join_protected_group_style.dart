@@ -13,19 +13,13 @@ class JoinProtectedGroupStyle extends BaseStyles {
     this.errorTextStyle,
     this.passwordInputTextStyle,
     this.passwordPlaceholderStyle,
-    double? width,
-    double? height,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
-  }) : super(
-            width: width,
-            height: height,
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
+    super.width,
+    super.height,
+    super.background,
+    super.border,
+    super.borderRadius,
+    super.gradient,
+  });
 
   ///[closeIconTint] provides color to close icon
   final Color? closeIconTint;

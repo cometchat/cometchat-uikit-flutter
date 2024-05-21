@@ -11,7 +11,7 @@ import 'package:get/get.dart';
 ///
 class CometChatCreateGroup extends StatefulWidget {
   const CometChatCreateGroup(
-      {Key? key,
+      {super.key,
       this.title,
       this.createIcon,
       this.namePlaceholderText,
@@ -22,8 +22,7 @@ class CometChatCreateGroup extends StatefulWidget {
       this.theme,
       this.passwordPlaceholderText,
       this.onBack,
-      this.onError})
-      : super(key: key);
+      this.onError});
 
   ///[title] Title of the component
   final String? title;
@@ -85,7 +84,7 @@ class _CometChatCreateGroupState extends State<CometChatCreateGroup>
         tag: createGroupController.tag,
         builder: (CometChatCreateGroupController createGroupController) {
           return CometChatListBase(
-              title: widget.title ?? cc.Translations.of(context).new_group,
+              title: widget.title ?? cc.Translations.of(context).newGroup,
               theme: theme,
               backIcon: widget.closeIcon ??
                   Image.asset(
@@ -191,7 +190,7 @@ class _CometChatCreateGroupState extends State<CometChatCreateGroup>
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return cc.Translations.of(context)
-                                      .enter_group_name;
+                                      .enterGroupName;
                                 }
                                 return null;
                               },
@@ -256,7 +255,7 @@ class _CometChatCreateGroupState extends State<CometChatCreateGroup>
                                           GroupTypeConstants.password &&
                                       (value == null || value.isEmpty)) {
                                     return cc.Translations.of(context)
-                                        .enter_group_password;
+                                        .enterGroupPassword;
                                   }
                                   return null;
                                 },

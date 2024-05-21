@@ -1,4 +1,3 @@
-// import 'package:cometchat_chat_uikit/src/shared/view_models/cometchat_group_members_controller_protocol.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../cometchat_chat_uikit.dart';
@@ -36,8 +35,8 @@ class CometChatGroupMembersController
       SelectionMode? mode,
       bool? hideUserPresence,
       required CometChatTheme theme,
-      OnError? onError})
-      : super(builderProtocol: groupMembersBuilderProtocol, onError: onError) {
+      super.onError})
+      : super(builderProtocol: groupMembersBuilderProtocol) {
     this.hideUserPresence = hideUserPresence ?? true;
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
@@ -113,10 +112,10 @@ class CometChatGroupMembersController
   }
 
   GroupMember? getGroupMemberFromUser(User user) {
-    try{
+    try {
       return list.firstWhereOrNull((element) => element.uid == user.uid);
-    } catch(e) {
-      if(kDebugMode) {
+    } catch (e) {
+      if (kDebugMode) {
         debugPrint('Error in getGroupMemberFromUser: $e');
       }
       return null;
@@ -128,7 +127,7 @@ class CometChatGroupMembersController
       cc.Action action, User kickedUser, User kickedBy, Group kickedFrom) {
     if (kickedFrom.guid == group.guid) {
       GroupMember? member = getGroupMemberFromUser(kickedUser);
-      if(member != null) {
+      if (member != null) {
         removeElement(member);
       }
     }
@@ -138,7 +137,7 @@ class CometChatGroupMembersController
   void onGroupMemberLeft(cc.Action action, User leftUser, Group leftGroup) {
     if (leftGroup.guid == group.guid) {
       GroupMember? member = getGroupMemberFromUser(leftUser);
-      if(member != null) {
+      if (member != null) {
         removeElement(member);
       }
     }
@@ -149,7 +148,7 @@ class CometChatGroupMembersController
       cc.Action action, User bannedUser, User bannedBy, Group bannedFrom) {
     if (bannedFrom.guid == group.guid) {
       GroupMember? member = getGroupMemberFromUser(bannedUser);
-      if(member != null) {
+      if (member != null) {
         removeElement(member);
       }
     }
@@ -170,8 +169,6 @@ class CometChatGroupMembersController
       addElement(addedTo as GroupMember);
     }
   }
-
-  // UI Group Listeners  ------
 
   Future<void> changeScope(
       Group group, GroupMember member, String newScope, String oldScope) async {

@@ -72,9 +72,8 @@ class ConversationsConfiguration {
       this.disableTyping,
       this.deleteConversationDialogStyle,
       this.hideAppbar,
-        this.disableMentions,
-        this.textFormatters
-      });
+      this.disableMentions,
+      this.textFormatters});
 
   ///[conversationsProtocol] set custom conversations request builder protocol
   final ConversationsBuilderProtocol? conversationsProtocol;

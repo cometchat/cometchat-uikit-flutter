@@ -15,23 +15,16 @@ class AddMembersStyle extends BaseStyles {
       this.searchBorderWidth,
       this.searchBorderColor,
       this.searchBorderRadius,
-      double? width,
-      double? height,
-      Color? background,
-      BoxBorder? border,
-      double? borderRadius,
-      Gradient? gradient,
+      super.width,
+      super.height,
+      super.background,
+      super.border,
+      super.borderRadius,
+      super.gradient,
       this.emptyStateTextStyle,
       this.errorStateTextStyle,
       this.submitIconTint,
-      this.selectionIconTint})
-      : super(
-            width: width,
-            height: height,
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
+      this.selectionIconTint});
 
   ///[titleStyle] provide title style to add members
   final TextStyle? titleStyle;

@@ -19,28 +19,27 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 ///
 
 class AISmartRepliesView extends StatefulWidget {
-  const AISmartRepliesView({
-    Key? key,
-    this.user,
-    this.group,
-    this.style,
-    this.theme,
-    this.onError,
-    this.emptyStateText,
-    this.errorStateText,
-    this.customView,
-    this.loadingStateText,
-    this.loadingIconUrl,
-    this.loadingStateView,
-    this.errorIconUrl,
-    this.errorStateView,
-    this.emptyStateView,
-    this.emptyIconUrl,
-    this.loadingIconPackageName,
-    this.emptyIconPackageName,
-    this.errorIconPackageName,
-    this.apiConfiguration
-  }) : super(key: key);
+  const AISmartRepliesView(
+      {super.key,
+      this.user,
+      this.group,
+      this.style,
+      this.theme,
+      this.onError,
+      this.emptyStateText,
+      this.errorStateText,
+      this.customView,
+      this.loadingStateText,
+      this.loadingIconUrl,
+      this.loadingStateView,
+      this.errorIconUrl,
+      this.errorStateView,
+      this.emptyStateView,
+      this.emptyIconUrl,
+      this.loadingIconPackageName,
+      this.emptyIconPackageName,
+      this.errorIconPackageName,
+      this.apiConfiguration});
 
   ///[style] provides styling to the reply view
   final AISmartRepliesStyle? style;
@@ -97,10 +96,7 @@ class AISmartRepliesView extends StatefulWidget {
   final String? emptyIconPackageName;
 
   ///[apiConfiguration] sets the api configuration for smart replies
-  final Map<String , dynamic>? apiConfiguration;
-
-
-
+  final Map<String, dynamic>? apiConfiguration;
 
   @override
   State<AISmartRepliesView> createState() => _AISmartRepliesViewState();
@@ -117,7 +113,6 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
 
   @override
   void initState() {
-    // TODO: implement initState
     getReply();
     super.initState();
   }
@@ -143,8 +138,7 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
     Map<String, String> smartReplies = {};
     List<String> aiReplies = [];
     await CometChat.getSmartReplies(receiverId, receiverType,
-        configuration: widget.apiConfiguration,
-        onSuccess: (reply) {
+        configuration: widget.apiConfiguration, onSuccess: (reply) {
       smartReplies = reply;
       if (smartReplies.containsKey("negative")) {
         aiReplies.add(smartReplies["negative"] ?? "");
@@ -182,13 +176,13 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
           children: [
             Image.asset(
               widget.errorIconUrl ?? AssetConstants.repliesError,
-              package: widget.errorIconPackageName?? UIConstants.packageName,
+              package: widget.errorIconPackageName ?? UIConstants.packageName,
               color:
                   widget.style?.emptyIconTint ?? _theme.palette.getAccent700(),
             ),
             Text(
               widget.errorStateText ??
-                  Translations.of(context).something_went_wrong_error,
+                  Translations.of(context).somethingWentWrongError,
               style: widget.style?.errorTextStyle ??
                   TextStyle(
                     fontSize: _theme.typography.title1.fontSize,
@@ -212,13 +206,12 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
         children: [
           Image.asset(
             widget.emptyIconUrl ?? AssetConstants.repliesEmpty,
-            package:widget.emptyIconPackageName?? UIConstants.packageName,
+            package: widget.emptyIconPackageName ?? UIConstants.packageName,
             color: widget.style?.emptyIconTint ?? _theme.palette.getAccent700(),
           ),
           Center(
             child: Text(
-              widget.emptyStateText ??
-                  Translations.of(context).no_messages_found,
+              widget.emptyStateText ?? Translations.of(context).noMessagesFound,
               style: widget.style?.emptyTextStyle ??
                   TextStyle(
                     fontSize: _theme.typography.title1.fontSize,
@@ -241,7 +234,7 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
         children: [
           Image.asset(
             widget.loadingIconUrl ?? AssetConstants.spinner,
-            package:widget.loadingIconPackageName?? UIConstants.packageName,
+            package: widget.loadingIconPackageName ?? UIConstants.packageName,
             color:
                 widget.style?.loadingIconTint ?? _theme.palette.getAccent600(),
           ),
@@ -250,7 +243,7 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
           ),
           Text(
             widget.loadingStateText ??
-                Translations.of(context).generating_replies,
+                Translations.of(context).generatingReplies,
             style: widget.style?.loadingTextStyle ??
                 TextStyle(
                     fontSize: _theme.typography.subtitle1.fontSize,
@@ -284,17 +277,13 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
       width: double.maxFinite,
       color: widget.style?.backgroundColor ?? _theme.palette.getBackground(),
       child: isLoading
-          // --- on Loading ---
           ? _getLoadingIndicator()
           :
-          // ---on error---
           isError
               ? _getOnError(context, _theme)
               :
-              // --- empty replies state ----
               _replies.isEmpty
                   ? _getEmptyView(context)
-                  // ---- View of smart replies ------
                   : (widget.customView != null)
                       ? widget.customView!(_replies, context)
                       : SingleChildScrollView(

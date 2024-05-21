@@ -18,19 +18,13 @@ class MessageComposerStyle extends BaseStyles {
     this.contentPadding,
     this.aiIconTint,
     this.messageInputPadding,
-    double? width,
-    double? height,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
-  }) : super(
-            width: width,
-            height: height,
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
+    super.width,
+    super.height,
+    super.background,
+    super.border,
+    super.borderRadius,
+    super.gradient,
+  });
 
   ///[inputBackground] background color of text field
   final Color? inputBackground;

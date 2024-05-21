@@ -4,14 +4,14 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'cometchat_chat_uikit'
-  s.version          = '4.4.0'
+  s.version          = '4.5.0'
   s.summary          = 'CometChat Flutter UI KIt'
   s.description      = <<-DESC
 CometChat Flutter UI KIt
                        DESC
   s.homepage         = 'https://www.cometchat.com/'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'shantanu.khare@cometchat.com'  }
+  s.author           = { 'CometChat' => 'shantanu.khare@cometchat.com'  }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'

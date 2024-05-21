@@ -4,12 +4,12 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 ///It provides a generic [requestBuilder] property and methods [getRequest] and [getSearchRequest] that needs to be overridden.
 abstract class GroupsBuilderProtocol
     extends BuilderProtocol<GroupsRequestBuilder, GroupsRequest> {
-  const GroupsBuilderProtocol(GroupsRequestBuilder _builder) : super(_builder);
+  const GroupsBuilderProtocol(super._builder);
 }
 
 ///[UIGroupsBuilder] is the default [GroupsBuilderProtocol] used when a custom builder protocol is not passed
 class UIGroupsBuilder extends GroupsBuilderProtocol {
-  const UIGroupsBuilder(GroupsRequestBuilder _builder) : super(_builder);
+  const UIGroupsBuilder(super._builder);
 
   @override
   GroupsRequest getRequest() {

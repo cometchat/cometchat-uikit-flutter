@@ -10,10 +10,8 @@ class CometChatUsersController
         ConnectionListener {
   //--------------------Constructor-----------------------
   CometChatUsersController(
-      {required this.usersBuilderProtocol,
-      SelectionMode? mode,
-      OnError? onError})
-      : super(builderProtocol: usersBuilderProtocol, onError: onError) {
+      {required this.usersBuilderProtocol, SelectionMode? mode, super.onError})
+      : super(builderProtocol: usersBuilderProtocol) {
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
     userListenerID = "${dateStamp}user_listener";
@@ -78,7 +76,7 @@ class CometChatUsersController
 
   @override
   void onConnected() {
-    if(!isLoading) {
+    if (!isLoading) {
       request = usersBuilderProtocol.getRequest();
       list = [];
       loadMoreElements();

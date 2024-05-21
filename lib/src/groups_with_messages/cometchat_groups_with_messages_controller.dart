@@ -267,8 +267,7 @@ class CometChatGroupsWithMessagesController extends GetxController
                           fontSize: theme.typography.text2.fontSize,
                           fontWeight: theme.typography.text2.fontWeight,
                           color: theme.palette.getPrimary())),
-                  title: Text(
-                      Translations.of(context).something_went_wrong_error,
+                  title: Text(Translations.of(context).somethingWentWrongError,
                       style: TextStyle(
                           fontSize: theme.typography.name.fontSize,
                           fontWeight: theme.typography.name.fontWeight,

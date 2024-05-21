@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get.dart';
 
-// import 'package:get/get_state_manager/get_state_manager.dart';
-// import 'package:get/state_manager.dart';
-
 ///
 /// [CometChatMessageComposer] component allows users to
 /// send messages and attachments to the chat, participating in the conversation.
@@ -31,7 +28,7 @@ import 'package:get/get.dart';
 //ignore: must_be_immutable
 class CometChatMessageComposer extends StatelessWidget {
   CometChatMessageComposer(
-      {Key? key,
+      {super.key,
       this.user,
       this.group,
       this.messageComposerStyle = const MessageComposerStyle(),
@@ -73,11 +70,9 @@ class CometChatMessageComposer extends StatelessWidget {
       this.aiIconURL,
       this.aiIconPackageName,
       this.aiOptionStyle,
-      List<CometChatTextFormatter>?
-          textFormatters,
+      List<CometChatTextFormatter>? textFormatters,
       this.disableMentions,
-        this.messageComposerKey
-      })
+      this.messageComposerKey})
       : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
@@ -101,8 +96,7 @@ class CometChatMessageComposer extends StatelessWidget {
             onError: onError,
             aiOptionStyle: aiOptionStyle,
             theme: theme,
-            textFormatters: textFormatters),
-        super(key: key);
+            textFormatters: textFormatters);
 
   ///sets [user] for message composer
   final User? user;
@@ -201,8 +195,6 @@ class CometChatMessageComposer extends StatelessWidget {
 
   late Map<String, dynamic> composerId = {};
 
-
-
   Widget _getSendButton(
       CometChatTheme theme, CometChatMessageComposerController value) {
     if (value.textEditingController.text.isEmpty &&
@@ -242,12 +234,9 @@ class CometChatMessageComposer extends StatelessWidget {
     }
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
-    final CometChatTheme _theme = theme ?? cometChatTheme;
+    final CometChatTheme theme = this.theme ?? cometChatTheme;
 
     if (group != null) {
       composerId['guid'] = group!.guid;
@@ -257,7 +246,7 @@ class CometChatMessageComposer extends StatelessWidget {
 
     final List<CometChatMessageComposerAction> elementList =
         CometChatUIKit.getDataSource().getAIOptions(
-            user, group, _theme, context, composerId, aiOptionStyle);
+            user, group, theme, context, composerId, aiOptionStyle);
 
     return WillPopScope(
       onWillPop: () async {
@@ -271,11 +260,9 @@ class CometChatMessageComposer extends StatelessWidget {
               decoration: BoxDecoration(
                   color: messageComposerStyle.gradient == null
                       ? messageComposerStyle.background ??
-                          _theme.palette.getBackground()
+                          theme.palette.getBackground()
                       : null,
                   gradient: messageComposerStyle.gradient),
-
-
               padding: messageComposerStyle.contentPadding ??
                   const EdgeInsets.only(bottom: 10),
               child: GetBuilder(
@@ -289,7 +276,7 @@ class CometChatMessageComposer extends StatelessWidget {
                     value.context = context;
                     if (value.getAttachmentOptionsCalled == false) {
                       value.getAttachmentOptionsCalled = true;
-                      value.getAttachmentOptions(_theme, context);
+                      value.getAttachmentOptions(theme, context);
                     }
                     value.initializeHeaderAndFooterView();
                     return Column(
@@ -315,28 +302,28 @@ class CometChatMessageComposer extends StatelessWidget {
                                   onCloseClick: value.onMessagePreviewClose,
                                   style: CometChatMessagePreviewStyle(
                                       messagePreviewTitleStyle: TextStyle(
-                                          color: _theme.palette.getAccent600(),
+                                          color: theme.palette.getAccent600(),
                                           fontSize:
-                                              _theme.typography.text2.fontSize,
-                                          fontWeight: _theme
-                                              .typography.text2.fontWeight,
-                                          fontFamily: _theme
+                                              theme.typography.text2.fontSize,
+                                          fontWeight:
+                                              theme.typography.text2.fontWeight,
+                                          fontFamily: theme
                                               .typography.text2.fontFamily),
                                       messagePreviewSubtitleStyle: TextStyle(
-                                          color: _theme.palette.getAccent600(),
+                                          color: theme.palette.getAccent600(),
                                           fontSize:
-                                              _theme.typography.text2.fontSize,
-                                          fontWeight: _theme
-                                              .typography.text2.fontWeight,
-                                          fontFamily: _theme
+                                              theme.typography.text2.fontSize,
+                                          fontWeight:
+                                              theme.typography.text2.fontWeight,
+                                          fontFamily: theme
                                               .typography.text2.fontFamily),
                                       closeIconColor:
                                           messageComposerStyle.closeIconTint ??
-                                              _theme.palette.getAccent500(),
+                                              theme.palette.getAccent500(),
                                       messagePreviewBorder: Border(
                                           left: BorderSide(
                                               color:
-                                                  _theme.palette.getAccent100(),
+                                                  theme.palette.getAccent100(),
                                               width: 3))),
                                 ),
                               ),
@@ -356,7 +343,7 @@ class CometChatMessageComposer extends StatelessWidget {
                               if (value.header != null) value.header!,
                               Padding(
                                 padding: messageComposerStyle
-                                        ?.messageInputPadding ??
+                                        .messageInputPadding ??
                                     const EdgeInsets.symmetric(horizontal: 16),
                                 child: CometChatMessageInput(
                                   text: text,
@@ -366,7 +353,7 @@ class CometChatMessageComposer extends StatelessWidget {
                                   maxLine: maxLine,
                                   onChange: onChange ?? value.onChange,
                                   primaryButtonView:
-                                      _getSendButton(_theme, value),
+                                      _getSendButton(theme, value),
                                   secondaryButtonView: secondaryButtonView !=
                                           null
                                       ? secondaryButtonView!(
@@ -385,12 +372,12 @@ class CometChatMessageComposer extends StatelessWidget {
                                                     UIConstants.packageName,
                                                 color: messageComposerStyle
                                                         .attachmentIconTint ??
-                                                    _theme.palette
+                                                    theme.palette
                                                         .getAccent700(),
                                               ),
                                           onPressed: () async {
                                             value.showBottomActionSheet(
-                                                _theme, context);
+                                                theme, context);
                                           }),
                                   auxiliaryButtonsAlignment:
                                       auxiliaryButtonsAlignment ??
@@ -414,7 +401,7 @@ class CometChatMessageComposer extends StatelessWidget {
                                                     value.group,
                                                     context,
                                                     value.composerId,
-                                                    _theme)
+                                                    theme)
                                               ..paddingAll(0.0)
                                               ..marginAll(0.0),
 
@@ -434,14 +421,14 @@ class CometChatMessageComposer extends StatelessWidget {
                                                                     .packageName,
                                                         color: messageComposerStyle
                                                                 .aiIconTint ??
-                                                            _theme.palette
+                                                            theme.palette
                                                                 .getAccent700(),
                                                         height: 24,
                                                         width: 24,
                                                       ),
                                                   onPressed: () {
                                                     value.aiButtonTap(
-                                                        _theme,
+                                                        theme,
                                                         context,
                                                         value.composerId);
                                                   }).paddingOnly(right: 10.0),
@@ -461,7 +448,7 @@ class CometChatMessageComposer extends StatelessWidget {
                                                             .packageName,
                                                         color: messageComposerStyle
                                                                 .voiceRecordingIconTint ??
-                                                            _theme.palette
+                                                            theme.palette
                                                                 .getAccent700(),
                                                         height: 24,
                                                         width: 24,
@@ -483,7 +470,7 @@ class CometChatMessageComposer extends StatelessWidget {
                                                           stopIcon: stopIcon,
                                                           mediaRecorderStyle:
                                                               mediaRecorderStyle,
-                                                          theme: _theme,
+                                                          theme: theme,
                                                           onSubmit: value
                                                               .sendMediaRecording,
                                                         );
@@ -495,10 +482,10 @@ class CometChatMessageComposer extends StatelessWidget {
                                   style: MessageInputStyle(
                                       dividerTint:
                                           messageComposerStyle.dividerTint ??
-                                              _theme.palette.getAccent500(),
+                                              theme.palette.getAccent500(),
                                       background: messageComposerStyle
                                               .inputBackground ??
-                                          _theme.palette.getAccent100(),
+                                          theme.palette.getAccent100(),
                                       gradient:
                                           messageComposerStyle.inputGradient,
                                       textStyle:

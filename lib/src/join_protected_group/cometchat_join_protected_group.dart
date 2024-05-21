@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
-// import 'package:cometchat_chat_uikit/src/utils/loading_indicator.dart';
 
 ///[CometChatJoinProtectedGroup] is a component that provides a screen with a form field to join a password protected group
 ///
@@ -21,7 +20,7 @@ import 'package:get/get_state_manager/get_state_manager.dart';
 /// ```
 class CometChatJoinProtectedGroup extends StatelessWidget {
   CometChatJoinProtectedGroup(
-      {Key? key,
+      {super.key,
       required Group group,
       this.title,
       this.description,
@@ -41,8 +40,7 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                 onJoinTap: onJoinTap,
                 background: joinProtectedGroupStyle?.background,
                 errorStateText: errorStateText,
-                errorTextStyle: joinProtectedGroupStyle?.errorTextStyle),
-        super(key: key);
+                errorTextStyle: joinProtectedGroupStyle?.errorTextStyle);
 
   ///[title] sets title of the component
   final String? title;
@@ -73,7 +71,7 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
 
     return GetBuilder(
         init: cometChatJoinProtectedGroupController,
@@ -83,14 +81,14 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                 state.controller?.onClose(),
         builder: (CometChatJoinProtectedGroupController controller) {
           return CometChatListBase(
-              title: title ?? Translations.of(context).protected_group,
+              title: title ?? Translations.of(context).protectedGroup,
               theme: theme,
               backIcon: closeIcon ??
                   Image.asset(
                     AssetConstants.close,
                     package: UIConstants.packageName,
                     color: joinProtectedGroupStyle?.closeIconTint ??
-                        _theme.palette.getPrimary(),
+                        theme.palette.getPrimary(),
                   ),
               showBackButton: true,
               onBack: onBack,
@@ -107,13 +105,13 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
               menuOptions: [
                 IconButton(
                     onPressed: () =>
-                        controller.requestJoinGroup(context, _theme),
+                        controller.requestJoinGroup(context, theme),
                     icon: joinIcon ??
                         Image.asset(
                           AssetConstants.checkmark,
                           package: UIConstants.packageName,
                           color: joinProtectedGroupStyle?.joinIconTint ??
-                              _theme.palette.getPrimary(),
+                              theme.palette.getPrimary(),
                         ))
               ],
               container: Padding(
@@ -122,12 +120,12 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                   children: [
                     Text(
                       description ??
-                          '${Translations.of(context).enter_password_to_access} ${controller.getGroupName(context)}.',
+                          '${Translations.of(context).enterPasswordToAccess} ${controller.getGroupName(context)}.',
                       style: TextStyle(
-                        color: _theme.palette.getAccent(),
-                        fontSize: _theme.typography.subtitle1.fontSize,
-                        fontFamily: _theme.typography.subtitle1.fontFamily,
-                        fontWeight: _theme.typography.subtitle1.fontWeight,
+                        color: theme.palette.getAccent(),
+                        fontSize: theme.typography.subtitle1.fontSize,
+                        fontFamily: theme.typography.subtitle1.fontFamily,
+                        fontWeight: theme.typography.subtitle1.fontWeight,
                       ).merge(joinProtectedGroupStyle?.descriptionTextStyle),
                     ),
                     const SizedBox(
@@ -138,7 +136,7 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                       child: TextFormField(
                         key: controller.passwordsFieldKey,
                         keyboardAppearance:
-                            _theme.palette.mode == PaletteThemeModes.light
+                            theme.palette.mode == PaletteThemeModes.light
                                 ? Brightness.light
                                 : Brightness.dark,
                         obscureText: true,
@@ -147,10 +145,10 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                         controller: controller.textEditingController,
                         maxLength: 16,
                         style: TextStyle(
-                          color: _theme.palette.getAccent(),
-                          fontSize: _theme.typography.body.fontSize,
-                          fontFamily: _theme.typography.body.fontFamily,
-                          fontWeight: _theme.typography.body.fontWeight,
+                          color: theme.palette.getAccent(),
+                          fontSize: theme.typography.body.fontSize,
+                          fontFamily: theme.typography.body.fontFamily,
+                          fontWeight: theme.typography.body.fontWeight,
                         ).merge(
                             joinProtectedGroupStyle?.passwordInputTextStyle),
                         decoration: InputDecoration(
@@ -159,27 +157,27 @@ class CometChatJoinProtectedGroup extends StatelessWidget {
                               borderSide: BorderSide(
                                   color: joinProtectedGroupStyle
                                           ?.inputBorderColor ??
-                                      _theme.palette.getAccent100()),
+                                      theme.palette.getAccent100()),
                             ),
                             enabledBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
                                   color: joinProtectedGroupStyle
                                           ?.inputBorderColor ??
-                                      _theme.palette.getAccent100()),
+                                      theme.palette.getAccent100()),
                             ),
                             focusedBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
                                   color: joinProtectedGroupStyle
                                           ?.inputBorderColor ??
-                                      _theme.palette.getAccent100()),
+                                      theme.palette.getAccent100()),
                             ),
                             hintText: passwordPlaceholderText ??
-                                Translations.of(context).group_password,
+                                Translations.of(context).groupPassword,
                             hintStyle: TextStyle(
-                              color: _theme.palette.getAccent600(),
-                              fontSize: _theme.typography.body.fontSize,
-                              fontFamily: _theme.typography.body.fontFamily,
-                              fontWeight: _theme.typography.body.fontWeight,
+                              color: theme.palette.getAccent600(),
+                              fontSize: theme.typography.body.fontSize,
+                              fontFamily: theme.typography.body.fontFamily,
+                              fontWeight: theme.typography.body.fontWeight,
                             ).merge(joinProtectedGroupStyle
                                 ?.passwordPlaceholderStyle)),
                       ),

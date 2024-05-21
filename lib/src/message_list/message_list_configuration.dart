@@ -64,7 +64,6 @@ class MessageListConfiguration {
     this.textFormatters,
     this.disableMentions,
     this.reactionsConfiguration,
-
   });
 
   ///[messagesRequestBuilder] custom request builder for fetching messages

@@ -14,16 +14,11 @@ class AIConversationStarterStyle extends BaseStyles {
     this.loadingTextStyle,
     this.loadingIconTint,
     this.shadowColor,
-    Color? background,
-    BoxBorder? border,
-    double? borderRadius,
-    Gradient? gradient,
-  }) : super(
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient
-  );
+    super.background,
+    super.border,
+    super.borderRadius,
+    super.gradient,
+  });
 
   ///[replyTextStyle] changes style of suggested reply text
   final TextStyle? replyTextStyle;

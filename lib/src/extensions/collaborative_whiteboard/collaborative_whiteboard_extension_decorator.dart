@@ -11,9 +11,8 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
 
   User? loggedInUser;
 
-  CollaborativeWhiteBoardExtensionDecorator(DataSource dataSource,
-      {this.configuration})
-      : super(dataSource) {
+  CollaborativeWhiteBoardExtensionDecorator(super.dataSource,
+      {this.configuration}) {
     getLoggedInUser();
   }
 
@@ -46,12 +45,12 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
   @override
   List<CometChatMessageTemplate> getAllMessageTemplates(
       {CometChatTheme? theme}) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme0 = theme ?? cometChatTheme;
 
     List<CometChatMessageTemplate> templateList =
-        super.getAllMessageTemplates(theme: _theme);
+        super.getAllMessageTemplates(theme: theme0);
 
-    templateList.add(getTemplate(theme: _theme));
+    templateList.add(getTemplate(theme: theme0));
 
     return templateList;
   }
@@ -76,21 +75,22 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
     if (message != null &&
         message.type == collaborativeWhiteBoardExtensionTypeConstant &&
         message.category == MessageCategoryConstants.custom) {
-      return Translations.of(context).custom_message_whiteboard;
+      return Translations.of(context).customMessageWhiteboard;
     } else {
       return super.getLastConversationMessage(conversation, context);
     }
   }
 
   CometChatMessageTemplate getTemplate({CometChatTheme? theme}) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme0 = theme ?? cometChatTheme;
 
     return CometChatMessageTemplate(
         type: collaborativeWhiteBoardExtensionTypeConstant,
         category: CometChatMessageCategory.custom,
         contentView: (BaseMessage message, BuildContext context,
-            BubbleAlignment alignment,{AdditionalConfigurations? additionalConfigurations}) {
-          return getContentView(message as CustomMessage, _theme, context);
+            BubbleAlignment alignment,
+            {AdditionalConfigurations? additionalConfigurations}) {
+          return getContentView(message as CustomMessage, theme0, context);
         },
         options: CometChatUIKit.getDataSource().getCommonOptions,
         bottomView: CometChatUIKit.getDataSource().getBottomView);
@@ -138,8 +138,8 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
                 color: theme.palette.getAccent(),
                 fontFamily: theme.typography.title2.fontFamily),
           ),
-          confirmButtonText: Translations.of(context).try_again,
-          cancelButtonText: Translations.of(context).cancel_capital,
+          confirmButtonText: Translations.of(context).tryAgain,
+          cancelButtonText: Translations.of(context).cancelCapital,
           onConfirm: () {
             Navigator.pop(context);
             sendCollaborativeWhiteBoard(
@@ -153,7 +153,7 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
     return CometChatMessageComposerAction(
         id: collaborativeWhiteBoardExtensionTypeConstant,
         title: configuration?.optionTitle ??
-            Translations.of(context).collaborative_whiteboard,
+            Translations.of(context).collaborativeWhiteboard,
         iconUrl: configuration?.optionIconUrl ??
             AssetConstants.collaborativeWhiteboard,
         iconUrlPackageName:
@@ -202,10 +202,10 @@ class CollaborativeWhiteBoardExtensionDecorator extends DataSourceDecorator {
 
   String getErrorTranslatedText(BuildContext context, String errorCode) {
     if (errorCode == "ERROR_INTERNET_UNAVAILABLE") {
-      return Translations.of(context).error_internet_unavailable;
+      return Translations.of(context).errorInternetUnavailable;
     } else {}
 
-    return Translations.of(context).something_went_wrong_error;
+    return Translations.of(context).somethingWentWrongError;
   }
 
   bool isNotThread(Map<String, dynamic>? id) {

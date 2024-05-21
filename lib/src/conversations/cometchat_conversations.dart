@@ -25,77 +25,75 @@ import '../../../cometchat_chat_uikit.dart' as cc;
 ///  );
 /// ```
 class CometChatConversations extends StatelessWidget {
-  CometChatConversations(
-      {Key? key,
-      this.conversationsProtocol,
-      this.subtitleView,
-      this.listItemView,
-      this.conversationsStyle = const ConversationsStyle(),
-      this.controller,
-      this.theme,
-      this.backButton,
-      this.showBackButton = true,
-      this.selectionMode,
-      this.onSelection,
-      this.title,
-      this.errorStateText,
-      this.emptyStateText,
-      this.stateCallBack,
-      this.conversationsRequestBuilder,
-      this.hideError,
-      this.loadingStateText,
-      this.emptyStateView,
-      this.errorStateView,
-      this.listItemStyle,
-      this.tailView,
-      this.options,
-      this.avatarStyle,
-      this.statusIndicatorStyle,
-      this.badgeStyle,
-      this.receiptStyle,
-      this.appBarOptions,
-      this.hideSeparator = false,
-      this.disableUsersPresence = false,
-      this.disableReceipt = false,
-      this.protectedGroupIcon,
-      this.privateGroupIcon,
-      this.readIcon,
-      this.deliveredIcon,
-      this.sentIcon,
-      this.activateSelection,
-      this.datePattern,
-      String? customSoundForMessages,
-      bool? disableSoundForMessages = false,
-      this.typingIndicatorText,
-      this.dateStyle,
-      this.onBack,
-      this.onItemTap,
-      this.onItemLongPress,
-      bool? disableTyping,
-      ConfirmDialogStyle? deleteConversationDialogStyle,
-      OnError? onError,
-        this.hideAppbar = false,
-  this.disableMentions,
-  this.textFormatters,
-      })
-      : conversationsController = CometChatConversationsController(
-            conversationsBuilderProtocol: conversationsProtocol ??
-                UIConversationsBuilder(
-                  conversationsRequestBuilder ?? ConversationsRequestBuilder(),
-                ),
-            mode: selectionMode,
-            theme: theme ?? cometChatTheme,
-            disableSoundForMessages: disableSoundForMessages,
-            customSoundForMessages: customSoundForMessages,
-            disableUsersPresence: disableUsersPresence,
-            disableReceipt: disableReceipt,
-            disableTyping: disableTyping,
-            deleteConversationDialogStyle: deleteConversationDialogStyle,
-            onError: onError,
-  textFormatters: textFormatters,
-    disableMentions: disableMentions,
-  ),
-        super(key: key);
+  CometChatConversations({
+    super.key,
+    this.conversationsProtocol,
+    this.subtitleView,
+    this.listItemView,
+    this.conversationsStyle = const ConversationsStyle(),
+    this.controller,
+    this.theme,
+    this.backButton,
+    this.showBackButton = true,
+    this.selectionMode,
+    this.onSelection,
+    this.title,
+    this.errorStateText,
+    this.emptyStateText,
+    this.stateCallBack,
+    this.conversationsRequestBuilder,
+    this.hideError,
+    this.loadingStateText,
+    this.emptyStateView,
+    this.errorStateView,
+    this.listItemStyle,
+    this.tailView,
+    this.options,
+    this.avatarStyle,
+    this.statusIndicatorStyle,
+    this.badgeStyle,
+    this.receiptStyle,
+    this.appBarOptions,
+    this.hideSeparator = false,
+    this.disableUsersPresence = false,
+    this.disableReceipt = false,
+    this.protectedGroupIcon,
+    this.privateGroupIcon,
+    this.readIcon,
+    this.deliveredIcon,
+    this.sentIcon,
+    this.activateSelection,
+    this.datePattern,
+    String? customSoundForMessages,
+    bool? disableSoundForMessages = false,
+    this.typingIndicatorText,
+    this.dateStyle,
+    this.onBack,
+    this.onItemTap,
+    this.onItemLongPress,
+    bool? disableTyping,
+    ConfirmDialogStyle? deleteConversationDialogStyle,
+    OnError? onError,
+    this.hideAppbar = false,
+    this.disableMentions,
+    this.textFormatters,
+  }) : conversationsController = CometChatConversationsController(
+          conversationsBuilderProtocol: conversationsProtocol ??
+              UIConversationsBuilder(
+                conversationsRequestBuilder ?? ConversationsRequestBuilder(),
+              ),
+          mode: selectionMode,
+          theme: theme ?? cometChatTheme,
+          disableSoundForMessages: disableSoundForMessages,
+          customSoundForMessages: customSoundForMessages,
+          disableUsersPresence: disableUsersPresence,
+          disableReceipt: disableReceipt,
+          disableTyping: disableTyping,
+          deleteConversationDialogStyle: deleteConversationDialogStyle,
+          onError: onError,
+          textFormatters: textFormatters,
+          disableMentions: disableMentions,
+        );
 
   ///property to be set internally by using passed parameters [conversationsProtocol] ,[selectionMode] ,[options]
   ///these are passed to the [CometChatConversationsController] which is responsible for the business logic
@@ -258,8 +256,8 @@ class CometChatConversations extends StatelessWidget {
       subtitle = getDefaultSubtitle(theme,
           context: context,
           conversation: conversation,
-          showTypingIndicator: controller.typingMap
-              .containsKey(conversation.conversationId),
+          showTypingIndicator:
+              controller.typingMap.containsKey(conversation.conversationId),
           hideThreadIndicator: controller.getHideThreadIndicator(conversation),
           controller: controller);
     }
@@ -354,20 +352,20 @@ class CometChatConversations extends StatelessWidget {
         theme: theme,
         hideSeparator: hideSeparator,
         style: ListItemStyle(
-            background: listItemStyle?.background ?? Colors.transparent,
-            titleStyle: listItemStyle?.titleStyle ??
-                TextStyle(
-                    fontSize: theme.typography.name.fontSize,
-                    fontWeight: theme.typography.name.fontWeight,
-                    fontFamily: theme.typography.name.fontFamily,
-                    color: theme.palette.getAccent()),
-            height: listItemStyle?.height ?? 72,
-            border: listItemStyle?.border,
-            borderRadius: listItemStyle?.borderRadius,
-            gradient: listItemStyle?.gradient,
-            separatorColor: listItemStyle?.separatorColor,
-            width: listItemStyle?.width,
-            margin: listItemStyle?.margin,
+          background: listItemStyle?.background ?? Colors.transparent,
+          titleStyle: listItemStyle?.titleStyle ??
+              TextStyle(
+                  fontSize: theme.typography.name.fontSize,
+                  fontWeight: theme.typography.name.fontWeight,
+                  fontFamily: theme.typography.name.fontFamily,
+                  color: theme.palette.getAccent()),
+          height: listItemStyle?.height ?? 72,
+          border: listItemStyle?.border,
+          borderRadius: listItemStyle?.borderRadius,
+          gradient: listItemStyle?.gradient,
+          separatorColor: listItemStyle?.separatorColor,
+          width: listItemStyle?.width,
+          margin: listItemStyle?.margin,
           padding: listItemStyle?.padding,
         ),
         options: options != null
@@ -412,7 +410,7 @@ class CometChatConversations extends StatelessWidget {
     } else {
       return Center(
         child: Text(
-          emptyStateText ?? cc.Translations.of(context).no_chats_found,
+          emptyStateText ?? cc.Translations.of(context).noChatsFound,
           style: conversationsStyle.emptyTextStyle ??
               TextStyle(
                   fontSize: theme.typography.title1.fontSize,
@@ -436,8 +434,8 @@ class CometChatConversations extends StatelessWidget {
                   color: theme.palette.getAccent(),
                   fontFamily: theme.typography.title2.fontFamily),
         ),
-        confirmButtonText: cc.Translations.of(context).try_again,
-        cancelButtonText: cc.Translations.of(context).cancel_capital,
+        confirmButtonText: cc.Translations.of(context).tryAgain,
+        cancelButtonText: cc.Translations.of(context).cancelCapital,
         style: ConfirmDialogStyle(
             backgroundColor: theme.palette.mode == PaletteThemeModes.light
                 ? theme.palette.getBackground()
@@ -470,16 +468,16 @@ class CometChatConversations extends StatelessWidget {
       error = Utils.getErrorTranslatedText(
           context, (controller.error as CometChatException).code);
     } else {
-      error = cc.Translations.of(context).no_chats_found;
+      error = cc.Translations.of(context).noChatsFound;
     }
     if (errorStateView != null) {}
     _showErrorDialog(error, context, theme, controller);
   }
 
-  Widget _getList(CometChatConversationsController _controller,
-      BuildContext context, CometChatTheme _theme) {
+  Widget _getList(CometChatConversationsController conversationController,
+      BuildContext context, CometChatTheme theme) {
     return GetBuilder(
-      init: _controller,
+      init: conversationController,
       global: false,
       dispose: (GetBuilderState<CometChatConversationsController> state) =>
           state.controller?.onClose(),
@@ -487,18 +485,18 @@ class CometChatConversations extends StatelessWidget {
         value.context = context;
         if (value.hasError == true) {
           WidgetsBinding.instance
-              .addPostFrameCallback((_) => _showError(value, context, _theme));
+              .addPostFrameCallback((_) => _showError(value, context, theme));
 
           if (errorStateView != null) {
             return errorStateView!(context);
           }
 
-          return _getLoadingIndicator(context, _theme);
+          return _getLoadingIndicator(context, theme);
         } else if (value.isLoading == true && (value.list.isEmpty)) {
-          return _getLoadingIndicator(context, _theme);
+          return _getLoadingIndicator(context, theme);
         } else if (value.list.isEmpty) {
           //----------- empty list widget-----------
-          return _getNoConversationIndicator(context, _theme);
+          return _getNoConversationIndicator(context, theme);
         } else {
           return ListView.builder(
             controller: controller,
@@ -507,12 +505,12 @@ class CometChatConversations extends StatelessWidget {
             itemBuilder: (context, index) {
               if (index >= value.list.length) {
                 value.loadMoreElements();
-                return _getLoadingIndicator(context, _theme);
+                return _getLoadingIndicator(context, theme);
               }
 
               return Column(
                 children: [
-                  getListItem(value.list[index], value, _theme, context),
+                  getListItem(value.list[index], value, theme, context),
                 ],
               );
             },
@@ -547,7 +545,7 @@ class CometChatConversations extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
 
     if (stateCallBack != null) {
       WidgetsBinding.instance
@@ -566,7 +564,7 @@ class CometChatConversations extends StatelessWidget {
           if (appBarOptions != null && appBarOptions!.isNotEmpty)
             ...appBarOptions!,
           Obx(
-            () => getSelectionWidget(conversationsController, _theme),
+            () => getSelectionWidget(conversationsController, theme),
           )
         ],
         style: ListBaseStyle(
@@ -580,7 +578,7 @@ class CometChatConversations extends StatelessWidget {
             backIconTint: conversationsStyle.backIconTint,
             border: conversationsStyle.border,
             borderRadius: conversationsStyle.borderRadius),
-        container: _getList(conversationsController, context, _theme));
+        container: _getList(conversationsController, context, theme));
   }
 
 //----------- default subtitle
@@ -597,7 +595,7 @@ class CometChatConversations extends StatelessWidget {
       children: [
         if (hideThreadIndicator != null && hideThreadIndicator == false)
           Text(
-            cc.Translations.of(context).in_a_thread,
+            cc.Translations.of(context).inAThread,
             style: conversationsStyle.threadIndicatorStyle ??
                 TextStyle(
                     color: theme.palette.getPrimary(),
@@ -615,10 +613,10 @@ class CometChatConversations extends StatelessWidget {
                     controller.getHideReceipt(conversation, disableReceipt)),
             if (showTypingIndicator)
               Text(
-                typingIndicatorText ?? (
-        (conversation.conversationWith is User) ?
-              cc.Translations.of(context).is_typing
-                      : "${controller.typingMap[conversation.conversationId]?.sender.name ?? ''} ${cc.Translations.of(context).is_typing}"),
+                typingIndicatorText ??
+                    ((conversation.conversationWith is User)
+                        ? cc.Translations.of(context).isTyping
+                        : "${controller.typingMap[conversation.conversationId]?.sender.name ?? ''} ${cc.Translations.of(context).isTyping}"),
                 style: conversationsStyle.typingIndicatorStyle ??
                     TextStyle(
                         color: theme.palette.getPrimary(),
@@ -685,21 +683,20 @@ class CometChatConversations extends StatelessWidget {
             fontWeight: theme.typography.subtitle1.fontWeight,
             fontFamily: theme.typography.subtitle1.fontFamily);
 
-
     AdditionalConfigurations? configurations;
 
-    if(conversation.lastMessage!=null) {
-
+    if (conversation.lastMessage != null) {
       configurations = AdditionalConfigurations(
-        textFormatters: controller.getTextFormatters(conversation.lastMessage!, theme),
+        textFormatters:
+            controller.getTextFormatters(conversation.lastMessage!, theme),
       );
     }
 
-    Widget subtitle = CometChatUIKit.getDataSource()
-        .getConversationSubtitle(conversation, context,theme,subtitleStyle,additionalConfigurations: configurations);
+    Widget subtitle = CometChatUIKit.getDataSource().getConversationSubtitle(
+        conversation, context, theme, subtitleStyle,
+        additionalConfigurations: configurations);
 
     return subtitle;
-
   }
 
 //----------- last message update time and unread message count -----------

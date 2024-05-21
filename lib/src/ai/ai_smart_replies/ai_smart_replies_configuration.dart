@@ -68,33 +68,33 @@ class AISmartRepliesConfiguration {
   final String? loadingIconUrl;
 
   ///[apiConfiguration] set the configuration
-  final Future<Map<String, dynamic>> Function(User? user,  Group? group)? apiConfiguration;
-
+  final Future<Map<String, dynamic>> Function(User? user, Group? group)?
+      apiConfiguration;
 
   /// Copies current [AISmartRepliesConfiguration] with some changes
-  AISmartRepliesConfiguration copyWith({
-    AISmartRepliesStyle? smartRepliesStyle,
-    CometChatTheme? theme,
-    String? emptyStateText,
-    OnError? onError,
-    String? errorStateText,
-    Widget Function(List<String> replies, BuildContext context)? customView,
-    Function(
-            User? user,
-            Group? group,
-            Function(Widget, bool isLoading, BuildContext context) onSuccess,
-            Function(CometChatException e, bool isError, BuildContext context)
-                onError)?
-        onClick,
-    String? loadingStateText,
-    WidgetBuilder? emptyStateView,
-    WidgetBuilder? loadingStateView,
-    WidgetBuilder? errorStateView,
-    String? errorIconUrl,
-    String? emptyIconUrl,
-    String? loadingIconUrl,
-    Future<Map<String, dynamic>> Function(User? user,  Group? group)? apiConfiguration
-  }) {
+  AISmartRepliesConfiguration copyWith(
+      {AISmartRepliesStyle? smartRepliesStyle,
+      CometChatTheme? theme,
+      String? emptyStateText,
+      OnError? onError,
+      String? errorStateText,
+      Widget Function(List<String> replies, BuildContext context)? customView,
+      Function(
+              User? user,
+              Group? group,
+              Function(Widget, bool isLoading, BuildContext context) onSuccess,
+              Function(CometChatException e, bool isError, BuildContext context)
+                  onError)?
+          onClick,
+      String? loadingStateText,
+      WidgetBuilder? emptyStateView,
+      WidgetBuilder? loadingStateView,
+      WidgetBuilder? errorStateView,
+      String? errorIconUrl,
+      String? emptyIconUrl,
+      String? loadingIconUrl,
+      Future<Map<String, dynamic>> Function(User? user, Group? group)?
+          apiConfiguration}) {
     return AISmartRepliesConfiguration(
       smartRepliesStyle: smartRepliesStyle ?? this.smartRepliesStyle,
       theme: theme ?? this.theme,

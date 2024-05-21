@@ -25,7 +25,7 @@ import '../../../cometchat_chat_uikit.dart' as cc;
 class CometChatMessageHeader extends StatelessWidget
     implements PreferredSizeWidget {
   const CometChatMessageHeader(
-      {Key? key,
+      {super.key,
       this.backButton,
       this.messageHeaderStyle = const MessageHeaderStyle(),
       this.group,
@@ -46,8 +46,7 @@ class CometChatMessageHeader extends StatelessWidget
       : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
-            "Only one of user or group should be passed"),
-        super(key: key);
+            "Only one of user or group should be passed");
 
   ///[backButton] used to set back button widget
   final WidgetBuilder? backButton;
@@ -117,7 +116,7 @@ class CometChatMessageHeader extends StatelessWidget
   ///CometChatMessageHeader(
   /// 	 group: group,
   ///    appBarOptions: [
-  // /
+  ///
   ///       (User? user, Group? group,BuildContext context) {
   ///            return Icon(Icons.group);
   ///              },
@@ -139,26 +138,22 @@ class CometChatMessageHeader extends StatelessWidget
 
   Widget getBackButton(BuildContext context, CometChatTheme theme) {
     if (hideBackButton != true) {
-      Widget _backButton;
-      if (backButton != null) {
-        _backButton = backButton!(context);
-      } else {
-        _backButton = GestureDetector(
-          onTap: onBack ??
-              () {
-                Navigator.pop(context);
-              },
-          child: Image.asset(
-            AssetConstants.back,
-            package: UIConstants.packageName,
-            color: messageHeaderStyle.backButtonIconTint ??
-                theme.palette.getPrimary(),
-          ),
-        );
-      }
+      Widget backButton;
+      backButton = GestureDetector(
+        onTap: onBack ??
+            () {
+              Navigator.pop(context);
+            },
+        child: Image.asset(
+          AssetConstants.back,
+          package: UIConstants.packageName,
+          color: messageHeaderStyle.backButtonIconTint ??
+              theme.palette.getPrimary(),
+        ),
+      );
 
       return Padding(
-          padding: const EdgeInsets.only(left: 20.0), child: _backButton);
+          padding: const EdgeInsets.only(left: 20.0), child: backButton);
     } else {
       return const SizedBox(
         height: 0,
@@ -171,10 +166,10 @@ class CometChatMessageHeader extends StatelessWidget
       CometChatMessageHeaderController controller, CometChatTheme theme) {
     String text;
     if (controller.userObject != null) {
-      text = cc.Translations.of(context).is_typing;
+      text = cc.Translations.of(context).isTyping;
     } else {
       text =
-          "${controller.typingUser?.name ?? ''} ${cc.Translations.of(context).is_typing}";
+          "${controller.typingUser?.name ?? ''} ${cc.Translations.of(context).isTyping}";
     }
     return Text(
       text,
@@ -280,26 +275,7 @@ class CometChatMessageHeader extends StatelessWidget
       if (temp != null) {
         tailWidgetList.addAll(temp);
       }
-
-      // for (var item in appBarOptions!) {
-      //   _tailWidgetList.add(
-      //       item(_controller.userObject, _controller.groupObject, context));
-      // }
     }
-
-    // if (hideDetail != true) {
-    //   _tailWidgetList ??= [];
-    //   _tailWidgetList.add(IconButton(
-    //       padding: EdgeInsets.zero,
-    //       onPressed: () {
-    //         CometChatMessageEvents.onViewDetail(user, group);
-    //       },
-    //       icon: detailIcon ??
-    //           Image.asset(
-    //             AssetConstants.infoIcon,
-    //             package: UIConstants.packageName,
-    //           )));
-    // }
 
     if (tailWidgetList.isNotEmpty) {
       tailView = Row(
@@ -329,10 +305,10 @@ class CometChatMessageHeader extends StatelessWidget
                 background: Colors.transparent,
                 height: 56,
                 titleStyle: TextStyle(
-                    fontSize: theme.typography.name.fontSize,
-                    fontWeight: theme.typography.name.fontWeight,
-                    fontFamily: theme.typography.name.fontFamily,
-                    color: theme.palette.getAccent(),
+                  fontSize: theme.typography.name.fontSize,
+                  fontWeight: theme.typography.name.fontWeight,
+                  fontFamily: theme.typography.name.fontFamily,
+                  color: theme.palette.getAccent(),
                   overflow: TextOverflow.ellipsis,
                 )),
       ),
@@ -341,7 +317,7 @@ class CometChatMessageHeader extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    CometChatTheme _theme = theme ?? cometChatTheme;
+    CometChatTheme theme = this.theme ?? cometChatTheme;
     CometChatMessageHeaderController controller =
         CometChatMessageHeaderController(
             userObject: user, groupObject: group, disableTyping: disableTyping);
@@ -351,7 +327,7 @@ class CometChatMessageHeader extends StatelessWidget
       width: messageHeaderStyle.width ?? MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
           color: messageHeaderStyle.gradient == null
-              ? messageHeaderStyle.background ?? _theme.palette.getBackground()
+              ? messageHeaderStyle.background ?? theme.palette.getBackground()
               : null,
           border: messageHeaderStyle.border,
           gradient: messageHeaderStyle.gradient,
@@ -360,11 +336,11 @@ class CometChatMessageHeader extends StatelessWidget
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          getBackButton(context, _theme),
+          getBackButton(context, theme),
           Expanded(
               child: Padding(
             padding: const EdgeInsets.only(left: 20.0, right: 16),
-            child: _getBody(controller, context, _theme),
+            child: _getBody(controller, context, theme),
           ))
         ],
       ),

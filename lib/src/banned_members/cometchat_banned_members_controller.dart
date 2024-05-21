@@ -37,13 +37,12 @@ class CometChatBannedMembersController
       required this.group,
       required this.disableUsersPresence,
       required CometChatTheme theme,
-      OnError? onError,
+      super.onError,
       this.unbanIconUrl,
       this.unbanIconUrlPackageName})
-      : super(builderProtocol: bannedMemberBuilderProtocol, onError: onError) {
+      : super(builderProtocol: bannedMemberBuilderProtocol) {
     selectionMode = mode ?? SelectionMode.none;
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
-    // assigning values for listeners
     groupSDKListenerID = "${dateStamp}group_sdk_listener";
     userSDKListenerID = "${dateStamp}user_sdk_listener";
     groupUIListenerID = "${dateStamp}_ui_group_listener";

@@ -7,12 +7,12 @@ class ConversationsStyle extends BaseStyles {
   const ConversationsStyle(
       {this.backIconTint,
       this.titleStyle,
-      double? width,
-      double? height,
-      Color? background,
-      BoxBorder? border,
-      double? borderRadius,
-      Gradient? gradient,
+      super.width,
+      super.height,
+      super.background,
+      super.border,
+      super.borderRadius,
+      super.gradient,
       this.emptyTextStyle,
       this.errorTextStyle,
       this.onlineStatusColor,
@@ -22,14 +22,7 @@ class ConversationsStyle extends BaseStyles {
       this.threadIndicatorStyle,
       this.typingIndicatorStyle,
       this.privateGroupIconBackground,
-      this.protectedGroupIconBackground})
-      : super(
-            width: width,
-            height: height,
-            background: background,
-            border: border,
-            borderRadius: borderRadius,
-            gradient: gradient);
+      this.protectedGroupIconBackground});
 
   ///[backIconTint] provides color for the back icon
   final Color? backIconTint;

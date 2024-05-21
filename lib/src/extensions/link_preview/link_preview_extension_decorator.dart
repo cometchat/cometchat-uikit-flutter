@@ -8,14 +8,15 @@ class LinkPreviewExtensionDecorator extends DataSourceDecorator {
   String messageTranslationTypeConstant = ExtensionConstants.linkPreview;
   LinkPreviewConfiguration? configuration;
 
-  LinkPreviewExtensionDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource);
+  LinkPreviewExtensionDecorator(super.dataSource, {this.configuration});
 
   @override
   Widget getTextMessageContentView(TextMessage message, BuildContext context,
-      BubbleAlignment _alignment, CometChatTheme theme, {AdditionalConfigurations? additionalConfigurations}) {
-    Widget? child =
-        super.getTextMessageContentView(message, context, _alignment, theme,additionalConfigurations: additionalConfigurations);
+      BubbleAlignment alignment, CometChatTheme theme,
+      {AdditionalConfigurations? additionalConfigurations}) {
+    Widget? child = super.getTextMessageContentView(
+        message, context, alignment, theme,
+        additionalConfigurations: additionalConfigurations);
     return LinkPreviewBubble(
       theme: configuration?.theme ?? theme,
       onTapUrl: onTapUrl,

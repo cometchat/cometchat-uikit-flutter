@@ -9,8 +9,7 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
   User? loggedInUser;
   SmartReplyConfiguration? configuration;
 
-  SmartReplyExtensionDecorator(DataSource dataSource, {this.configuration})
-      : super(dataSource) {
+  SmartReplyExtensionDecorator(super.dataSource, {this.configuration}) {
     dateStamp = DateTime.now().microsecondsSinceEpoch.toString();
     _listenerId = "ExtensionSmartReplyListener";
     CometChatMessageEvents.removeMessagesListener(_listenerId);
@@ -179,12 +178,12 @@ class SmartReplyExtensionDecorator extends DataSourceDecorator
     }
 
     Map<String, dynamic> id =
-    UIEventUtils.createMap(uid, guid, textMessage.parentMessageId);
+        UIEventUtils.createMap(uid, guid, textMessage.parentMessageId);
 
     if (replies.isEmpty) {
       CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
       return;
-    };
+    }
 
     onCloseTap() {
       CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
