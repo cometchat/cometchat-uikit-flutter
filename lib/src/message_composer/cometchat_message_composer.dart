@@ -72,7 +72,9 @@ class CometChatMessageComposer extends StatelessWidget {
       this.aiOptionStyle,
       List<CometChatTextFormatter>? textFormatters,
       this.disableMentions,
-      this.messageComposerKey})
+      this.messageComposerKey,
+        this.textEditingController,
+      })
       : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
@@ -96,7 +98,9 @@ class CometChatMessageComposer extends StatelessWidget {
             onError: onError,
             aiOptionStyle: aiOptionStyle,
             theme: theme,
-            textFormatters: textFormatters);
+            textFormatters: textFormatters,
+          textEditingController: textEditingController
+        );
 
   ///sets [user] for message composer
   final User? user;
@@ -193,11 +197,14 @@ class CometChatMessageComposer extends StatelessWidget {
   ///[messageComposerKey] key to identify the message composer
   final GlobalKey? messageComposerKey;
 
+  ///[textEditingController] controls the state of the text field
+  final TextEditingController? textEditingController;
+
   late Map<String, dynamic> composerId = {};
 
   Widget _getSendButton(
       CometChatTheme theme, CometChatMessageComposerController value) {
-    if (value.textEditingController.text.isEmpty &&
+    if (value.textEditingController != null && value.textEditingController!.text.isEmpty &&
         value.hideLiveReaction != true) {
       return IconButton(
         padding: const EdgeInsets.all(0),
@@ -225,7 +232,7 @@ class CometChatMessageComposer extends StatelessWidget {
                   Image.asset(
                     AssetConstants.send,
                     package: UIConstants.packageName,
-                    color: value.textEditingController.text.isEmpty
+                    color: (value.textEditingController != null && value.textEditingController!.text.isEmpty)
                         ? theme.palette.getAccent400()
                         : messageComposerStyle.sendButtonIconTint ??
                             theme.palette.getPrimary(),

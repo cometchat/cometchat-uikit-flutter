@@ -186,88 +186,91 @@ class _CometChatMessageInformationState
           } else if (value.isLoading == true) {
             return _getLoadingIndicator(context, _theme);
           } else {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(
-                  height: 10,
-                ),
-                Text(
-                  cc.Translations.of(context).message,
-                  style: widget.messageInformationStyle?.titleStyle ??
-                      TextStyle(
-                          fontSize: _theme.typography.text1.fontSize,
-                          fontWeight: _theme.typography.text1.fontWeight,
-                          color: _theme.palette.getAccent400()),
-                ),
-                Divider(
-                  color: widget.messageInformationStyle?.dividerTint ??
-                      _theme.palette.getAccent500(),
-                ),
-                (widget.bubbleView != null)
-                    ? getBubbleView(value, context)
-                    : MessageUtils.getMessageBubble(
-                        context: context,
-                        theme: _theme,
-                        bubbleAlignment: BubbleAlignment.right,
-                        message: value.parentMessage,
-                        template: _messageTemplate,
-                      ),
-                Divider(
-                  color: widget.messageInformationStyle?.dividerTint ??
-                      _theme.palette.getAccent500(),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Text(
-                  cc.Translations.of(context).receiptInformation,
-                  style: widget.messageInformationStyle?.titleStyle ??
-                      TextStyle(
-                          fontSize: _theme.typography.text1.fontSize,
-                          fontWeight: _theme.typography.text1.fontWeight,
-                          color: _theme.palette.getAccent400()),
-                ),
-                Divider(
-                  color: widget.messageInformationStyle?.dividerTint ??
-                      _theme.palette.getAccent500(),
-                ),
-                (cometchatMessageInformationController
-                        .messageReceiptList.isEmpty)
-                    ? _getNoRecipient(context, _theme)
-                    : Expanded(
-                        child: ListView.separated(
-                          itemCount: cometchatMessageInformationController
-                              .messageReceiptList.length,
-                          itemBuilder: (context, index) {
-                            final messageReceipt =
-                                cometchatMessageInformationController
-                                    .messageReceiptList[index];
-                            return ((cometchatMessageInformationController
-                                            .parentMessage.receiver is User &&
-                                        cometchatMessageInformationController
-                                                .parentMessage.sentAt !=
-                                            null) &&
-                                    (cometchatMessageInformationController
-                                                .parentMessage.readAt ==
-                                            null &&
-                                        cometchatMessageInformationController
-                                                .parentMessage.deliveredAt ==
-                                            null))
-                                ? _getNoRecipient(context, _theme)
-                                : _getListItemView(
-                                    value, messageReceipt, context);
-                          },
-                          separatorBuilder: (context, index) {
-                            return Divider(
-                              color:
-                                  widget.messageInformationStyle?.dividerTint ??
-                                      _theme.palette.getAccent500(),
-                            );
-                          },
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Text(
+                    cc.Translations.of(context).message,
+                    style: widget.messageInformationStyle?.titleStyle ??
+                        TextStyle(
+                            fontSize: _theme.typography.text1.fontSize,
+                            fontWeight: _theme.typography.text1.fontWeight,
+                            color: _theme.palette.getAccent400()),
+                  ),
+                  Divider(
+                    color: widget.messageInformationStyle?.dividerTint ??
+                        _theme.palette.getAccent500(),
+                  ),
+                  (widget.bubbleView != null)
+                      ? getBubbleView(value, context)
+                      : MessageUtils.getMessageBubble(
+                          context: context,
+                          theme: _theme,
+                          bubbleAlignment: BubbleAlignment.right,
+                          message: value.parentMessage,
+                          template: _messageTemplate,
                         ),
-                      ),
-              ],
+                  Divider(
+                    color: widget.messageInformationStyle?.dividerTint ??
+                        _theme.palette.getAccent500(),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Text(
+                    cc.Translations.of(context).receiptInformation,
+                    style: widget.messageInformationStyle?.titleStyle ??
+                        TextStyle(
+                            fontSize: _theme.typography.text1.fontSize,
+                            fontWeight: _theme.typography.text1.fontWeight,
+                            color: _theme.palette.getAccent400()),
+                  ),
+                  Divider(
+                    color: widget.messageInformationStyle?.dividerTint ??
+                        _theme.palette.getAccent500(),
+                  ),
+                  SizedBox(
+                    child: (cometchatMessageInformationController
+                        .messageReceiptList.isEmpty)
+                        ? _getNoRecipient(context, _theme)
+                        : ListView.separated(
+                      itemCount: cometchatMessageInformationController
+                          .messageReceiptList.length,
+                      shrinkWrap: true,
+                      itemBuilder: (context, index) {
+                        final messageReceipt =
+                        cometchatMessageInformationController
+                            .messageReceiptList[index];
+                        return ((cometchatMessageInformationController
+                            .parentMessage.receiver is User &&
+                            cometchatMessageInformationController
+                                .parentMessage.sentAt !=
+                                null) &&
+                            (cometchatMessageInformationController
+                                .parentMessage.readAt ==
+                                null &&
+                                cometchatMessageInformationController
+                                    .parentMessage.deliveredAt ==
+                                    null))
+                            ? _getNoRecipient(context, _theme)
+                            : _getListItemView(
+                            value, messageReceipt, context);
+                      },
+                      separatorBuilder: (context, index) {
+                        return Divider(
+                          color:
+                          widget.messageInformationStyle?.dividerTint ??
+                              _theme.palette.getAccent500(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             );
           }
         },

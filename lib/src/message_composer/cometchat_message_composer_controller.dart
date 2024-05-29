@@ -33,7 +33,9 @@ class CometChatMessageComposerController extends GetxController
       this.disableMentions = false,
       this.previewView,
       this.theme,
-      this.textFormatters}) {
+      this.textFormatters,
+        this.textEditingController,
+      }) {
     tag = "tag$counter";
     counter++;
   }
@@ -60,7 +62,7 @@ class CometChatMessageComposerController extends GetxController
   String receiverType = "";
 
   ///[textEditingController] controls the state of the text field
-  late TextEditingController textEditingController;
+  TextEditingController? textEditingController;
 
   ///[loggedInUser] is the user the message is being sent from
   User loggedInUser = User(name: '', uid: '');
@@ -216,7 +218,7 @@ class CometChatMessageComposerController extends GetxController
         CometChatUIEvents.showPanel(
             composerId,
             CustomUIPosition.composerPreview,
-            (context) => getList(context, textEditingController));
+            (context) => getList(context, textEditingController!));
         if (shouldScrollDown) {
           _scrollDown();
         }
@@ -238,8 +240,8 @@ class CometChatMessageComposerController extends GetxController
     });
 
     initializeFormatters();
-    textEditingController = CustomTextEditingController(
-        text: text, theme: cometChatTheme, formatters: _formatters);
+    textEditingController ??= CustomTextEditingController(
+          text: text, theme: cometChatTheme, formatters: _formatters);
 
     CometChatMessageEvents.addMessagesListener(_uiMessageListener, this);
     CometChatUIEvents.addUiListener(_uiEventListener, this);
@@ -327,7 +329,7 @@ class CometChatMessageComposerController extends GetxController
   void onClose() {
     CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
     CometChatUIEvents.removeUiListener(_uiEventListener);
-    textEditingController.dispose();
+    textEditingController?.dispose();
     focusNode.removeListener(_onFocusChange);
     focusNode.dispose();
     _subscription.cancel();
@@ -428,7 +430,7 @@ class CometChatMessageComposerController extends GetxController
 
   @override
   void ccComposeMessage(String text, MessageEditStatus status) {
-    textEditingController.text = text;
+    textEditingController?.text = text;
     _previousText = text;
     update();
   }
@@ -542,7 +544,7 @@ class CometChatMessageComposerController extends GetxController
               _currentSearchKeyword!.isNotEmpty &&
               element.trackingCharacter == _currentSearchKeyword![0])) {
         try {
-          element.onChange(textEditingController, _previousText);
+          element.onChange(textEditingController!, _previousText);
         } catch (err) {
           if (kDebugMode) {
             print("error caught in message composer onchange $err");
@@ -553,19 +555,20 @@ class CometChatMessageComposerController extends GetxController
   }
 
   _onTyping() {
-    if ((_previousText.isEmpty && textEditingController.text.isNotEmpty) ||
-        (_previousText.isNotEmpty && textEditingController.text.isEmpty)) {
+    if(textEditingController == null) return;
+    if ((_previousText.isEmpty && textEditingController!.text.isNotEmpty) ||
+        (_previousText.isNotEmpty &&  textEditingController!.text.isEmpty)) {
       update();
     }
 
-    if (_previousText.length > textEditingController.text.length) {
+    if ( _previousText.length > textEditingController!.text.length) {
       _checkFormatter();
-      _previousText = textEditingController.text;
+      _previousText = textEditingController!.text;
       return;
     }
 
     _checkFormatter();
-    _previousText = textEditingController.text;
+    _previousText = textEditingController!.text;
 
     if (disableTypingEvents == false) {
       if (_isTyping == false) {
@@ -591,7 +594,8 @@ class CometChatMessageComposerController extends GetxController
   }
 
   sendTextMessage({Map<String, dynamic>? metadata}) {
-    String messagesText = textEditingController.text;
+    if(textEditingController == null) return;
+    String messagesText = textEditingController!.text;
     String type = MessageTypeConstants.text;
 
     TextMessage textMessage = TextMessage(
@@ -612,7 +616,7 @@ class CometChatMessageComposerController extends GetxController
     messagePreviewTitle = '';
     messagePreviewSubtitle = '';
     previewMessageMode = PreviewMessageMode.none;
-    textEditingController.clear();
+    textEditingController?.clear();
     _previousText = '';
     update();
     if (onSendButtonTap != null) {
@@ -687,8 +691,8 @@ class CometChatMessageComposerController extends GetxController
       category: CometChatMessageCategory.message,
     );
 
-    if (textEditingController.text.isNotEmpty) {
-      textEditingController.clear();
+    if (textEditingController != null && textEditingController!.text.isNotEmpty) {
+      textEditingController?.clear();
       _previousText = '';
       update();
     }
@@ -724,13 +728,14 @@ class CometChatMessageComposerController extends GetxController
   }
 
   editTextMessage() {
+    if(textEditingController == null) return;
     TextMessage editedMessage = oldMessage as TextMessage;
-    editedMessage.text = textEditingController.text;
+    editedMessage.text = textEditingController!.text;
     handlePreMessageSend(editedMessage);
     messagePreviewTitle = '';
     messagePreviewSubtitle = '';
     previewMessageMode = PreviewMessageMode.none;
-    textEditingController.clear();
+    textEditingController?.clear();
     _previousText = '';
     update();
     editedMessage.reactions = [];
@@ -847,17 +852,17 @@ class CometChatMessageComposerController extends GetxController
     }
 
     if (mode == PreviewMessageMode.edit && message is TextMessage) {
-      textEditingController.text = message.text;
+      textEditingController?.text = message.text;
 
       _previousText = message.text;
 
       if (message.mentionedUsers.isNotEmpty) {
         int mentionFormatterIndex = _formatters
             .indexWhere((element) => element.trackingCharacter == '@');
-        if (mentionFormatterIndex != -1) {
+        if (textEditingController != null && mentionFormatterIndex != -1) {
           CometChatMentionsFormatter mentionsFormatter =
               _formatters[mentionFormatterIndex] as CometChatMentionsFormatter;
-          mentionsFormatter.onMessageEdit(textEditingController,
+          mentionsFormatter.onMessageEdit(textEditingController!,
               mentionedUsers: message.mentionedUsers);
         }
       }
@@ -956,7 +961,7 @@ class CometChatMessageComposerController extends GetxController
 
 //triggered if developer doesn't pass their onSendButtonClick handler
   onSendButtonClick() {
-    if (textEditingController.text.isNotEmpty) {
+    if (textEditingController != null && textEditingController!.text.isNotEmpty) {
       if (previewMessageMode == PreviewMessageMode.none) {
         sendTextMessage();
       } else if (previewMessageMode == PreviewMessageMode.edit) {
@@ -994,24 +999,25 @@ class CometChatMessageComposerController extends GetxController
 
 //inserts emojis to correct position in the text
   _addEmojiToText(String emoji) {
-    int cursorPosition = textEditingController.selection.base.offset;
+    if (textEditingController == null) return;
+    int cursorPosition = textEditingController!.selection.base.offset;
     if (cursorPosition == -1) {
-      cursorPosition = textEditingController.text.length;
+      cursorPosition = textEditingController!.text.length;
     }
 
     //get the text on the right side of cursor
     String textRightOfCursor =
-        textEditingController.text.substring(cursorPosition);
+        textEditingController!.text.substring(cursorPosition);
 
     //get the text on the left side of cursor
     String textLeftOfCursor =
-        textEditingController.text.substring(0, cursorPosition);
+        textEditingController!.text.substring(0, cursorPosition);
 
     //insert the emoji in the correct order
-    textEditingController.text = textLeftOfCursor + emoji + textRightOfCursor;
+    textEditingController!.text = textLeftOfCursor + emoji + textRightOfCursor;
 
     //move the cursor to the end of the added emoji
-    textEditingController.selection = TextSelection(
+    textEditingController?.selection = TextSelection(
       baseOffset: cursorPosition + emoji.length,
       extentOffset: cursorPosition + emoji.length,
     );

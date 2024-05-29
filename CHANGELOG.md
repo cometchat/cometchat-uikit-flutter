@@ -1,3 +1,10 @@
+## 4.5.1
+**Enhancements**
+- Enhanced the CometChatMessageComposer by exposing ‘TextEditingController’, thus improving customization options.
+
+**Fixes**
+- Fixed rendering flex issues that were encountered when opening message information for scheduler messages.
+
 ## 4.5.0
 **Enhancements**
 - Updated all 3rd-party plugins versions.

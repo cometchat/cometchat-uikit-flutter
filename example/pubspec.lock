@@ -63,7 +63,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "4.5.0"
+    version: "4.5.1"
   cometchat_sdk:
     dependency: transitive
     description:
@@ -76,10 +76,10 @@ packages:
     dependency: transitive
     description:
       name: cometchat_uikit_shared
-      sha256: "8498ef2614e961175e9ad45b8c8a0f12a6d96eec754cb8201fa88b38069cd22d"
+      sha256: e49cbb2098e0ae8905166193771df6fb620187f6eb4af0880c2136d51f8f6c2d
       url: "https://pub.dev"
     source: hosted
-    version: "4.4.0"
+    version: "4.4.1"
   cross_file:
     dependency: transitive
     description:

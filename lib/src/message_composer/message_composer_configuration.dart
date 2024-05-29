@@ -52,7 +52,9 @@ class MessageComposerConfiguration {
       this.aiIcon,
       this.aiIconURL,
       this.textFormatters,
-      this.disableMentions});
+      this.disableMentions,
+        this.textEditingController,
+      });
 
   ///[messageComposerStyle] message composer style
   final MessageComposerStyle? messageComposerStyle;
@@ -174,4 +176,7 @@ class MessageComposerConfiguration {
 
   ///[disableMentions] disables mentions in the composer
   final bool? disableMentions;
+
+  ///[textEditingController] controls the state of the text field
+  final TextEditingController? textEditingController;
 }

@@ -412,6 +412,7 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             messageComposerKey: controller.messageComposerKey,
             disableMentions:
                 widget.messageComposerConfiguration.disableMentions,
+      textEditingController: widget.messageComposerConfiguration.textEditingController,
           );
   }
 

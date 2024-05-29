@@ -225,6 +225,7 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
             onError: widget.messageComposerConfiguration?.onError,
             text: widget.messageComposerConfiguration?.text,
             stateCallBack: widget.messageComposerConfiguration?.stateCallBack,
+      textEditingController: widget.messageComposerConfiguration?.textEditingController,
           );
   }
 
