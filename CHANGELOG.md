@@ -1,3 +1,14 @@
+## 4.5.2
+**New**
+- Introduced real-time updates for the last message and unread count in conversations based on App setting configured via dashboard, ensuring up-to-date information is displayed.
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.2`.
+- Updated `cometchat_sdk` to version `4.0.12`.
+
+**Fixes**
+- Fixed the issue where the textEditingController property  in `CometChatMessageComposer`  was causing UI  issues within `CometChatMessageList`.
+
 ## 4.5.1
 **Enhancements**
 - Enhanced the CometChatMessageComposer by exposing ‘TextEditingController’, thus improving customization options.

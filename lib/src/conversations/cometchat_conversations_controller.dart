@@ -151,6 +151,9 @@ class CometChatConversationsController
 
   @override
   void ccMessageSent(BaseMessage message, MessageStatus messageStatus) {
+    if (_checkMessageSettings(message)) {
+      return;
+    }
     if (messageStatus == MessageStatus.sent) {
       updateLastMessage(message);
     }
@@ -193,6 +196,9 @@ class CometChatConversationsController
   @override
   void ccGroupMemberAdded(List<cc.Action> messages, List<User> usersAdded,
       Group groupAddedIn, User addedBy) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     refreshSingleConversation(messages.last, true);
   }
 
@@ -212,16 +218,25 @@ class CometChatConversationsController
 
   @override
   void onTextMessageReceived(TextMessage textMessage) async {
+    if (_checkMessageSettings(textMessage)) {
+      return;
+    }
     _onMessageReceived(textMessage, false);
   }
 
   @override
   void onMediaMessageReceived(MediaMessage mediaMessage) async {
+    if (_checkMessageSettings(mediaMessage)) {
+      return;
+    }
     _onMessageReceived(mediaMessage, false);
   }
 
   @override
   void onCustomMessageReceived(CustomMessage customMessage) async {
+    if (_checkMessageSettings(customMessage)) {
+      return;
+    }
     _onMessageReceived(customMessage, false);
   }
 
@@ -262,17 +277,26 @@ class CometChatConversationsController
 
   @override
   void onFormMessageReceived(FormMessage formMessage) {
+    if (_checkMessageSettings(formMessage)) {
+      return;
+    }
     _onMessageReceived(formMessage, false);
   }
 
   @override
   void onCardMessageReceived(CardMessage cardMessage) {
+    if (_checkMessageSettings(cardMessage)) {
+      return;
+    }
     _onMessageReceived(cardMessage, false);
   }
 
   @override
   void onCustomInteractiveMessageReceived(
       CustomInteractiveMessage customInteractiveMessage) {
+    if (_checkMessageSettings(customInteractiveMessage)) {
+      return;
+    }
     _onMessageReceived(customInteractiveMessage, false);
   }
 
@@ -302,11 +326,17 @@ class CometChatConversationsController
 
   @override
   onGroupMemberJoined(cc.Action action, User joinedUser, Group joinedGroup) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     refreshSingleConversation(action, true);
   }
 
   @override
   onGroupMemberLeft(cc.Action action, User leftUser, Group leftGroup) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     if (loggedInUserId == leftUser.uid) {
       refreshSingleConversation(action, true, remove: true);
     } else {
@@ -317,6 +347,9 @@ class CometChatConversationsController
   @override
   onGroupMemberKicked(
       cc.Action action, User kickedUser, User kickedBy, Group kickedFrom) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     if (loggedInUserId == kickedUser.uid) {
       refreshSingleConversation(action, true, remove: true);
     } else {
@@ -327,6 +360,9 @@ class CometChatConversationsController
   @override
   void ccGroupMemberKicked(
       cc.Action message, User kickedUser, User kickedBy, Group kickedFrom) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     if (loggedInUserId == kickedUser.uid) {
       refreshSingleConversation(message, true, remove: true);
     } else {
@@ -337,6 +373,9 @@ class CometChatConversationsController
   @override
   onGroupMemberBanned(
       cc.Action action, User bannedUser, User bannedBy, Group bannedFrom) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     if (loggedInUserId == bannedUser.uid) {
       refreshSingleConversation(action, true, remove: true);
     } else {
@@ -347,24 +386,37 @@ class CometChatConversationsController
   @override
   onGroupMemberUnbanned(cc.Action action, User unbannedUser, User unbannedBy,
       Group unbannedFrom) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     refreshSingleConversation(action, true);
   }
 
   @override
   onGroupMemberScopeChanged(cc.Action action, User updatedBy, User updatedUser,
       String scopeChangedTo, String scopeChangedFrom, Group group) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     refreshSingleConversation(action, true);
   }
 
   @override
   onMemberAddedToGroup(
       cc.Action action, User addedby, User userAdded, Group addedTo) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
     refreshSingleConversation(action, true);
   }
 
   @override
   void ccGroupMemberBanned(
       cc.Action message, User bannedUser, User bannedBy, Group bannedFrom) {
+    if (_checkGroupSettings() == false) {
+      return;
+    }
+
     if (loggedInUserId == bannedUser.uid) {
       refreshSingleConversation(message, true, remove: true);
     } else {
@@ -408,7 +460,6 @@ class CometChatConversationsController
   @override
   updateLastMessage(BaseMessage message) async {
     int matchingIndex = getMatchingIndexFromKey(message.conversationId!);
-
     if (matchingIndex != -1) {
       Conversation conversation = list[matchingIndex];
       conversation.lastMessage = message;
@@ -485,10 +536,18 @@ class CometChatConversationsController
     bool isCategoryMessage = (conversation.lastMessage!.category ==
             MessageCategoryConstants.message) ||
         (conversation.lastMessage!.category ==
-            MessageCategoryConstants.interactive);
-    if (metaData != null) {
-      if (metaData.containsKey("incrementUnreadCount")) {
-        incrementUnreadCount = metaData["incrementUnreadCount"] as bool;
+            MessageCategoryConstants.interactive) ||
+        (conversation.lastMessage!.category == MessageCategoryConstants.call);
+    if (conversation.lastMessage is CustomMessage) {
+      final message = conversation.lastMessage as CustomMessage;
+      if (message.updateConversation == true ||
+          (conversation.lastMessage?.metadata?[
+                      UpdateSettingsConstant.incrementUnreadCount] ??
+                  false) ==
+              true ||
+          (CometChatUIKit.conversationUpdateSettings?.customMessages ??
+              true == true)) {
+        incrementUnreadCount = true;
       }
     }
 
@@ -638,7 +697,8 @@ class CometChatConversationsController
   playNotificationSound(BaseMessage message) {
     //Write all conditions here to stop sound
     if (message.type == MessageTypeConstants.custom &&
-        (message.metadata?["incrementUnreadCount"] != true)) {
+        (message.metadata?[UpdateSettingsConstant.incrementUnreadCount] !=
+            true)) {
       return;
     } //not playing sound in case message type is custom and increment counter is not true
 
@@ -731,51 +791,115 @@ class CometChatConversationsController
 
   @override
   void ccCallAccepted(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void ccOutgoingCall(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void ccCallRejected(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void ccCallEnded(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void onIncomingCallReceived(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void onOutgoingCallAccepted(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void onOutgoingCallRejected(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void onIncomingCallCancelled(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void onCallEndedMessageReceived(Call call) {
+    if (_checkCallSettings() == false) {
+      return;
+    }
     refreshSingleConversation(call, true);
   }
 
   @override
   void onSchedulerMessageReceived(SchedulerMessage schedulerMessage) {
+    if (_checkMessageSettings(schedulerMessage)) {
+      return;
+    }
     _onMessageReceived(schedulerMessage, false);
+  }
+
+  // Check settings for custom message and thread message condition
+  bool _checkMessageSettings(BaseMessage message) {
+    if (message.parentMessageId != 0 &&
+        CometChatUIKit.conversationUpdateSettings != null &&
+        !CometChatUIKit.conversationUpdateSettings!.messageReplies) {
+      return true;
+    } else if (message is CustomMessage &&
+        (message.updateConversation == false) &&
+        ((message.metadata?[UpdateSettingsConstant.incrementUnreadCount] ??
+                false) ==
+            false) &&
+        (CometChatUIKit.conversationUpdateSettings?.customMessages == false)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  // Check settings for call
+  bool _checkCallSettings() {
+    if (CometChatUIKit.conversationUpdateSettings != null) {
+      return CometChatUIKit.conversationUpdateSettings!.callActivities;
+    }
+    return true;
+  }
+
+// Check settings for Group Actions
+  bool _checkGroupSettings() {
+    if (CometChatUIKit.conversationUpdateSettings != null) {
+      return CometChatUIKit.conversationUpdateSettings!.groupActions;
+    }
+    return true;
   }
 }

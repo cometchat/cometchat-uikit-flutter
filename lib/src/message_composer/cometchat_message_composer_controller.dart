@@ -173,6 +173,8 @@ class CometChatMessageComposerController extends GetxController
   /// Create a stream from the controller
   late Stream<String> _previousTextStream;
 
+  bool _isMyController = true;
+
   String? _currentSearchKeyword;
   bool _searcKeywordChanged = true;
   bool disableMentions;
@@ -187,6 +189,9 @@ class CometChatMessageComposerController extends GetxController
   //-------------------------LifeCycle Methods-----------------------------
   @override
   void onInit() {
+    if(textEditingController != null) {
+      _isMyController = false;
+    }
     populateComposerId();
     _suggestionListStream = _suggestionListController.stream;
     _previousTextStream = _previousTextController.stream;
@@ -327,9 +332,11 @@ class CometChatMessageComposerController extends GetxController
 
   @override
   void onClose() {
+    if(_isMyController) {
+      textEditingController?.dispose();
+    }
     CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
     CometChatUIEvents.removeUiListener(_uiEventListener);
-    textEditingController?.dispose();
     focusNode.removeListener(_onFocusChange);
     focusNode.dispose();
     _subscription.cancel();

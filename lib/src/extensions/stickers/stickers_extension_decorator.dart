@@ -118,6 +118,10 @@ class StickersExtensionDecorator extends DataSourceDecorator {
           category: CometChatMessageCategory.custom,
           parentMessageId: parentMessageId,
           muid: DateTime.now().microsecondsSinceEpoch.toString(),
+          updateConversation: true,
+          metadata: {
+            UpdateSettingsConstant.incrementUnreadCount: true,
+          },
         );
 
         CometChatUIKit.sendCustomMessage(customMessage);
