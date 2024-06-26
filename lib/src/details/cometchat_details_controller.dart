@@ -168,7 +168,8 @@ class CometChatDetailsController extends GetxController
       String scopeChangedTo,
       String scopeChangedFrom,
       Group group) {
-    if (group.guid == this.group?.guid && updatedUser.uid == loggedInUser?.uid) {
+    if (group.guid == this.group?.guid &&
+        updatedUser.uid == loggedInUser?.uid) {
       this.group?.scope = scopeChangedTo;
       update();
     }

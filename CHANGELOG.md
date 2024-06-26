@@ -1,3 +1,12 @@
+## 4.5.3
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.3`.
+- Updated `cometchat_sdk` to version `4.0.13`.
+
+**Fixes**
+- Fixed an issue where the overriding onSendButtonTap function would fail to trigger upon tapping the send button after editing a message.
+
 ## 4.5.2
 **New**
 - Introduced real-time updates for the last message and unread count in conversations based on App setting configured via dashboard, ensuring up-to-date information is displayed.

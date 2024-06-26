@@ -531,7 +531,6 @@ class CometChatConversationsController
   updateConversation(Conversation conversation) {
     int matchingIndex = getMatchingIndex(conversation);
 
-    Map<String, dynamic>? metaData = conversation.lastMessage!.metadata;
     bool incrementUnreadCount = false;
     bool isCategoryMessage = (conversation.lastMessage!.category ==
             MessageCategoryConstants.message) ||

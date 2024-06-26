@@ -67,8 +67,7 @@ class _CometChatCollaborativeWebViewState
       body: WebViewWidget(
           controller: WebViewController()
             ..loadRequest(Uri.parse(widget.webviewUrl))
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ),
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)),
     );
   }
 }

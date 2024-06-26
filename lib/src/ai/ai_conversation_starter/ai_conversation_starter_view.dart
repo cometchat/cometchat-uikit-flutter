@@ -233,11 +233,9 @@ class _AIConversationStarterViewState extends State<AIConversationStarterView>
     return (!isKeyboardOpen)
         ? isLoading
             ? _getLoadingIndicator(_theme)
-            :
-            isError
+            : isError
                 ? _getOnError(context, _theme)
-                :
-                _replies.isEmpty
+                : _replies.isEmpty
                     ? _getEmptyView(context, _theme)
                     : (widget.customView != null)
                         ? widget.customView!(_replies, context)

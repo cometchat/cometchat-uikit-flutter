@@ -278,11 +278,9 @@ class _AISmartRepliesViewState extends State<AISmartRepliesView> {
       color: widget.style?.backgroundColor ?? _theme.palette.getBackground(),
       child: isLoading
           ? _getLoadingIndicator()
-          :
-          isError
+          : isError
               ? _getOnError(context, _theme)
-              :
-              _replies.isEmpty
+              : _replies.isEmpty
                   ? _getEmptyView(context)
                   : (widget.customView != null)
                       ? widget.customView!(_replies, context)

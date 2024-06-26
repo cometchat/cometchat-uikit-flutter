@@ -27,55 +27,54 @@ import 'package:get/get.dart';
 
 //ignore: must_be_immutable
 class CometChatMessageComposer extends StatelessWidget {
-  CometChatMessageComposer(
-      {super.key,
-      this.user,
-      this.group,
-      this.messageComposerStyle = const MessageComposerStyle(),
-      this.placeholderText,
-      bool hideLiveReaction = false,
-      bool disableTypingEvents = false,
-      bool disableSoundForMessages = false,
-      this.parentMessageId = 0,
-      String? customSoundForMessage,
-      String? customSoundForMessagePackage,
-      this.auxiliaryButtonView,
-      ComposerWidgetBuilder? headerView,
-      ComposerWidgetBuilder? footerView,
-      this.secondaryButtonView,
-      this.sendButtonView,
-      ComposerActionsBuilder? attachmentOptions,
-      this.text,
-      this.onChange,
-      this.maxLine,
-      this.auxiliaryButtonsAlignment,
-      String? liveReactionIconURL,
-      this.attachmentIconURL,
-      void Function(CometChatMessageComposerController)? stateCallBack,
-      this.theme,
-      this.attachmentIcon,
-      this.liveReactionIcon,
-      OnError? onError,
-      this.recordIcon,
-      this.playIcon,
-      this.deleteIcon,
-      this.stopIcon,
-      this.submitIcon,
-      this.mediaRecorderStyle,
-      this.pauseIcon,
-      Function(BuildContext, BaseMessage, PreviewMessageMode?)? onSendButtonTap,
-      this.hideVoiceRecording,
-      this.voiceRecordingIcon,
-      this.aiIcon,
-      this.aiIconURL,
-      this.aiIconPackageName,
-      this.aiOptionStyle,
-      List<CometChatTextFormatter>? textFormatters,
-      this.disableMentions,
-      this.messageComposerKey,
-        this.textEditingController,
-      })
-      : assert(user != null || group != null,
+  CometChatMessageComposer({
+    super.key,
+    this.user,
+    this.group,
+    this.messageComposerStyle = const MessageComposerStyle(),
+    this.placeholderText,
+    bool hideLiveReaction = false,
+    bool disableTypingEvents = false,
+    bool disableSoundForMessages = false,
+    this.parentMessageId = 0,
+    String? customSoundForMessage,
+    String? customSoundForMessagePackage,
+    this.auxiliaryButtonView,
+    ComposerWidgetBuilder? headerView,
+    ComposerWidgetBuilder? footerView,
+    this.secondaryButtonView,
+    this.sendButtonView,
+    ComposerActionsBuilder? attachmentOptions,
+    this.text,
+    this.onChange,
+    this.maxLine,
+    this.auxiliaryButtonsAlignment,
+    String? liveReactionIconURL,
+    this.attachmentIconURL,
+    void Function(CometChatMessageComposerController)? stateCallBack,
+    this.theme,
+    this.attachmentIcon,
+    this.liveReactionIcon,
+    OnError? onError,
+    this.recordIcon,
+    this.playIcon,
+    this.deleteIcon,
+    this.stopIcon,
+    this.submitIcon,
+    this.mediaRecorderStyle,
+    this.pauseIcon,
+    Function(BuildContext, BaseMessage, PreviewMessageMode?)? onSendButtonTap,
+    this.hideVoiceRecording,
+    this.voiceRecordingIcon,
+    this.aiIcon,
+    this.aiIconURL,
+    this.aiIconPackageName,
+    this.aiOptionStyle,
+    List<CometChatTextFormatter>? textFormatters,
+    this.disableMentions,
+    this.messageComposerKey,
+    this.textEditingController,
+  })  : assert(user != null || group != null,
             "One of user or group should be passed"),
         assert(user == null || group == null,
             "Only one of user or group should be passed"),
@@ -99,8 +98,7 @@ class CometChatMessageComposer extends StatelessWidget {
             aiOptionStyle: aiOptionStyle,
             theme: theme,
             textFormatters: textFormatters,
-          textEditingController: textEditingController
-        );
+            textEditingController: textEditingController);
 
   ///sets [user] for message composer
   final User? user;
@@ -204,7 +202,8 @@ class CometChatMessageComposer extends StatelessWidget {
 
   Widget _getSendButton(
       CometChatTheme theme, CometChatMessageComposerController value) {
-    if (value.textEditingController != null && value.textEditingController!.text.isEmpty &&
+    if (value.textEditingController != null &&
+        value.textEditingController!.text.isEmpty &&
         value.hideLiveReaction != true) {
       return IconButton(
         padding: const EdgeInsets.all(0),
@@ -232,7 +231,8 @@ class CometChatMessageComposer extends StatelessWidget {
                   Image.asset(
                     AssetConstants.send,
                     package: UIConstants.packageName,
-                    color: (value.textEditingController != null && value.textEditingController!.text.isEmpty)
+                    color: (value.textEditingController != null &&
+                            value.textEditingController!.text.isEmpty)
                         ? theme.palette.getAccent400()
                         : messageComposerStyle.sendButtonIconTint ??
                             theme.palette.getPrimary(),

@@ -91,7 +91,6 @@ class LinkPreviewBubble extends StatelessWidget {
                             );
                       }),
                     ),
-
                   if (links.isNotEmpty &&
                       (links[0]["title"] != null ||
                           links[0]["url"] != null ||

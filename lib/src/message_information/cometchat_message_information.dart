@@ -235,39 +235,39 @@ class _CometChatMessageInformationState
                   ),
                   SizedBox(
                     child: (cometchatMessageInformationController
-                        .messageReceiptList.isEmpty)
+                            .messageReceiptList.isEmpty)
                         ? _getNoRecipient(context, _theme)
                         : ListView.separated(
-                      itemCount: cometchatMessageInformationController
-                          .messageReceiptList.length,
-                      shrinkWrap: true,
-                      itemBuilder: (context, index) {
-                        final messageReceipt =
-                        cometchatMessageInformationController
-                            .messageReceiptList[index];
-                        return ((cometchatMessageInformationController
-                            .parentMessage.receiver is User &&
-                            cometchatMessageInformationController
-                                .parentMessage.sentAt !=
-                                null) &&
-                            (cometchatMessageInformationController
-                                .parentMessage.readAt ==
-                                null &&
-                                cometchatMessageInformationController
-                                    .parentMessage.deliveredAt ==
-                                    null))
-                            ? _getNoRecipient(context, _theme)
-                            : _getListItemView(
-                            value, messageReceipt, context);
-                      },
-                      separatorBuilder: (context, index) {
-                        return Divider(
-                          color:
-                          widget.messageInformationStyle?.dividerTint ??
-                              _theme.palette.getAccent500(),
-                        );
-                      },
-                    ),
+                            itemCount: cometchatMessageInformationController
+                                .messageReceiptList.length,
+                            shrinkWrap: true,
+                            itemBuilder: (context, index) {
+                              final messageReceipt =
+                                  cometchatMessageInformationController
+                                      .messageReceiptList[index];
+                              return ((cometchatMessageInformationController
+                                              .parentMessage.receiver is User &&
+                                          cometchatMessageInformationController
+                                                  .parentMessage.sentAt !=
+                                              null) &&
+                                      (cometchatMessageInformationController
+                                                  .parentMessage.readAt ==
+                                              null &&
+                                          cometchatMessageInformationController
+                                                  .parentMessage.deliveredAt ==
+                                              null))
+                                  ? _getNoRecipient(context, _theme)
+                                  : _getListItemView(
+                                      value, messageReceipt, context);
+                            },
+                            separatorBuilder: (context, index) {
+                              return Divider(
+                                color: widget
+                                        .messageInformationStyle?.dividerTint ??
+                                    _theme.palette.getAccent500(),
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),

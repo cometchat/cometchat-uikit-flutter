@@ -917,8 +917,7 @@ class CometChatMessageListController
       );
       await CometChatUIKit.sendTextMessage(message,
           onSuccess: (BaseMessage returnedMessage) {},
-          onError: (CometChatException excep) {
-      });
+          onError: (CometChatException excep) {});
     } else if (copyFromMessage is MediaMessage) {
       if (copyFromMessage.attachment == null) return;
 
@@ -944,8 +943,7 @@ class CometChatMessageListController
 
       await CometChatUIKit.sendMediaMessage(message,
           onSuccess: (BaseMessage returnedMessage) {},
-          onError: (CometChatException excep) {
-      });
+          onError: (CometChatException excep) {});
     } else if (copyFromMessage is CustomMessage) {
       CustomMessage message = CustomMessage(
         customData: copyFromMessage.customData,
@@ -962,8 +960,7 @@ class CometChatMessageListController
 
       await CometChatUIKit.sendCustomMessage(message,
           onSuccess: (BaseMessage returnedMessage) {},
-          onError: (CometChatException excep) {
-      });
+          onError: (CometChatException excep) {});
     }
   }
 
@@ -1438,6 +1435,7 @@ class CometChatMessageListController
         reactionCount.reactedByMe == true);
     if (reactionIndex != -1) {
       updateElement(updateReactionsOnMessage(message, reaction, false));
+
       /// remove reaction
       CometChat.removeReaction(
         message.id,

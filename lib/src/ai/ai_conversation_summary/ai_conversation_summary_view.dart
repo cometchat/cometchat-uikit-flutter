@@ -259,11 +259,9 @@ class _AIConversationSummaryViewState extends State<AIConversationSummaryView>
     return (!isKeyboardOpen)
         ? isLoading
             ? _getLoadingIndicator(context, _theme)
-            :
-            isError
+            : isError
                 ? _getOnError(context, _theme)
-                :
-                _summary.isEmpty
+                : _summary.isEmpty
                     ? _getEmptyView(context, _theme)
                     : (widget.customView != null)
                         ? widget.customView!(_summary, context)

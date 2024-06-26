@@ -12,30 +12,30 @@ import 'dart:io';
 ///it contains all the business logic involved in changing the state of the UI of [CometChatMessageComposer]
 class CometChatMessageComposerController extends GetxController
     with CometChatMessageEventListener, CometChatUIEventListener {
-  CometChatMessageComposerController(
-      {this.user,
-      this.group,
-      this.text,
-      this.parentMessageId = 0,
-      this.disableSoundForMessages = false,
-      this.customSoundForMessage,
-      this.customSoundForMessagePackage,
-      this.disableTypingEvents = false,
-      this.hideLiveReaction = false,
-      this.attachmentOptions,
-      this.liveReactionIconURL,
-      this.stateCallBack,
-      this.headerView,
-      this.footerView,
-      this.onSendButtonTap,
-      this.onError,
-      this.aiOptionStyle,
-      this.disableMentions = false,
-      this.previewView,
-      this.theme,
-      this.textFormatters,
-        this.textEditingController,
-      }) {
+  CometChatMessageComposerController({
+    this.user,
+    this.group,
+    this.text,
+    this.parentMessageId = 0,
+    this.disableSoundForMessages = false,
+    this.customSoundForMessage,
+    this.customSoundForMessagePackage,
+    this.disableTypingEvents = false,
+    this.hideLiveReaction = false,
+    this.attachmentOptions,
+    this.liveReactionIconURL,
+    this.stateCallBack,
+    this.headerView,
+    this.footerView,
+    this.onSendButtonTap,
+    this.onError,
+    this.aiOptionStyle,
+    this.disableMentions = false,
+    this.previewView,
+    this.theme,
+    this.textFormatters,
+    this.textEditingController,
+  }) {
     tag = "tag$counter";
     counter++;
   }
@@ -189,7 +189,7 @@ class CometChatMessageComposerController extends GetxController
   //-------------------------LifeCycle Methods-----------------------------
   @override
   void onInit() {
-    if(textEditingController != null) {
+    if (textEditingController != null) {
       _isMyController = false;
     }
     populateComposerId();
@@ -233,6 +233,7 @@ class CometChatMessageComposerController extends GetxController
               composerId, CustomUIPosition.composerPreview);
           suggestions.clear();
         }
+
         /// suggestions.clear();
         /// CometChatUIEvents.hidePanel(composerId, CustomUIPosition.composerPreview);
         hasMore = false;
@@ -246,7 +247,7 @@ class CometChatMessageComposerController extends GetxController
 
     initializeFormatters();
     textEditingController ??= CustomTextEditingController(
-          text: text, theme: cometChatTheme, formatters: _formatters);
+        text: text, theme: cometChatTheme, formatters: _formatters);
 
     CometChatMessageEvents.addMessagesListener(_uiMessageListener, this);
     CometChatUIEvents.addUiListener(_uiEventListener, this);
@@ -332,7 +333,7 @@ class CometChatMessageComposerController extends GetxController
 
   @override
   void onClose() {
-    if(_isMyController) {
+    if (_isMyController) {
       textEditingController?.dispose();
     }
     CometChatMessageEvents.removeMessagesListener(_uiMessageListener);
@@ -562,13 +563,13 @@ class CometChatMessageComposerController extends GetxController
   }
 
   _onTyping() {
-    if(textEditingController == null) return;
+    if (textEditingController == null) return;
     if ((_previousText.isEmpty && textEditingController!.text.isNotEmpty) ||
-        (_previousText.isNotEmpty &&  textEditingController!.text.isEmpty)) {
+        (_previousText.isNotEmpty && textEditingController!.text.isEmpty)) {
       update();
     }
 
-    if ( _previousText.length > textEditingController!.text.length) {
+    if (_previousText.length > textEditingController!.text.length) {
       _checkFormatter();
       _previousText = textEditingController!.text;
       return;
@@ -601,7 +602,7 @@ class CometChatMessageComposerController extends GetxController
   }
 
   sendTextMessage({Map<String, dynamic>? metadata}) {
-    if(textEditingController == null) return;
+    if (textEditingController == null) return;
     String messagesText = textEditingController!.text;
     String type = MessageTypeConstants.text;
 
@@ -698,7 +699,8 @@ class CometChatMessageComposerController extends GetxController
       category: CometChatMessageCategory.message,
     );
 
-    if (textEditingController != null && textEditingController!.text.isNotEmpty) {
+    if (textEditingController != null &&
+        textEditingController!.text.isNotEmpty) {
       textEditingController?.clear();
       _previousText = '';
       update();
@@ -735,7 +737,7 @@ class CometChatMessageComposerController extends GetxController
   }
 
   editTextMessage() {
-    if(textEditingController == null) return;
+    if (textEditingController == null) return;
     TextMessage editedMessage = oldMessage as TextMessage;
     editedMessage.text = textEditingController!.text;
     handlePreMessageSend(editedMessage);
@@ -748,29 +750,32 @@ class CometChatMessageComposerController extends GetxController
     editedMessage.reactions = [];
     editedMessage.mentionedUsers = [];
 
-    CometChat.editMessage(editedMessage,
-        onSuccess: (BaseMessage updatedMessage) {
-      _playSound();
+    if (onSendButtonTap != null) {
+      onSendButtonTap!(context, editedMessage, PreviewMessageMode.edit);
+    } else {
+      CometChat.editMessage(editedMessage,
+          onSuccess: (BaseMessage updatedMessage) {
+        _playSound();
 
-      CometChatMessageEvents.ccMessageEdited(
-          updatedMessage, MessageEditStatus.success);
-    },
-        onError: onError ??
-            (CometChatException e) {
-              if (editedMessage.metadata != null) {
-                editedMessage.metadata!["error"] = e;
-              } else {
-                editedMessage.metadata = {"error": e};
-              }
-              CometChatMessageEvents.ccMessageSent(
-                  editedMessage, MessageStatus.error);
+        CometChatMessageEvents.ccMessageEdited(
+            updatedMessage, MessageEditStatus.success);
+      },
+          onError: onError ??
+              (CometChatException e) {
+                if (editedMessage.metadata != null) {
+                  editedMessage.metadata!["error"] = e;
+                } else {
+                  editedMessage.metadata = {"error": e};
+                }
+                CometChatMessageEvents.ccMessageSent(
+                    editedMessage, MessageStatus.error);
 
-              if (kDebugMode) {
-                debugPrint(
-                    "Message editing failed with exception: ${e.message}");
-              }
-            });
-
+                if (kDebugMode) {
+                  debugPrint(
+                      "Message editing failed with exception: ${e.message}");
+                }
+              });
+    }
     update();
   }
 
@@ -968,7 +973,8 @@ class CometChatMessageComposerController extends GetxController
 
 //triggered if developer doesn't pass their onSendButtonClick handler
   onSendButtonClick() {
-    if (textEditingController != null && textEditingController!.text.isNotEmpty) {
+    if (textEditingController != null &&
+        textEditingController!.text.isNotEmpty) {
       if (previewMessageMode == PreviewMessageMode.none) {
         sendTextMessage();
       } else if (previewMessageMode == PreviewMessageMode.edit) {

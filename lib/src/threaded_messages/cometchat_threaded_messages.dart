@@ -225,7 +225,8 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
             onError: widget.messageComposerConfiguration?.onError,
             text: widget.messageComposerConfiguration?.text,
             stateCallBack: widget.messageComposerConfiguration?.stateCallBack,
-      textEditingController: widget.messageComposerConfiguration?.textEditingController,
+            textEditingController:
+                widget.messageComposerConfiguration?.textEditingController,
           );
   }
 
@@ -273,7 +274,6 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
                         contentPadding: widget.messageListConfiguration
                                 ?.messageListStyle?.contentPadding ??
                             const EdgeInsets.all(8)),
-
             sentIcon: widget.messageListConfiguration?.sentIcon,
             readIcon: widget.messageListConfiguration?.readIcon,
             scrollToBottomOnNewMessages:
@@ -294,10 +294,8 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
             disableReceipt: widget.messageListConfiguration?.disableReceipt,
             dateSeparatorStyle:
                 widget.messageListConfiguration?.dateSeparatorStyle,
-
             disableMentions: widget.messageListConfiguration?.disableMentions,
             onError: widget.messageListConfiguration?.onError,
-
             reactionsConfiguration:
                 widget.messageListConfiguration?.reactionsConfiguration,
             emojiKeyboardStyle:
@@ -306,7 +304,6 @@ class _CometChatThreadedMessagesState extends State<CometChatThreadedMessages> {
                 widget.messageListConfiguration?.addReactionIconTap,
             addReactionIcon: widget.messageListConfiguration?.addReactionIcon,
             reactionsStyle: widget.messageListConfiguration?.reactionsStyle,
-
             textFormatters: widget.messageListConfiguration?.textFormatters,
             reactionListConfiguration:
                 widget.messageListConfiguration?.reactionListConfiguration,
