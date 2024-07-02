@@ -1,3 +1,14 @@
+## 4.5.4
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.4`.
+- Updated `cometchat_sdk` to version `4.0.14`.
+
+**Fixes**
+- Fixed an issue where the Back Button of the Message Header was not updating.
+- Fixed an issue where `separatorColor` was not working in `CometChatGroups`.
+- Fixed an issue where `separatorColor` was not working in `CometChatConversations`.
+
 ## 4.5.3
 
 **Enhancements**

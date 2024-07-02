@@ -68,35 +68,15 @@ class CometChatAddMembersController extends GetxController {
             if (result[member.uid] == "success") {
               addedMembers.add(member);
               messages.add(cc.Action(
-                action: MessageCategoryConstants.action,
                 conversationId: _conversationId!,
                 message: '${_loggedInUser?.name} added ${member.name}',
-                rawData: '{}',
                 oldScope: '',
                 newScope: GroupMemberScope.participant,
-                id: 0,
                 muid: DateTime.now().microsecondsSinceEpoch.toString(),
                 sender: _loggedInUser!,
-                receiver: group,
                 receiverUid: group.guid,
                 type: MessageTypeConstants.groupActions,
                 receiverType: ReceiverTypeConstants.group,
-                category: MessageCategoryConstants.action,
-                sentAt: DateTime.now(),
-                deliveredAt: DateTime.now(),
-                readAt: DateTime.now(),
-                metadata: {},
-                readByMeAt: DateTime.now(),
-                deliveredToMeAt: DateTime.fromMillisecondsSinceEpoch(
-                    DateTime.now().millisecondsSinceEpoch * 1000),
-                deletedAt: DateTime.now(),
-                editedAt: DateTime.now(),
-                deletedBy: null,
-                editedBy: null,
-                updatedAt: DateTime.now(),
-                parentMessageId: 0,
-                replyCount: 0,
-                unreadRepliesCount: 0,
               ));
             }
           }

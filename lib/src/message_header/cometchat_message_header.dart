@@ -138,8 +138,11 @@ class CometChatMessageHeader extends StatelessWidget
 
   Widget getBackButton(BuildContext context, CometChatTheme theme) {
     if (hideBackButton != true) {
-      Widget backButton;
-      backButton = GestureDetector(
+      if (backButton != null) {
+        return backButton!(context);
+      }
+      Widget backIcon;
+      backIcon = GestureDetector(
         onTap: onBack ??
             () {
               Navigator.pop(context);
@@ -153,7 +156,7 @@ class CometChatMessageHeader extends StatelessWidget
       );
 
       return Padding(
-          padding: const EdgeInsets.only(left: 20.0), child: backButton);
+          padding: const EdgeInsets.only(left: 20.0), child: backIcon);
     } else {
       return const SizedBox(
         height: 0,
