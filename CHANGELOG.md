@@ -1,3 +1,15 @@
+## 4.5.5
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.5`.
+
+**Fixes**
+- Resolved an issue where `border` and `border-radius` style were not being applied to the `CometChatConversations` component using the `ConversationsStyle` prop.
+- Resolved an issue where `border` and `border-radius` style were not being applied to the `CometChatDetails` component using the `DetailsStyle` prop.
+- Resolved an issue where `border` and `border-radius` style were not being applied to the `CometChatUsersWithMessages` component using the `UsersStyle` prop.
+- Resolved an issue where `border`, `border-radius` & separator color style were not being applied to the `CometChatConversationsWithMessages` component using the `ConversationsStyle` prop.
+- Resolved an issue in the `CometChatConversations` component where the default error view remained visible on iOS and Android, even after applying a custom error state view.
+
 ## 4.5.4
 
 **Enhancements**

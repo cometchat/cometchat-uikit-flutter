@@ -363,7 +363,8 @@ class CometChatConversations extends StatelessWidget {
           border: listItemStyle?.border,
           borderRadius: listItemStyle?.borderRadius,
           gradient: listItemStyle?.gradient,
-          separatorColor: listItemStyle?.separatorColor,
+          separatorColor: listItemStyle?.separatorColor ??
+              conversationsStyle.separatorColor,
           width: listItemStyle?.width,
           margin: listItemStyle?.margin,
           padding: listItemStyle?.padding,
@@ -462,7 +463,6 @@ class CometChatConversations extends StatelessWidget {
 
   _showError(CometChatConversationsController controller, BuildContext context,
       CometChatTheme theme) {
-    if (hideError == true) return;
     String error;
     if (controller.error != null && controller.error is CometChatException) {
       error = Utils.getErrorTranslatedText(
@@ -470,7 +470,6 @@ class CometChatConversations extends StatelessWidget {
     } else {
       error = cc.Translations.of(context).noChatsFound;
     }
-    if (errorStateView != null) {}
     _showErrorDialog(error, context, theme, controller);
   }
 
@@ -484,12 +483,14 @@ class CometChatConversations extends StatelessWidget {
       builder: (CometChatConversationsController value) {
         value.context = context;
         if (value.hasError == true) {
-          WidgetsBinding.instance
-              .addPostFrameCallback((_) => _showError(value, context, theme));
-
+          if (hideError == true) {
+            return const SizedBox();
+          }
           if (errorStateView != null) {
             return errorStateView!(context);
           }
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _showError(value, context, theme));
 
           return _getLoadingIndicator(context, theme);
         } else if (value.isLoading == true && (value.list.isEmpty)) {

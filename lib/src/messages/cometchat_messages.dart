@@ -246,9 +246,12 @@ class _CometChatMessagesState extends State<CometChatMessages> {
             customSoundForMessages:
                 widget.messageListConfiguration.customSoundForMessages ??
                     widget.customSoundForIncomingMessages,
-            messageListStyle:
-                widget.messageListConfiguration.messageListStyle ??
-                    const MessageListStyle(),
+            messageListStyle: MessageListStyle(
+              gradient: widget.messagesStyle?.gradient,
+              background: (widget.messagesStyle?.gradient != null
+                  ? Colors.transparent
+                  : widget.messagesStyle?.background),
+            ).mergeWith(widget.messageListConfiguration.messageListStyle),
             sentIcon: widget.messageListConfiguration.sentIcon,
             readIcon: widget.messageListConfiguration.readIcon,
             onThreadRepliesClick:
@@ -420,7 +423,7 @@ class _CometChatMessagesState extends State<CometChatMessages> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: DecoratedBox(
+      child: Container(
           decoration: BoxDecoration(
               gradient: widget.messagesStyle?.gradient,
               color: widget.messagesStyle?.gradient == null
