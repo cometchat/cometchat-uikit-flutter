@@ -1,3 +1,19 @@
+## 4.5.6
+
+**New**
+- Unveiled the ability to customize `CometChatContacts`, offering a bespoke user experience.
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.6`.
+- Updated `cometchat_sdk` to version `4.0.16`.
+
+**Fixes**
+- Perfected the indicator color of the tab bar in `CometChatContacts` for a sleek and polished look.
+- Resolved an issue where component colors weren't applied to the safe area, ensuring seamless visual consistency.
+- Addressed a privacy concern where users could see typing and online status of blocked contacts within the `CometChatMessages` and `CometChatConversations` components.
+- Fixed an issue where passing `disableMention` as true did not disable the mentions feature
+- Fixed an issue where if the conversation type was set to users and a message was received in a group, the group was visible in the conversations list in real time.
+
 ## 4.5.5
 
 **Enhancements**
