@@ -1,3 +1,17 @@
+## 4.5.7
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.7`.
+
+**Fixes**
+- Fixed a missing `auxiliaryHeaderMenu` prop in the `CometChatMessages` component.
+- Fixed an issue where the `showAvatar` prop of the `CometChatMessageList` component was not working, ensuring avatars are displayed in received messages in one-to-one conversations.
+- Fixed an issue where a custom empty state view could not be set in the `CometChatMessageList` component.
+- Fixed an issue in the `CometChatCreateGroup` component where the selected tab background was applied only to the text and not the entire tab.
+
+**Removals**
+- Removed unnecessary location permission.
+
 ## 4.5.6
 
 **New**
