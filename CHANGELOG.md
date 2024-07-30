@@ -1,3 +1,9 @@
+## 4.5.8
+
+**Fixes**
+- Fixed an issue where a custom message composer view was hiding the messages at the bottom of the message list in `CometChatThreadedMessages`.
+- Fixed an issue where `GroupMembersConfiguration` was not being applied to the `CometChatGroupMembers` component when accessed through `CometChatDetails`.
+
 ## 4.5.7
 
 **Enhancements**
