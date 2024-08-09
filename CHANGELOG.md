@@ -1,3 +1,17 @@
+## 4.5.9
+
+**New**
+- The sender of a message will now see a double tick on a group message to indicate that the message has been successfully delivered to all users within that group, and a double blue tick once it has been read by all participants in the group.
+
+**Enhancements**
+- Updated `cometchat_uikit_shared` to version `4.4.9`.
+- Updated `cometchat_sdk` to version `4.0.17`.
+
+**Fixes**
+- Fixed an issue where launching `CometChatMessages` resulted in the same messages being appended multiple times, causing duplicate chats.
+- Fixed an issue where the `hideTimestamp` prop of `CometChatMessageList` was not working.
+
+
 ## 4.5.8
 
 **Fixes**

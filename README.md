@@ -3,7 +3,7 @@
 </p>
 
 # CometChat Flutter Chat UIKit
-The CometChat <a href="https://pub.dev/packages/cometchat_chat_uikit"><strong>CometChat Chat UIKit</strong></a>. provides a pre-built user interface kit that developers can use to quickly integrate a reliable & fully-featured chat experience into an existing or a new app. <br/>
+The <a href="https://pub.dev/packages/cometchat_chat_uikit"><strong>CometChat Chat UIKit</strong></a> provides a pre-built user interface kit that developers can use to quickly integrate a reliable & fully-featured chat experience into an existing or a new app. <br/>
 
 ### Prerequisites
 - Flutter >=3.10.5
