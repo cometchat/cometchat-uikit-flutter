@@ -1,3 +1,19 @@
+## 4.5.10
+
+**New**
+- Added a new prop `hideReceipt` to hide the receipt in the message bubble and conversation’s last message.
+
+**Enhancements**
+- Updated `cometchat_sdk` to version `4.0.18`.
+- If `isIncludeBlockedUsers` is set to true in the `ConversationsRequestBuilder` and the logged-in user blocks another user, the conversation is not removed from the list.
+
+**Fixes**
+- Fixed an issue in a group conversation, where if it last message was an action message it was not being marked as read which prevented the unread count from decreasing.
+
+**Deprecations**
+- Deprecated `disableReceipt` prop from `CometChatMessageList` & `CometChatConversations` component.
+
+
 ## 4.5.9
 
 **New**
