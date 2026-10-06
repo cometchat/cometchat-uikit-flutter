@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../cometchat_uikit_shared.dart'
     show
+        CometChatExceptionStyle,
         CometChatAvatarStyle,
         CometChatMessageReceiptStyle,
         CometChatReactionsStyle,
@@ -17,8 +18,7 @@ import '../../../../../cometchat_uikit_shared.dart'
         CometChatMessageTranslationBubbleStyle,
         CometChatStickerBubbleStyle,
         CometChatCallBubbleStyle,
-        CometChatModerationStyle,
-        CometChatExceptionStyle;
+        CometChatModerationStyle;
 import '../../../../../../chat_ui/src/message_composer/cometchat_message_preview.dart'
     show CometChatMessagePreviewStyle;
 
@@ -42,6 +42,18 @@ import '../../../../../../chat_ui/src/message_composer/cometchat_message_preview
 /// ```
 class CometChatOutgoingMessageBubbleStyle
     extends ThemeExtension<CometChatOutgoingMessageBubbleStyle> {
+  /// Style for the quoted-message preview inside an outgoing bubble that is
+  /// a reply. Each property set here overrides the kit's default for it.
+  final CometChatMessagePreviewStyle? messagePreviewStyle;
+
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Style for the exception view of a sent message.
+  @Deprecated(
+    'Has no effect. The outgoing bubble has no exception view: style the moderation banner with moderationStyle, and attachment-size errors surface in the composer (CometChatMessageComposer.attachmentErrorAlertStyle). Will be removed in 7.0.0.',
+  )
+  final CometChatExceptionStyle? exceptionStyle;
+
   const CometChatOutgoingMessageBubbleStyle({
     this.messageBubbleBackgroundImage,
     this.backgroundColor,
@@ -159,12 +171,6 @@ class CometChatOutgoingMessageBubbleStyle
   ///[moderationStyle] provides style to the moderated view of the sent message
   final CometChatModerationStyle? moderationStyle;
 
-  ///[messagePreviewStyle] provides style to the message preview
-  final CometChatMessagePreviewStyle? messagePreviewStyle;
-
-  ///[exceptionStyle] provides style to the exception view of the sent message
-  final CometChatExceptionStyle? exceptionStyle;
-
   static CometChatOutgoingMessageBubbleStyle of(BuildContext context) =>
       const CometChatOutgoingMessageBubbleStyle();
 
@@ -199,7 +205,6 @@ class CometChatOutgoingMessageBubbleStyle
     CometChatCallBubbleStyle? videoCallBubbleStyle,
     CometChatModerationStyle? moderationStyle,
     CometChatMessagePreviewStyle? messagePreviewStyle,
-    CometChatExceptionStyle? exceptionStyle,
   }) {
     return CometChatOutgoingMessageBubbleStyle(
       messageBubbleBackgroundImage:
@@ -244,7 +249,6 @@ class CometChatOutgoingMessageBubbleStyle
       videoCallBubbleStyle: videoCallBubbleStyle ?? this.videoCallBubbleStyle,
       moderationStyle: moderationStyle ?? this.moderationStyle,
       messagePreviewStyle: messagePreviewStyle ?? this.messagePreviewStyle,
-      exceptionStyle: exceptionStyle ?? this.exceptionStyle,
     );
   }
 
@@ -284,7 +288,6 @@ class CometChatOutgoingMessageBubbleStyle
       videoCallBubbleStyle: style.videoCallBubbleStyle,
       moderationStyle: style.moderationStyle,
       messagePreviewStyle: style.messagePreviewStyle,
-      exceptionStyle: style.exceptionStyle,
     );
   }
 
@@ -375,7 +378,6 @@ class CometChatOutgoingMessageBubbleStyle
         other.messagePreviewStyle,
         t,
       ),
-      exceptionStyle: exceptionStyle?.lerp(other.exceptionStyle, t),
     );
   }
 }

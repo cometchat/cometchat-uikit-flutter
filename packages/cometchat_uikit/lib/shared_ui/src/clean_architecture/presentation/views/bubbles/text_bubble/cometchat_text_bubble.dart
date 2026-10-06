@@ -205,11 +205,14 @@ class _CometChatTextBubbleState extends State<CometChatTextBubble> {
           textAlign: TextAlign.left,
           text: TextSpan(
             style: textStyle,
+            // Pass the bubble style down as well: the spans set their own
+            // style, which would otherwise override this parent's.
             children: FormatterUtils.buildTextSpan(
               message,
               widget.formatters,
               context,
               widget.alignment,
+              textStyle: textStyle,
             ),
           ),
         ),

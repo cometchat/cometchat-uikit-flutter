@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+// Redundant from gpt_markdown 1.2, which re-exports it. 1.1.x, still allowed
+// by our ^1.1.2 constraint, does not provide what this file uses without it.
+// ignore: unnecessary_import
 import 'package:gpt_markdown/custom_widgets/markdown_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../cometchat_uikit_shared.dart';
@@ -150,6 +153,10 @@ class _CometChatAiAssistantTableBuilderState
         );
       } else {
         final cleanedText = _stripMarkdownLinks(text);
+        // gpt_markdown 1.3.0 deprecates MdWidget in favour of GptMarkdown. It stays
+        // until 2.0.0, which our ^1.1.2 constraint excludes; migrate when the
+        // package's floor moves to 1.3.0.
+        // ignore: deprecated_member_use
         content = MdWidget(
           context,
           cleanedText,

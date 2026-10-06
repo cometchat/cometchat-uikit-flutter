@@ -1,5 +1,6 @@
 // Core Utils - Clean Architecture
 export 'string_utils.dart';
+export 'text_scale_utils.dart';
 export 'file_utils.dart';
 export 'network_utils.dart';
 export 'ui_state_utils.dart';

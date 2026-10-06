@@ -33,10 +33,16 @@ class UpdateSelectedReaction extends ReactionListEvent {
   List<Object?> get props => [reaction];
 }
 
-class RemoveReaction extends ReactionListEvent {
+/// Removes the logged-in user's own reaction from the list.
+///
+/// Named `RemoveOwnReaction` rather than `RemoveReaction` because the message
+/// list declares an event by the latter name, and the collision was previously
+/// worked around with a `show` clause on this file's export — which took every
+/// other event in this family off the public surface with it. ENG-39101.
+class RemoveOwnReaction extends ReactionListEvent {
   final Reaction reaction;
 
-  const RemoveReaction(this.reaction);
+  const RemoveOwnReaction(this.reaction);
 
   @override
   List<Object?> get props => [reaction];
@@ -184,7 +190,7 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
     on<InitializeReactionList>(_onInitialize);
     on<FetchReactions>(_onFetchReactions);
     on<UpdateSelectedReaction>(_onUpdateSelectedReaction);
-    on<RemoveReaction>(_onRemoveReaction);
+    on<RemoveOwnReaction>(_onRemoveReaction);
     on<ReactionAdded>(_onReactionAdded);
     on<ReactionRemoved>(_onReactionRemoved);
   }
@@ -232,7 +238,7 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
   }
 
   Future<void> _onRemoveReaction(
-    RemoveReaction event,
+    RemoveOwnReaction event,
     Emitter<ReactionListState> emit,
   ) async {
     if (state is! ReactionListLoaded) return;
@@ -265,21 +271,23 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
     );
 
     // Make API call
-    CometChat.removeReaction(
-      event.reaction.messageId!,
-      event.reaction.reaction!,
-      onSuccess: (reactedMessage) {
-        if (messageObject != null) {
-          CometChatMessageEvents.ccMessageEdited(
-            messageObject!..reactions = reactedMessage.reactions,
-            MessageEditStatus.success,
-          );
-        }
-      },
-      onError: (exception) {
-        // Revert on error
-        add(ReactionAdded(event.reaction));
-      },
+    unawaited(
+      CometChat.removeReaction(
+        event.reaction.messageId!,
+        event.reaction.reaction!,
+        onSuccess: (reactedMessage) {
+          if (messageObject != null) {
+            CometChatMessageEvents.ccMessageEdited(
+              messageObject!..reactions = reactedMessage.reactions,
+              MessageEditStatus.success,
+            );
+          }
+        },
+        onError: (exception) {
+          // Revert on error
+          add(ReactionAdded(event.reaction));
+        },
+      ),
     );
   }
 
@@ -389,80 +397,82 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
 
     final completer = Completer<void>();
 
-    request.fetchPrevious(
-      onSuccess: (messageReactionsList) {
-        if (messageReactionsList.isEmpty) {
-          _hasMoreReactions[reaction] = false;
-          // Emit loaded state so UI transitions out of loading
-          if (!emit.isDone) {
-            emit(
-              ReactionListLoaded(
-                messageReactions: currentReactions,
-                selectedReaction: currentSelectedReaction,
-                totalReactions: currentState is ReactionListLoaded
-                    ? currentState.totalReactions
-                    : 0,
-                canFetchMore: false,
-              ),
+    unawaited(
+      request.fetchPrevious(
+        onSuccess: (messageReactionsList) {
+          if (messageReactionsList.isEmpty) {
+            _hasMoreReactions[reaction] = false;
+            // Emit loaded state so UI transitions out of loading
+            if (!emit.isDone) {
+              emit(
+                ReactionListLoaded(
+                  messageReactions: currentReactions,
+                  selectedReaction: currentSelectedReaction,
+                  totalReactions: currentState is ReactionListLoaded
+                      ? currentState.totalReactions
+                      : 0,
+                  canFetchMore: false,
+                ),
+              );
+            }
+          } else {
+            _hasMoreReactions[reaction] = true;
+
+            final updatedReactions = Map<String, List<Reaction>>.from(
+              currentReactions,
             );
-          }
-        } else {
-          _hasMoreReactions[reaction] = true;
+            int totalCount = currentState is ReactionListLoaded
+                ? currentState.totalReactions
+                : 0;
 
-          final updatedReactions = Map<String, List<Reaction>>.from(
-            currentReactions,
-          );
-          int totalCount = currentState is ReactionListLoaded
-              ? currentState.totalReactions
-              : 0;
-
-          for (Reaction messageReaction in messageReactionsList) {
-            if (updatedReactions.containsKey(messageReaction.reaction)) {
-              final existingIndex = updatedReactions[messageReaction.reaction!]
-                  ?.indexWhere(
-                    (element) =>
-                        element.reaction == messageReaction.reaction &&
-                        element.reactedBy?.uid ==
-                            messageReaction.reactedBy?.uid,
+            for (Reaction messageReaction in messageReactionsList) {
+              if (updatedReactions.containsKey(messageReaction.reaction)) {
+                final existingIndex =
+                    updatedReactions[messageReaction.reaction!]?.indexWhere(
+                      (element) =>
+                          element.reaction == messageReaction.reaction &&
+                          element.reactedBy?.uid ==
+                              messageReaction.reactedBy?.uid,
+                    );
+                if (existingIndex == -1) {
+                  updatedReactions[messageReaction.reaction!]?.add(
+                    messageReaction,
                   );
-              if (existingIndex == -1) {
-                updatedReactions[messageReaction.reaction!]?.add(
-                  messageReaction,
-                );
+                  totalCount++;
+                }
+              } else {
+                updatedReactions[messageReaction.reaction!] = [messageReaction];
                 totalCount++;
               }
-            } else {
-              updatedReactions[messageReaction.reaction!] = [messageReaction];
-              totalCount++;
+            }
+
+            if (!emit.isDone) {
+              emit(
+                ReactionListLoaded(
+                  messageReactions: updatedReactions,
+                  selectedReaction: currentSelectedReaction,
+                  totalReactions: totalCount,
+                  canFetchMore:
+                      _hasMoreReactions[currentSelectedReaction] ?? false,
+                ),
+              );
             }
           }
-
+          completer.complete();
+        },
+        onError: (exception) {
           if (!emit.isDone) {
             emit(
-              ReactionListLoaded(
-                messageReactions: updatedReactions,
+              ReactionListError(
+                error: exception,
+                messageReactions: currentReactions,
                 selectedReaction: currentSelectedReaction,
-                totalReactions: totalCount,
-                canFetchMore:
-                    _hasMoreReactions[currentSelectedReaction] ?? false,
               ),
             );
           }
-        }
-        completer.complete();
-      },
-      onError: (exception) {
-        if (!emit.isDone) {
-          emit(
-            ReactionListError(
-              error: exception,
-              messageReactions: currentReactions,
-              selectedReaction: currentSelectedReaction,
-            ),
-          );
-        }
-        completer.complete();
-      },
+          completer.complete();
+        },
+      ),
     );
 
     await completer.future;

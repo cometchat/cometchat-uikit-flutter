@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../misc/avatar/cometchat_avatar_style.dart';
+
 ///[CometChatReactionListStyle] is a class which is used to set the style for the reaction list
 ///It takes `loadingStateColor`, [emptyTextStyle], [errorTextStyle], [subtitleTextStyle], `width`, `height`, `background`, `gradient`, [border], [borderRadius] as a parameter
 ///
@@ -32,6 +34,7 @@ class CometChatReactionListStyle
     this.tailViewTextStyle,
     this.subtitleTextColor,
     this.emptyTextStyle,
+    this.avatarStyle,
   });
 
   ///[backgroundColor] provides background color to the modal sheet
@@ -88,6 +91,10 @@ class CometChatReactionListStyle
   ///[subtitleTextStyle] provides styling to the subtitle in the modal sheet
   final Color? subtitleTextColor;
 
+  ///[avatarStyle] styles the avatar on each reactor row. The list's own
+  ///[CometChatReactionList.avatarStyle], when set, takes precedence.
+  final CometChatAvatarStyle? avatarStyle;
+
   @override
   CometChatReactionListStyle copyWith({
     TextStyle? subtitleTextStyle,
@@ -108,6 +115,7 @@ class CometChatReactionListStyle
     TextStyle? tailViewTextStyle,
     Color? subtitleTextColor,
     TextStyle? emptyTextStyle,
+    CometChatAvatarStyle? avatarStyle,
   }) {
     return CometChatReactionListStyle(
       subtitleTextStyle: subtitleTextStyle ?? this.subtitleTextStyle,
@@ -130,6 +138,7 @@ class CometChatReactionListStyle
       tailViewTextStyle: tailViewTextStyle ?? this.tailViewTextStyle,
       subtitleTextColor: subtitleTextColor ?? this.subtitleTextColor,
       emptyTextStyle: emptyTextStyle ?? this.emptyTextStyle,
+      avatarStyle: avatarStyle ?? this.avatarStyle,
     );
   }
 
@@ -196,6 +205,7 @@ class CometChatReactionListStyle
         t,
       ),
       emptyTextStyle: TextStyle.lerp(emptyTextStyle, other.emptyTextStyle, t),
+      avatarStyle: avatarStyle?.lerp(other.avatarStyle, t) ?? other.avatarStyle,
     );
   }
 
@@ -220,6 +230,7 @@ class CometChatReactionListStyle
       tailViewTextStyle: style.tailViewTextStyle,
       subtitleTextColor: style.subtitleTextColor,
       emptyTextStyle: style.emptyTextStyle,
+      avatarStyle: style.avatarStyle,
     );
   }
 

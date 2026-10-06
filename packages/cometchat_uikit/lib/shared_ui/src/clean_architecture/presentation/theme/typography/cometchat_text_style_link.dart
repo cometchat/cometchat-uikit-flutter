@@ -25,10 +25,17 @@ class CometChatTextStyleLink extends ThemeExtension<CometChatTextStyleLink> {
     );
   }
 
-  static CometChatTextStyleLink of(BuildContext context) =>
-      CometChatTextStyleLink(
-        regular: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w400),
-      );
+  /// Resolves the default type for this role, then lets a
+  /// [CometChatTextStyleLink] supplied through `ThemeData.extensions`
+  /// override it. Merge direction is `default.merge(supplied)` so the
+  /// caller wins; the reverse silently discards their style.
+  static CometChatTextStyleLink of(BuildContext context) {
+    final ext = Theme.of(context).extension<CometChatTextStyleLink>();
+    final base = _ccTextStyle(context);
+    return CometChatTextStyleLink(
+      regular: base.copyWith(fontWeight: FontWeight.w400).merge(ext?.regular),
+    );
+  }
 
   static TextStyle _ccTextStyle(BuildContext context) {
     return const TextStyle(fontSize: 14, fontWeight: FontWeight.w400);

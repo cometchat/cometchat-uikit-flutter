@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/translations.dart';
 
 /// A floating action button that appears when the user scrolls away from the bottom
 ///
@@ -103,10 +104,14 @@ class ScrollToBottomButton extends StatelessWidget {
                   shape: const CircleBorder(),
                   color: bgColor,
                   clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: onPressed,
-                    child: Center(
-                      child: Icon(icon, color: fgColor, size: size * 0.6),
+                  child: Semantics(
+                    button: true,
+                    label: Translations.of(context).scrollToBottom,
+                    child: InkWell(
+                      onTap: onPressed,
+                      child: Center(
+                        child: Icon(icon, color: fgColor, size: size * 0.6),
+                      ),
                     ),
                   ),
                 ),

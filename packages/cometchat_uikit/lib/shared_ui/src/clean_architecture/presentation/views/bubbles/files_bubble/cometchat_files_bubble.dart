@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../clean_architecture.dart';
+import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform_file;
 import '../../../../core/utils/platform_utils/web_download.dart'
@@ -44,7 +45,13 @@ class CometChatFilesBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final attachments = AttachmentUtils.attachmentsOf(message);
-    if (attachments.isEmpty) return const SizedBox.shrink();
+    final caption = message.caption;
+    final hasCaption = caption != null && caption.trim().isNotEmpty;
+    // A media message can reach us with its attachments missing while still
+    // carrying a caption (the caption is parsed independently of the
+    // attachments). Dropping the whole bubble there silently discarded the
+    // user's text — render the caption on its own instead.
+    if (attachments.isEmpty && !hasCaption) return const SizedBox.shrink();
 
     final resolved = CometChatThemeHelper.getTheme<CometChatFilesBubbleStyle>(
       context: context,
@@ -54,18 +61,18 @@ class CometChatFilesBubble extends StatelessWidget {
     // 2dp inset on all sides between the bubble edge and the card stack — same
     // as every other multi-attachment bubble (images / videos / audios).
     final children = <Widget>[
-      Padding(
-        padding: const EdgeInsets.all(kMultiAttachmentContentInset),
-        child: _FileList(
-          files: attachments,
-          alignment: alignment,
-          style: resolved,
+      if (attachments.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.all(kMultiAttachmentContentInset),
+          child: _FileList(
+            files: attachments,
+            alignment: alignment,
+            style: resolved,
+          ),
         ),
-      ),
     ];
 
-    final caption = message.caption;
-    if (caption != null && caption.trim().isNotEmpty) {
+    if (hasCaption) {
       children.add(
         CometChatMediaCaption(
           caption: caption,
@@ -251,7 +258,10 @@ class _FileCardState extends State<_FileCard> {
   /// Restores an earlier download so the card hides the ↓ right away.
   Future<void> _restoreDownloaded() async {
     if (kIsWeb) return;
-    final p = await platform_file.getDownloadedFilePath(a.fileName);
+    final p = await platform_file.getDownloadedFilePath(
+      a.fileName,
+      fileUrl: a.fileUrl,
+    );
     if (p == null || !mounted) return;
     setState(() => _localPath = p);
   }
@@ -277,7 +287,7 @@ class _FileCardState extends State<_FileCard> {
         localPath: _localPath,
       );
     } catch (e) {
-      debugPrint('[files bubble] download failed: $e');
+      ccLog('[files bubble] download failed: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -315,7 +325,10 @@ class _FileCardState extends State<_FileCard> {
       var path = _localPath;
       if (path == null || !platform_file.fileExistsSync(path)) {
         await BubbleUtils.downloadFile(url, a.fileName);
-        path = await platform_file.getDownloadedFilePath(a.fileName);
+        path = await platform_file.getDownloadedFilePath(
+          a.fileName,
+          fileUrl: a.fileUrl,
+        );
         _localPath = path;
       }
       if (path != null) {
@@ -326,7 +339,7 @@ class _FileCardState extends State<_FileCard> {
         });
       }
     } catch (e) {
-      debugPrint('[files bubble] open failed: $e');
+      ccLog('[files bubble] open failed: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -401,7 +414,7 @@ class _FileCardState extends State<_FileCard> {
                   children: [
                     Text(
                       a.fileName,
-                      maxLines: 1,
+                      maxLines: scaledMaxLines(context),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
@@ -413,7 +426,7 @@ class _FileCardState extends State<_FileCard> {
                     const SizedBox(height: 2),
                     Text(
                       '${_fmtSize(a.fileSize ?? 0)} • ${_ext().toUpperCase()}',
-                      maxLines: 1,
+                      maxLines: scaledMaxLines(context),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
@@ -427,22 +440,27 @@ class _FileCardState extends State<_FileCard> {
               // (reference design) — card tap still downloads-and-opens.
               if (_showDownload && !_busy) ...[
                 const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: _onDownloadTap,
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    // The UIKit's own download glyph — same asset the legacy
-                    // file bubble ships (reference design).
-                    child: Image.asset(
-                      AssetConstants.download,
-                      height: 22,
-                      width: 22,
-                      package: UIConstants.packageName,
-                      color:
-                          widget.style?.downloadIconTint ??
-                          (_sent
-                              ? Colors.white
-                              : (colors.primary ?? Colors.blue)),
+                Semantics(
+                  button: true,
+                  label: Translations.of(context).download,
+                  child: GestureDetector(
+                    onTap: _onDownloadTap,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      // The UIKit's own download glyph — same asset the legacy
+                      // file bubble ships (reference design).
+                      child: Image.asset(
+                        AssetConstants.download,
+                        excludeFromSemantics: true,
+                        height: 22,
+                        width: 22,
+                        package: UIConstants.packageName,
+                        color:
+                            widget.style?.downloadIconTint ??
+                            (_sent
+                                ? Colors.white
+                                : (colors.primary ?? Colors.blue)),
+                      ),
                     ),
                   ),
                 ),

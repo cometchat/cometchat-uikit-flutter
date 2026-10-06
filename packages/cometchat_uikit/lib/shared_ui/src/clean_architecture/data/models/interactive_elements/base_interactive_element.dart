@@ -35,7 +35,8 @@ class BaseInteractiveElement extends ElementEntity {
         elementType: map[ModelFieldConstants.elementType],
         elementId: map[ModelFieldConstants.elementId],
         action: action,
-        disableAfterInteracted: map[ModelFieldConstants.disableAfterInteracted],
+        disableAfterInteracted:
+            map[ModelFieldConstants.disableAfterInteracted] ?? false,
       );
     }
   }

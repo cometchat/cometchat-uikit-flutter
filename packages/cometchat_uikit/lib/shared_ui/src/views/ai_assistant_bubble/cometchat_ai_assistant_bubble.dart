@@ -85,24 +85,28 @@ class CometChatAIAssistantBubble extends StatelessWidget {
           if (!hasElements && contentText.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: spacing.padding2 ?? 8),
-              child: GestureDetector(
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: contentText));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: colorPalette.background3,
-                      content: Text(
-                        'Copied to clipboard',
-                        style: TextStyle(color: colorPalette.textPrimary),
+              child: Semantics(
+                button: true,
+                label: Translations.of(context).copy,
+                child: GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: contentText));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: colorPalette.background3,
+                        content: Text(
+                          'Copied to clipboard',
+                          style: TextStyle(color: colorPalette.textPrimary),
+                        ),
+                        duration: const Duration(seconds: 2),
                       ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-                child: Icon(
-                  Icons.content_copy_rounded,
-                  size: 18,
-                  color: colorPalette.iconSecondary,
+                    );
+                  },
+                  child: Icon(
+                    Icons.content_copy_rounded,
+                    size: 18,
+                    color: colorPalette.iconSecondary,
+                  ),
                 ),
               ),
             ),
@@ -244,6 +248,9 @@ class CometChatAIAssistantBubble extends StatelessWidget {
               ),
             );
           },
+          // `inlineCodeBuilder` only exists from gpt_markdown 1.2; our ^1.1.2 still
+          // resolves 1.1.x, where this is the only option. Removed in 2.0.
+          // ignore: deprecated_member_use
           highlightBuilder: (context, text, style) {
             return CometchatHighlightBuilder(
               text: text,
@@ -253,6 +260,10 @@ class CometChatAIAssistantBubble extends StatelessWidget {
               colorPalette: colorPalette,
             );
           },
+          // gpt_markdown 1.3.0 deprecates linkBuilder in favour of inlineLinkBuilder,
+          // which only exists from 1.3.0. linkBuilder stays until 2.0.0, which our
+          // ^1.1.2 constraint excludes; migrate when the package's floor moves to 1.3.0.
+          // ignore: deprecated_member_use
           linkBuilder: (context, text, url, style) {
             return CometchatLinkBuilder(
               text: text,

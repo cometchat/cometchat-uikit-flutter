@@ -6,6 +6,7 @@ import "../../../../clean_architecture.dart";
 import '../../../../core/utils/platform_utils/platform_image_utils.dart'
     as platform_image;
 import 'image_viewer.dart';
+import '../../../../../logging/cometchat_log.dart';
 
 ///[CometChatImageBubble] creates a widget that gives image bubble
 ///
@@ -261,7 +262,7 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
           return _buildLoadingIndicator();
         },
         errorBuilder: (context, error, stackTrace) {
-          debugPrint('Image.network error: $error');
+          ccLog('Image.network error: $error');
           return _buildPlaceholderImage();
         },
       );
@@ -274,7 +275,7 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
       filterQuality: FilterQuality.medium,
       placeholder: (context, url) => _buildLoadingIndicator(),
       errorWidget: (context, url, error) {
-        debugPrint('CachedNetworkImage error: $error');
+        ccLog('CachedNetworkImage error: $error');
         return _buildPlaceholderImage();
       },
       fadeInDuration: const Duration(milliseconds: 200),

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import '../base_styles.dart';
 
+/// Style for the text input interactive element.
+@Deprecated(
+  'Has no effect: v6 renders form-message elements as unsupported, as the Android UI Kit does, so nothing reads it. No replacement. Will be removed in 7.0.0.',
+)
 class TextInputElementStyle extends BaseStyles {
+  /// Creates a [TextInputElementStyle].
   TextInputElementStyle({
     this.textStyle,
     this.hintTextStyle,
@@ -14,10 +19,16 @@ class TextInputElementStyle extends BaseStyles {
     super.gradient,
   });
 
+  /// The text style. Has no effect; deprecated with this class.
   TextStyle? textStyle;
+
+  /// The label style. Has no effect; deprecated with this class.
   TextStyle? labelStyle;
+
+  /// The hint text style. Has no effect; deprecated with this class.
   TextStyle? hintTextStyle;
 
+  /// Returns this style with the non-null values of [mergeWith] applied.
   TextInputElementStyle merge(TextInputElementStyle mergeWith) {
     return TextInputElementStyle(
       textStyle: textStyle ?? mergeWith.textStyle,

@@ -21,6 +21,20 @@ import '../../../../../../cometchat_uikit_shared.dart';
 ///      );
 /// ```
 class CometChatMessageBubble extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Height of the bubble.
+  @Deprecated(
+    'Has no effect. The bubble sizes to its content; size it through its parent. Will be removed in 7.0.0.',
+  )
+  final double? height;
+
+  /// Width of the bubble.
+  @Deprecated(
+    'Has no effect. The bubble sizes to its content; size it through its parent. Will be removed in 7.0.0.',
+  )
+  final double? width;
+
   const CometChatMessageBubble({
     super.key,
     this.style = const CometChatMessageBubbleStyle(),
@@ -33,13 +47,13 @@ class CometChatMessageBubble extends StatefulWidget {
     this.threadView,
     this.bottomView,
     this.statusInfoView,
-    this.height,
-    this.width,
     this.margin,
     this.colorPalette,
     this.spacing,
     this.contentPadding,
     this.outerPadding,
+    this.height,
+    this.width,
   });
 
   ///[leadingView] widget to be shown on the left side of the bubble
@@ -71,12 +85,6 @@ class CometChatMessageBubble extends StatefulWidget {
 
   ///[statusInfoView] widget to be shown under the [contentView] of the bubble
   final Widget? statusInfoView;
-
-  ///[width] sets width for the bubble
-  final double? width;
-
-  ///[height] sets height for the bubble
-  final double? height;
 
   ///[margin] sets margin for the bubble
   final EdgeInsetsGeometry? margin;
@@ -277,7 +285,10 @@ class _CometChatMessageBubbleState extends State<CometChatMessageBubble> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.leadingView != null) widget.leadingView!,
+            // The leading avatar duplicates the sender already named in
+            // headerView, so it is hidden from assistive technology.
+            if (widget.leadingView != null)
+              ExcludeSemantics(child: widget.leadingView!),
             Flexible(child: contentColumn),
           ],
         ),

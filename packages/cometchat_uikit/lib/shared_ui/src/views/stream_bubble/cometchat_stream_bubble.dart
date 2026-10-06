@@ -5,23 +5,33 @@ import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import '../../../cometchat_uikit_shared.dart';
 import '../no_intrinsic_card_wrapper.dart';
+import '../../logging/cometchat_log.dart';
 
 /// Renders an in-progress streaming AI response with shimmer effect.
 ///
 /// Migrated from GetX to StatefulWidget for v6 BLoC architecture.
 class CometChatStreamBubble extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Text shown when no message is passed.
+  @Deprecated(
+    'Has no effect. message is required and is always the source. Will be removed in 7.0.0.',
+  )
+  final String? text;
+
+  /// Alignment of the bubble.
+  @Deprecated('Has no effect. Will be removed in 7.0.0.')
+  final BubbleAlignment? alignment;
+
   const CometChatStreamBubble({
     super.key,
     required this.message,
-    this.text,
     this.style,
     this.width,
     this.height,
+    this.text,
     this.alignment,
   });
-
-  /// If message object is not passed then text should be passed.
-  final String? text;
 
   /// The stream message being rendered.
   final StreamMessage message;
@@ -34,9 +44,6 @@ class CometChatStreamBubble extends StatefulWidget {
 
   /// Height of the bubble.
   final double? height;
-
-  /// Alignment of the bubble.
-  final BubbleAlignment? alignment;
 
   @override
   State<CometChatStreamBubble> createState() => _CometChatStreamBubbleState();
@@ -114,9 +121,8 @@ class _CometChatStreamBubbleState extends State<CometChatStreamBubble> {
         )
         .listen(
           (_) {},
-          onError: (err) =>
-              debugPrint('[CometChatStreamBubble][StreamError] $err'),
-          onDone: () => debugPrint(
+          onError: (err) => ccLog('[CometChatStreamBubble][StreamError] $err'),
+          onDone: () => ccLog(
             '[CometChatStreamBubble][Done] Streaming completed for runId: $runId',
           ),
         );
@@ -361,6 +367,9 @@ class _CometChatStreamBubbleState extends State<CometChatStreamBubble> {
                       ),
                     );
                   },
+                  // `inlineCodeBuilder` only exists from gpt_markdown 1.2; our ^1.1.2 still
+                  // resolves 1.1.x, where this is the only option. Removed in 2.0.
+                  // ignore: deprecated_member_use
                   highlightBuilder: (context, text, style) {
                     return CometchatHighlightBuilder(
                       text: text,
@@ -370,6 +379,10 @@ class _CometChatStreamBubbleState extends State<CometChatStreamBubble> {
                       colorPalette: _colorPalette,
                     );
                   },
+                  // gpt_markdown 1.3.0 deprecates linkBuilder in favour of inlineLinkBuilder,
+                  // which only exists from 1.3.0. linkBuilder stays until 2.0.0, which our
+                  // ^1.1.2 constraint excludes; migrate when the package's floor moves to 1.3.0.
+                  // ignore: deprecated_member_use
                   linkBuilder: (context, text, url, style) {
                     return CometchatLinkBuilder(
                       text: text,

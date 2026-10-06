@@ -102,6 +102,21 @@ class CometChatAISmartRepliesStyle
       ),
       closeIconColor: Color.lerp(closeIconColor, other.closeIconColor, t),
       titleStyle: TextStyle.lerp(titleStyle, other.titleStyle, t),
+      // All four geometry props were absent from the constructor call, so an
+      // animated theme transition dropped every border and radius on this
+      // view mid-flight. ENG-39124.
+      border: BoxBorder.lerp(border, other.border, t),
+      borderRadius: BorderRadiusGeometry.lerp(
+        borderRadius,
+        other.borderRadius,
+        t,
+      ),
+      itemBorder: BoxBorder.lerp(itemBorder, other.itemBorder, t),
+      itemBorderRadius: BorderRadiusGeometry.lerp(
+        itemBorderRadius,
+        other.itemBorderRadius,
+        t,
+      ),
     );
   }
 }

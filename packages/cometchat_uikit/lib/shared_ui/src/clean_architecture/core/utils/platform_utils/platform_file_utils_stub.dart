@@ -26,7 +26,10 @@ Future<String?> downloadFileToLocal(String fileUrl, String fileName) async {
   return null;
 }
 
-Future<String?> getDownloadedFilePath(String fileName) async {
+Future<String?> getDownloadedFilePath(
+  String fileName, {
+  String? fileUrl,
+}) async {
   return null;
 }
 

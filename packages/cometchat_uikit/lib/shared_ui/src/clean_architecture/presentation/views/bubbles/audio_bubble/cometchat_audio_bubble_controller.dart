@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:flutter/services.dart';
+import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform;
+
+import 'voice_note_audio_session.dart';
 
 // Conditional import for web audio player
 import 'web_audio_player_stub.dart'
@@ -33,16 +35,46 @@ class AudioStateManager {
       );
     } else {
       final state = _audioStates[id]!;
-      if (localPath != null && localPath.isNotEmpty) {
+      // Only when the file actually moved. updateLocalPath exists to re-point
+      // the player at a newly-downloaded copy, and it does that by disposing
+      // the live controller and resetting the play state — so calling it with
+      // the path the state already holds tears down a perfectly good player
+      // for nothing.
+      //
+      // That mattered because the message list rebuilds every bubble's State
+      // whenever the list changes: one voice note sent recreated each State
+      // three times over, and each recreation ran this path twice (initState
+      // and again when the file check resolved). The result was every audio
+      // bubble on screen flipping to a spinner and back, together, on every
+      // send — ENG-39490. With the guard, a recreated bubble finds the cached
+      // state and reuses its already-initialised controller, which is what
+      // keying these by muid was for in the first place.
+      if (localPath != null &&
+          localPath.isNotEmpty &&
+          state.localPath != localPath) {
         state.updateLocalPath(localPath);
       }
-      // NOTE: audioUrl is deliberately not refreshed here. It is final, and the
-      // only updater (updateLocalPath) disposes the live controller — so
-      // refreshing it would tear players down mid-playback on every
-      // _checkFileExists. A state cached before its upload finished therefore
-      // keeps a stale audioUrl; harmless while the local file exists, which is
-      // the only case that reaches this branch today. Fixing it properly means
-      // separating "new source" from "drop the controller".
+      // The sender's state is created from the optimistic message, before the
+      // upload has finished — so it is cached with a null audioUrl, and the
+      // real one only arrives with the acknowledgement. Adopt it.
+      //
+      // This used to be skipped on the grounds that refreshing the url would
+      // tear players down mid-playback, with a null url held to be "harmless
+      // while the local file exists". It isn't: the recording is device-local,
+      // so the moment that path stops resolving — cache cleaned, or iOS hands
+      // the app a new container UUID after a reinstall, leaving the localPath
+      // stamped in server metadata pointing nowhere — the state has no source
+      // at all and the sender's own voice note refuses to play until the chat
+      // is closed and reopened (ENG-39489). The receiver never hits it: their
+      // state is first built from a message that already carries the url.
+      //
+      // adoptAudioUrl is what makes this safe — it separates "new source"
+      // from "drop the controller".
+      if (audioUrl != null &&
+          audioUrl.isNotEmpty &&
+          state.audioUrl != audioUrl) {
+        state.adoptAudioUrl(audioUrl);
+      }
     }
     return _audioStates[id]!;
   }
@@ -85,7 +117,11 @@ class AudioStateManager {
 /// Individual audio state for each audio bubble
 class AudioBubbleState {
   final int id;
-  final String? audioUrl;
+
+  /// Not final: the sender's state is built from the optimistic message, whose
+  /// attachment url does not exist until the upload completes. See
+  /// [adoptAudioUrl].
+  String? audioUrl;
   String? localPath;
 
   VideoPlayerController? _controller;
@@ -94,6 +130,11 @@ class AudioBubbleState {
   StreamSubscription<void>? _webCompletionSub;
   PlayStates _playState = PlayStates.init;
   bool _isInitializing = false;
+
+  /// Whether the native player was opened on this device's own recording.
+  /// Only that needs the session routed to the loudspeaker while it plays —
+  /// see [VoiceNoteAudioSession].
+  bool _playsLocalFile = false;
   Duration? _totalDuration;
   Duration _currentPosition = Duration.zero;
 
@@ -129,7 +170,7 @@ class AudioBubbleState {
   static const Duration _initTimeout = Duration(seconds: 6);
 
   Future<void> initializeController({bool isRetry = false}) async {
-    debugPrint("initializeController: $id");
+    ccLog("initializeController: $id");
 
     // If already initialized, return immediately
     if (kIsWeb && _webPlayer != null && _webPlayer!.isInitialized) return;
@@ -153,18 +194,18 @@ class AudioBubbleState {
       if (kIsWeb) {
         // Web: use HTML <audio> element for proper webm/opus support
         if (audioUrl == null || audioUrl!.isEmpty) {
-          debugPrint("No valid audio URL for web playback, id: $id");
+          ccLog("No valid audio URL for web playback, id: $id");
           _isInitializing = false;
           _notifyStateUpdate();
           return;
         }
 
-        debugPrint("Using WEB audio player for: $audioUrl");
+        ccLog("Using WEB audio player for: $audioUrl");
         _webPlayer = web_player.createWebAudioPlayer();
         final success = await _webPlayer!.initialize(audioUrl!);
 
         if (!success) {
-          debugPrint(
+          ccLog(
             '[AudioBubbleState] Web audio player failed to initialize for id: $id',
           );
           _webPlayer?.dispose();
@@ -175,7 +216,7 @@ class AudioBubbleState {
         }
 
         _totalDuration = _webPlayer!.duration;
-        debugPrint(
+        ccLog(
           '[AudioBubbleState] Web audio initialized for id: $id, duration: $_totalDuration',
         );
 
@@ -201,29 +242,23 @@ class AudioBubbleState {
             platform.fileExistsSync(localPath!);
 
         if (hasValidLocalFile) {
-          debugPrint("Using LOCAL audio file: $localPath");
-
-          if (platform.platformIsIOS()) {
-            await _setAudioSessionToSpeaker();
-          }
+          ccLog("Using LOCAL audio file: $localPath");
+          _playsLocalFile = true;
 
           _controller = VideoPlayerController.networkUrl(
             Uri.parse('file://$localPath'),
             videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
           );
         } else if (audioUrl != null && audioUrl!.isNotEmpty) {
-          debugPrint("Using NETWORK audio url: $audioUrl");
-
-          if (platform.platformIsIOS()) {
-            await _resetAudioSession();
-          }
+          ccLog("Using NETWORK audio url: $audioUrl");
+          _playsLocalFile = false;
 
           _controller = VideoPlayerController.networkUrl(
             Uri.parse(audioUrl!),
             videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
           );
         } else {
-          debugPrint("No valid audio source found for id: $id");
+          ccLog("No valid audio source found for id: $id");
           _isInitializing = false;
           _notifyStateUpdate();
           return;
@@ -232,7 +267,7 @@ class AudioBubbleState {
         await _controller!.initialize().timeout(_initTimeout);
 
         if (!_controller!.value.isInitialized) {
-          debugPrint(
+          ccLog(
             '[AudioBubbleState] Controller failed to initialize for id: $id',
           );
           _disposeController();
@@ -242,7 +277,7 @@ class AudioBubbleState {
         }
 
         _totalDuration = _controller!.value.duration;
-        debugPrint(
+        ccLog(
           '[AudioBubbleState] Initialized successfully for id: $id, duration: $_totalDuration',
         );
 
@@ -253,13 +288,13 @@ class AudioBubbleState {
       // on [_initTimeout]. Drop the wedged controller so the retry below (or a
       // later play tap) can build a fresh one.
       timedOut = true;
-      debugPrint(
+      ccLog(
         '[AudioBubbleState] initialize() timed out after '
         '${_initTimeout.inSeconds}s for id: $id${isRetry ? ' (retry)' : ''}',
       );
       _disposeController();
     } catch (e, stack) {
-      debugPrint("Error initializing audio controller for id: $id — $e");
+      ccLog("Error initializing audio controller for id: $id — $e");
       debugPrintStack(stackTrace: stack);
       _disposeController();
       _webPlayer?.dispose();
@@ -299,7 +334,7 @@ class AudioBubbleState {
         await initializeController();
       }
       if (_webPlayer == null || !_webPlayer!.isInitialized) {
-        debugPrint(
+        ccLog(
           '[AudioBubbleState] Cannot play — web player not initialized for id: $id',
         );
         _playState = PlayStates.stopped;
@@ -312,9 +347,7 @@ class AudioBubbleState {
         await _webPlayer!.play();
         _notifyStateUpdate();
       } catch (e, stack) {
-        debugPrint(
-          '[AudioBubbleState] Error playing web audio for id: $id — $e',
-        );
+        ccLog('[AudioBubbleState] Error playing web audio for id: $id — $e');
         debugPrintStack(stackTrace: stack);
         _playState = PlayStates.stopped;
         _notifyStateUpdate();
@@ -325,7 +358,7 @@ class AudioBubbleState {
       }
       final controller = _controller;
       if (controller == null || !controller.value.isInitialized) {
-        debugPrint(
+        ccLog(
           '[AudioBubbleState] Cannot play — controller not initialized for id: $id',
         );
         _playState = PlayStates.stopped;
@@ -334,11 +367,12 @@ class AudioBubbleState {
       }
       try {
         AudioStateManager().pauseAllExcept(id);
+        if (_playsLocalFile) await VoiceNoteAudioSession.takeForSpeaker(id);
         _playState = PlayStates.playing;
         await controller.play();
         _notifyStateUpdate();
       } catch (e, stack) {
-        debugPrint('[AudioBubbleState] Error playing audio for id: $id — $e');
+        ccLog('[AudioBubbleState] Error playing audio for id: $id — $e');
         debugPrintStack(stackTrace: stack);
         _playState = PlayStates.stopped;
         _notifyStateUpdate();
@@ -358,6 +392,7 @@ class AudioBubbleState {
         _playState = PlayStates.paused;
         _notifyStateUpdate();
       }
+      await VoiceNoteAudioSession.release(id);
     }
   }
 
@@ -377,6 +412,7 @@ class AudioBubbleState {
         _currentPosition = Duration.zero;
         _notifyStateUpdate();
       }
+      await VoiceNoteAudioSession.release(id);
     }
   }
 
@@ -443,24 +479,27 @@ class AudioBubbleState {
     }
   }
 
-  Future<void> _setAudioSessionToSpeaker() async {
-    if (kIsWeb) return;
-    MethodChannel channel = const MethodChannel('cometchat_uikit_shared');
-    try {
-      await channel.invokeMethod('setAudioSessionToSpeaker');
-    } catch (e) {
-      debugPrint('Error setting audio session to speaker: $e');
-    }
-  }
+  /// Takes a url that only became available after this state was created —
+  /// the sender's own message, whose attachment url exists once the upload
+  /// finishes.
+  ///
+  /// Deliberately gentler than [updateLocalPath]: a player that is already
+  /// initialised keeps playing, because the url it opened is still good for
+  /// this session and the new one will be picked up on the next
+  /// initialisation. Only a state with nothing working is reset, so the next
+  /// play tap builds a controller from the url instead of finding no source
+  /// at all.
+  void adoptAudioUrl(String url) {
+    audioUrl = url;
 
-  Future<void> _resetAudioSession() async {
-    if (kIsWeb) return;
-    MethodChannel channel = const MethodChannel('cometchat_uikit_shared');
-    try {
-      await channel.invokeMethod('resetAudioSession');
-    } catch (e) {
-      debugPrint('Error resetting audio session: $e');
-    }
+    final nativeLive = _controller?.value.isInitialized ?? false;
+    final webLive = _webPlayer?.isInitialized ?? false;
+    if (nativeLive || webLive) return;
+
+    _disposeController();
+    _disposeWebPlayer();
+    _playState = PlayStates.init;
+    _notifyStateUpdate();
   }
 
   void updateLocalPath(String path) {
@@ -475,6 +514,7 @@ class AudioBubbleState {
     _controller?.removeListener(_onControllerUpdate);
     _controller?.dispose();
     _controller = null;
+    unawaited(VoiceNoteAudioSession.release(id));
   }
 
   void _disposeWebPlayer() {
@@ -492,10 +532,7 @@ class AudioBubbleState {
     _controller = null;
     _disposeWebPlayer();
     _stateController.close();
-
-    if (!kIsWeb && localPath != null && platform.platformIsIOS()) {
-      _resetAudioSession();
-    }
+    unawaited(VoiceNoteAudioSession.release(id));
   }
 }
 

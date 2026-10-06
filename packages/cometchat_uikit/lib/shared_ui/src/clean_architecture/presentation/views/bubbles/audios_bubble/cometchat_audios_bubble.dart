@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart' as vp;
 
 import '../../../../clean_architecture.dart';
+import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform_file;
 import '../../../../core/utils/platform_utils/web_download.dart'
@@ -48,7 +49,13 @@ class CometChatAudiosBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final attachments = AttachmentUtils.attachmentsOf(message);
-    if (attachments.isEmpty) return const SizedBox.shrink();
+    final caption = message.caption;
+    final hasCaption = caption != null && caption.trim().isNotEmpty;
+    // A media message can reach us with its attachments missing while still
+    // carrying a caption (the caption is parsed independently of the
+    // attachments). Dropping the whole bubble there silently discarded the
+    // user's text — render the caption on its own instead.
+    if (attachments.isEmpty && !hasCaption) return const SizedBox.shrink();
 
     final resolved = CometChatThemeHelper.getTheme<CometChatAudiosBubbleStyle>(
       context: context,
@@ -66,20 +73,26 @@ class CometChatAudiosBubble extends StatelessWidget {
     // 2dp inset on all sides between the bubble edge and the rows — same as
     // every other multi-attachment bubble (images / videos / files).
     final children = <Widget>[
-      Padding(
-        padding: const EdgeInsets.all(kMultiAttachmentContentInset),
-        child: _AudioList(
-          attachments: attachments,
-          durationsMs: durationsMs,
-          alignment: alignment,
-          rowRadius: rowRadius,
-          style: resolved,
+      if (attachments.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.all(kMultiAttachmentContentInset),
+          child: _AudioList(
+            attachments: attachments,
+            durationsMs: durationsMs,
+            // Only for a single attachment: metadata['localPath'] is one path
+            // and there is no way to say which row it belongs to otherwise.
+            // (Multi-attachment sends stamp no local path at all today.)
+            stampedLocalPath: attachments.length == 1
+                ? FileUtils.getLocalFilePath(message.metadata)
+                : null,
+            alignment: alignment,
+            rowRadius: rowRadius,
+            style: resolved,
+          ),
         ),
-      ),
     ];
 
-    final caption = message.caption;
-    if (caption != null && caption.trim().isNotEmpty) {
+    if (hasCaption) {
       children.add(
         CometChatMediaCaption(
           caption: caption,
@@ -115,6 +128,7 @@ class _AudioList extends StatefulWidget {
   const _AudioList({
     required this.attachments,
     required this.durationsMs,
+    this.stampedLocalPath,
     required this.alignment,
     required this.rowRadius,
     this.style,
@@ -125,6 +139,10 @@ class _AudioList extends StatefulWidget {
   /// Sender-stamped per-attachment durations (ms), aligned with [attachments];
   /// an entry may be null/absent (older messages).
   final List<dynamic> durationsMs;
+
+  /// A copy of the file already on this device, when the message carries
+  /// exactly one attachment. See [_AudioRowState._restoreDownloaded].
+  final String? stampedLocalPath;
   final BubbleAlignment alignment;
   final double rowRadius;
   final CometChatAudiosBubbleStyle? style;
@@ -160,6 +178,7 @@ class _AudioListState extends State<_AudioList> {
         _AudioRow(
           attachment: visible[i],
           initialDurationMs: durMs is int ? durMs : null,
+          stampedLocalPath: widget.stampedLocalPath,
           alignment: widget.alignment,
           borderRadius: BorderRadius.circular(widget.rowRadius),
           style: widget.style,
@@ -240,6 +259,7 @@ class _AudioRow extends StatefulWidget {
     required this.alignment,
     required this.borderRadius,
     this.initialDurationMs,
+    this.stampedLocalPath,
     this.style,
     this.standalone = false,
   });
@@ -247,6 +267,10 @@ class _AudioRow extends StatefulWidget {
   final CometChatAudiosBubbleStyle? style;
 
   final Attachment attachment;
+
+  /// A copy of this file already on the device, stamped by the composer when
+  /// the message was sent. Null unless the message has a single attachment.
+  final String? stampedLocalPath;
 
   /// Sender-stamped duration (ms) for this row, shown in the clock before the
   /// file is loaded (ENG-37180). Null for older messages — the row then shows
@@ -319,14 +343,38 @@ class _AudioRowState extends State<_AudioRow> {
     });
   }
 
-  /// Restores an earlier download so the row shows play + duration right away.
+  /// Points the row at a copy already on the device so it shows play +
+  /// duration right away, instead of waiting for a download.
+  ///
+  /// Two places to look, and the order matters. The composer stamps
+  /// `metadata['localPath']` on anything it sends, so on the *sender's* device
+  /// the file is already there — every other bubble reads it (image, video,
+  /// file, voice note), and this one used to not, which made the sender fetch
+  /// their own upload back from the CDN before it would play. A signed url
+  /// that isn't servable yet then left the row on a sticky error while the
+  /// receiver, whose download had populated the cache, played fine
+  /// (ENG-39489). Failing that, fall back to the download cache.
   Future<void> _restoreDownloaded() async {
     if (kIsWeb) return;
+
+    // A mismatched (non-audio) file renders as a file card — never initialise
+    // a player for it, even if a copy is already on the device.
+    if (_isMismatch) return;
+
+    final stamped = widget.stampedLocalPath;
+    if (stamped != null &&
+        stamped.isNotEmpty &&
+        FileUtils.isLocalFileAvailable(stamped)) {
+      if (!mounted) return;
+      _localPath = stamped;
+      await _initController();
+      return;
+    }
+
     final p = await platform_file.getDownloadedFilePath(
       widget.attachment.fileName,
+      fileUrl: widget.attachment.fileUrl,
     );
-    // A mismatched (non-audio) file renders as a file card — never initialise a
-    // player for it, even if a copy is already on the device.
     if (p == null || !mounted || _isMismatch) return;
     _localPath = p;
     await _initController();
@@ -398,7 +446,7 @@ class _AudioRowState extends State<_AudioRow> {
 
   /// Fetches the file to the local cache (no playback). Shared by the play
   /// path (download → init → play) and the trailing download-only button.
-  Future<bool> _download() async {
+  Future<bool> _download({int attempt = 0}) async {
     setState(() => _busy = true);
     try {
       final path = await BubbleUtils.downloadFile(
@@ -406,6 +454,15 @@ class _AudioRowState extends State<_AudioRow> {
         widget.attachment.fileName,
       );
       if (path == null) {
+        // A url handed back by a send that has only just completed can be
+        // briefly unservable. Retry once before surfacing the error, the same
+        // way [_initController] does — otherwise the first play of your own
+        // upload lands on a sticky error icon and the user has to tap again.
+        if (attempt == 0 && mounted) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+          if (!mounted) return false;
+          return await _download(attempt: 1);
+        }
         if (mounted) setState(() => _error = true);
         return false;
       }
@@ -415,6 +472,11 @@ class _AudioRowState extends State<_AudioRow> {
       if (!_isMismatch) await _initController();
       return !_error;
     } catch (_) {
+      if (attempt == 0 && mounted) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        if (!mounted) return false;
+        return await _download(attempt: 1);
+      }
       if (mounted) setState(() => _error = true);
       return false;
     } finally {
@@ -540,6 +602,7 @@ class _AudioRowState extends State<_AudioRow> {
         await BubbleUtils.downloadFile(url, widget.attachment.fileName);
         path = await platform_file.getDownloadedFilePath(
           widget.attachment.fileName,
+          fileUrl: widget.attachment.fileUrl,
         );
         _localPath = path;
       }
@@ -551,7 +614,7 @@ class _AudioRowState extends State<_AudioRow> {
         });
       }
     } catch (e) {
-      debugPrint('[audios bubble] open failed: $e');
+      ccLog('[audios bubble] open failed: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -582,7 +645,9 @@ class _AudioRowState extends State<_AudioRow> {
       onTap: _busy ? null : _openFileCardTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: _kAudioRowHeight,
+        // maxFactor 2.0 rather than the 1.5 default: the row stacks a name,
+        // a slider and a clock, so it needs the full scale to stay uncropped.
+        height: scaledDimension(context, _kAudioRowHeight, maxFactor: 2.0),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: rowBg,
@@ -701,7 +766,9 @@ class _AudioRowState extends State<_AudioRow> {
         (_sent ? Colors.white : (colors.primary ?? Colors.blue));
 
     return Container(
-      height: _kAudioRowHeight,
+      // maxFactor 2.0 rather than the 1.5 default: the row stacks a name,
+      // a slider and a clock, so it needs the full scale to stay uncropped.
+      height: scaledDimension(context, _kAudioRowHeight, maxFactor: 2.0),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: rowBg,
@@ -797,18 +864,23 @@ class _AudioRowState extends State<_AudioRow> {
           // (native cache / web browser download).
           if (_showDownload && !_busy) ...[
             const SizedBox(width: 6),
-            GestureDetector(
-              onTap: _onDownloadTap,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                // The UIKit's own download glyph — same asset the legacy
-                // file bubble ships (reference design).
-                child: Image.asset(
-                  AssetConstants.download,
-                  height: 22,
-                  width: 22,
-                  package: UIConstants.packageName,
-                  color: style?.downloadIconColor ?? accent,
+            Semantics(
+              button: true,
+              label: Translations.of(context).download,
+              child: GestureDetector(
+                onTap: _onDownloadTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  // The UIKit's own download glyph — same asset the legacy
+                  // file bubble ships (reference design).
+                  child: Image.asset(
+                    AssetConstants.download,
+                    excludeFromSemantics: true,
+                    height: 22,
+                    width: 22,
+                    package: UIConstants.packageName,
+                    color: style?.downloadIconColor ?? accent,
+                  ),
                 ),
               ),
             ),

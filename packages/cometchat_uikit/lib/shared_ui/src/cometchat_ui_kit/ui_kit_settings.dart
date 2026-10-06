@@ -12,10 +12,22 @@ class UIKitSettings {
   ///[enableCalls] when true, initializes the CometChat Calls SDK
   ///and registers the calling extension (call buttons, incoming/outgoing call screens, call message templates).
   ///Defaults to false.
+  ///
+  ///The UI Kit then also starts its call handling (the incoming call
+  ///listener, the Calls SDK login) at login and stops it at logout.
+  ///`CometChatUIKit.init`, `login` and `loginWithAuthToken` call their
+  ///onSuccess, and complete their futures, once the Calls SDK is set up:
+  ///within about 22 s (10 s for an init that restores no session). A Calls
+  ///SDK failure never turns into onError. Await them behind a splash screen,
+  ///not before `runApp`.
   final bool enableCalls;
 
   ///[callingConfiguration] optional configuration for call buttons, incoming call, outgoing call, and group call settings.
-  ///Only used when [enableCalls] is true.
+  ///
+  ///The incoming call banner and the meeting bubble read it whether or not
+  ///[enableCalls] is set; the message header's call buttons, which only
+  ///appear with [enableCalls], read it too. It wins over the configuration
+  ///passed to the deprecated `CallEventService.init(configuration:)`.
   final CallingConfiguration? callingConfiguration;
 
   ///[enableThreadSubscription] feature gate for the thread follow/unfollow
@@ -58,10 +70,11 @@ class UIKitSettingsBuilder {
 
   ///[enableCalls] when true, initializes the CometChat Calls SDK
   ///and registers the calling extension. Defaults to false.
+  ///See [UIKitSettings.enableCalls] for when onSuccess is called with it.
   bool enableCalls = false;
 
   ///[callingConfiguration] optional configuration for call buttons, incoming call, outgoing call, and group call settings.
-  ///Only used when [enableCalls] is true.
+  ///See [UIKitSettings.callingConfiguration] for where it is read.
   CallingConfiguration? callingConfiguration;
 
   ///[enableThreadSubscription] feature gate for the thread follow/unfollow

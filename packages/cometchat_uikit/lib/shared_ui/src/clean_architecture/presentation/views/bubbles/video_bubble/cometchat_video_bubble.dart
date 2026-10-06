@@ -18,13 +18,25 @@ import 'video_player.dart';
   'Use CometChatVideosBubble instead — the multi-attachment bubble family (enableMultipleAttachments) replaces the single-attachment media bubbles.',
 )
 class CometChatVideoBubble extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Placeholder image for the video.
+  @Deprecated(
+    'Has no effect. For the colour shown while a thumbnail loads, use CometChatVideosBubbleStyle.placeholderColor. Will be removed in 7.0.0.',
+  )
+  final String? placeHolderImage;
+
+  /// Package of the placeholder image.
+  @Deprecated(
+    'Has no effect. For the colour shown while a thumbnail loads, use CometChatVideosBubbleStyle.placeholderColor. Will be removed in 7.0.0.',
+  )
+  final String? placeHolderImagePackageName;
+
   const CometChatVideoBubble({
     super.key,
     this.style,
     this.videoUrl,
     this.thumbnailUrl,
-    this.placeHolderImage,
-    this.placeHolderImagePackageName,
     this.playIcon,
     this.onClick,
     this.height,
@@ -35,6 +47,8 @@ class CometChatVideoBubble extends StatefulWidget {
     this.placeHolder,
     this.colorPalette,
     this.spacing,
+    this.placeHolderImage,
+    this.placeHolderImagePackageName,
   });
 
   ///[videoUrl] if message object is not passed then video url should be passed
@@ -45,12 +59,6 @@ class CometChatVideoBubble extends StatefulWidget {
 
   ///[style] video bubble styling properties
   final CometChatVideoBubbleStyle? style;
-
-  ///[placeHolderImage] shows placeholder for video
-  final String? placeHolderImage;
-
-  ///[placeHolderImagePackageName] is package path for the custom placeholder image
-  final String? placeHolderImagePackageName;
 
   ///[playIcon] video play pause icon
   final Icon? playIcon;

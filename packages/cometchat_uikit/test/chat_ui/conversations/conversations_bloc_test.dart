@@ -23,7 +23,6 @@ class MockConversationsRepository extends Mock
     implements ConversationsRepository {}
 
 class FakeConversation extends Fake implements Conversation {
-
   // Pin Conversation fields — read by the trailing view's pin glyph.
   @override
   DateTime? get pinnedAt => null;
@@ -35,6 +34,14 @@ class FakeConversation extends Fake implements Conversation {
 
   @override
   String? get conversationId => _id;
+
+  // Delete-target resolution (ENG fix for ERR_CONVERSATION_NOT_ACCESSIBLE):
+  // the bloc reads conversationWith/conversationType off the object.
+  @override
+  AppEntity get conversationWith => FakeUser();
+
+  @override
+  String get conversationType => 'user';
 }
 
 class FakeUser extends Fake implements User {
@@ -161,7 +168,11 @@ void main() {
           () => repo.getConversations(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Success(convs));
         when(
-          () => repo.deleteConversation(any()),
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
         ).thenAnswer((_) async => const Success(null));
         return _makeBloc(repo);
       },
@@ -192,7 +203,11 @@ void main() {
           () => repo.getConversations(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Success(convs));
         when(
-          () => repo.deleteConversation(any()),
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
         ).thenAnswer((_) async => const Success(null));
         return _makeBloc(repo);
       },
@@ -203,7 +218,17 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 50));
       },
       verify: (bloc) {
-        verify(() => repo.deleteConversation('user_abc')).called(1);
+        // The SDK delete target must come from the Conversation OBJECT
+        // (peer uid + type), not from parsing the conversation id — parsing
+        // picks the logged-in user's own uid whenever it sorts second in
+        // "{uidA}_user_{uidB}" (ERR_CONVERSATION_NOT_ACCESSIBLE).
+        verify(
+          () => repo.deleteConversation(
+            'user_abc',
+            conversationWith: 'test_user',
+            conversationType: 'user',
+          ),
+        ).called(1);
       },
     );
 
@@ -218,7 +243,11 @@ void main() {
           () => repo.getConversations(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Success(convs));
         when(
-          () => repo.deleteConversation(any()),
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
         ).thenAnswer((_) async => const Failure(message: 'Network error'));
         return _makeBloc(repo);
       },
@@ -244,7 +273,11 @@ void main() {
           () => repo.getConversations(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Success(convs));
         when(
-          () => repo.deleteConversation(any()),
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
         ).thenAnswer((_) async => const Success(null));
         return _makeBloc(repo);
       },
@@ -275,7 +308,11 @@ void main() {
           () => repo.getConversations(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Success(convs));
         when(
-          () => repo.deleteConversation(any()),
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
         ).thenAnswer((_) async => const Success(null));
         return _makeBloc(repo);
       },
@@ -334,7 +371,13 @@ void main() {
         bloc.add(const RemoveConversation('conv_1'));
       },
       verify: (bloc) {
-        verifyNever(() => repo.deleteConversation(any()));
+        verifyNever(
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
+        );
         final state = bloc.state as ConversationsLoaded;
         expect(state.conversations.length, 1);
       },

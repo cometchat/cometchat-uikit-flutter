@@ -40,6 +40,8 @@ class ListItemStyle extends BaseStyles {
     Gradient? gradient,
     BoxBorder? border,
     BorderRadiusGeometry? borderRadius,
+    EdgeInsetsGeometry? padding,
+    EdgeInsetsGeometry? margin,
   }) {
     return ListItemStyle(
       titleStyle: titleStyle ?? this.titleStyle,
@@ -50,6 +52,10 @@ class ListItemStyle extends BaseStyles {
       gradient: gradient ?? this.gradient,
       border: border ?? this.border,
       borderRadius: borderRadius ?? this.borderRadius,
+      // Declared fields copyWith never carried, so every copy reset both to
+      // null. ENG-39124.
+      padding: padding ?? this.padding,
+      margin: margin ?? this.margin,
     );
   }
 

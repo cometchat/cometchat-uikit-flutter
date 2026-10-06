@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import '../base_styles.dart';
 
+/// Style for the check box interactive element.
+@Deprecated(
+  'Has no effect: v6 renders form-message elements as unsupported, as the Android UI Kit does, so nothing reads it. No replacement. Will be removed in 7.0.0.',
+)
 class CheckBoxElementStyle extends BaseStyles {
+  /// Creates a [CheckBoxElementStyle].
   CheckBoxElementStyle({
     this.labelStyle,
     this.activeColor,
@@ -15,11 +20,19 @@ class CheckBoxElementStyle extends BaseStyles {
     super.gradient,
   });
 
+  /// The label style. Has no effect; deprecated with this class.
   final TextStyle? labelStyle;
+
+  /// The active color. Has no effect; deprecated with this class.
   final Color? activeColor;
+
+  /// The check color. Has no effect; deprecated with this class.
   final Color? checkColor;
+
+  /// The option text style. Has no effect; deprecated with this class.
   final TextStyle? optionTextStyle;
 
+  /// Returns this style with the non-null values of [mergeWith] applied.
   CheckBoxElementStyle merge(CheckBoxElementStyle mergeWith) {
     return CheckBoxElementStyle(
       labelStyle: labelStyle ?? mergeWith.labelStyle,

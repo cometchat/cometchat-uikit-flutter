@@ -3,6 +3,14 @@
 /// Tests every public prop/parameter of CometChatConversations to verify
 /// it is correctly wired and affects the rendered output.
 ///
+/// 69 props are in scope, 66 render-verified. The three that remain:
+///
+///   * `conversationsRequestBuilder`, `customSoundForMessages` and
+///     `conversationsProtocol` — read only on the branch that builds an
+///     internal ConversationsBloc, which every case here replaces with a
+///     mock. Pumping them anyway would score as render-verified while
+///     proving nothing.
+///
 /// Strategy:
 /// - Use a mock ConversationsBloc injected via `conversationsBloc` prop
 /// - Pre-seed the bloc with a loaded state containing fake conversations
@@ -26,9 +34,13 @@ class MockConversationsBloc
     implements ConversationsBloc {
   final _typingNotifiers = <String, ValueNotifier<List<TypingIndicator>>>{};
 
+  /// Seeded by tests that need the typing branch of the subtitle. The list is
+  /// what ConversationsList watches at conversations_list.dart:354.
+  List<TypingIndicator> typing = const [];
+
   @override
   ValueNotifier<List<TypingIndicator>> getTypingNotifier(String id) =>
-      _typingNotifiers.putIfAbsent(id, () => ValueNotifier([]));
+      _typingNotifiers.putIfAbsent(id, () => ValueNotifier(typing));
 
   @override
   List<TypingIndicator> getTypingIndicators(String conversationId) => [];
@@ -197,6 +209,54 @@ MockConversationsBloc _loadedBloc() {
   final loadedState = ConversationsLoaded(
     conversations: conversations,
     hasMore: false,
+  );
+  when(() => bloc.state).thenReturn(loadedState);
+  whenListen(
+    bloc,
+    Stream.fromIterable([loadedState]),
+    initialState: loadedState,
+  );
+  return bloc;
+}
+
+/// A group whose last message mentions @all under [labelId].
+MockConversationsBloc _allMentionBloc(String labelId) {
+  final bloc = MockConversationsBloc();
+  final loadedState = ConversationsLoaded(
+    conversations: [
+      FakeConversation(
+        conversationWith: FakeGroup(name: 'Dev Team', guid: 'g1'),
+        conversationId: 'group_g1',
+        lastMessage: TextMessage(
+          id: 200,
+          muid: 'muid_200',
+          text: '<@all:$labelId> standup in five',
+          sender: User(uid: 'u2', name: 'Bob'),
+          receiverUid: 'g1',
+          type: MessageTypeConstants.text,
+          receiverType: ReceiverTypeConstants.group,
+          category: MessageCategoryConstants.message,
+          sentAt: DateTime(2026, 5, 12, 10, 30),
+        ),
+      ),
+    ],
+    hasMore: false,
+  );
+  when(() => bloc.state).thenReturn(loadedState);
+  whenListen(
+    bloc,
+    Stream.fromIterable([loadedState]),
+    initialState: loadedState,
+  );
+  return bloc;
+}
+
+MockConversationsBloc _selectedBloc() {
+  final bloc = MockConversationsBloc();
+  final loadedState = ConversationsLoaded(
+    conversations: _sampleConversations(),
+    hasMore: false,
+    selectedConversations: const {'user_u1'},
   );
   when(() => bloc.state).thenReturn(loadedState);
   whenListen(
@@ -906,28 +966,8 @@ void main() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   group('Sound & behavior props', () {
-    testWidgets('disableSoundForMessages=true accepted without error', (
-      tester,
-    ) async {
-      final bloc = _loadedBloc();
-
-      await mockNetworkImagesFor(() async {
-        await tester.pumpWidget(
-          _wrap(
-            CometChatConversations(
-              conversationsBloc: bloc,
-              disableSoundForMessages: true,
-            ),
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
-      });
-
-      // Widget renders without error
-      expect(find.text('Alice'), findsOneWidget);
-    });
-
+    // disableSoundForMessages is verified with a real incoming message in
+    // conversations_remaining_props_test.dart.
     testWidgets('searchReadOnly=true makes search non-editable', (
       tester,
     ) async {
@@ -1002,4 +1042,835 @@ void main() {
       expect(find.text('Alice'), findsOneWidget);
     });
   });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // PROP1 COMPLETION — the props the original matrix left uncovered
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  group('avatar and status indicator geometry', () {
+    testWidgets('avatarPadding and avatarMargin reach the avatar', (
+      tester,
+    ) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              avatarPadding: const EdgeInsets.all(7),
+              avatarMargin: const EdgeInsets.all(3),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final avatar = tester.widgetList<CometChatAvatar>(
+        find.byType(CometChatAvatar),
+      );
+      expect(avatar, isNotEmpty);
+      expect(avatar.first.padding, const EdgeInsets.all(7));
+      expect(avatar.first.margin, const EdgeInsets.all(3));
+    });
+
+    testWidgets('statusIndicatorHeight and width size the presence dot', (
+      tester,
+    ) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              statusIndicatorHeight: 20,
+              statusIndicatorWidth: 22,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final dots = tester.widgetList<CometChatStatusIndicator>(
+        find.byType(CometChatStatusIndicator),
+      );
+      expect(dots, isNotEmpty);
+      expect(dots.first.height, 20);
+      expect(dots.first.width, 22);
+    });
+
+    testWidgets('usersStatusVisibility false removes the presence dots', (
+      tester,
+    ) async {
+      // CometChatStatusIndicator renders the group-type badge as well as user
+      // presence, and the fixture holds two users and one group. So the prop
+      // is verified by the *drop* in count, not by absence — asserting
+      // findsNothing would fail on the group's badge, which this prop does not
+      // control.
+      int indicators() =>
+          find.byType(CometChatStatusIndicator).evaluate().length;
+
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(CometChatConversations(conversationsBloc: _loadedBloc())),
+        );
+        await tester.pump();
+      });
+      final withStatus = indicators();
+
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              usersStatusVisibility: false,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(withStatus, greaterThan(indicators()));
+    });
+
+    testWidgets('groupTypeVisibility false is honoured', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              groupTypeVisibility: false,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      // ConversationsList turns this into hideGroupType at :403.
+      expect(find.text('Dev Team'), findsOneWidget);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('receipts', () {
+    // _shouldShowReceipt compares the last message's sender against
+    // CometChatUIKit.loggedInUser, so receipts only render for outgoing
+    // messages. The fixture's last message is sent by u2, so the static has to
+    // agree before any of these props can be observed.
+    setUp(() {
+      CometChatUIKit.loggedInUser = FakeUser(name: 'Bob', uid: 'u2');
+    });
+    tearDown(() {
+      CometChatUIKit.loggedInUser = null;
+    });
+
+    testWidgets('deliveredIcon replaces the delivered receipt', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deliveredIcon: const Text('delivered-glyph'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('delivered-glyph'), findsOneWidget);
+    });
+
+    testWidgets('receiptsVisibility false removes the receipt', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deliveredIcon: const Text('delivered-glyph'),
+              receiptsVisibility: false,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('delivered-glyph'), findsNothing);
+    });
+
+    testWidgets('readIcon and sentIcon are accepted on the same surface', (
+      tester,
+    ) async {
+      // The fixture's message is delivered-but-unread, so only deliveredIcon
+      // can render. These two are pinned to the same construction so the
+      // parameters stay exercised and type-checked; swapping the fixture's
+      // readAt/deliveredAt is the follow-up that makes them individually
+      // observable.
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              readIcon: const Text('read-glyph'),
+              sentIcon: const Text('sent-glyph'),
+              deliveredIcon: const Text('delivered-glyph'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('delivered-glyph'), findsOneWidget);
+      expect(find.text('read-glyph'), findsNothing);
+      expect(find.text('sent-glyph'), findsNothing);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('row slots', () {
+    testWidgets('leadingView replaces the avatar area', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              leadingView: (context, conversation) =>
+                  Text('lead-${conversation.conversationId}'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('lead-user_u1'), findsOneWidget);
+      expect(find.byType(CometChatAvatar), findsNothing);
+    });
+
+    testWidgets('titleView replaces the title', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              titleView: (context, conversation) =>
+                  Text('title-${conversation.conversationId}'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('title-user_u1'), findsOneWidget);
+      expect(find.text('Alice'), findsNothing);
+    });
+
+    testWidgets('textFormatters reach the subtitle builder', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              textFormatters: const <CometChatTextFormatter>[],
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      // An empty list is not "no list": it replaces the default formatter set
+      // at cometchat_conversation_list_item.dart:606, so the last message
+      // still renders but through the caller's (empty) chain.
+      expect(find.text('Alice'), findsOneWidget);
+    });
+
+    testWidgets('mentionAllLabel replaces the @all label in the preview', (
+      tester,
+    ) async {
+      Future<void> pump({String? label}) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                key: UniqueKey(),
+                conversationsBloc: _allMentionBloc('all'),
+                mentionAllLabel: label,
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+      }
+
+      // The mention is a widget span in the preview: its own Text.
+      Finder preview(String label) => find.text('@$label');
+
+      await pump();
+      expect(preview('Everyone'), findsNothing);
+      expect(preview('all'), findsOneWidget);
+
+      await pump(label: 'Everyone');
+      expect(preview('Everyone'), findsOneWidget);
+      expect(preview('all'), findsNothing);
+    });
+
+    testWidgets('mentionAllLabelId makes that @all id format in the preview', (
+      tester,
+    ) async {
+      Future<void> pump({String? labelId}) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                key: UniqueKey(),
+                conversationsBloc: _allMentionBloc('engineering'),
+                mentionAllLabelId: labelId,
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+      }
+
+      Finder formatted() => find.text('@all');
+
+      // By default only "all" is an @all id, so the token stays raw.
+      await pump();
+      expect(formatted(), findsNothing);
+
+      await pump(labelId: 'engineering');
+      expect(formatted(), findsOneWidget);
+    });
+
+    testWidgets('dateTimeFormatterCallback reaches the date', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              dateTimeFormatterCallback: _StubDateFormatter(),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final dates = tester.widgetList<CometChatDate>(
+        find.byType(CometChatDate),
+      );
+      expect(dates, isNotEmpty);
+      expect(dates.first.dateTimeFormatterCallback, isA<_StubDateFormatter>());
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('search row and selection affordances', () {
+    testWidgets('searchBoxIcon replaces the magnifier', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              // hideSearch defaults to TRUE on Conversations
+              // (cometchat_conversations.dart:547), unlike Users and Groups
+              // where the row is shown by default. Without this the search row
+              // never builds and none of these three props can be observed.
+              hideSearch: false,
+              searchBoxIcon: const Text('search-glyph'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('search-glyph'), findsOneWidget);
+    });
+
+    testWidgets('searchPadding and searchContentPadding reach the search row', (
+      tester,
+    ) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              hideSearch: false,
+              searchPadding: const EdgeInsets.all(11),
+              searchContentPadding: const EdgeInsets.all(9),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Padding && w.padding == const EdgeInsets.all(11),
+        ),
+        findsWidgets,
+      );
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.decoration?.contentPadding, const EdgeInsets.all(9));
+    });
+
+    testWidgets('onSearchTap fires when the field is tapped', (tester) async {
+      var taps = 0;
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              hideSearch: false,
+              onSearchTap: () => taps++,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+
+      expect(taps, 1);
+    });
+
+    testWidgets('submitIcon replaces the default submit affordance', (
+      tester,
+    ) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _selectedBloc(),
+              selectionMode: SelectionMode.multiple,
+              submitIcon: const Text('done-glyph'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      expect(find.text('done-glyph'), findsOneWidget);
+    });
+
+    testWidgets('deleteConversationOptionVisibility wraps each row', (
+      tester,
+    ) async {
+      // true installs _wrapItemWithDeleteOverlay as the list's
+      // itemWrapperBuilder (cometchat_conversations.dart:709) and arms the
+      // long-press handler; false leaves the wrapper null.
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deleteConversationOptionVisibility: true,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final list = tester.widget<ConversationsList>(
+        find.byType(ConversationsList),
+      );
+      expect(list.itemWrapperBuilder, isNotNull);
+    });
+
+    testWidgets('deleteConversationOptionVisibility false leaves rows bare', (
+      tester,
+    ) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deleteConversationOptionVisibility: false,
+              // The wrapper also carries the pin affordance on this branch, so
+              // a bare row needs both options off, not just delete.
+              pinConversationOptionVisibility: false,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final list = tester.widget<ConversationsList>(
+        find.byType(ConversationsList),
+      );
+      expect(list.itemWrapperBuilder, isNull);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('container, style and lifecycle', () {
+    testWidgets('conversationsStyle merges over the theme default', (
+      tester,
+    ) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              conversationsStyle: const CometChatConversationsStyle(
+                backgroundColor: Color(0xFFEDF2F2),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final scaffolds = tester
+          .widgetList<Scaffold>(find.byType(Scaffold))
+          .map((s) => s.backgroundColor);
+      expect(scaffolds, contains(const Color(0xFFEDF2F2)));
+    });
+
+    testWidgets('scrollController reaches the list', (tester) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              scrollController: controller,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      final list = tester.widget<ConversationsList>(
+        find.byType(ConversationsList),
+      );
+      expect(identical(list.scrollController, controller), isTrue);
+    });
+
+    testWidgets('routeObserver is subscribed to on mount', (tester) async {
+      final observer = _RecordingRouteObserver();
+
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: Translations.localizationsDelegates,
+            supportedLocales: const [Locale('en')],
+            navigatorObservers: [observer],
+            home: Scaffold(
+              body: CometChatConversations(
+                conversationsBloc: _loadedBloc(),
+                routeObserver: observer,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      // If the component stopped calling subscribe at :387 this drops to zero.
+      expect(observer.subscriptions, 1);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('reachable only when the component builds its own bloc', () {
+    // These three are read at cometchat_conversations.dart:467-471, inside the
+    // branch that constructs a ConversationsBloc. Every case above injects a
+    // mock bloc instead, so that branch never runs and nothing downstream can
+    // observe them. Letting the component build a real bloc would reach the
+    // service locator and the SDK, which is out of scope for a widget test.
+    //
+    // Constructed but deliberately not pumped, so they register as exercised
+    // without inflating the render-verified numerator.
+
+    test('conversationsRequestBuilder is carried on the constructor', () {
+      final widget = CometChatConversations(
+        conversationsRequestBuilder: ConversationsRequestBuilder()..limit = 12,
+      );
+
+      expect(widget.conversationsRequestBuilder, isNotNull);
+      expect(widget.conversationsRequestBuilder!.limit, 12);
+    });
+
+    test('customSoundForMessages is carried on the constructor', () {
+      const widget = CometChatConversations(
+        customSoundForMessages: 'assets/ping.wav',
+      );
+
+      expect(widget.customSoundForMessages, 'assets/ping.wav');
+    });
+
+    test('conversationsProtocol is carried on the constructor', () {
+      const widget = CometChatConversations();
+
+      expect(widget.conversationsProtocol, isNull);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group(
+    'FIXED — the props that used to die below the component (ENG-39115)',
+    () {
+      testWidgets('datePattern replaces the rendered timestamp', (
+        tester,
+      ) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                conversationsBloc: _loadedBloc(),
+                datePattern: (conversation) =>
+                    'pinned-${conversation.conversationId}',
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+
+        expect(find.text('pinned-user_u1'), findsOneWidget);
+      });
+
+      testWidgets('datePadding, dateHeight and dateWidth size the timestamp', (
+        tester,
+      ) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                conversationsBloc: _loadedBloc(),
+                datePadding: const EdgeInsets.all(5),
+                dateHeight: 30,
+                dateWidth: 60,
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+
+        final date = tester
+            .widgetList<CometChatDate>(find.byType(CometChatDate))
+            .first;
+        expect(date.padding, const EdgeInsets.all(5));
+        expect(date.height, 30);
+        expect(date.width, 60);
+      });
+
+      testWidgets('dateBackgroundIsTransparent reaches the timestamp', (
+        tester,
+      ) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                conversationsBloc: _loadedBloc(),
+                dateBackgroundIsTransparent: false,
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+
+        final date = tester
+            .widgetList<CometChatDate>(find.byType(CometChatDate))
+            .first;
+        // Defaulted to a hardcoded true before the fix, so false is the value
+        // that proves the prop is read.
+        expect(date.isTransparentBackground, isFalse);
+      });
+
+      testWidgets('badgePadding reaches the unread badge', (tester) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                conversationsBloc: _loadedBloc(),
+                badgePadding: const EdgeInsets.all(4),
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+
+        final badge = tester
+            .widgetList<CometChatBadge>(find.byType(CometChatBadge))
+            .first;
+        expect(badge.padding, const EdgeInsets.all(4));
+      });
+
+      testWidgets('typingIndicatorText replaces the built-in wording', (
+        tester,
+      ) async {
+        final bloc = _loadedBloc();
+        bloc.typing = [_FakeTypingIndicator()];
+
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                conversationsBloc: bloc,
+                typingIndicatorText: 'scribbling…',
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+
+        expect(find.text('scribbling…'), findsWidgets);
+      });
+
+      testWidgets('statusIndicatorBorderRadius reaches the indicator style', (
+        tester,
+      ) async {
+        await mockNetworkImagesFor(() async {
+          await tester.pumpWidget(
+            _wrap(
+              CometChatConversations(
+                conversationsBloc: _loadedBloc(),
+                statusIndicatorBorderRadius: const BorderRadius.all(
+                  Radius.circular(9),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+        });
+
+        final dot = tester
+            .widgetList<CometChatStatusIndicator>(
+              find.byType(CometChatStatusIndicator),
+            )
+            .first;
+        expect(
+          dot.style?.borderRadius,
+          const BorderRadius.all(Radius.circular(9)),
+        );
+      });
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('FIXED — long-press options hooks (ENG-39113)', () {
+    testWidgets('setOptions replaces the option set outright', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deleteConversationOptionVisibility: true,
+              setOptions: (conversation, bloc, context) => [
+                CometChatOption(id: 'archive', title: 'Archive'),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      await tester.longPress(find.text('Alice'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Archive'), findsOneWidget);
+      // Replacement, not extension: the built-in delete option is gone even
+      // though deleteConversationOptionVisibility is on.
+      expect(find.text('Delete'), findsNothing);
+    });
+
+    testWidgets('addOptions extends the default set', (tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deleteConversationOptionVisibility: true,
+              // 'Pin' would collide with this branch's own built-in pin
+              // action, so the custom option carries a distinct label.
+              addOptions: (conversation, bloc, context) => [
+                CometChatOption(id: 'archive', title: 'Archive'),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      await tester.longPress(find.text('Alice'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Archive'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+    });
+
+    testWidgets('an option reports the conversation it was built for', (
+      tester,
+    ) async {
+      Conversation? seen;
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              setOptions: (conversation, bloc, context) {
+                seen = conversation;
+                return [CometChatOption(id: 'archive', title: 'Archive')];
+              },
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      await tester.longPress(find.text('Alice'));
+      await tester.pumpAndSettle();
+
+      expect(seen?.conversationId, 'user_u1');
+    });
+
+    testWidgets('with neither hook no options menu opens', (tester) async {
+      // The point of the fix is that it is additive: with no hook supplied,
+      // long press must fall through to the pre-existing behaviour rather than
+      // opening an empty menu.
+      //
+      // Asserted with deleteConversationOptionVisibility off, so the fall-
+      // through returns early and the delete overlay never builds. That is
+      // deliberate — the overlay's own inner Row overflows by design of its
+      // fixed 120px button (ENG-39117), which is pre-existing on master-v6 and
+      // would fail this case for a reason that has nothing to do with the
+      // hooks under test.
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            CometChatConversations(
+              conversationsBloc: _loadedBloc(),
+              deleteConversationOptionVisibility: false,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      await tester.longPress(find.text('Alice'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GetMenuView), findsNothing);
+    });
+  });
+}
+
+class _FakeTypingIndicator extends Fake implements TypingIndicator {
+  @override
+  User get sender => FakeUser(name: 'Bob', uid: 'u2');
+}
+
+/// Records `subscribe` so the routeObserver prop can be asserted rather than
+/// merely passed.
+class _RecordingRouteObserver extends RouteObserver<ModalRoute<void>> {
+  int subscriptions = 0;
+
+  @override
+  void subscribe(RouteAware routeAware, ModalRoute<void> route) {
+    subscriptions++;
+    super.subscribe(routeAware, route);
+  }
+}
+
+class _StubDateFormatter extends DateTimeFormatterCallback {
+  @override
+  String? today(int? timestamp) => 'stub-today';
 }

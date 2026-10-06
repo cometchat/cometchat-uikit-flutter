@@ -70,11 +70,14 @@ class CometChatMediaCaption extends StatelessWidget {
             textAlign: TextAlign.left,
             text: TextSpan(
               style: captionStyle,
+              // Pass the caption style down as well: the spans set their own
+              // style, which would otherwise override this parent's.
               children: FormatterUtils.buildTextSpan(
                 caption,
                 formatters,
                 context,
                 alignment,
+                textStyle: captionStyle,
               ),
             ),
           ),

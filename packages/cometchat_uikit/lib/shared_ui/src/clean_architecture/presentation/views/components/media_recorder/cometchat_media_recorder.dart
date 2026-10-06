@@ -2,7 +2,6 @@ import '_microphone_visualizer.dart' show MicrophoneVisualizer;
 import "../../../../clean_architecture.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'media_recorder_bloc.dart';
 
 ///[CometChatMediaRecorder] is a class that allows users to record audio  messages.
 ///It has a start button to start recording, a stop button to stop recording, a play button to play the recorded message, a pause button to pause the recorded message, a submit button to submit the recorded message and a close button to close the media recorder.
@@ -36,6 +35,7 @@ class CometChatMediaRecorder extends StatefulWidget {
     this.deleteButtonIcon,
     this.stopButtonIcon,
     this.sendButtonIcon,
+    this.mediaRecorderBloc,
   });
 
   ///[onSubmit] provides callback to the submit Icon/widget
@@ -65,23 +65,39 @@ class CometChatMediaRecorder extends StatefulWidget {
   ///[sendButtonIcon] defines the icon of the send button.
   final Widget? sendButtonIcon;
 
+  ///[mediaRecorderBloc] Optional external MediaRecorderBloc instance.
+  ///If provided, it is used instead of creating one internally and the widget
+  ///does not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc] — the seam that lets a test
+  ///drive the recorder through its states without a live microphone.
+  final MediaRecorderBloc? mediaRecorderBloc;
+
   @override
   State<CometChatMediaRecorder> createState() => _CometChatMediaRecorderState();
 }
 
 class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
   late MediaRecorderBloc _bloc;
+  bool _isExternalBloc = false;
 
   @override
   void initState() {
     super.initState();
-    _bloc = MediaRecorderBloc();
-    _bloc.add(const StartRecordingEvent());
+    if (widget.mediaRecorderBloc != null) {
+      _bloc = widget.mediaRecorderBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = MediaRecorderBloc();
+      _bloc.add(const StartRecordingEvent());
+    }
   }
 
   @override
   void dispose() {
-    _bloc.close();
+    // an injected bloc belongs to its owner, so only close what we created
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 
@@ -149,7 +165,6 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
                             },
                             alignment: BubbleAlignment.right,
                             width: MediaQuery.sizeOf(context).width - 40,
-                            padding: EdgeInsets.all(spacing.padding2 ?? 0),
                             style: CometChatVoiceNoteBubbleStyle(
                               playIconColor:
                                   mediaRecorderStyle.playButtonIconColor,
@@ -194,11 +209,13 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
         if (state.isCompleted || state.duration > Duration.zero)
           _buttonWrapper(
             IconButton(
+              tooltip: Translations.of(context).deleteRecording,
               padding: const EdgeInsets.all(0),
               constraints: const BoxConstraints(),
               icon:
                   widget.deleteButtonIcon ??
                   Image.asset(
+                    excludeFromSemantics: true,
                     AssetConstants.delete48px,
                     package: UIConstants.packageName,
                     color:
@@ -312,12 +329,14 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
   ) {
     return _buttonWrapper(
       IconButton(
+        tooltip: Translations.of(context).sendMessage,
         padding: const EdgeInsets.all(0),
         constraints: const BoxConstraints(),
         splashRadius: 32,
         icon:
             widget.sendButtonIcon ??
             Image.asset(
+              excludeFromSemantics: true,
               AssetConstants.mediaRecorderSendIcon,
               package: UIConstants.packageName,
               color: mediaRecorderStyle.sendButtonIconColor,
@@ -365,7 +384,8 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
                   startSize: 80,
                   endSize: 120,
                   color:
-                      mediaRecorderStyle.recordIndicatorBackgroundColor
+                      (mediaRecorderStyle.recordIndicatorColor ??
+                              mediaRecorderStyle.recordIndicatorBackgroundColor)
                           ?.withValues(alpha: .05) ??
                       colorPalette.extendedPrimary50,
                   borderRadius:
@@ -378,7 +398,8 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
                   startSize: 80,
                   endSize: 100,
                   color:
-                      mediaRecorderStyle.recordIndicatorBackgroundColor
+                      (mediaRecorderStyle.recordIndicatorColor ??
+                              mediaRecorderStyle.recordIndicatorBackgroundColor)
                           ?.withValues(alpha: .1) ??
                       colorPalette.extendedPrimary100,
                   borderRadius:
@@ -451,11 +472,13 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
     CometChatSpacing spacing,
   ) {
     return IconButton(
+      tooltip: Translations.of(context).stopRecording,
       padding: const EdgeInsets.all(0),
       constraints: const BoxConstraints(),
       icon:
           widget.stopButtonIcon ??
           Image.asset(
+            excludeFromSemantics: true,
             AssetConstants.stop48px,
             package: UIConstants.packageName,
             color:
@@ -498,11 +521,13 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
     CometChatSpacing spacing,
   ) {
     return IconButton(
+      tooltip: Translations.of(context).startRecording,
       padding: const EdgeInsets.all(0),
       constraints: const BoxConstraints(),
       icon:
           widget.startButtonIcon ??
           Image.asset(
+            excludeFromSemantics: true,
             AssetConstants.mic96px,
             package: UIConstants.packageName,
             color:
@@ -522,11 +547,13 @@ class _CometChatMediaRecorderState extends State<CometChatMediaRecorder> {
     CometChatSpacing spacing,
   ) {
     return IconButton(
+      tooltip: Translations.of(context).pauseRecording,
       padding: const EdgeInsets.all(0),
       constraints: const BoxConstraints(),
       icon:
           widget.pauseButtonIcon ??
           Image.asset(
+            excludeFromSemantics: true,
             AssetConstants.pause72px,
             package: UIConstants.packageName,
             color:

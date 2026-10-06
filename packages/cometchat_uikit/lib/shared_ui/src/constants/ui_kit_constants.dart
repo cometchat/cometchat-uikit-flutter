@@ -62,7 +62,9 @@ class MessageOptionConstants {
   static const String saveMessage = "saveMessage";
   static const String unsaveMessage = "unsaveMessage";
   // static const String reactToMessage = "reactToMessage";
-  // static const String translateMessage = "translateMessage";
+  /// The Translate option: shows a text message translated into the
+  /// app language, via the `message-translation` extension.
+  static const String translateMessage = "translateMessage";
   static const String messageInformation = "messageInformation";
   static const String sendMessagePrivately = "sendMessagePrivately";
   // static const String replyMessagePrivately = "replyMessagePrivately";
@@ -369,7 +371,7 @@ class SetSourceConstant {
 
   /// Semantic version of the UIKit package.
   /// Must be kept in sync with pubspec.yaml version field.
-  static const String version = "6.1.1";
+  static const String version = "6.0.5";
 }
 
 class ErrorConstants {

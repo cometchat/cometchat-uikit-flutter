@@ -19,7 +19,6 @@ class MockConversationsRepository extends Mock
     implements ConversationsRepository {}
 
 class FakeConversation extends Fake implements Conversation {
-
   // Pin Conversation fields — read by the trailing view's pin glyph.
   @override
   DateTime? get pinnedAt => null;
@@ -154,16 +153,32 @@ void main() {
 
     test('delegates to repository with valid ID', () async {
       when(
-        () => repo.deleteConversation(any()),
+        () => repo.deleteConversation(
+          any(),
+          conversationWith: any(named: 'conversationWith'),
+          conversationType: any(named: 'conversationType'),
+        ),
       ).thenAnswer((_) async => const Success(null));
 
       final result = await useCase('user_abc');
       expect(result.isSuccess, isTrue);
-      verify(() => repo.deleteConversation('user_abc')).called(1);
+      verify(
+        () => repo.deleteConversation(
+          'user_abc',
+          conversationWith: any(named: 'conversationWith'),
+          conversationType: any(named: 'conversationType'),
+        ),
+      ).called(1);
     });
 
     test('propagates repository failure', () async {
-      when(() => repo.deleteConversation(any())).thenAnswer(
+      when(
+        () => repo.deleteConversation(
+          any(),
+          conversationWith: any(named: 'conversationWith'),
+          conversationType: any(named: 'conversationType'),
+        ),
+      ).thenAnswer(
         (_) async => const Failure(message: 'Delete failed', code: 'DEL_ERR'),
       );
 
@@ -174,7 +189,13 @@ void main() {
 
     test('does not call repository for empty ID', () async {
       await useCase('');
-      verifyNever(() => repo.deleteConversation(any()));
+      verifyNever(
+        () => repo.deleteConversation(
+          any(),
+          conversationWith: any(named: 'conversationWith'),
+          conversationType: any(named: 'conversationType'),
+        ),
+      );
     });
   });
 

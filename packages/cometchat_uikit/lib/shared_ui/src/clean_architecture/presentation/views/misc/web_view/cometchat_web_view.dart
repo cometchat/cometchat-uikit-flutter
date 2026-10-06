@@ -37,12 +37,21 @@ class CometChatWebView extends StatefulWidget {
 class _CometChatWebViewState extends State<CometChatWebView> {
   @override
   Widget build(BuildContext context) {
+    final colorPalette = CometChatThemeHelper.getColorPalette(context);
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: widget.appBarColor ?? const Color(0xffFFFFFF),
+        // The style's appBarColor was declared and read nowhere — the
+        // widget's own parameter shadowed it. It still wins, so this is
+        // additive. ENG-39125.
+        backgroundColor:
+            widget.appBarColor ??
+            widget.webViewStyle?.appBarColor ??
+            colorPalette.background1 ??
+            const Color(0xffFFFFFF),
         elevation: 0,
         toolbarHeight: 56,
         leading: IconButton(
+          tooltip: Translations.of(context).close,
           onPressed: () {
             Navigator.pop(context);
           },
@@ -53,6 +62,7 @@ class _CometChatWebViewState extends State<CometChatWebView> {
                 size: 24,
                 color:
                     widget.webViewStyle?.backIconColor ??
+                    colorPalette.iconHighlight ??
                     const Color(0xff3399FF),
               ),
         ),
@@ -60,8 +70,8 @@ class _CometChatWebViewState extends State<CometChatWebView> {
           widget.title,
           style:
               widget.webViewStyle?.titleStyle ??
-              const TextStyle(
-                color: Color(0xff141414),
+              TextStyle(
+                color: colorPalette.textPrimary ?? const Color(0xFF141414),
                 fontSize: 20,
                 fontWeight: FontWeight.w500,
               ),
@@ -92,7 +102,7 @@ class _CometChatWebViewState extends State<CometChatWebView> {
               );
             },
             icon: const Icon(Icons.open_in_new),
-            label: const Text('Open in Browser'),
+            label: Text(Translations.of(context).openInBrowser),
           ),
         ],
       ),

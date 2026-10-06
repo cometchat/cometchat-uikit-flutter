@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart' as vp;
 
 import "../../../../clean_architecture.dart";
+import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform;
 
@@ -69,7 +70,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
       });
       _controller?.addListener(_onControllerUpdate);
     } catch (e) {
-      debugPrint('$e');
+      ccLog('$e');
     }
   }
 
@@ -107,12 +108,14 @@ class _VideoPlayerState extends State<VideoPlayer> {
         backgroundColor: widget.fullScreenBackground ?? const Color(0xffFFFFFF),
         appBar: AppBar(
           leading: IconButton(
+            tooltip: Translations.of(context).back,
             padding: const EdgeInsets.all(0),
             color: Colors.green,
             onPressed: () {
               Navigator.pop(context);
             },
             icon: Image.asset(
+              excludeFromSemantics: true,
               AssetConstants.back,
               package: UIConstants.packageName,
               color: widget.backIcon ?? const Color(0xff3399FF),

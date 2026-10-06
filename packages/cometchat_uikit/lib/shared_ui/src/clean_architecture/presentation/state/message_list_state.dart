@@ -4,20 +4,28 @@ import '../../domain/entities/message_entity.dart';
 import '../../core/result.dart';
 
 /// Base state class for all message list states
-abstract class MessageListState extends Equatable {
-  const MessageListState();
+/// Base of the message-list state family.
+///
+/// Named `MessageListStateBase` rather than `MessageListState` because the
+/// chat_ui message-list bloc declares a concrete class by the latter name and
+/// the barrel exports that one. Before the rename this base was reachable from
+/// neither published barrel, so `MessageListSearchResults` had a supertype no
+/// consumer could write — `state is MessageListState` was always false and
+/// `MessageListState s = searchResults;` did not compile. ENG-39100.
+abstract class MessageListStateBase extends Equatable {
+  const MessageListStateBase();
 
   @override
   List<Object?> get props => [];
 }
 
 /// Initial state - before any operation
-class MessageListInitial extends MessageListState {
+class MessageListInitial extends MessageListStateBase {
   const MessageListInitial();
 }
 
 /// Loading state - while fetching data
-class MessageListLoading extends MessageListState {
+class MessageListLoading extends MessageListStateBase {
   final List<MessageEntity>? cachedMessages;
 
   const MessageListLoading({this.cachedMessages});
@@ -27,7 +35,7 @@ class MessageListLoading extends MessageListState {
 }
 
 /// Success state - data loaded successfully
-class MessageListSuccess extends MessageListState {
+class MessageListSuccess extends MessageListStateBase {
   final List<MessageEntity> messages;
   final bool hasMoreData;
   final int totalCount;
@@ -56,7 +64,7 @@ class MessageListSuccess extends MessageListState {
 }
 
 /// Error state - operation failed
-class MessageListError extends MessageListState {
+class MessageListError extends MessageListStateBase {
   final Failure failure;
   final List<MessageEntity>? cachedMessages;
 
@@ -73,12 +81,12 @@ class MessageListError extends MessageListState {
 }
 
 /// Empty state - no messages found
-class MessageListEmpty extends MessageListState {
+class MessageListEmpty extends MessageListStateBase {
   const MessageListEmpty();
 }
 
 /// Pagination state - loading more messages
-class MessageListLoadingMore extends MessageListState {
+class MessageListLoadingMore extends MessageListStateBase {
   final List<MessageEntity> currentMessages;
 
   const MessageListLoadingMore({required this.currentMessages});
@@ -88,7 +96,7 @@ class MessageListLoadingMore extends MessageListState {
 }
 
 /// Search state - searching for messages
-class MessageListSearching extends MessageListState {
+class MessageListSearching extends MessageListStateBase {
   final String query;
   final List<MessageEntity>? previousMessages;
 
@@ -99,7 +107,7 @@ class MessageListSearching extends MessageListState {
 }
 
 /// Search results state
-class MessageListSearchResults extends MessageListState {
+class MessageListSearchResults extends MessageListStateBase {
   final List<MessageEntity> searchResults;
   final String query;
   final bool isEmpty;
@@ -115,7 +123,7 @@ class MessageListSearchResults extends MessageListState {
 }
 
 /// Message sending state
-class MessageListSending extends MessageListState {
+class MessageListSending extends MessageListStateBase {
   final List<MessageEntity> currentMessages;
   final String tempMessageText;
 
@@ -129,7 +137,7 @@ class MessageListSending extends MessageListState {
 }
 
 /// Message sent state
-class MessageListMessageSent extends MessageListState {
+class MessageListMessageSent extends MessageListStateBase {
   final List<MessageEntity> messages;
   final MessageEntity newMessage;
 
@@ -143,7 +151,7 @@ class MessageListMessageSent extends MessageListState {
 }
 
 /// Message deleted state
-class MessageListMessageDeleted extends MessageListState {
+class MessageListMessageDeleted extends MessageListStateBase {
   final List<MessageEntity> messages;
   final String deletedMessageId;
 

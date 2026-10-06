@@ -35,7 +35,7 @@ class CheckBoxElement extends BaseInputElement<List<String>> {
     return CheckBoxElement(
       elementType: map[ModelFieldConstants.elementType],
       elementId: map[ModelFieldConstants.elementId],
-      optional: map[ModelFieldConstants.optional] ?? "true",
+      optional: map[ModelFieldConstants.optional] ?? true,
       label: map[ModelFieldConstants.label],
       defaultValue: map[ModelFieldConstants.defaultValue]
           ?.map<String>((e) => e.toString())

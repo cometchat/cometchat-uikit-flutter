@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../utils/composer_height_notifier.dart';
+import '../../logging/cometchat_log.dart';
 
 /// A sliver that provides dynamic spacing at the bottom of the message list
 ///
@@ -212,12 +213,12 @@ class _SliverSpacingState extends State<SliverSpacing>
       );
 
       // Debug: Print bottom inset as keyboard opens/closes
-      debugPrint('🔵 [SliverSpacing] Bottom Inset Changed:');
-      debugPrint('   Raw viewInsets.bottom: $rawKeyboardHeight');
-      debugPrint('   Pixel ratio: $pixelRatio');
-      debugPrint('   Initial safe area: $_initialSafeArea');
-      debugPrint('   Adjusted keyboard height: $adjustedHeight');
-      debugPrint('   Previous keyboard height: $_keyboardHeight');
+      ccLog('🔵 [SliverSpacing] Bottom Inset Changed:');
+      ccLog('   Raw viewInsets.bottom: $rawKeyboardHeight');
+      ccLog('   Pixel ratio: $pixelRatio');
+      ccLog('   Initial safe area: $_initialSafeArea');
+      ccLog('   Adjusted keyboard height: $adjustedHeight');
+      ccLog('   Previous keyboard height: $_keyboardHeight');
 
       // Detect keyboard state transitions
       final wasKeyboardFullyClosed = _keyboardHeight == 0;
@@ -231,13 +232,13 @@ class _SliverSpacingState extends State<SliverSpacing>
         _shouldPushList = _isAtBottom();
         // Store current height before keyboard
         _heightBeforeKeyboard = _calculateBaseHeight();
-        debugPrint('   🟢 Keyboard OPENING - shouldPushList: $_shouldPushList');
+        ccLog('   🟢 Keyboard OPENING - shouldPushList: $_shouldPushList');
       }
 
       // When keyboard is fully closed, reset for next time
       if (isKeyboardFullyClosed) {
         _shouldPushList = true;
-        debugPrint('   🔴 Keyboard CLOSED');
+        ccLog('   🔴 Keyboard CLOSED');
       }
 
       if (_keyboardHeight != adjustedHeight) {

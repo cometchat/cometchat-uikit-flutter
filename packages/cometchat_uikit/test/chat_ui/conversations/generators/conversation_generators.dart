@@ -13,7 +13,6 @@ import 'package:cometchat_sdk/cometchat_sdk.dart';
 // ---------------------------------------------------------------------------
 
 class FakeConversation extends Fake implements Conversation {
-
   // Pin Conversation fields — read by the trailing view's pin glyph.
   @override
   DateTime? get pinnedAt => null;

@@ -126,31 +126,39 @@ class SwipeTileOptions extends StatelessWidget {
       onTap: () {
         performOnClick(item);
       },
-      child: Container(
-        color: item.backgroundColor,
-        height: 70,
-        width: 64,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              item.icon!,
-              package: item.packageName,
-              color: Colors.white,
-              height: 24,
-              width: 24,
-            ),
-            if (item.title != null)
-              Text(
-                item.title!,
-                style:
-                    item.titleStyle ??
-                    const TextStyle(color: Colors.white, fontSize: 12),
-                maxLines: 1,
-                overflow: TextOverflow.fade,
+      // The label sits inside the detector rather than around it so this
+      // public method keeps returning a GestureDetector. The label, the button
+      // role and the tap action still merge into one semantics node.
+      child: Semantics(
+        button: true,
+        label: item.title ?? '',
+        child: Container(
+          color: item.backgroundColor,
+          height: 70,
+          width: 64,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                item.icon!,
+                excludeFromSemantics: true,
+                package: item.packageName,
+                color: Colors.white,
+                height: 24,
+                width: 24,
               ),
-          ],
+              if (item.title != null)
+                Text(
+                  item.title!,
+                  style:
+                      item.titleStyle ??
+                      const TextStyle(color: Colors.white, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                ),
+            ],
+          ),
         ),
       ),
     );

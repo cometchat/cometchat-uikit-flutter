@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../cometchat_uikit_shared.dart';
+import '../../logging/cometchat_log.dart';
 
 /// Displays an AI-generated conversation summary.
 ///
@@ -121,7 +122,7 @@ class _CometChatAIConversationSummaryViewState
       },
       onError: (error) {
         if (kDebugMode) {
-          debugPrint('Error in AI conversation summary: ${error.details}');
+          ccLog('Error in AI conversation summary: ${error.details}');
         }
         if (mounted) setState(() => _isError = true);
       },

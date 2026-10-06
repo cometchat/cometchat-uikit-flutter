@@ -134,6 +134,7 @@ class _CometChatListBaseState extends State<CometChatListBase> {
     Widget? backButton;
     if (widget.showBackButton != null && widget.showBackButton == true) {
       backButton = IconButton(
+        tooltip: Translations.of(context).back,
         onPressed:
             widget.onBack ??
             () {
@@ -144,6 +145,7 @@ class _CometChatListBaseState extends State<CometChatListBase> {
         icon:
             widget.backIcon ??
             Image.asset(
+              excludeFromSemantics: true,
               AssetConstants.back,
               package: UIConstants.packageName,
               color: widget.style.backIconTint,

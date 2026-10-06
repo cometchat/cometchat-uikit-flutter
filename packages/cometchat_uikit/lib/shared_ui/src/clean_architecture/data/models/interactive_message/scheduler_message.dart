@@ -176,18 +176,24 @@ class SchedulerMessage extends InteractiveMessage {
 
     Map<String, List<TimeRange>> availability = {};
 
-    json.forEach((key, value) {
-      List<TimeRange> timeRanges = [];
-      for (var timeRange in value) {
-        timeRanges.add(
-          TimeRange(
-            from: timeRange[SchedulerConstants.from],
-            to: timeRange[SchedulerConstants.to],
-          ),
-        );
-      }
-      availability[key] = timeRanges;
-    });
+    // A message that merely claims type=scheduler is enough to reach here, so
+    // the payload may be absent or the wrong shape. Degrade to no
+    // availability rather than throwing inside message-list rendering, which
+    // is what CardMessage.fromInteractiveMessage already does. ENG-39022.
+    if (json is Map) {
+      json.forEach((key, value) {
+        List<TimeRange> timeRanges = [];
+        for (var timeRange in value) {
+          timeRanges.add(
+            TimeRange(
+              from: timeRange[SchedulerConstants.from],
+              to: timeRange[SchedulerConstants.to],
+            ),
+          );
+        }
+        availability[key] = timeRanges;
+      });
+    }
 
     return SchedulerMessage(
       id: message.id,

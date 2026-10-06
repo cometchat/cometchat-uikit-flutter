@@ -30,18 +30,25 @@ class GetMenuView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.only(right: spacing.padding2 ?? 0),
-            child:
-                option.iconWidget ??
-                Image.asset(
-                  option.icon ?? "",
-                  package: option.packageName ?? UIConstants.packageName,
-                  color: iconTint ?? option.iconTint ?? colorPalette.error,
-                  height: 24,
-                  width: 24,
-                ),
-          ),
+          // An option carrying neither an iconWidget nor an icon path gets no
+          // icon slot at all. Previously this fell through to
+          // Image.asset("") and resolved "packages/cometchat_chat_uikit/",
+          // which throws — so any caller-supplied option without an icon broke
+          // the whole menu.
+          if (option.iconWidget != null ||
+              (option.icon != null && option.icon!.isNotEmpty))
+            Padding(
+              padding: EdgeInsets.only(right: spacing.padding2 ?? 0),
+              child:
+                  option.iconWidget ??
+                  Image.asset(
+                    option.icon!,
+                    package: option.packageName ?? UIConstants.packageName,
+                    color: iconTint ?? option.iconTint ?? colorPalette.error,
+                    height: 24,
+                    width: 24,
+                  ),
+            ),
           Expanded(
             child: Text(
               option.title ?? "",

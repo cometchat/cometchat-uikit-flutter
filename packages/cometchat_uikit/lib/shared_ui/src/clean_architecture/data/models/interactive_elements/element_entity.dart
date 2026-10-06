@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import '../../../../../cometchat_uikit_shared.dart'
     show ModelFieldConstants, UIElementTypeConstants;
 import 'label_element.dart';
@@ -9,6 +8,7 @@ import 'radio_button_element.dart';
 import 'text_input_element.dart';
 import 'single_select_element.dart';
 import 'date_time_element.dart';
+import '../../../../logging/cometchat_log.dart';
 
 class ElementEntity {
   ElementEntity({required this.elementType, required this.elementId});
@@ -25,36 +25,36 @@ class ElementEntity {
 
   factory ElementEntity.fromMap(dynamic map) {
     if (map[ModelFieldConstants.elementType] == UIElementTypeConstants.label) {
-      debugPrint("mapping from label");
+      ccLog("mapping from label");
       return LabelElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.button) {
-      debugPrint("mapping from button");
+      ccLog("mapping from button");
       return ButtonElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.checkbox) {
-      debugPrint("mapping from checkbox");
+      ccLog("mapping from checkbox");
       return CheckBoxElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.dropdown) {
-      debugPrint("mapping from dropdown");
+      ccLog("mapping from dropdown");
 
       return DropdownElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.radio) {
-      debugPrint("mapping from radio");
+      ccLog("mapping from radio");
       return RadioButtonElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.textInput) {
-      debugPrint("mapping from textInput");
+      ccLog("mapping from textInput");
       return TextInputElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.singleSelect) {
-      debugPrint("mapping from singleSelect");
+      ccLog("mapping from singleSelect");
       return SingleSelectElement.fromMap(map);
     } else if (map[ModelFieldConstants.elementType] ==
         UIElementTypeConstants.dateTime) {
-      debugPrint("mapping from dateTime");
+      ccLog("mapping from dateTime");
       return DateTimeElement.fromMap(map);
     }
     return ElementEntity(

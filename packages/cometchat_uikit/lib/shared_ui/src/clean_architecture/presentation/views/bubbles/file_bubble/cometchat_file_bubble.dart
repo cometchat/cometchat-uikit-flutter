@@ -8,6 +8,7 @@ import "../../../../clean_architecture.dart";
 import '../../../../core/utils/platform_utils/web_download.dart'
     as web_download;
 import 'package:intl/intl.dart';
+import '../../../../../logging/cometchat_log.dart';
 
 ///[CometChatFileBubble] creates a widget that gives file bubble
 ///
@@ -24,6 +25,11 @@ import 'package:intl/intl.dart';
   'Use CometChatFilesBubble instead — the multi-attachment bubble family (enableMultipleAttachments) replaces the single-attachment media bubbles.',
 )
 class CometChatFileBubble extends StatefulWidget {
+  /// Icon for the download button, in place of the default one. It takes
+  /// [CometChatFileBubbleStyle.downloadIconTint] unless it sets its own
+  /// colour.
+  final Icon? downloadIcon;
+
   const CometChatFileBubble({
     super.key,
     this.style,
@@ -32,7 +38,6 @@ class CometChatFileBubble extends StatefulWidget {
     this.fileUrl,
     this.fileMimeType,
     this.id,
-    this.downloadIcon,
     this.width,
     this.height,
     this.padding,
@@ -45,6 +50,7 @@ class CometChatFileBubble extends StatefulWidget {
     this.colorPalette,
     this.spacing,
     this.typography,
+    this.downloadIcon,
   });
 
   ///[title] if title passed then that title is displayed instead of file name from [MediaMessage]
@@ -64,9 +70,6 @@ class CometChatFileBubble extends StatefulWidget {
 
   ///[id] message object id to make file name unique
   final int? id;
-
-  ///[downloadIcon] icon to press for downloading the file
-  final Icon? downloadIcon;
 
   ///[width] width of the image bubble
   final double? width;
@@ -269,7 +272,10 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
       setState(() => _localPath = decodedPath);
     } else {
       final fileName = _getFileName();
-      final path = await BubbleUtils.isFileDownloaded(fileName);
+      final path = await BubbleUtils.isFileDownloaded(
+        fileName,
+        fileUrl: widget.fileUrl,
+      );
       if (path != null && mounted) {
         setState(() => _localPath = path);
       }
@@ -291,7 +297,7 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
     if (kIsWeb) {
       if (openAfterDownload) {
         // Open file in new tab for viewing
-        _openFile();
+        unawaited(_openFile());
       } else {
         // Trigger actual browser download using HTML anchor with download attribute
         final fileName = _getFileName();
@@ -333,7 +339,7 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
           _isDownloading = false;
         });
         if (openAfterDownload) {
-          _openFile();
+          unawaited(_openFile());
         }
       } else if (mounted) {
         setState(() {
@@ -349,7 +355,7 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
           _downloadProgress = 0.0;
         });
       }
-      debugPrint('Download failed: $e');
+      ccLog('Download failed: $e');
     }
   }
 
@@ -368,7 +374,7 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
 
     if (_localPath == null) return;
 
-    debugPrint(
+    ccLog(
       '[FileBubble] _openFile called - localPath: $_localPath, fileMimeType: ${widget.fileMimeType}, fileExtension: ${widget.fileExtension}, title: ${widget.title}',
     );
 
@@ -378,9 +384,9 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
         'file_path': _localPath,
         'file_type': widget.fileMimeType,
       });
-      debugPrint('[FileBubble] open_file result: $result');
+      ccLog('[FileBubble] open_file result: $result');
     } catch (e) {
-      debugPrint('[FileBubble] Could not open file: $e');
+      ccLog('[FileBubble] Could not open file: $e');
     }
   }
 
@@ -492,13 +498,19 @@ class _CometChatFileBubbleState extends State<CometChatFileBubble> {
                   strokeWidth: 2.5,
                 ),
               ),
-            Image.asset(
-              _isDownloading ? AssetConstants.close : AssetConstants.download,
-              height: _isDownloading ? 15 : 24,
-              width: _isDownloading ? 15 : 24,
-              package: UIConstants.packageName,
-              color: _getDownloadIconColor(),
-            ),
+            if (!_isDownloading && widget.downloadIcon != null)
+              IconTheme.merge(
+                data: IconThemeData(color: _getDownloadIconColor(), size: 24),
+                child: widget.downloadIcon!,
+              )
+            else
+              Image.asset(
+                _isDownloading ? AssetConstants.close : AssetConstants.download,
+                height: _isDownloading ? 15 : 24,
+                width: _isDownloading ? 15 : 24,
+                package: UIConstants.packageName,
+                color: _getDownloadIconColor(),
+              ),
           ],
         ),
       ),

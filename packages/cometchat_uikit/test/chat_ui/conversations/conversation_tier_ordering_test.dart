@@ -5,11 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cometchat_chat_uikit/chat_ui/src/conversations/utils/conversation_tier_ordering.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-Conversation _row(
-  String id, {
-  DateTime? pinnedAt,
-  String? pinnedBy,
-}) {
+Conversation _row(String id, {DateTime? pinnedAt, String? pinnedBy}) {
   final conversation = Conversation(
     conversationId: id,
     conversationType: 'user',
@@ -124,21 +120,23 @@ void main() {
       );
     });
 
-    test('degrades gracefully: stray pin below the boundary is not counted',
-        () {
-      final interleaved = [
-        _row('sys1', pinnedAt: when, pinnedBy: 'app_system'),
-        _row('normal1'),
-        _row('user-stray', pinnedAt: when, pinnedBy: 'me'),
-      ];
-      expect(
-        ConversationTierOrdering.tierTopIndex(
-          ConversationTierOrdering.userPinTier,
-          interleaved,
-        ),
-        1,
-        reason: 'leading-scan stops at the first same-or-lower tier row',
-      );
-    });
+    test(
+      'degrades gracefully: stray pin below the boundary is not counted',
+      () {
+        final interleaved = [
+          _row('sys1', pinnedAt: when, pinnedBy: 'app_system'),
+          _row('normal1'),
+          _row('user-stray', pinnedAt: when, pinnedBy: 'me'),
+        ];
+        expect(
+          ConversationTierOrdering.tierTopIndex(
+            ConversationTierOrdering.userPinTier,
+            interleaved,
+          ),
+          1,
+          reason: 'leading-scan stops at the first same-or-lower tier row',
+        );
+      },
+    );
   });
 }

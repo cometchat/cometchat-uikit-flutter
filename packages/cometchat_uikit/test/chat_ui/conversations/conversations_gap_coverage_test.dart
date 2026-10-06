@@ -511,7 +511,11 @@ void main() {
           () => repo.getConversations(limit: any(named: 'limit')),
         ).thenAnswer((_) async => Success(convs));
         when(
-          () => repo.deleteConversation(any()),
+          () => repo.deleteConversation(
+            any(),
+            conversationWith: any(named: 'conversationWith'),
+            conversationType: any(named: 'conversationType'),
+          ),
         ).thenAnswer((_) async => const Success(null));
         return _makeBloc(repo);
       },
@@ -569,6 +573,61 @@ void main() {
       verify: (bloc) {
         final state = bloc.state as ConversationsLoaded;
         expect(state.hasMore, isTrue);
+      },
+    );
+
+    blocTest<ConversationsBloc, ConversationsState>(
+      "a builder's limit sizes every page and decides the first page's "
+      'hasMore',
+      build: () {
+        // The first page used the builder's limit; load-more and the first
+        // page's hasMore used a hard-coded 30. With a limit of 10, a full
+        // first page read as the last one and paging never started.
+        var page = 0;
+        when(
+          () => repo.getConversations(
+            limit: any(named: 'limit'),
+            fromId: any(named: 'fromId'),
+            requestBuilder: any(named: 'requestBuilder'),
+          ),
+        ).thenAnswer((invocation) async {
+          final limit = invocation.namedArguments[#limit] as int;
+          final p = page++;
+          return Success([
+            for (var i = 0; i < limit; i++) FakeConversation('p${p}_$i'),
+          ]);
+        });
+        return ConversationsBloc(
+          getConversationsUseCase: GetConversationsUseCase(repo),
+          loadMoreConversationsUseCase: LoadMoreConversationsUseCase(repo),
+          deleteConversationUseCase: DeleteConversationUseCase(repo),
+          getLoggedInUserUseCase: GetLoggedInUserUseCase(repo),
+          getConversationUseCase: GetConversationUseCase(repo),
+          markAsDeliveredUseCase: MarkAsDeliveredUseCase(repo),
+          disableSDKListeners: true,
+          conversationsRequestBuilder: ConversationsRequestBuilder()
+            ..limit = 10,
+        );
+      },
+      act: (bloc) async {
+        bloc.add(const LoadConversations());
+        await Future.delayed(const Duration(milliseconds: 50));
+        bloc.add(const LoadMoreConversations());
+        await Future.delayed(const Duration(milliseconds: 50));
+      },
+      verify: (bloc) {
+        final calls = verify(
+          () => repo.getConversations(
+            limit: captureAny(named: 'limit'),
+            fromId: captureAny(named: 'fromId'),
+            requestBuilder: any(named: 'requestBuilder'),
+          ),
+        ).captured;
+        // [limit, fromId] per call: the first page, then load-more from the
+        // last row of the first page.
+        expect(calls, [10, null, 10, 'p0_9']);
+        final state = bloc.state as ConversationsLoaded;
+        expect(state.conversations, hasLength(20));
       },
     );
 

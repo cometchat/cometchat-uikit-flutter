@@ -3,11 +3,12 @@ import '../../../../../cometchat_uikit_shared.dart'
     show UIElementTypeConstants, ModelFieldConstants, DateTimeVisibilityMode;
 import 'base_input_element.dart';
 import 'text_input_placeholder.dart';
+import '../../../../logging/cometchat_log.dart';
 
 /// Represents a dropdown model class , used to draw dropdown .
 class DateTimeElement extends BaseInputElement<String> {
   DateTimeElement({
-    super.elementType = UIElementTypeConstants.dropdown,
+    super.elementType = UIElementTypeConstants.dateTime,
     required super.elementId,
     required this.label,
     this.mode = DateTimeVisibilityMode.dateTime,
@@ -60,32 +61,34 @@ class DateTimeElement extends BaseInputElement<String> {
     DateTime? to;
     DateTime? defaultDateTime;
 
+    // One try per value. Sharing a block made `from` the gatekeeper for
+    // `defaultValue`: a payload carrying a default but no lower bound threw on
+    // the `from` parse and never reached the default, so the picker opened
+    // with no pre-selection even though the server had sent one. `to` was
+    // always parsed separately, which is the shape the other two now follow.
+    final bool timeOnly = mode == DateTimeVisibilityMode.time;
+
     try {
-      if (mode == DateTimeVisibilityMode.time) {
-        from = DateTime.parse(
-          (cometchatConstantString + map[ModelFieldConstants.from]),
-        );
-        defaultDateTime = DateTime.parse(
-          (cometchatConstantString + map[ModelFieldConstants.defaultValue]),
-        );
-      } else {
-        from = DateTime.parse(map[ModelFieldConstants.from]);
-        defaultDateTime = DateTime.parse(map[ModelFieldConstants.defaultValue]);
-      }
+      final rawFrom = map[ModelFieldConstants.from];
+      from = DateTime.parse(
+        timeOnly ? cometchatConstantString + rawFrom : rawFrom,
+      );
     } catch (_) {}
 
     try {
-      if (mode == DateTimeVisibilityMode.time) {
-        to = DateTime.parse(
-          (cometchatConstantString + map[ModelFieldConstants.to]),
-        );
-      } else {
-        to = DateTime.parse(map[ModelFieldConstants.to]);
-      }
+      final rawDefault = map[ModelFieldConstants.defaultValue];
+      defaultDateTime = DateTime.parse(
+        timeOnly ? cometchatConstantString + rawDefault : rawDefault,
+      );
+    } catch (_) {}
+
+    try {
+      final rawTo = map[ModelFieldConstants.to];
+      to = DateTime.parse(timeOnly ? cometchatConstantString + rawTo : rawTo);
     } catch (_) {}
 
     if (kDebugMode) {
-      print("_defaultDateTime is $defaultDateTime");
+      ccLog("_defaultDateTime is $defaultDateTime");
     }
     return DateTimeElement(
       elementType: map[ModelFieldConstants.elementType],

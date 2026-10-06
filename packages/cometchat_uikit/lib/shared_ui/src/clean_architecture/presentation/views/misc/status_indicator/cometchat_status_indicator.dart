@@ -48,17 +48,21 @@ class CometChatStatusIndicator extends StatelessWidget {
 
     final spacing = CometChatThemeHelper.getSpacing(context);
 
-    return Container(
-      width: width ?? 12,
-      height: height ?? 12,
-      decoration: BoxDecoration(
-        borderRadius:
-            statusIndicatorStyle.borderRadius ??
-            BorderRadius.circular(spacing.radiusMax ?? 0),
-        border: statusIndicatorStyle.border,
-        color: statusIndicatorStyle.backgroundColor,
+    // An unlabelled coloured dot. It conveys presence visually but announces
+    // nothing, so it is hidden rather than read out as an empty node.
+    return ExcludeSemantics(
+      child: Container(
+        width: width ?? 12,
+        height: height ?? 12,
+        decoration: BoxDecoration(
+          borderRadius:
+              statusIndicatorStyle.borderRadius ??
+              BorderRadius.circular(spacing.radiusMax ?? 0),
+          border: statusIndicatorStyle.border,
+          color: statusIndicatorStyle.backgroundColor,
+        ),
+        child: backgroundImage,
       ),
-      child: backgroundImage,
     );
   }
 }

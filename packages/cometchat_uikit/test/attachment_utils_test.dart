@@ -152,7 +152,9 @@ void main() {
 
     test('a PDF sent in an image message is a mismatch (the core case)', () {
       // The bubble is chosen by message.type=image, but the file is a PDF.
-      final m = _msg(attachments: [_att('application/pdf', name: 'r.pdf', ext: 'pdf')]);
+      final m = _msg(
+        attachments: [_att('application/pdf', name: 'r.pdf', ext: 'pdf')],
+      );
       final a = AttachmentUtils.attachmentsOf(m).first;
       expect(AttachmentUtils.isNonPreviewableFile(a), isTrue);
     });

@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:web/web.dart' as web;
 
 import 'clipboard_image.dart';
 import 'web_picked_file.dart';
+import '../../../../logging/cometchat_log.dart';
 
 /// Web implementation of platform file utilities.
 ///
@@ -184,11 +184,14 @@ bool platformIsAndroid() => false;
 Future<String?> downloadFileToLocal(String fileUrl, String fileName) async {
   // On web, we cannot download to a local filesystem.
   // The caller should use url_launcher or an anchor download instead.
-  debugPrint('[Web] downloadFileToLocal not supported — use URL directly');
+  ccLog('[Web] downloadFileToLocal not supported — use URL directly');
   return null;
 }
 
-Future<String?> getDownloadedFilePath(String fileName) async {
+Future<String?> getDownloadedFilePath(
+  String fileName, {
+  String? fileUrl,
+}) async {
   // No local filesystem on web
   return null;
 }

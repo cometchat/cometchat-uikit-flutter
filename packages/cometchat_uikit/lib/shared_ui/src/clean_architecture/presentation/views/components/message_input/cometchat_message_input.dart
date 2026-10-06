@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import "../../../../clean_architecture.dart";
 
@@ -39,6 +40,14 @@ import "../../../../clean_architecture.dart";
 ///  );
 /// ```
 class CometChatMessageInput extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Callback for an Enter key press.
+  @Deprecated(
+    'Has no effect. Enter inserts a new line, as on the other UI Kits; messages are sent with the send button. Will be removed in 7.0.0.',
+  )
+  final bool Function(String text, TextSelection selection)? onEnterPressed;
+
   const CometChatMessageInput({
     super.key,
     this.text,
@@ -57,7 +66,6 @@ class CometChatMessageInput extends StatefulWidget {
     this.margin,
     this.height,
     this.width,
-    this.onEnterPressed,
     this.showCodeBlockIndicator = false,
     this.codeBlockIndicatorColor,
     this.codeBlockContent,
@@ -65,6 +73,7 @@ class CometChatMessageInput extends StatefulWidget {
     this.onPasteImage,
     this.onTap,
     this.layout = CometChatComposerLayout.singleLine,
+    this.onEnterPressed,
   });
 
   ///[text] initial text for the input field
@@ -114,10 +123,6 @@ class CometChatMessageInput extends StatefulWidget {
 
   ///[margin] defines the margin of the widget
   final EdgeInsetsGeometry? margin;
-
-  ///[onEnterPressed] callback to handle Enter key press for list continuation
-  ///Returns true if the Enter was handled (e.g., for list continuation), false otherwise
-  final bool Function(String text, TextSelection selection)? onEnterPressed;
 
   ///[showCodeBlockIndicator] shows a Slack-style left accent bar when true
   ///Used to indicate code block formatting in the input
@@ -172,7 +177,13 @@ class _CometChatMessageInputState extends State<CometChatMessageInput> {
       _textEditingController = widget.textEditingController;
       _isOwnController = false;
     } else {
-      _textEditingController = TextEditingController(text: widget.text);
+      // In code-block mode the extracted content (without the backticks) is
+      // what the field should hold.
+      _textEditingController = TextEditingController(
+        text: widget.showCodeBlockIndicator
+            ? (widget.codeBlockContent ?? widget.text)
+            : widget.text,
+      );
       _isOwnController = true;
     }
   }
@@ -437,7 +448,9 @@ class _CometChatMessageInputState extends State<CometChatMessageInput> {
             editableTextState.hideToolbar();
             final handled = await widget.onPasteImage!();
             if (!handled) {
-              editableTextState.pasteText(SelectionChangedCause.toolbar);
+              unawaited(
+                editableTextState.pasteText(SelectionChangedCause.toolbar),
+              );
             }
           },
         );
@@ -462,7 +475,9 @@ class _CometChatMessageInputState extends State<CometChatMessageInput> {
             // Nothing on the clipboard we can stage — fall back to text paste,
             // which is a no-op when there are no strings either.
             if (!handled) {
-              editableTextState.pasteText(SelectionChangedCause.toolbar);
+              unawaited(
+                editableTextState.pasteText(SelectionChangedCause.toolbar),
+              );
             }
           },
         ),
@@ -553,7 +568,12 @@ class _CometChatMessageInputState extends State<CometChatMessageInput> {
     // Use theme colors for code block
     final codeBackgroundColor =
         colorPalette.background3 ?? const Color(0xFF1E1E1E);
-    final borderColor = colorPalette.borderDark ?? const Color(0xFF404040);
+    // The caller-supplied indicator colour outlines the code block; the
+    // composer already passes one.
+    final borderColor =
+        widget.codeBlockIndicatorColor ??
+        colorPalette.borderDark ??
+        const Color(0xFF404040);
     final textColor = colorPalette.textPrimary ?? Colors.white;
     final hintColor = colorPalette.textTertiary ?? Colors.grey;
 

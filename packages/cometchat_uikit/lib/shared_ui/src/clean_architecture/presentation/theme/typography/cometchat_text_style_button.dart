@@ -42,12 +42,19 @@ class CometChatTextStyleButton
     );
   }
 
-  static CometChatTextStyleButton of(BuildContext context) =>
-      CometChatTextStyleButton(
-        bold: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w700),
-        medium: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w500),
-        regular: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w400),
-      );
+  /// Resolves the default type for this role, then lets a
+  /// [CometChatTextStyleButton] supplied through `ThemeData.extensions`
+  /// override it. Merge direction is `default.merge(supplied)` so the
+  /// caller wins; the reverse silently discards their style.
+  static CometChatTextStyleButton of(BuildContext context) {
+    final ext = Theme.of(context).extension<CometChatTextStyleButton>();
+    final base = _ccTextStyle(context);
+    return CometChatTextStyleButton(
+      bold: base.copyWith(fontWeight: FontWeight.w700).merge(ext?.bold),
+      medium: base.copyWith(fontWeight: FontWeight.w500).merge(ext?.medium),
+      regular: base.copyWith(fontWeight: FontWeight.w400).merge(ext?.regular),
+    );
+  }
 
   static TextStyle _ccTextStyle(BuildContext context) {
     return const TextStyle(fontSize: 14, fontWeight: FontWeight.w700);

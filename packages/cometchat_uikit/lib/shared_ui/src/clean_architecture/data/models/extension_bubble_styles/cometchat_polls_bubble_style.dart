@@ -250,47 +250,37 @@ class CometChatPollsBubbleStyle
   static CometChatPollsBubbleStyle of(BuildContext context) =>
       const CometChatPollsBubbleStyle();
 
+  /// Returns a copy of this style with every non-null property of [other]
+  /// applied on top, which is what every other style class in the kit means by
+  /// `merge` — the caller's style overrides the theme default, not the other
+  /// way round. `copyWith` already falls back to this instance for anything
+  /// [other] leaves null.
   CometChatPollsBubbleStyle merge(CometChatPollsBubbleStyle? other) {
     if (other == null) return this;
     return copyWith(
-      questionTextStyle: questionTextStyle?.merge(other.questionTextStyle),
-      voteCountTextStyle: voteCountTextStyle?.merge(other.voteCountTextStyle),
-      pollOptionsTextStyle: pollOptionsTextStyle?.merge(
-        other.pollOptionsTextStyle,
-      ),
-      radioButtonColor: radioButtonColor ?? other.radioButtonColor,
-      pollOptionsBackgroundColor:
-          pollOptionsBackgroundColor ?? other.pollOptionsBackgroundColor,
-      selectedOptionColor: selectedOptionColor ?? other.selectedOptionColor,
-      unSelectedOptionColor:
-          unSelectedOptionColor ?? other.unSelectedOptionColor,
-      backgroundColor: backgroundColor ?? other.backgroundColor,
-      iconColor: iconColor ?? other.iconColor,
-      border: border ?? other.border,
-      borderRadius: borderRadius ?? other.borderRadius,
-      progressColor: progressColor ?? other.progressColor,
-      progressBackgroundColor:
-          progressBackgroundColor ?? other.progressBackgroundColor,
-      voterAvatarStyle: voterAvatarStyle?.merge(other.voterAvatarStyle),
-      messageBubbleAvatarStyle: messageBubbleAvatarStyle?.merge(
-        other.messageBubbleAvatarStyle,
-      ),
-      messageBubbleDateStyle: messageBubbleDateStyle?.merge(
-        other.messageBubbleDateStyle,
-      ),
-      messageBubbleBackgroundImage:
-          messageBubbleBackgroundImage ?? other.messageBubbleBackgroundImage,
-      threadedMessageIndicatorTextStyle: threadedMessageIndicatorTextStyle
-          ?.merge(other.threadedMessageIndicatorTextStyle),
+      questionTextStyle: other.questionTextStyle,
+      voteCountTextStyle: other.voteCountTextStyle,
+      pollOptionsTextStyle: other.pollOptionsTextStyle,
+      radioButtonColor: other.radioButtonColor,
+      pollOptionsBackgroundColor: other.pollOptionsBackgroundColor,
+      selectedOptionColor: other.selectedOptionColor,
+      unSelectedOptionColor: other.unSelectedOptionColor,
+      backgroundColor: other.backgroundColor,
+      iconColor: other.iconColor,
+      border: other.border,
+      borderRadius: other.borderRadius,
+      progressColor: other.progressColor,
+      progressBackgroundColor: other.progressBackgroundColor,
+      voterAvatarStyle: other.voterAvatarStyle,
+      messageBubbleAvatarStyle: other.messageBubbleAvatarStyle,
+      messageBubbleDateStyle: other.messageBubbleDateStyle,
+      messageBubbleBackgroundImage: other.messageBubbleBackgroundImage,
+      threadedMessageIndicatorTextStyle:
+          other.threadedMessageIndicatorTextStyle,
       threadedMessageIndicatorIconColor:
-          threadedMessageIndicatorIconColor ??
           other.threadedMessageIndicatorIconColor,
-      senderNameTextStyle: senderNameTextStyle?.merge(
-        other.senderNameTextStyle,
-      ),
-      messageReceiptStyle: messageReceiptStyle?.merge(
-        other.messageReceiptStyle,
-      ),
+      senderNameTextStyle: other.senderNameTextStyle,
+      messageReceiptStyle: other.messageReceiptStyle,
     );
   }
 }

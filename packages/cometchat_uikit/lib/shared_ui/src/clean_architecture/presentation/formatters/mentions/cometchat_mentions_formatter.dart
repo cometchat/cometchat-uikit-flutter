@@ -11,6 +11,7 @@ import '../../../core/constants/regex_constants.dart';
 import '../../../domain/events/ui_events/cometchat_ui_events.dart';
 import '../../theme/theme.dart';
 import 'cometchat_mentions_style.dart';
+import '../../../../logging/cometchat_log.dart';
 import '../../../../../cometchat_uikit_shared.dart'
     show
         BubbleAlignment,
@@ -311,10 +312,10 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
         // Only add on first fetch to avoid duplication or re-triggering during pagination
         if (firstTimeFetch && !disableMentionAll && group != null) {
           final allLabelId = mentionAllLabelId ?? "all";
-          // Use localized text if available, otherwise fall back to custom or default label
-          final allLabel = context != null
-              ? Translations.of(context!).notifyAll
-              : (mentionAllLabel ?? "all");
+          // The configured label first, then the localized one, then "all".
+          final allLabel =
+              mentionAllLabel ??
+              (context != null ? Translations.of(context!).notifyAll : "all");
 
           // Check if search keyword matches "all"
           bool shouldShowAll =
@@ -406,7 +407,7 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
                     );
                   } catch (e) {
                     if (kDebugMode) {
-                      print("Error tapping @all mention: $e");
+                      ccLog("Error tapping @all mention: $e");
                     }
                   }
                 },
@@ -1417,7 +1418,7 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
           );
         } catch (error) {
           if (kDebugMode) {
-            print("error in mentions input $error");
+            ccLog("error in mentions input $error");
           }
         }
       }
@@ -1600,9 +1601,9 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
       }
 
       if (isMatchingAllMention) {
-        // Handle @all mention - format it with the configured or default label
-        // Use localized text if available, otherwise fall back to custom or default label
-        final allLabel = Translations.of(context).notifyAll;
+        // Handle @all mention - format it with the configured label, else the
+        // localized one.
+        final allLabel = mentionAllLabel ?? Translations.of(context).notifyAll;
         underlyingText = "@$allLabel";
         // Style @all like logged-in user mention
         isLoggedInUser = true;

@@ -1,9 +1,8 @@
 import "../../../../clean_architecture.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'reaction_list_bloc.dart';
 import '../../../../../../cometchat_uikit_shared.dart'
-    show CometChatAvatarStyle, ListItemStyle, CometChatListItem;
+    show ListItemStyle, CometChatListItem, CometChatAvatarStyle;
 
 /// [CometChatReactionList] is a StatefulWidget that displays the list of reactions
 /// for a particular message. It requires [reactionRequestBuilder] to fetch the
@@ -30,19 +29,27 @@ class CometChatReactionList extends StatefulWidget {
     this.emptyStateView,
     this.emptyStateText,
     this.loadingIcon,
-    this.avatarStyle,
     this.onTap,
     this.style,
     this.selectedReaction,
     this.listItemStyle,
+    this.avatarStyle,
     this.message,
     this.height,
     this.width,
     this.padding,
     this.onReactionListItemClick,
+    this.reactionListBloc,
   });
 
   ///[reactionRequestBuilder] is a parameter used to fetch the reactions of a particular message
+  ///[reactionListBloc] Optional external ReactionListBloc instance.
+  ///If provided, it is used instead of creating one internally and the widget
+  ///does not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc] — the seam that lets a test
+  ///supply reactions without a live SDK.
+  final ReactionListBloc? reactionListBloc;
+
   final ReactionsRequestBuilder? reactionRequestBuilder;
 
   ///[errorStateView] is a parameter used to show the error state view in case of any error
@@ -63,9 +70,6 @@ class CometChatReactionList extends StatefulWidget {
   ///[loadingIcon] is a parameter used to show the loading icon in case of loading
   final Widget? loadingIcon;
 
-  ///[avatarStyle] is a parameter used to set the style for avatar
-  final CometChatAvatarStyle? avatarStyle;
-
   ///[onTap] is a parameter used to perform some action on click of a particular reaction
   final Function(Reaction, BaseMessage)? onTap;
 
@@ -77,6 +81,11 @@ class CometChatReactionList extends StatefulWidget {
 
   ///[listItemStyle] is a parameter used to set the style for the list item
   final ListItemStyle? listItemStyle;
+
+  ///[avatarStyle] styles the avatar on each reactor row. Takes precedence
+  ///over [CometChatReactionListStyle.avatarStyle], which is the way to set it
+  ///on the list [CometChatMessageList] opens.
+  final CometChatAvatarStyle? avatarStyle;
 
   ///[message] is a parameter used to set the message object for which the reactions are to be fetched
   final BaseMessage? message;
@@ -100,23 +109,32 @@ class CometChatReactionList extends StatefulWidget {
 
 class _CometChatReactionListState extends State<CometChatReactionList> {
   late ReactionListBloc _bloc;
+  bool _isExternalBloc = false;
 
   @override
   void initState() {
     super.initState();
-    _bloc = ReactionListBloc(
-      messageId: widget.message!.id,
-      reactionsRequestBuilder: widget.reactionRequestBuilder,
-      messageObject: widget.message,
-      initialSelectedReaction:
-          widget.selectedReaction ?? ReactionConstants.allReactions,
-    );
-    _bloc.add(const InitializeReactionList());
+    if (widget.reactionListBloc != null) {
+      _bloc = widget.reactionListBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = ReactionListBloc(
+        messageId: widget.message!.id,
+        reactionsRequestBuilder: widget.reactionRequestBuilder,
+        messageObject: widget.message,
+        initialSelectedReaction:
+            widget.selectedReaction ?? ReactionConstants.allReactions,
+      );
+      _bloc.add(const InitializeReactionList());
+    }
   }
 
   @override
   void dispose() {
-    _bloc.close();
+    // an injected bloc belongs to its owner, so only close what we created
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 
@@ -171,7 +189,9 @@ class _CometChatReactionListState extends State<CometChatReactionList> {
                     height: 4,
                     width: 50,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF141414).withValues(alpha: 0.1),
+                      color:
+                          (colorPalette.textPrimary ?? const Color(0xFF141414))
+                              .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -440,7 +460,7 @@ class _CometChatReactionListState extends State<CometChatReactionList> {
       final isReactedByMe =
           reaction.reactedBy?.uid == CometChatUIKit.loggedInUser?.uid;
       if (isReactedByMe) {
-        _bloc.add(RemoveReaction(reaction));
+        _bloc.add(RemoveOwnReaction(reaction));
         // Check if we should close the sheet
         if (state.messageReactions.isEmpty ||
             (state.messageReactions.length == 1 &&
@@ -541,6 +561,10 @@ class _CometChatReactionListState extends State<CometChatReactionList> {
                 colorPalette.textPrimary,
           ).merge(reactionListStyle.titleTextStyle),
         ).merge(widget.listItemStyle),
+        avatarStyle:
+            widget.avatarStyle ??
+            reactionListStyle.avatarStyle ??
+            const CometChatAvatarStyle(),
         avatarHeight: 32,
         avatarWidth: 32,
       ),

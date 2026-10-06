@@ -68,27 +68,27 @@ class _CometChatSingleSelectState extends State<CometChatSingleSelect> {
                     ? const Border(left: BorderSide(width: 1))
                     : null,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CometChatSingleSelectButton(
-                    selectedOptionsTextStyle: widget.selectedOptionsTextStyle,
-                    optionBackground: widget.optionBackground,
-                    optionTextStyle: widget.optionTextStyle,
-                    selectedOptionBackground: widget.selectedOptionBackground,
-                    selected: selectedValue == option.value,
-                    label: option.label,
-                    onSelected: () {
-                      setState(() {
-                        selectedValue = option.value;
-                      });
-                      if (widget.onChanged != null) {
-                        widget.onChanged!(option.value);
-                      }
-                    },
-                  ),
-                ],
+              // The button used to sit inside a Row(mainAxisSize: max), which
+              // lays a non-flex child out with unbounded width — so the label
+              // never wrapped and the row overflowed by up to 157px at 200%
+              // text scale. The Expanded above already gives this slot a tight
+              // width; handing it straight to the button is what lets the text
+              // wrap. ENG-39112.
+              child: CometChatSingleSelectButton(
+                selectedOptionsTextStyle: widget.selectedOptionsTextStyle,
+                optionBackground: widget.optionBackground,
+                optionTextStyle: widget.optionTextStyle,
+                selectedOptionBackground: widget.selectedOptionBackground,
+                selected: selectedValue == option.value,
+                label: option.label,
+                onSelected: () {
+                  setState(() {
+                    selectedValue = option.value;
+                  });
+                  if (widget.onChanged != null) {
+                    widget.onChanged!(option.value);
+                  }
+                },
               ),
             ),
           );
@@ -163,13 +163,16 @@ class CometChatSingleSelectButton extends StatelessWidget {
 
     return GestureDetector(
       onTap: onSelected,
-      child: Container(
-        padding: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Wrap(
-            children: [Center(child: Text(label, style: containerTextStyle))],
-          ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        // A Wrap sized this label to its own intrinsic width, so a long option
+        // at a large text scale ran past the slot instead of wrapping inside
+        // it. ENG-39112.
+        child: Text(
+          label,
+          style: containerTextStyle,
+          textAlign: TextAlign.center,
+          softWrap: true,
         ),
       ),
     );

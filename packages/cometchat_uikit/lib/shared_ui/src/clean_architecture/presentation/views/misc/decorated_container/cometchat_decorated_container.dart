@@ -112,6 +112,7 @@ class CometChatDecoratedContainer extends StatelessWidget {
                     height: 20,
                     width: 20,
                     child: IconButton(
+                      tooltip: Translations.of(context).close,
                       onPressed: onCloseIconTap,
                       padding: EdgeInsets.zero,
                       icon: closeIconUrl == null
@@ -122,6 +123,7 @@ class CometChatDecoratedContainer extends StatelessWidget {
                                   colorPalette?.iconPrimary,
                             )
                           : Image.asset(
+                              excludeFromSemantics: true,
                               closeIconUrl!,
                               package: closeIconUrlPackageName,
                             ),

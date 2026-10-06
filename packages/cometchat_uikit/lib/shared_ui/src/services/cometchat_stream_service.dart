@@ -5,6 +5,7 @@ import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 import '../models/ai/stream_message.dart';
 import 'cometchat_stream_callback.dart';
 import '../../cometchat_uikit_shared.dart' as cc;
+import '../logging/cometchat_log.dart';
 
 /// Manages real-time AI response streaming with event queues, delta buffers,
 /// and reconnect handling.
@@ -49,7 +50,7 @@ class CometChatStreamService {
   // Queue Management
   void handleIncomingEvent(int runId, AIAssistantBaseEvent event) {
     if (!_isConnected || _disconnectedRunIds.contains(runId)) {
-      debugPrint('[AI Stream] Ignoring event for disconnected runId: $runId');
+      ccLog('[AI Stream] Ignoring event for disconnected runId: $runId');
       return;
     }
 
@@ -212,7 +213,7 @@ class CometChatStreamService {
     _isConnected = true;
     _disconnectedRunIds.clear();
     cleanupAll();
-    debugPrint('[AI Stream] Connected');
+    ccLog('[AI Stream] Connected');
     CometChatStreamCallBackEvents.ccStreamCompleted(true);
   }
 
@@ -239,7 +240,7 @@ class CometChatStreamService {
     }
 
     _stopAllActiveRuns();
-    debugPrint('[AI Stream] Disconnected');
+    ccLog('[AI Stream] Disconnected');
     CometChatStreamCallBackEvents.ccStreamInterrupted(true);
   }
 
@@ -266,7 +267,7 @@ class CometChatStreamService {
     }
 
     _stopAllActiveRuns();
-    debugPrint('[AI Stream] Connection error: ${e.message}');
+    ccLog('[AI Stream] Connection error: ${e.message}');
     CometChatStreamCallBackEvents.ccStreamInterrupted(true);
   }
 

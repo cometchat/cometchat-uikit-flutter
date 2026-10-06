@@ -168,6 +168,9 @@ class CometChatTextBubbleStyle
         other?.messageReceiptStyle,
         t,
       ),
+      // Absent from the constructor call, so the bubble's border vanished
+      // during an animated theme transition. ENG-39124.
+      border: BoxBorder.lerp(border, other?.border, t),
     );
   }
 }

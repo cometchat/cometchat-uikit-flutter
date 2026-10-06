@@ -63,15 +63,19 @@ class _CometChatShimmerEffectState extends State<CometChatShimmerEffect>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, child) {
-        return ShaderMask(
-          shaderCallback: (bounds) => _computedGradient.createShader(bounds),
-          blendMode: BlendMode.srcATop,
-          child: widget.child,
-        );
-      },
+    // A loading skeleton carries no information; without this a screen reader
+    // walks a list of empty placeholder boxes while content is still loading.
+    return ExcludeSemantics(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (_, child) {
+          return ShaderMask(
+            shaderCallback: (bounds) => _computedGradient.createShader(bounds),
+            blendMode: BlendMode.srcATop,
+            child: widget.child,
+          );
+        },
+      ),
     );
   }
 }

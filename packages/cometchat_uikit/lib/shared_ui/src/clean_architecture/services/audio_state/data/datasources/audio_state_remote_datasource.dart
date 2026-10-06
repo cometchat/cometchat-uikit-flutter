@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../domain/entities/audio_state_entity.dart';
+import '../../../../../logging/cometchat_log.dart';
 
 /// Remote data source for audio state (in-memory implementation)
 abstract class AudioStateRemoteDataSource {
@@ -112,7 +112,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
         var updatedState = state.copyWith(playState: PlayState.playing);
         await updateAudioState(updatedState);
       } catch (e) {
-        debugPrint('[AudioState] Error playing audio: $e');
+        ccLog('[AudioState] Error playing audio: $e');
       }
     }
   }
@@ -125,7 +125,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
         var updatedState = state.copyWith(playState: PlayState.paused);
         await updateAudioState(updatedState);
       } catch (e) {
-        debugPrint('[AudioState] Error pausing audio: $e');
+        ccLog('[AudioState] Error pausing audio: $e');
       }
     }
   }
@@ -141,7 +141,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
         );
         await updateAudioState(updatedState);
       } catch (e) {
-        debugPrint('[AudioState] Error stopping audio: $e');
+        ccLog('[AudioState] Error stopping audio: $e');
       }
     }
   }
@@ -153,7 +153,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
         await stopAudio(state.id);
       }
     } catch (e) {
-      debugPrint('[AudioState] Error stopping all audio: $e');
+      ccLog('[AudioState] Error stopping all audio: $e');
     }
   }
 
@@ -166,7 +166,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
         }
       }
     } catch (e) {
-      debugPrint('[AudioState] Error pausing all audio: $e');
+      ccLog('[AudioState] Error pausing all audio: $e');
     }
   }
 
@@ -187,7 +187,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
       _controllers.remove(audioId);
       _stateControllers.remove(audioId);
     } catch (e) {
-      debugPrint('[AudioState] Error removing audio state: $e');
+      ccLog('[AudioState] Error removing audio state: $e');
     }
   }
 
@@ -204,7 +204,7 @@ class AudioStateRemoteDataSourceImpl implements AudioStateRemoteDataSource {
         var updatedState = state.copyWith(currentPosition: position);
         await updateAudioState(updatedState);
       } catch (e) {
-        debugPrint('[AudioState] Error seeking audio: $e');
+        ccLog('[AudioState] Error seeking audio: $e');
       }
     }
   }

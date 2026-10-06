@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import "../../../../clean_architecture.dart";
 import 'package:flutter/scheduler.dart';
 
-import 'cometchat_audio_bubble_controller.dart';
+import '../../../../../logging/cometchat_log.dart';
 
 /// [CometChatVoiceNoteBubble] renders a single audio message with the classic
 /// waveform player look.
@@ -22,7 +22,6 @@ import 'cometchat_audio_bubble_controller.dart';
 ///              audioUrl:
 ///                  'audio url',
 ///              title: 'Sample Audio',
-///              subtitle: 'audio.mp3',
 ///              style: CometChatVoiceNoteBubbleStyle(
 ///              backgroundColor: Colors.white,
 ///              border: Border.all(color: Colors.red),
@@ -33,6 +32,18 @@ import 'cometchat_audio_bubble_controller.dart';
 ///
 /// ```
 class CometChatVoiceNoteBubble extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Text for a subtitle line.
+  @Deprecated(
+    'Has no effect. The bubble shows a waveform and a position/duration line, never a subtitle; style that line with CometChatVoiceNoteBubbleStyle.durationTextStyle / durationTextColor. Will be removed in 7.0.0.',
+  )
+  final String? subtitle;
+
+  /// Mime type used when no message is passed.
+  @Deprecated('Has no effect. Will be removed in 7.0.0.')
+  final String? fileMimeType;
+
   /// Metadata marker distinguishing a recorded voice note from an audio file.
   /// `voice_note` (snake_case) is the value every UIKit platform writes and
   /// dispatches on — do not change the casing.
@@ -53,7 +64,6 @@ class CometChatVoiceNoteBubble extends StatefulWidget {
     this.style,
     this.audioUrl,
     this.title,
-    this.subtitle,
     this.playIcon,
     this.pauseIcon,
     this.margin,
@@ -61,13 +71,14 @@ class CometChatVoiceNoteBubble extends StatefulWidget {
     this.height,
     this.width,
     this.alignment,
-    this.fileMimeType,
     this.id,
     this.muid,
     this.metadata,
     this.colorPalette,
     this.spacing,
     this.typography,
+    this.subtitle,
+    this.fileMimeType,
   });
 
   ///[audioUrl] if audioUrl passed then that audioUrl is used instead of file name from message Object
@@ -75,9 +86,6 @@ class CometChatVoiceNoteBubble extends StatefulWidget {
 
   ///[title]  text to show in title
   final String? title;
-
-  ///[subtitle]  text to show in subtitle
-  final String? subtitle;
 
   ///[style]  Style component for audio Bubble
   final CometChatVoiceNoteBubbleStyle? style;
@@ -102,9 +110,6 @@ class CometChatVoiceNoteBubble extends StatefulWidget {
 
   ///[alignment] of the bubble
   final BubbleAlignment? alignment;
-
-  ///[fileMimeType] file mime type to open the file if message object is not passed
-  final String? fileMimeType;
 
   ///[id] message object id to make file name unique
   final int? id;
@@ -224,7 +229,10 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
       this.localPath = localPath;
       isFileExists = true;
     } else {
-      String? path = await BubbleUtils.isFileDownloaded(fileName);
+      String? path = await BubbleUtils.isFileDownloaded(
+        fileName,
+        fileUrl: widget.audioUrl,
+      );
       if (path == null) {
         isFileExists = false;
       } else {
@@ -242,7 +250,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
       widget.audioUrl,
       localPath,
     );
-    _audioState!.initializeController();
+    unawaited(_audioState!.initializeController());
   }
 
   late CometChatVoiceNoteBubbleStyle audioBubbleStyle;
@@ -385,7 +393,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
     try {
       timer?.cancel();
     } catch (e) {
-      debugPrint('Error canceling timer: $e');
+      ccLog('Error canceling timer: $e');
     } finally {
       timer = null;
     }
@@ -395,7 +403,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
         _ticker?.stop(canceled: true);
         _ticker?.dispose();
       } catch (e) {
-        debugPrint('Error disposing _ticker: $e');
+        ccLog('Error disposing _ticker: $e');
       } finally {
         _ticker = null;
       }
@@ -579,6 +587,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
                             ),
                           ),
                         IconButton(
+                          tooltip: Translations.of(context).download,
                           onPressed: () async {
                             if (widget.audioUrl != null) {
                               isFileDownloading = true;
@@ -595,7 +604,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
                                   isFileExists = true;
                                 }
                               } catch (e) {
-                                debugPrint("Error downloading file: $e");
+                                ccLog("Error downloading file: $e");
                                 isFileExists = false;
                               } finally {
                                 _ticker?.stop();
@@ -606,6 +615,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
                             }
                           },
                           icon: Image.asset(
+                            excludeFromSemantics: true,
                             isFileDownloading
                                 ? AssetConstants.close
                                 : AssetConstants.download,

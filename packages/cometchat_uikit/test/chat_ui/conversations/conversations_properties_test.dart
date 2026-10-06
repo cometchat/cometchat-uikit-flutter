@@ -44,7 +44,11 @@ ConversationsBloc _makeBloc(
     () => repo.getConversations(limit: mt.any(named: 'limit')),
   ).thenAnswer((_) async => Success(initial));
   when(
-    () => repo.deleteConversation(mt.any()),
+    () => repo.deleteConversation(
+      mt.any(),
+      conversationWith: mt.any(named: 'conversationWith'),
+      conversationType: mt.any(named: 'conversationType'),
+    ),
   ).thenAnswer((_) async => const Success(null));
 
   return ConversationsBloc(

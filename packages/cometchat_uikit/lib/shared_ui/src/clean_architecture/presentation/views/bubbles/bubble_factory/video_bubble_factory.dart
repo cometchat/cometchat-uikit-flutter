@@ -11,18 +11,30 @@ import 'bubble_factory.dart';
 
 /// Factory for creating video message bubbles.
 class VideoBubbleFactory extends BubbleFactory<MediaMessage> {
-  final CometChatVideoBubbleStyle? style;
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Placeholder image for the video.
+  @Deprecated(
+    'Has no effect. For the colour shown while a thumbnail loads, use CometChatVideosBubbleStyle.placeholderColor. Will be removed in 7.0.0.',
+  )
   final String? placeHolderImage;
+
+  /// Package of the placeholder image.
+  @Deprecated(
+    'Has no effect. For the colour shown while a thumbnail loads, use CometChatVideosBubbleStyle.placeholderColor. Will be removed in 7.0.0.',
+  )
   final String? placeHolderImagePackageName;
+
+  final CometChatVideoBubbleStyle? style;
   final Icon? playIcon;
   final Function()? onClick;
 
   VideoBubbleFactory({
     this.style,
-    this.placeHolderImage,
-    this.placeHolderImagePackageName,
     this.playIcon,
     this.onClick,
+    this.placeHolderImage,
+    this.placeHolderImagePackageName,
   });
 
   @override
@@ -42,8 +54,6 @@ class VideoBubbleFactory extends BubbleFactory<MediaMessage> {
       videoUrl: message.attachment?.fileUrl,
       thumbnailUrl: thumbnailUrl,
       style: style,
-      placeHolderImage: placeHolderImage,
-      placeHolderImagePackageName: placeHolderImagePackageName,
       playIcon: playIcon,
       onClick: onClick,
       metadata: message.metadata,

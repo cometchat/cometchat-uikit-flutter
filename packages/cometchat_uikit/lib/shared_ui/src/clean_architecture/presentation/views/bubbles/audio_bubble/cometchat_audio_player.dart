@@ -2,17 +2,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../../../clean_architecture.dart';
-import 'cometchat_audio_bubble_controller.dart';
 import 'waveform_utils.dart';
 import 'gesture_waveform.dart';
+import '../../../../../logging/cometchat_log.dart';
 
 /// Single-audio player widget (lazy loading + gesture-controlled waveform).
 ///
-/// This is the internal player used by the voice-note bubble
-/// ([CometChatVoiceNoteBubble]) and the legacy audio bubble factory — it is
-/// not itself a routed message bubble. Plain audio *files* render via
-/// [CometChatAudiosBubble]; the deprecated single-attachment path renders via
-/// [CometChatVoiceNoteBubble].
+/// This is the internal player behind the media recorder's playback preview
+/// and the legacy audio bubble factory — it is not itself a routed message
+/// bubble. Voice notes render via [CometChatVoiceNoteBubble] and plain audio
+/// files via [CometChatAudiosBubble].
 ///
 /// Flow:
 /// 1. Initial: Show play button + placeholder bars
@@ -22,6 +21,20 @@ import 'gesture_waveform.dart';
 /// Renamed from `CometChatAudioBubbleV2`; the old name survives as a
 /// deprecated alias below so no import breaks.
 class CometChatAudioPlayer extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Padding around the player.
+  @Deprecated(
+    'Has no effect. The player derives its spacing from the theme; wrap it in a Padding. Will be removed in 7.0.0.',
+  )
+  final EdgeInsetsGeometry? padding;
+
+  /// Margin around the player.
+  @Deprecated(
+    'Has no effect. The player derives its spacing from the theme; wrap it in a Padding. Will be removed in 7.0.0.',
+  )
+  final EdgeInsetsGeometry? margin;
+
   const CometChatAudioPlayer({
     super.key,
     this.audioUrl,
@@ -31,8 +44,6 @@ class CometChatAudioPlayer extends StatefulWidget {
     this.pauseIcon,
     this.height,
     this.width,
-    this.padding,
-    this.margin,
     this.alignment,
     this.id,
     this.metadata,
@@ -40,6 +51,8 @@ class CometChatAudioPlayer extends StatefulWidget {
     this.spacing,
     this.typography,
     this.barCount = 40,
+    this.padding,
+    this.margin,
   });
 
   final String? audioUrl;
@@ -49,8 +62,6 @@ class CometChatAudioPlayer extends StatefulWidget {
   final Icon? pauseIcon;
   final double? height;
   final double? width;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
   final BubbleAlignment? alignment;
   final int? id;
   final Map<String, dynamic>? metadata;
@@ -174,7 +185,7 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
       _isDownloaded = true;
       _setupAudioState();
       // Generate real waveform in background — don't block UI
-      _generateWaveform();
+      unawaited(_generateWaveform());
     } else {
       String fileName = '';
       if (widget.id != null) fileName += '${widget.id}';
@@ -182,13 +193,16 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
         if (fileName.isNotEmpty) fileName += '_';
         fileName += widget.title!;
       }
-      String? path = await BubbleUtils.isFileDownloaded(fileName);
+      String? path = await BubbleUtils.isFileDownloaded(
+        fileName,
+        fileUrl: widget.audioUrl,
+      );
       if (path != null) {
         _localPath = path;
         _isDownloaded = true;
         _setupAudioState();
         // Generate real waveform in background — don't block UI
-        _generateWaveform();
+        unawaited(_generateWaveform());
       }
     }
     if (mounted) setState(() {});
@@ -200,7 +214,7 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
       widget.audioUrl,
       _localPath,
     );
-    debugPrint(
+    ccLog(
       '[AudioBubble $_tag] _setupAudioState: audioState.id=${_audioState!.id}, localPath=$_localPath',
     );
     _audioStateSubscription?.cancel();
@@ -267,7 +281,7 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
   }
 
   Future<void> _onPlayTap() async {
-    debugPrint(
+    ccLog(
       '[AudioBubble $_tag] _onPlayTap: _isDownloaded=$_isDownloaded, _audioState=${_audioState != null}',
     );
     if (!_isDownloaded) {
@@ -287,9 +301,9 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
       _isDownloaded = true;
       if (mounted) setState(() => _isPreparingToPlay = false);
       _setupAudioState();
-      _generateWaveform();
+      unawaited(_generateWaveform());
       await Future.delayed(const Duration(milliseconds: 100));
-      _audioState?.playAudio();
+      unawaited(_audioState?.playAudio());
       return;
     }
 
@@ -317,15 +331,15 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
         if (mounted) setState(() => _isPreparingToPlay = false);
         _setupAudioState();
         // Generate real waveform in background — don't block playback
-        _generateWaveform();
+        unawaited(_generateWaveform());
         // Play after audio is initialized
         await Future.delayed(const Duration(milliseconds: 100));
-        _audioState?.playAudio();
+        unawaited(_audioState?.playAudio());
       } else {
-        debugPrint('Audio download returned null for ${widget.audioUrl}');
+        ccLog('Audio download returned null for ${widget.audioUrl}');
       }
     } catch (e) {
-      debugPrint('Error downloading audio: $e');
+      ccLog('Error downloading audio: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -352,7 +366,7 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
 
   void _togglePlayPause() {
     final playState = _audioState?.playState ?? PlayStates.init;
-    debugPrint(
+    ccLog(
       '[AudioBubble $_tag] _togglePlayPause: playState=$playState, controller=${_audioState?.controller != null}, initialized=${_audioState?.controller?.value.isInitialized}',
     );
     if (playState == PlayStates.playing) {
@@ -487,24 +501,31 @@ class _CometChatAudioPlayerState extends State<CometChatAudioPlayer> {
 
     final isPlaying = playState == PlayStates.playing;
 
-    return GestureDetector(
-      onTap: _onPlayTap,
-      child: CircleAvatar(
-        radius: 20,
-        backgroundColor: _style.playIconBackgroundColor ?? _colorPalette.white,
-        child: isPlaying
-            ? widget.pauseIcon ??
-                  Icon(
-                    Icons.pause,
-                    size: 28,
-                    color: _style.playIconColor ?? _colorPalette.primary,
-                  )
-            : widget.playIcon ??
-                  Icon(
-                    Icons.play_arrow_rounded,
-                    size: 28,
-                    color: _style.playIconColor ?? _colorPalette.primary,
-                  ),
+    return Semantics(
+      button: true,
+      label: isPlaying
+          ? Translations.of(context).pause
+          : Translations.of(context).play,
+      child: GestureDetector(
+        onTap: _onPlayTap,
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor:
+              _style.playIconBackgroundColor ?? _colorPalette.white,
+          child: isPlaying
+              ? widget.pauseIcon ??
+                    Icon(
+                      Icons.pause,
+                      size: 28,
+                      color: _style.playIconColor ?? _colorPalette.primary,
+                    )
+              : widget.playIcon ??
+                    Icon(
+                      Icons.play_arrow_rounded,
+                      size: 28,
+                      color: _style.playIconColor ?? _colorPalette.primary,
+                    ),
+        ),
       ),
     );
   }

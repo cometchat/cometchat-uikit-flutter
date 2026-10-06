@@ -1,11 +1,14 @@
 import 'dart:convert';
-import 'timezone_utils/date_time.dart';
-import 'timezone_utils/env.dart';
+// The timezone copy CometChatUIKit.init initialises. SchedulerUtils used to
+// import a second, identical copy whose database nothing ever filled.
+import '../../../utils/timezone_utils/date_time.dart';
+import '../../../utils/timezone_utils/env.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 import 'package:intl/intl.dart';
+import '../../../logging/cometchat_log.dart';
 import '../../data/models/interactive_message/scheduler_message.dart'
     show TimeRange, SchedulerMessage;
 import '../../../../cometchat_uikit_shared.dart'
@@ -1177,7 +1180,7 @@ class SchedulerUtils {
             ),
           );
           if (kDebugMode) {
-            print('Failed to load ICS file: ${response.statusCode}');
+            ccLog('Failed to load ICS file: ${response.statusCode}');
           }
         }
       } catch (e) {
@@ -1189,7 +1192,7 @@ class SchedulerUtils {
           ),
         );
         if (kDebugMode) {
-          print('Error: caught while parsing icsFile $e');
+          ccLog('Error: caught while parsing icsFile $e');
         }
       }
     } else {
@@ -1372,6 +1375,22 @@ class SchedulerUtils {
     "sunday",
   ];
 
+  /// Parses an availability time into a [Duration] since midnight.
+  ///
+  /// The documented wire format is `HHmm` with no separator. This used to be
+  /// two bare `int.parse` calls over `substring(0, 2)` and `substring(2)`, so
+  /// a payload carrying the equally plausible `HH:mm` threw FormatException
+  /// and took slot generation down with it. Availability arrives from the
+  /// scheduler message payload, so it is not trusted input. ENG-39021.
+  static Duration parseAvailabilityTime(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 3) return Duration.zero;
+
+    final hours = int.tryParse(digits.substring(0, 2)) ?? 0;
+    final minutes = int.tryParse(digits.substring(2)) ?? 0;
+    return Duration(hours: hours, minutes: minutes);
+  }
+
   static List<DateTimeRange> getAvailableSlots(
     DateTime selectedDateTime,
     String messageTimeZone,
@@ -1392,15 +1411,15 @@ class SchedulerUtils {
       for (TimeRange start in availableSlots) {
         DateTime startTime = localStartTime.add(
           Duration(
-            hours: int.parse(start.from.substring(0, 2)),
-            minutes: int.parse(start.from.substring(2)),
+            hours: parseAvailabilityTime(start.from).inHours,
+            minutes: parseAvailabilityTime(start.from).inMinutes % 60,
           ),
         );
 
         DateTime endTime = localStartTime.add(
           Duration(
-            hours: int.parse(start.to.substring(0, 2)),
-            minutes: int.parse(start.to.substring(2)),
+            hours: parseAvailabilityTime(start.to).inHours,
+            minutes: parseAvailabilityTime(start.to).inMinutes % 60,
           ),
         );
 
@@ -1439,15 +1458,15 @@ class SchedulerUtils {
       for (TimeRange start in availableSlots1) {
         DateTime startTime = baseStart.add(
           Duration(
-            hours: int.parse(start.from.substring(0, 2)),
-            minutes: int.parse(start.from.substring(2)),
+            hours: parseAvailabilityTime(start.from).inHours,
+            minutes: parseAvailabilityTime(start.from).inMinutes % 60,
           ),
         );
 
         DateTime endTime = baseStart.add(
           Duration(
-            hours: int.parse(start.to.substring(0, 2)),
-            minutes: int.parse(start.to.substring(2)),
+            hours: parseAvailabilityTime(start.to).inHours,
+            minutes: parseAvailabilityTime(start.to).inMinutes % 60,
           ),
         );
 
@@ -1495,15 +1514,15 @@ class SchedulerUtils {
         for (TimeRange start in availableSlots2) {
           DateTime startTime = baseEnd.add(
             Duration(
-              hours: int.parse(start.from.substring(0, 2)),
-              minutes: int.parse(start.from.substring(2)),
+              hours: parseAvailabilityTime(start.from).inHours,
+              minutes: parseAvailabilityTime(start.from).inMinutes % 60,
             ),
           );
 
           DateTime endTime = baseEnd.add(
             Duration(
-              hours: int.parse(start.to.substring(0, 2)),
-              minutes: int.parse(start.to.substring(2)),
+              hours: parseAvailabilityTime(start.to).inHours,
+              minutes: parseAvailabilityTime(start.to).inMinutes % 60,
             ),
           );
 
@@ -1639,17 +1658,28 @@ class SchedulerUtils {
     Map<String, Map<String, dynamic>> blockedDates,
     Map<String, List<TimeRange>>? availability,
   ) {
-    if (isDateSelectable(selectedDay, from, to, blockedDates, availability)) {
-      return selectedDay;
-    } else {
-      return nearestSelectableDate(
-        selectedDay.add(const Duration(days: 1)),
-        from,
-        to,
-        blockedDates,
-        availability,
-      );
+    // Previously unbounded recursion. When no weekday key ever matched --
+    // an availability map that is non-null but empty for every day, or keyed
+    // with anything other than the seven names in [weekdays] -- this never
+    // terminated and hung the isolate. Enforcing the date window above makes
+    // that more reachable, not less, so the walk is now bounded. ENG-39021.
+    const int maxDaysToScan = 366;
+    DateTime candidate = selectedDay;
+
+    for (int i = 0; i <= maxDaysToScan; i++) {
+      if (isDateSelectable(candidate, from, to, blockedDates, availability)) {
+        return candidate;
+      }
+      final DateTime next = candidate.add(const Duration(days: 1));
+      // Past the end of the window there is nothing left to find.
+      if (to != null && next.isAfter(to)) break;
+      candidate = next;
     }
+
+    // Nothing in range is selectable. Hand back what we were given rather
+    // than a date the caller never asked about; the caller still has to treat
+    // the result as a proposal and check it.
+    return selectedDay;
   }
 
   static bool isDateSelectable(
@@ -1679,10 +1709,22 @@ class SchedulerUtils {
     if (isNotAvailable) {
       return false;
     }
-    return selectedDate.isAtSameMomentAs(from ?? now) ||
-        selectedDate.isAfter(from ?? now) ||
-        selectedDate.isAtSameMomentAs(selectedDate) ||
-        selectedDate.isBefore(to ?? now.add(const Duration(days: 1)));
+    // The window is a conjunction, not a disjunction. This used to be four
+    // clauses OR-ed together, one of which was
+    // `selectedDate.isAtSameMomentAs(selectedDate)` -- always true -- so the
+    // whole expression was always true and neither bound was enforced.
+    // ENG-39021.
+    final DateTime lower = from ?? now;
+    final bool atOrAfterFrom =
+        selectedDate.isAtSameMomentAs(lower) || selectedDate.isAfter(lower);
+
+    final DateTime? upper = to;
+    final bool atOrBeforeTo =
+        upper == null ||
+        selectedDate.isAtSameMomentAs(upper) ||
+        selectedDate.isBefore(upper);
+
+    return atOrAfterFrom && atOrBeforeTo;
   }
 
   static Map<String, dynamic> getActionRequestBody(
@@ -1780,13 +1822,11 @@ extension DateTimeExtension2 on DateTime {
   }
 
   DateTime adjustTimeDifference(int hours, int minutes) {
-    if (hours > 0) {
-      return add(Duration(hours: hours.abs(), minutes: minutes.abs()));
-    } else if (hours < 0) {
-      return subtract(Duration(hours: hours.abs(), minutes: minutes.abs()));
-    } else {
-      return this;
-    }
+    // A zero-hour offset used to return `this`, discarding the minutes with
+    // it, so a sub-hour zone offset was silently dropped. ENG-39021.
+    final offset = Duration(hours: hours.abs(), minutes: minutes.abs());
+    if (hours < 0 || (hours == 0 && minutes < 0)) return subtract(offset);
+    return add(offset);
   }
 
   bool isSameTime(DateTime other) {

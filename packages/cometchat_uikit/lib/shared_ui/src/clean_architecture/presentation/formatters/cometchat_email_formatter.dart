@@ -42,13 +42,16 @@ class CometChatEmailFormatter extends CometChatTextFormatter {
 
   @override
   TextStyle getMessageInputTextStyle(BuildContext context) {
-    // TODO: implement messageInputTextStyle
-    throw UnimplementedError();
+    // The email formatter styles matched text in the rendered message, not the
+    // composer input, so it contributes no input style of its own. Returning
+    // the default matches CometChatMarkdownTextFormatter; the previous
+    // UnimplementedError would crash any caller of this public API.
+    return const TextStyle();
   }
 
   @override
   void onScrollToBottom(TextEditingController textEditingController) {
-    // TODO: implement onScrollToBottom
+    // Not used: this formatter holds no scroll-dependent state.
   }
 
   @override
@@ -87,7 +90,7 @@ class CometChatEmailFormatter extends CometChatTextFormatter {
     TextEditingController textEditingController,
     String previousText,
   ) {
-    // TODO: implement onChange
+    // Not used: matching is done on render, not on each keystroke.
   }
 
   @override

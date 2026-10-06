@@ -11,18 +11,14 @@ abstract class CometChatSearchListController<T1, T2>
   CometChatSearchListController({
     required this.builderProtocol,
     String? searchKeyword,
-    Function(Exception)? onError,
-    bool isFetchNext = true,
-    OnLoad<T1>? onLoad,
-    OnEmpty? onEmpty,
+    super.onError,
+    super.isFetchNext = true,
+    super.onLoad,
+    super.onEmpty,
   }) : super(
          searchKeyword != null && searchKeyword != ''
              ? builderProtocol.getSearchRequest(searchKeyword)
              : builderProtocol.getRequest(),
-         onError: onError,
-         isFetchNext: isFetchNext,
-         onEmpty: onEmpty,
-         onLoad: onLoad,
        );
 
   @override

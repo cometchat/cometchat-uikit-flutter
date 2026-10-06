@@ -16,20 +16,28 @@ import '../../../../../../cometchat_uikit_shared.dart';
 /// )
 /// ```
 class CometChatDeletedBubble extends StatelessWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Height of the widget.
+  @Deprecated(
+    'Has no effect. Size it through its parent. Will be removed in 7.0.0.',
+  )
+  final double? height;
+
+  /// Width of the widget.
+  @Deprecated(
+    'Has no effect. Size it through its parent. Will be removed in 7.0.0.',
+  )
+  final double? width;
+
   const CometChatDeletedBubble({
     super.key,
     this.style,
-    this.height,
-    this.width,
     this.padding,
     this.margin,
+    this.height,
+    this.width,
   });
-
-  ///[height] defines the height of the widget
-  final double? height;
-
-  ///[width] defines the width of the widget
-  final double? width;
 
   ///[padding] defines the padding of the widget
   final EdgeInsetsGeometry? padding;
@@ -83,17 +91,19 @@ class CometChatDeletedBubble extends StatelessWidget {
               size: 16,
             ),
           ),
-          Text(
-            Translations.of(context).thisMessageDeleted,
-            style:
-                TextStyle(
-                      color: deletedBubbleStyle.textColor,
-                      fontSize: typography.body?.regular?.fontSize,
-                      fontWeight: typography.body?.regular?.fontWeight,
-                      fontFamily: typography.body?.regular?.fontFamily,
-                    )
-                    .merge(deletedBubbleStyle.textStyle)
-                    .copyWith(color: deletedBubbleStyle.textColor),
+          Flexible(
+            child: Text(
+              Translations.of(context).thisMessageDeleted,
+              style:
+                  TextStyle(
+                        color: deletedBubbleStyle.textColor,
+                        fontSize: typography.body?.regular?.fontSize,
+                        fontWeight: typography.body?.regular?.fontWeight,
+                        fontFamily: typography.body?.regular?.fontFamily,
+                      )
+                      .merge(deletedBubbleStyle.textStyle)
+                      .copyWith(color: deletedBubbleStyle.textColor),
+            ),
           ),
         ],
       ),

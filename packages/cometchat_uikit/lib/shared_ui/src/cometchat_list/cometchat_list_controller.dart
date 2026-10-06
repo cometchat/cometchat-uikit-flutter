@@ -2,6 +2,7 @@ import 'list_protocols.dart';
 import 'package:flutter/foundation.dart';
 
 import '../constants/ui_kit_constants.dart';
+import '../logging/cometchat_log.dart';
 
 /// Generic exception class to replace SDK-specific exceptions
 class CometChatListException implements Exception {
@@ -123,7 +124,7 @@ abstract class CometChatListController<T1, T2> extends ChangeNotifier
 
   void _onError(CometChatListException e) {
     if (kDebugMode) {
-      print("Error ${e.details}");
+      ccLog("Error ${e.details}");
     }
     error = e;
     hasError = true;
@@ -216,7 +217,7 @@ abstract class CometChatListController<T1, T2> extends ChangeNotifier
     } catch (e, s) {
       isFetching = false;
       if (kDebugMode) {
-        print("Error in Catch: $e");
+        ccLog("Error in Catch: $e");
       }
       error = CometChatListException("ERR", s.toString(), "Error");
       hasError = true;

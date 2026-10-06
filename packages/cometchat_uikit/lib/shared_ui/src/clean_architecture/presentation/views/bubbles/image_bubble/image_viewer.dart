@@ -171,6 +171,7 @@ class _ImageViewerState extends State<ImageViewer> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
+                                  tooltip: Translations.of(context).retry,
                                   onPressed: () {
                                     setState(() {
                                       _isLoading = true;
@@ -191,6 +192,7 @@ class _ImageViewerState extends State<ImageViewer> {
                                     );
                                   },
                                   icon: Image.asset(
+                                    excludeFromSemantics: true,
                                     AssetConstants.refreshIcon,
                                     height: 24,
                                     width: 24,
@@ -233,6 +235,7 @@ class _ImageViewerState extends State<ImageViewer> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
+                                  tooltip: Translations.of(context).retry,
                                   onPressed: () {
                                     setState(() {
                                       _isLoading = true;
@@ -256,6 +259,7 @@ class _ImageViewerState extends State<ImageViewer> {
                                     );
                                   },
                                   icon: Image.asset(
+                                    excludeFromSemantics: true,
                                     AssetConstants.refreshIcon,
                                     height: 24,
                                     width: 24,

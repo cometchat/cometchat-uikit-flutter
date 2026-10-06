@@ -10,6 +10,7 @@ import '../../data/models/interactive_message/card_message.dart';
 import '../../data/models/interactive_message/custom_interactive_message.dart';
 import '../../data/models/interactive_message/scheduler_message.dart';
 import '../../../cometchat_ui_kit/cometchat_ui_kit.dart';
+import '../../../logging/cometchat_log.dart';
 
 class InteractiveMessageUtils {
   static Future<void> markInteracted(
@@ -126,7 +127,7 @@ class InteractiveMessageUtils {
     InteractiveMessage message,
   ) {
     if (kDebugMode) {
-      print(" message Id ${message.id} interactions ${message.interactions}  ");
+      ccLog(" message Id ${message.id} interactions ${message.interactions}  ");
     }
     if (message.type == MessageTypeConstants.form) {
       return FormMessage.fromInteractiveMessage(message);
@@ -170,12 +171,14 @@ class InteractiveMessageUtils {
         InteractiveMessageConstants.interactedElementId: element.elementId,
       },
     };
-    if (element.action?.actionType == ActionTypeConstants.apiAction) {
-      if (element.action == null) {
-        APIAction apiAction = element.action! as APIAction;
-        Map<String, dynamic> payload = apiAction.payload ?? {};
-        requestData["payload"] = payload;
-      }
+    // The outer test already establishes that the action is non-null and is
+    // an api action; an inner `action == null` guard used to sit here, making
+    // the whole body unreachable and silently dropping the integrator's
+    // payload from every interaction request. ENG-39022.
+    final action = element.action;
+    if (action is APIAction &&
+        action.actionType == ActionTypeConstants.apiAction) {
+      requestData["payload"] = action.payload ?? {};
     }
     if (body != null && body.isNotEmpty) {
       requestData.addAll(body);

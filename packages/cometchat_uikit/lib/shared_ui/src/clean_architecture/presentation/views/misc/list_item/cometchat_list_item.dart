@@ -13,6 +13,14 @@ import '../../../../../../cometchat_uikit_shared.dart';
 ///                  );
 /// ```
 class CometChatListItem extends StatelessWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Options for the list item.
+  @Deprecated(
+    'Has no effect. The list item has no option menu; use setOptions or addOptions on CometChatUsers, CometChatGroups, CometChatConversations or CometChatGroupMembers. Will be removed in 7.0.0.',
+  )
+  final List<CometChatOption>? options;
+
   const CometChatListItem({
     super.key,
     this.avatarURL,
@@ -21,7 +29,6 @@ class CometChatListItem extends StatelessWidget {
     this.statusIndicatorIcon,
     this.title,
     this.subtitleView,
-    this.options,
     this.tailView,
     this.hideSeparator = true,
     this.avatarStyle = const CometChatAvatarStyle(),
@@ -34,11 +41,12 @@ class CometChatListItem extends StatelessWidget {
     this.statusIndicatorWidth,
     this.statusIndicatorHeight,
     this.statusIndicatorBorderRadius,
-    this.id,
     this.titlePadding,
     this.titleView,
     this.leadingStateView,
     this.contentPadding,
+    this.id,
+    this.options,
   }) : assert(avatarURL != null || avatarName != null);
 
   ///[avatarURL] sets image url to be shown in avatar
@@ -59,9 +67,6 @@ class CometChatListItem extends StatelessWidget {
   ///[subtitleView] gives subtitle view
   final Widget? subtitleView;
 
-  ///[options] set options for
-  final List<CometChatOption>? options;
-
   ///[tailView] sets tail
   final Widget? tailView;
 
@@ -76,9 +81,6 @@ class CometChatListItem extends StatelessWidget {
 
   ///[statusIndicatorStyle] style for status indicator
   final CometChatStatusIndicatorStyle statusIndicatorStyle;
-
-  ///[id] for list item
-  final String? id;
 
   ///[avatarWidth] provides width to the widget
   final double? avatarWidth;
@@ -112,6 +114,10 @@ class CometChatListItem extends StatelessWidget {
 
   ///[contentPadding] set content padding
   final EdgeInsetsGeometry? contentPadding;
+
+  ///[id] identifies this row. Applied as a value key on the row's
+  ///container so a rebuilt list keeps element identity per item.
+  final String? id;
 
   Widget getLeadingView() {
     if (leadingStateView != null) {
@@ -154,7 +160,9 @@ class CometChatListItem extends StatelessWidget {
     } else {
       return Text(
         title ?? "",
-        maxLines: 1,
+        // Wraps to a second line rather than clipping the name once the user
+        // scales their text up. Measured clipping at 1.3x on a 412pt phone.
+        maxLines: scaledMaxLines(context),
         style: TextStyle(
           overflow: TextOverflow.ellipsis,
           fontSize: style.titleStyle?.fontSize,
@@ -173,6 +181,7 @@ class CometChatListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: id != null ? ValueKey<String>(id!) : null,
       margin: style.margin,
       padding: style.padding,
       alignment: Alignment.center,
@@ -185,19 +194,29 @@ class CometChatListItem extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _CometChatListTile(
+            // NOTE: _CometChatListTile declares `height` and never reads it, so
+            // ListItemStyle.height has no effect today. Wiring it up would
+            // start applying heights that have been silently ignored, so it is
+            // left alone here and recorded instead.
             height: style.height,
-            leading: Stack(
-              children: [
-                getLeadingView(),
-                if (statusIndicatorColor != null || statusIndicatorIcon != null)
-                  Positioned(
-                    height: statusIndicatorHeight ?? 14,
-                    width: statusIndicatorWidth ?? 14,
-                    right: 0,
-                    bottom: 0,
-                    child: getStatus(),
-                  ),
-              ],
+            // The avatar and status dot restate what the title already says,
+            // and neither carries a label of its own, so they are hidden from
+            // assistive technology rather than read out as unlabelled nodes.
+            leading: ExcludeSemantics(
+              child: Stack(
+                children: [
+                  getLeadingView(),
+                  if (statusIndicatorColor != null ||
+                      statusIndicatorIcon != null)
+                    Positioned(
+                      height: statusIndicatorHeight ?? 14,
+                      width: statusIndicatorWidth ?? 14,
+                      right: 0,
+                      bottom: 0,
+                      child: getStatus(),
+                    ),
+                ],
+              ),
             ),
             title: getTitle(context),
             subtitle: getSubtitle(),
@@ -261,9 +280,14 @@ class _CometChatListTile extends StatelessWidget {
             child: Padding(
               padding:
                   titlePadding ?? EdgeInsets.only(left: spacing.padding3 ?? 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [title ?? const SizedBox(), ?subtitle],
+              // Title and subtitle describe one row, so they are merged into a
+              // single node. Deliberately scoped to the text column: merging
+              // the whole tile would swallow the trailing view's own actions.
+              child: MergeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [title ?? const SizedBox(), ?subtitle],
+                ),
               ),
             ),
           ),

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 ///[CometChatExceptionStyle] is a data class that has styling-related properties for exception view
+@Deprecated(
+  'Nothing reads it; the outgoing bubble has no exception view. Style the moderation banner with CometChatModerationStyle (or moderationStyle on CometChatOutgoingMessageBubbleStyle); an attachment that is too large is rejected in the composer, styled by CometChatMessageComposer.attachmentErrorAlertStyle. Will be removed in 7.0.0.',
+)
 class CometChatExceptionStyle extends ThemeExtension<CometChatExceptionStyle> {
+  /// Creates a [CometChatExceptionStyle].
   const CometChatExceptionStyle({
     this.exceptionBackgroundColor,
     this.exceptionTextStyle,
@@ -17,6 +21,7 @@ class CometChatExceptionStyle extends ThemeExtension<CometChatExceptionStyle> {
   ///[exceptionIconTint] provides icon color for the exception view warning icon
   final Color? exceptionIconTint;
 
+  /// The default style for [context].
   static CometChatExceptionStyle of(BuildContext context) =>
       const CometChatExceptionStyle();
 
@@ -34,6 +39,7 @@ class CometChatExceptionStyle extends ThemeExtension<CometChatExceptionStyle> {
     );
   }
 
+  /// Returns this style with the non-null values of [style] applied.
   CometChatExceptionStyle merge(CometChatExceptionStyle? style) {
     if (style == null) return this;
     return copyWith(

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import '../base_styles.dart';
 
+/// Style for the drop down interactive element.
+@Deprecated(
+  'Has no effect: v6 renders form-message elements as unsupported, as the Android UI Kit does, so nothing reads it. No replacement. Will be removed in 7.0.0.',
+)
 class DropDownElementStyle extends BaseStyles {
+  /// Creates a [DropDownElementStyle].
   DropDownElementStyle({
     this.optionTextStyle,
     this.labelStyle,
@@ -14,10 +19,16 @@ class DropDownElementStyle extends BaseStyles {
     super.gradient,
   });
 
+  /// The label style. Has no effect; deprecated with this class.
   final TextStyle? labelStyle;
+
+  /// The option text style. Has no effect; deprecated with this class.
   final TextStyle? optionTextStyle;
+
+  /// The hint text style. Has no effect; deprecated with this class.
   final TextStyle? hintTextStyle;
 
+  /// Returns this style with the non-null values of [mergeWith] applied.
   DropDownElementStyle merge(DropDownElementStyle mergeWith) {
     return DropDownElementStyle(
       optionTextStyle: optionTextStyle ?? mergeWith.optionTextStyle,

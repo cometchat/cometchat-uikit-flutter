@@ -15,6 +15,11 @@ import 'package:flutter/material.dart';
 ///
 class CometChatMediaRecorderStyle
     extends ThemeExtension<CometChatMediaRecorderStyle> {
+  /// Color of the pulsing rings around the record indicator while
+  /// recording. Without it they are drawn from
+  /// [recordIndicatorBackgroundColor].
+  final Color? recordIndicatorColor;
+
   CometChatMediaRecorderStyle({
     this.backgroundColor,
     this.border,
@@ -46,8 +51,8 @@ class CometChatMediaRecorderStyle
     this.recordIndicatorBackgroundColor,
     this.recordIndicatorBorderRadius,
     this.recordIndicatorBorder,
-    this.recordIndicatorColor,
     this.audioBubbleStyle,
+    this.recordIndicatorColor,
   });
 
   ///[backgroundColor] defines the background color of the media recorder widget.
@@ -140,9 +145,6 @@ class CometChatMediaRecorderStyle
   ///[recordIndicatorBorder] defines the border of the record button.
   final BoxBorder? recordIndicatorBorder;
 
-  ///[recordIndicatorColor] defines the color of the record indicator.
-  final Color? recordIndicatorColor;
-
   ///[audioBubbleStyle] defines the style of the audio bubble.
   final CometChatVoiceNoteBubbleStyle? audioBubbleStyle;
 
@@ -181,8 +183,8 @@ class CometChatMediaRecorderStyle
     Color? recordIndicatorBackgroundColor,
     BorderRadiusGeometry? recordIndicatorBorderRadius,
     BoxBorder? recordIndicatorBorder,
-    Color? recordIndicatorColor,
     CometChatVoiceNoteBubbleStyle? audioBubbleStyle,
+    Color? recordIndicatorColor,
   }) {
     return CometChatMediaRecorderStyle(
       backgroundColor: backgroundColor,
@@ -215,8 +217,8 @@ class CometChatMediaRecorderStyle
       recordIndicatorBackgroundColor: recordIndicatorBackgroundColor,
       recordIndicatorBorderRadius: recordIndicatorBorderRadius,
       recordIndicatorBorder: recordIndicatorBorder,
-      recordIndicatorColor: recordIndicatorColor,
       audioBubbleStyle: audioBubbleStyle,
+      recordIndicatorColor: recordIndicatorColor,
     );
   }
 
@@ -298,11 +300,6 @@ class CometChatMediaRecorderStyle
         other.recordIndicatorBorder,
         t,
       ),
-      recordIndicatorColor: Color.lerp(
-        recordIndicatorColor,
-        other.recordIndicatorColor,
-        t,
-      ),
       recordIndicatorIconColor: Color.lerp(
         recordIndicatorIconColor,
         other.recordIndicatorIconColor,
@@ -316,6 +313,11 @@ class CometChatMediaRecorderStyle
       sendButtonBorderRadius: BorderRadiusGeometry.lerp(
         sendButtonBorderRadius,
         other.sendButtonBorderRadius,
+        t,
+      ),
+      sendButtonBorder: BoxBorder.lerp(
+        sendButtonBorder,
+        other.sendButtonBorder,
         t,
       ),
       sendButtonIconColor: Color.lerp(
@@ -365,6 +367,11 @@ class CometChatMediaRecorderStyle
         t,
       ),
       audioBubbleStyle: audioBubbleStyle?.lerp(other.audioBubbleStyle, t),
+      recordIndicatorColor: Color.lerp(
+        recordIndicatorColor,
+        other.recordIndicatorColor,
+        t,
+      ),
     );
   }
 
@@ -388,10 +395,11 @@ class CometChatMediaRecorderStyle
       recordIndicatorBackgroundColor: style.recordIndicatorBackgroundColor,
       recordIndicatorBorderRadius: style.recordIndicatorBorderRadius,
       recordIndicatorBorder: style.recordIndicatorBorder,
-      recordIndicatorColor: style.recordIndicatorColor,
       recordIndicatorIconColor: style.recordIndicatorIconColor,
+      recordIndicatorColor: style.recordIndicatorColor,
       sendButtonBackgroundColor: style.sendButtonBackgroundColor,
       sendButtonBorderRadius: style.sendButtonBorderRadius,
+      sendButtonBorder: style.sendButtonBorder,
       sendButtonIconColor: style.sendButtonIconColor,
       startButtonBackgroundColor: style.startButtonBackgroundColor,
       startButtonBorderRadius: style.startButtonBorderRadius,

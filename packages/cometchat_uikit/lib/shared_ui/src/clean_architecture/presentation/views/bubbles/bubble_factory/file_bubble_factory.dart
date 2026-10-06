@@ -10,8 +10,11 @@ import 'bubble_factory.dart';
 
 /// Factory for creating file message bubbles.
 class FileBubbleFactory extends BubbleFactory<MediaMessage> {
-  final CometChatFileBubbleStyle? style;
+  /// Icon for the bubble's download button; see
+  /// [CometChatFileBubble.downloadIcon].
   final Icon? downloadIcon;
+
+  final CometChatFileBubbleStyle? style;
 
   FileBubbleFactory({this.style, this.downloadIcon});
 
@@ -31,11 +34,11 @@ class FileBubbleFactory extends BubbleFactory<MediaMessage> {
       fileExtension: message.attachment?.fileExtension,
       fileSize: message.attachment?.fileSize,
       style: style,
-      downloadIcon: downloadIcon,
       alignment: alignment,
       id: message.id,
       dateTime: message.sentAt,
       metadata: message.metadata,
+      downloadIcon: downloadIcon,
     );
   }
 }

@@ -1,9 +1,9 @@
 name: cometchat_chat_uikit
 description: CometChat's Flutter UI Kit offers custom UI components for streamlined text and chat features in your app, designed with developers in mind to minimize development effort.
-version: 6.1.1
+version: 6.2.0
 homepage: https://www.cometchat.com/
-repository: https://github.com/cometchat/chat-uikit-flutter
-issue_tracker: https://github.com/cometchat/chat-uikit-flutter/issues
+repository: https://github.com/cometchat/cometchat-uikit-flutter
+issue_tracker: https://github.com/cometchat/cometchat-uikit-flutter/issues
 topics:
   - chat
   - messaging
@@ -30,7 +30,11 @@ dependencies:
   path_provider: ^2.1.2
   webview_flutter: ^4.13.0
   url_launcher: ^6.3.2
-  cometchat_sdk: ^5.0.7
+  # Transitive dependency lag is inherited from these two SDKs and cannot be
+  # closed from this repository:
+  #   connectivity_plus      6.1.5  (latest 7.x)  via cometchat_calls_sdk
+  #   flutter_secure_storage 10.3.1 (latest 11.x) via cometchat_sdk
+  cometchat_sdk: ^5.0.8
   cometchat_cards: ^1.0.1
   video_player: ^2.10.1
   http: ^1.4.0
@@ -39,9 +43,25 @@ dependencies:
   image_picker_platform_interface: ^2.11.1
   flutter_svg: ^2.2.2
   flutter_cache_manager: ^3.4.1
+  # Held at 3.x deliberately: cached_network_image 4.0.0 requires Dart
+  # ^3.12.0, above this package's 3.10.8 floor.
   cached_network_image: ^3.4.1
-  cometchat_calls_sdk: ^5.0.4
-  permission_handler: ^12.0.0
+  # Floor at 5.0.8, the release the call UI is tested against. 5.0.4's
+  # CometChatCalls.logout() also de-initialised the plugin, and it pinned
+  # the native CometChatCallsSDK and calls-sdk-android at 5.0.2 (5.0.8 pins
+  # 5.0.4). The floor is a hard requirement: the kit calls
+  # CometChatOngoingCallService.launch(isVideo:), which 5.0.4 lacks, so a
+  # dependency_override back to 5.0.4 stops the kit compiling. iOS apps with
+  # an existing Podfile.lock need `pod update CometChatCallsSDK` once.
+  cometchat_calls_sdk: ^5.0.8
+  # Ceiling held below 13 deliberately. Admitting 13.x does not merely permit
+  # it, it lets pub choose it, and permission_handler 13.0.1 pulls
+  # permission_handler_android 14.0.0, whose build.gradle.kts uses a top-level
+  # `kotlin { compilerOptions { } }` block without ever applying the Kotlin
+  # Gradle plugin, and which requires compileSdk 37 -- past what AGP 9.0.1
+  # supports. Every integrator on AGP 8 would break, with an error pointing
+  # into .pub-cache and no hint the UI Kit caused it.
+  permission_handler: '>=12.0.0 <13.0.0'
   flutter_bloc: ^9.1.1
   equatable: ^2.0.8
   diffutil_dart: ^5.0.0
@@ -66,7 +86,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter.
 flutter:
-  generate: true
   plugin:
     platforms:
       android:

@@ -493,7 +493,10 @@ class CometChatThemeHelper {
 
   /// Get the default text styles used in the UI components
   static CometChatTypography getTypography(BuildContext context) {
-    return CometChatTypography(
+    // Each `of(context)` already merges its own CometChatTextStyle* extension.
+    // A CometChatTypography supplied wholesale was still being ignored, so
+    // merge it over the resolved defaults here — `merge` lets the argument win.
+    final defaults = CometChatTypography(
       heading1: CometChatTextStyleHeading1.of(context),
       heading2: CometChatTextStyleHeading2.of(context),
       heading3: CometChatTextStyleHeading3.of(context),
@@ -505,6 +508,7 @@ class CometChatThemeHelper {
       link: CometChatTextStyleLink.of(context),
       title: CometChatTextStyleTitle.of(context),
     );
+    return defaults.merge(_getThemeExtensionData<CometChatTypography>(context));
   }
 
   static Color _getAlertColors(

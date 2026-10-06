@@ -1,4 +1,5 @@
-import '../../../../../cometchat_uikit_shared.dart' show ActionTypeConstants;
+import '../../../../../cometchat_uikit_shared.dart'
+    show ActionTypeConstants, ModelFieldConstants;
 import 'action_entity.dart';
 
 /// Represents an action for URL navigation within a chat application.
@@ -19,6 +20,11 @@ class URLNavigationAction extends ActionEntity {
   }
 
   factory URLNavigationAction.fromMap(dynamic map) {
-    return URLNavigationAction(url: map['url'], type: map['type']);
+    return URLNavigationAction(
+      url: map['url'],
+      // toMap writes `actionType`; reading `type` here meant a round trip
+      // silently reset the field to the default.
+      type: map[ModelFieldConstants.actionType] ?? map['type'],
+    );
   }
 }

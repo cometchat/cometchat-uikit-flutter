@@ -13,6 +13,7 @@ import '../../../../core/utils/platform_utils/platform_file_utils.dart'
 import '../../../../core/utils/platform_utils/platform_image_utils.dart'
     as platform_image;
 import '../../../../core/utils/platform_utils/web_video.dart' as web_video;
+import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/web_download.dart'
     as web_download;
 
@@ -153,7 +154,7 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
     }
     if (!mounted) return;
     if (failure != null) {
-      debugPrint('media viewer save failed for ${a.fileName}: $failure');
+      ccLog('media viewer save failed for ${a.fileName}: $failure');
       _showDownloadAlert(Translations.of(context).somethingWentWrongError);
     } else if (saved) {
       _showDownloadAlert(Translations.of(context).fileSaved);
@@ -184,15 +185,21 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
         child: Material(
           color: Colors.white.withValues(alpha: 0.14),
           shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: () => _goTo(forward ? _index + 1 : _index - 1),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                forward ? Icons.chevron_right : Icons.chevron_left,
-                color: Colors.white,
-                size: 28,
+          child: Semantics(
+            button: true,
+            label: forward
+                ? Translations.of(context).next
+                : Translations.of(context).previous,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _goTo(forward ? _index + 1 : _index - 1),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  forward ? Icons.chevron_right : Icons.chevron_left,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
             ),
           ),
@@ -211,6 +218,7 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
         foregroundColor: Colors.white,
         title: Text('${_index + 1} / $total'),
         leading: IconButton(
+          tooltip: Translations.of(context).close,
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
@@ -495,21 +503,27 @@ class _VideoPageState extends State<_VideoPage> {
                           Positioned.fill(
                             bottom: _kVideoControlsBarHeight,
                             child: Center(
-                              child: GestureDetector(
-                                onTap: _toggle,
-                                child: Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black45,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    value.isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 40,
+                              child: Semantics(
+                                button: true,
+                                label: value.isPlaying
+                                    ? Translations.of(context).pause
+                                    : Translations.of(context).play,
+                                child: GestureDetector(
+                                  onTap: _toggle,
+                                  child: Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black45,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      value.isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 40,
+                                    ),
                                   ),
                                 ),
                               ),

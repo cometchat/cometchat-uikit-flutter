@@ -1,11 +1,12 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 import 'clipboard_image.dart';
 import 'web_picked_file.dart';
+import '../download_cache_key.dart';
+import '../../../../logging/cometchat_log.dart';
 
 /// Native (mobile/desktop) implementation of platform file utilities.
 
@@ -39,7 +40,7 @@ Future<ClipboardImage?> readClipboardImage() async {
       name is String ? name : null,
     );
   } catch (e) {
-    debugPrint('readClipboardImage failed: $e');
+    ccLog('readClipboardImage failed: $e');
     return null;
   }
 }
@@ -129,6 +130,14 @@ Future<void> _setDownloadFilePath() async {
   }
 }
 
+/// The directory a given attachment's cached copy lives in — the download root
+/// plus its per-attachment bucket (see [DownloadCacheKey]). Falls back to the
+/// flat root when no URL is known, which is the pre-bucket layout.
+String _cacheDirFor(String? fileUrl) {
+  final bucket = fileUrl == null ? '' : DownloadCacheKey.bucketFor(fileUrl);
+  return bucket.isEmpty ? _fileDownloadPath : "$_fileDownloadPath/$bucket";
+}
+
 Future<String?> downloadFileToLocal(String fileUrl, String fileName) async {
   File? partial;
   try {
@@ -137,7 +146,9 @@ Future<String?> downloadFileToLocal(String fileUrl, String fileName) async {
     }
     if (_fileDownloadPath.isEmpty) return null;
 
-    String filePath = "$_fileDownloadPath/$fileName";
+    final dir = Directory(_cacheDirFor(fileUrl));
+    await dir.create(recursive: true);
+    String filePath = "${dir.path}/$fileName";
     final request = await HttpClient().getUrl(Uri.parse(fileUrl));
     final response = await request.close();
 
@@ -145,16 +156,14 @@ Future<String?> downloadFileToLocal(String fileUrl, String fileName) async {
     // so an expired link 403s — piping regardless wrote the error body into
     // e.g. "photo.png" and reported success, leaving a corrupt file behind.
     if (response.statusCode != HttpStatus.ok) {
-      debugPrint(
-        'File download failed: HTTP ${response.statusCode} for $fileName',
-      );
+      ccLog('File download failed: HTTP ${response.statusCode} for $fileName');
       await response.drain<void>();
       return null;
     }
 
     partial = File(filePath);
     await response.pipe(partial.openWrite());
-    debugPrint("Download path $filePath");
+    ccLog("Download path $filePath");
 
     // Hand the file to the platform so it lands somewhere the user can
     // actually find it (Android: MediaStore Downloads; iOS: no-op — see
@@ -163,7 +172,7 @@ Future<String?> downloadFileToLocal(String fileUrl, String fileName) async {
     final exported = await _exportToPublicDownloads(filePath, fileName);
     return exported ?? filePath;
   } catch (e) {
-    debugPrint("File download failed: $e");
+    ccLog("File download failed: $e");
     // Don't leave a truncated file behind — it would make the row/tile look
     // downloaded and later fail to play or open.
     try {
@@ -188,7 +197,7 @@ Future<String?> _exportToPublicDownloads(
     });
     return (saved != null && saved.isNotEmpty) ? saved : null;
   } catch (e) {
-    debugPrint('saveToDownloads failed (keeping app-local copy): $e');
+    ccLog('saveToDownloads failed (keeping app-local copy): $e');
     return null;
   }
 }
@@ -216,17 +225,30 @@ Future<bool> saveFileWithPicker(
         });
     return saved != null && saved.isNotEmpty;
   } catch (e) {
-    debugPrint('saveFileWithPicker failed: $e');
+    ccLog('saveFileWithPicker failed: $e');
     return false;
   }
 }
 
-Future<String?> getDownloadedFilePath(String fileName) async {
+/// The local path of an already-downloaded [fileName], or null.
+///
+/// [fileUrl] identifies *which* attachment is being asked about — without it,
+/// a name like `invoice.pdf` is ambiguous across senders and this would hand
+/// back somebody else's file. Always pass it when the URL is known; callers
+/// that omit it fall back to the pre-bucket flat layout, which is only correct
+/// when the name is already unique (the legacy bubbles prefix the message id).
+///
+/// Files cached before bucketing existed live at the old flat path and are not
+/// returned here — they re-download once, which is the safe direction to fail.
+Future<String?> getDownloadedFilePath(
+  String fileName, {
+  String? fileUrl,
+}) async {
   try {
     if (_fileDownloadPath.isEmpty) {
       await _setDownloadFilePath();
     }
-    String filePath = "$_fileDownloadPath/$fileName";
+    String filePath = "${_cacheDirFor(fileUrl)}/$fileName";
     if (File(filePath).existsSync()) {
       return filePath;
     }
@@ -234,7 +256,7 @@ Future<String?> getDownloadedFilePath(String fileName) async {
   } catch (e) {
     // getExternalStorageDirectory is Android-only — desktop/test hosts land
     // here; "not downloaded yet" is the right answer everywhere it throws.
-    debugPrint("getDownloadedFilePath failed: $e");
+    ccLog("getDownloadedFilePath failed: $e");
     return null;
   }
 }
@@ -251,7 +273,7 @@ Future<String?> writeBytesToTempFile(List<int> bytes, String fileName) async {
     await file.writeAsBytes(bytes);
     return file.path;
   } catch (e) {
-    debugPrint("writeBytesToTempFile failed: $e");
+    ccLog("writeBytesToTempFile failed: $e");
     return null;
   }
 }

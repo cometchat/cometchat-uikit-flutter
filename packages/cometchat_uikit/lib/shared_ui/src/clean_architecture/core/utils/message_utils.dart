@@ -611,7 +611,7 @@ extension BubbleUIBuilder on MessageUtils {
     }
     CometChatMessageBubbleStyleData? messageBubbleStyleData;
     switch (key) {
-      case (MessageCategoryConstants.message + MessageTypeConstants.text):
+      case const (MessageCategoryConstants.message + MessageTypeConstants.text):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.textBubbleStyle?.backgroundColor
@@ -669,7 +669,8 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.message + MessageTypeConstants.image):
+      case const (MessageCategoryConstants.message +
+          MessageTypeConstants.image):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.imageBubbleStyle?.backgroundColor
@@ -727,7 +728,7 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.message + MessageTypeConstants.file):
+      case const (MessageCategoryConstants.message + MessageTypeConstants.file):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.fileBubbleStyle?.backgroundColor
@@ -785,7 +786,8 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.message + MessageTypeConstants.video):
+      case const (MessageCategoryConstants.message +
+          MessageTypeConstants.video):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.videoBubbleStyle?.backgroundColor
@@ -843,65 +845,81 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.message + MessageTypeConstants.audio):
+      case const (MessageCategoryConstants.message +
+          MessageTypeConstants.audio):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
-              ? outgoingMessageBubbleStyle?.audioBubbleStyle?.backgroundColor
-              : incomingMessageBubbleStyle?.audioBubbleStyle?.backgroundColor,
+              ? outgoingMessageBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
+                    ?.backgroundColor
+              : incomingMessageBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
+                    ?.backgroundColor,
           border: isSent
-              ? outgoingMessageBubbleStyle?.audioBubbleStyle?.border
-              : incomingMessageBubbleStyle?.audioBubbleStyle?.border,
+              ? outgoingMessageBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
+                    ?.border
+              : incomingMessageBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
+                    ?.border,
           borderRadius: isSent
               ? getSentTextMediaBorderRadiusGeometry(
                   message,
-                  outgoingMessageBubbleStyle?.audioBubbleStyle?.borderRadius,
+                  outgoingMessageBubbleStyle
+                      ?.effectiveVoiceNoteBubbleStyle
+                      ?.borderRadius,
                   colorPalette,
                   typography,
                   spacing,
                 )
-              : incomingMessageBubbleStyle?.audioBubbleStyle?.borderRadius,
+              : incomingMessageBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
+                    ?.borderRadius,
           threadedMessageIndicatorIconColor: isSent
               ? outgoingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.threadedMessageIndicatorIconColor
               : incomingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.threadedMessageIndicatorIconColor,
           messageBubbleAvatarStyle: isSent
               ? outgoingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.messageBubbleAvatarStyle
               : incomingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.messageBubbleAvatarStyle,
-          senderNameTextStyle:
-              incomingMessageBubbleStyle?.audioBubbleStyle?.senderNameTextStyle,
-          messageReceiptStyle:
-              outgoingMessageBubbleStyle?.audioBubbleStyle?.messageReceiptStyle,
+          senderNameTextStyle: incomingMessageBubbleStyle
+              ?.effectiveVoiceNoteBubbleStyle
+              ?.senderNameTextStyle,
+          messageReceiptStyle: outgoingMessageBubbleStyle
+              ?.effectiveVoiceNoteBubbleStyle
+              ?.messageReceiptStyle,
           messageBubbleDateStyle: isSent
               ? outgoingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.messageBubbleDateStyle
               : incomingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.messageBubbleDateStyle,
           messageBubbleBackgroundImage: isSent
               ? outgoingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.messageBubbleBackgroundImage
               : incomingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.messageBubbleBackgroundImage,
           threadedMessageIndicatorTextStyle: isSent
               ? outgoingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.threadedMessageIndicatorTextStyle
               : incomingMessageBubbleStyle
-                    ?.audioBubbleStyle
+                    ?.effectiveVoiceNoteBubbleStyle
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.custom + ExtensionType.extensionPoll):
+      case const (MessageCategoryConstants.custom +
+          ExtensionType.extensionPoll):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.pollsBubbleStyle?.backgroundColor
@@ -953,7 +971,7 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.custom + ExtensionType.document):
+      case const (MessageCategoryConstants.custom + ExtensionType.document):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle
@@ -1019,7 +1037,7 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.custom + ExtensionType.whiteboard):
+      case const (MessageCategoryConstants.custom + ExtensionType.whiteboard):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle
@@ -1085,7 +1103,7 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.custom + ExtensionType.sticker):
+      case const (MessageCategoryConstants.custom + ExtensionType.sticker):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor:
               (isSent
@@ -1145,7 +1163,8 @@ extension BubbleUIBuilder on MessageUtils {
                     ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case (MessageCategoryConstants.custom + MessageTypeConstants.meeting):
+      case const (MessageCategoryConstants.custom +
+          MessageTypeConstants.meeting):
         CustomMessage msg = message as CustomMessage;
         String? callType;
         if (msg.customData != null &&
@@ -1373,31 +1392,8 @@ extension BubbleUIBuilder on MessageUtils {
               ),
       audioBubbleStyle:
           (isSent
-                  ? outgoingMessageBubbleStyle.audioBubbleStyle
-                  : incomingMessageBubbleStyle.audioBubbleStyle)
-              ?.copyWith(
-                border: Border.all(color: Colors.transparent, width: 0),
-              ),
-      collaborativeDocumentBubbleStyle:
-          (isSent
-                  ? outgoingMessageBubbleStyle.collaborativeDocumentBubbleStyle
-                  : incomingMessageBubbleStyle.collaborativeDocumentBubbleStyle)
-              ?.copyWith(
-                border: Border.all(color: Colors.transparent, width: 0),
-              ),
-      collaborativeWhiteboardBubbleStyle:
-          (isSent
-                  ? outgoingMessageBubbleStyle
-                        .collaborativeWhiteboardBubbleStyle
-                  : incomingMessageBubbleStyle
-                        .collaborativeWhiteboardBubbleStyle)
-              ?.copyWith(
-                border: Border.all(color: Colors.transparent, width: 0),
-              ),
-      pollsBubbleStyle:
-          (isSent
-                  ? outgoingMessageBubbleStyle.pollsBubbleStyle
-                  : incomingMessageBubbleStyle.pollsBubbleStyle)
+                  ? outgoingMessageBubbleStyle.effectiveVoiceNoteBubbleStyle
+                  : incomingMessageBubbleStyle.effectiveVoiceNoteBubbleStyle)
               ?.copyWith(
                 border: Border.all(color: Colors.transparent, width: 0),
               ),
@@ -1415,10 +1411,33 @@ extension BubbleUIBuilder on MessageUtils {
       messageTranslationBubbleStyle: isSent
           ? outgoingMessageBubbleStyle.messageTranslationBubbleStyle
           : incomingMessageBubbleStyle.messageTranslationBubbleStyle,
+      pollsBubbleStyle:
+          (isSent
+                  ? outgoingMessageBubbleStyle.pollsBubbleStyle
+                  : incomingMessageBubbleStyle.pollsBubbleStyle)
+              ?.copyWith(
+                border: Border.all(color: Colors.transparent, width: 0),
+              ),
       stickerBubbleStyle:
           (isSent
                   ? outgoingMessageBubbleStyle.stickerBubbleStyle
                   : incomingMessageBubbleStyle.stickerBubbleStyle)
+              ?.copyWith(
+                border: Border.all(color: Colors.transparent, width: 0),
+              ),
+      collaborativeDocumentBubbleStyle:
+          (isSent
+                  ? outgoingMessageBubbleStyle.collaborativeDocumentBubbleStyle
+                  : incomingMessageBubbleStyle.collaborativeDocumentBubbleStyle)
+              ?.copyWith(
+                border: Border.all(color: Colors.transparent, width: 0),
+              ),
+      collaborativeWhiteboardBubbleStyle:
+          (isSent
+                  ? outgoingMessageBubbleStyle
+                        .collaborativeWhiteboardBubbleStyle
+                  : incomingMessageBubbleStyle
+                        .collaborativeWhiteboardBubbleStyle)
               ?.copyWith(
                 border: Border.all(color: Colors.transparent, width: 0),
               ),

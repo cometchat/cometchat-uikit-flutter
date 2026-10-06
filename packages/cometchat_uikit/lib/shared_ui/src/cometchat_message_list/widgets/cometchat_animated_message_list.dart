@@ -50,6 +50,14 @@ typedef MessageItemBuilder =
 /// It works with [AnimatedMessageListBloc] for state management and receives
 /// [MessageOperation] events for animations.
 class CometChatAnimatedMessageList extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Whether to handle the safe area.
+  @Deprecated(
+    'Has no effect. The list never applied it; wrap the list in a SafeArea or set bottomPadding. Will be removed in 7.0.0.',
+  )
+  final bool handleSafeArea;
+
   /// Builder function for creating individual message widgets
   final MessageItemBuilder itemBuilder;
 
@@ -120,7 +128,6 @@ class CometChatAnimatedMessageList extends StatefulWidget {
   final double? bottomPadding;
 
   /// Whether to handle safe area
-  final bool handleSafeArea;
 
   /// Keyboard dismiss behavior
   final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
@@ -178,7 +185,6 @@ class CometChatAnimatedMessageList extends StatefulWidget {
     this.bottomSliver,
     this.topPadding = 8,
     this.bottomPadding = 20,
-    this.handleSafeArea = true,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.physics,
     this.composerHeightNotifier,
@@ -187,6 +193,7 @@ class CometChatAnimatedMessageList extends StatefulWidget {
     this.onTopVisibleDateChanged,
     this.onScrollToBottomTap,
     this.hasMoreNewer = false,
+    this.handleSafeArea = true,
   });
 
   @override
@@ -1451,6 +1458,8 @@ class _CometChatAnimatedMessageListState
                     controller: _scrollController,
                     reverse: widget.reversed,
                     physics: widget.physics,
+                    // `scrollCacheExtent` needs Flutter 3.41; the package floor stays at 3.38.9 (DEPR1).
+                    // ignore: deprecated_member_use
                     cacheExtent:
                         500, // Pre-render 500px above/below viewport for smoother scrolling
                     keyboardDismissBehavior: widget.keyboardDismissBehavior,
@@ -1527,35 +1536,55 @@ class _CometChatAnimatedMessageListState
     );
   }
 
+  /// Stable identity for a message across its whole life in the list.
+  ///
+  /// muid first, deliberately: it is assigned before the send leaves the
+  /// device and survives the acknowledgement, whereas `id` is 0 until the
+  /// server answers. Keying on `id` would re-key the sender's own message the
+  /// moment it was acknowledged and rebuild that bubble for nothing — the
+  /// same reason the voice-note bubble derives its cache tag from muid.
+  static String _identityOf(BaseMessage message) =>
+      message.muid.isNotEmpty ? 'muid:${message.muid}' : 'id:${message.id}';
+
+  /// Resolves a child's key back to its visual index so the framework can keep
+  /// elements paired with their message when the list shifts.
+  ///
+  /// Also accepts the two older key shapes — a bare `ValueKey<int>` id and the
+  /// `"$id-$hash-..."` composite — so a caller that keys its own items by
+  /// either still reorders rather than rebuilding.
+  int? _findChildIndex(Key key) {
+    int index = -1;
+
+    if (key is ValueKey<String>) {
+      final value = key.value;
+      if (value.startsWith('muid:')) {
+        final muid = value.substring(5);
+        index = _messages.indexWhere((m) => m.muid == muid);
+      } else {
+        final idPart = value.startsWith('id:')
+            ? value.substring(3)
+            : value.split('-').first;
+        final id = int.tryParse(idPart);
+        if (id != null) index = _indexOfId(id);
+      }
+    } else if (key is ValueKey<int>) {
+      index = _indexOfId(key.value);
+    }
+
+    return index == -1 ? null : visualPosition(index);
+  }
+
+  /// O(1) where the caller supplied a lookup, O(n) otherwise.
+  int _indexOfId(int id) =>
+      widget.findMessageIndex?.call(id) ??
+      _messages.indexWhere((m) => m.id == id);
+
   /// Build the actual SliverAnimatedList content
   Widget _buildAnimatedListContent() {
     return SliverAnimatedList(
       key: _listKey,
       initialItemCount: _messages.length,
-      findChildIndexCallback: (Key key) {
-        // Handle both ValueKey<int> (legacy) and ValueKey<String> (composite key)
-        int? messageId;
-        if (key is ValueKey<int>) {
-          messageId = key.value;
-        } else if (key is ValueKey<String>) {
-          // Composite key format: "$messageId-$reactionsHash-$editedHash"
-          final parts = key.value.split('-');
-          if (parts.isNotEmpty) {
-            messageId = int.tryParse(parts[0]);
-          }
-        }
-
-        if (messageId != null) {
-          // Use O(1) lookup if available, otherwise fall back to O(n) indexWhere
-          final index =
-              widget.findMessageIndex?.call(messageId) ??
-              _messages.indexWhere((m) => m.id == messageId);
-          if (index != -1) {
-            return visualPosition(index);
-          }
-        }
-        return null;
-      },
+      findChildIndexCallback: _findChildIndex,
       itemBuilder: (context, index, animation) {
         if (index < 0 || index >= _messages.length) {
           return const SizedBox.shrink();
@@ -1570,6 +1599,24 @@ class _CometChatAnimatedMessageListState
 
         final message = _messages[contentIndex];
         return RepaintBoundary(
+          // The identity key belongs on the widget the delegate hands back,
+          // not somewhere further down the item's own subtree.
+          //
+          // This list is reversed, so inserting one message shifts every
+          // visual index by one and each slot comes to hold a *different*
+          // message. Whatever key the framework sees at a slot then no longer
+          // matches the element's, Widget.canUpdate says false, and the
+          // element is thrown away and re-inflated — every bubble's State
+          // recreated, on every send, including a plain text one. Audio
+          // bubbles showed it worst because a fresh State starts on a
+          // placeholder waveform with no duration and re-runs an async
+          // file-exists check before it can paint the real thing (ENG-39490).
+          //
+          // With the key here instead, the framework can pair each element
+          // with its message across the shift and leave the rest alone. The
+          // per-message composite key further down still does its own job:
+          // rebuilding that one item when it is edited, deleted or pinned.
+          key: ValueKey<String>(_identityOf(message)),
           child: widget.itemBuilder(context, message, contentIndex, animation),
         );
       },

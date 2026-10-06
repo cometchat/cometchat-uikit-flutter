@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../cometchat_uikit_shared.dart';
+import '../../logging/cometchat_log.dart';
+import '../../clean_architecture/core/utils/ui_event_target.dart';
 
 /// Displays AI-generated conversation starter suggestions as tappable chips.
 ///
@@ -80,7 +82,7 @@ class _CometChatAIConversationStarterViewState
       },
       onError: (error) {
         if (kDebugMode) {
-          debugPrint('Error in AI conversation starter: ${error.details}');
+          ccLog('Error in AI conversation starter: ${error.details}');
         }
         if (mounted) setState(() => _isError = true);
       },
@@ -90,15 +92,10 @@ class _CometChatAIConversationStarterViewState
   }
 
   void _onReplyTapped(String reply) {
-    final id = <String, dynamic>{};
-    String receiverId = '';
-    if (widget.user != null) {
-      receiverId = widget.user!.uid;
-    } else if (widget.group != null) {
-      receiverId = widget.group!.guid;
-    }
-    id['uid'] = receiverId;
-    id['guid'] = receiverId;
+    // Previously this set BOTH uid and guid to the same value, so a group's
+    // guid was also published as a uid. Nothing caught it while matching only
+    // compared keys both sides happened to carry.
+    final id = buildUiEventId(uid: widget.user?.uid, guid: widget.group?.guid);
     CometChatUIEvents.hidePanel(id, CustomUIPosition.messageListBottom);
     CometChatUIEvents.ccComposeMessage(reply, MessageEditStatus.inProgress);
   }

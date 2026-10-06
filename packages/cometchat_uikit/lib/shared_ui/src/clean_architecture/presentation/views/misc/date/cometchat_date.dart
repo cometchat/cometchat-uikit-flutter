@@ -270,6 +270,11 @@ class CometChatDate extends StatelessWidget {
       ),
       child: Text(
         date,
+        // Callers pass `overflow: TextOverflow.ellipsis` in the *style* with no
+        // maxLines, which makes the paragraph ellipsise against whatever height
+        // it is given rather than wrap. One line at default text size (no
+        // visual change), two when the user has scaled up.
+        maxLines: scaledMaxLines(context),
         style: TextStyle(
           color: dateStyle.textColor ?? colorPalette.textSecondary,
           fontSize: typography.caption1?.regular?.fontSize,

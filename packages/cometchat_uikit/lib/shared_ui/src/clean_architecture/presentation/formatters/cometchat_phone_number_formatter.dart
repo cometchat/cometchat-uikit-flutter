@@ -45,18 +45,21 @@ class CometChatPhoneNumberFormatter extends CometChatTextFormatter {
 
   @override
   void handlePreMessageSend(BuildContext context, BaseMessage baseMessage) {
-    // TODO: implement handlePreMessageSend
+    // Nothing to do before send: this formatter only decorates text for display.
   }
 
   @override
   TextStyle getMessageInputTextStyle(BuildContext context) {
-    // TODO: implement messageInputTextStyle
-    throw UnimplementedError();
+    // The phone-number formatter styles matched text in the rendered message, not the
+    // composer input, so it contributes no input style of its own. Returning
+    // the default matches CometChatMarkdownTextFormatter; the previous
+    // UnimplementedError would crash any caller of this public API.
+    return const TextStyle();
   }
 
   @override
   void onScrollToBottom(TextEditingController textEditingController) {
-    // TODO: implement onScrollToBottom
+    // Not used: this formatter holds no scroll-dependent state.
   }
 
   @override
@@ -95,7 +98,7 @@ class CometChatPhoneNumberFormatter extends CometChatTextFormatter {
     TextEditingController textEditingController,
     String previousText,
   ) {
-    // TODO: implement onChange
+    // Not used: matching is done on render, not on each keystroke.
   }
 
   @override

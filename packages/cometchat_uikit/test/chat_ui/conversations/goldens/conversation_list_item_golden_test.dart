@@ -1,5 +1,4 @@
-import 'dart:io' show Platform;
-
+import '../../../helpers/golden_config.dart';
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,10 +9,6 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 /// Whether we're running in CI (GitHub Actions sets CI=true).
 /// When true, skip platform-specific golden variants (Linux/macOS/Windows)
 /// and only run the CI variant (Ahem font, platform-agnostic).
-final bool _isCI =
-    Platform.environment['CI'] == 'true' ||
-    Platform.environment['ALCHEMIST_CI'] == 'true';
-
 // ---------------------------------------------------------------------------
 // Fakes
 // ---------------------------------------------------------------------------
@@ -55,7 +50,6 @@ class _FakeGroup extends Fake implements Group {
 }
 
 class _FakeConversation extends Fake implements Conversation {
-
   // Pin Conversation fields — read by the trailing view's pin glyph.
   @override
   DateTime? get pinnedAt => null;
@@ -180,14 +174,8 @@ Conversation _groupPasswordConv() => _FakeConversation(
 
 void main() {
   // In CI, disable platform-specific golden variants (Linux/Windows).
-  // Only the CI variant (Ahem font, platform-agnostic) runs.
-  // Platform goldens (macOS) are validated locally only.
   AlchemistConfig.runWithConfig(
-    config: AlchemistConfig(
-      platformGoldensConfig: _isCI
-          ? const PlatformGoldensConfig(enabled: false)
-          : const PlatformGoldensConfig(),
-    ),
+    config: goldenConfig(),
     run: () {
       _variantGolden(
         'list_item_user_read',

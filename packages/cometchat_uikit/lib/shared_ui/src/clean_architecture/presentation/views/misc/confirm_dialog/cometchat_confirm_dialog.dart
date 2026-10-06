@@ -205,7 +205,7 @@ class CometChatConfirmDialog {
                       ),
                 )
               : const SizedBox(),
-          title: title ?? const Text("Block this contact?"),
+          title: title ?? Text(Translations.of(context).blockContact),
           titleTextStyle:
               TextStyle(
                     fontSize: typography.heading2?.medium?.fontSize,

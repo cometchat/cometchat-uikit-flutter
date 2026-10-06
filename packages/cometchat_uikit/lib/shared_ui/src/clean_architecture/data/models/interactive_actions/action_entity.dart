@@ -1,6 +1,7 @@
 import '../../../../../cometchat_uikit_shared.dart'
     show ModelFieldConstants, ActionTypeConstants;
 import 'api_action.dart';
+import 'custom_action.dart';
 import 'url_navigation_action.dart';
 
 /// A base class for representing actions in a chat application.
@@ -26,7 +27,7 @@ class ActionEntity {
       return URLNavigationAction.fromMap(map);
     } else if (map[ModelFieldConstants.actionType] ==
         ActionTypeConstants.customAction) {
-      return URLNavigationAction.fromMap(map);
+      return CustomAction.fromMap(map);
     }
     return ActionEntity(actionType: map[ModelFieldConstants.actionType]);
   }

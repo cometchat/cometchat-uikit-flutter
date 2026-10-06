@@ -11,7 +11,6 @@ import 'package:cometchat_chat_uikit/chat_ui/src/conversations/utils/status_indi
 // ---------------------------------------------------------------------------
 
 class FakeConversation extends Fake implements Conversation {
-
   // Pin Conversation fields — read by the trailing view's pin glyph.
   @override
   DateTime? get pinnedAt => null;

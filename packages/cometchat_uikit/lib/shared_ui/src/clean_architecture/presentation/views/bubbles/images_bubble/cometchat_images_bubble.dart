@@ -41,7 +41,13 @@ class CometChatImagesBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final attachments = AttachmentUtils.attachmentsOf(message);
-    if (attachments.isEmpty) return const SizedBox.shrink();
+    final caption = message.caption;
+    final hasCaption = caption != null && caption.trim().isNotEmpty;
+    // A media message can reach us with its attachments missing while still
+    // carrying a caption (the caption is parsed independently of the
+    // attachments). Dropping the whole bubble there silently discarded the
+    // user's text — render the caption on its own instead.
+    if (attachments.isEmpty && !hasCaption) return const SizedBox.shrink();
 
     final resolved = CometChatThemeHelper.getTheme<CometChatImagesBubbleStyle>(
       context: context,
@@ -58,24 +64,24 @@ class CometChatImagesBubble extends StatelessWidget {
     final gridWidth = bubbleWidth - inset * 2;
 
     final children = <Widget>[
-      Padding(
-        padding: const EdgeInsets.all(inset),
-        child: CometChatMediaGrid(
-          style: CometChatMediaGridStyle(
-            cellBorderRadius: resolved.tileBorderRadius,
-            placeholderColor: resolved.placeholderColor,
-            overflowScrimColor: resolved.overflowScrimColor,
-            overflowTextStyle: resolved.overflowTextStyle,
+      if (attachments.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.all(inset),
+          child: CometChatMediaGrid(
+            style: CometChatMediaGridStyle(
+              cellBorderRadius: resolved.tileBorderRadius,
+              placeholderColor: resolved.placeholderColor,
+              overflowScrimColor: resolved.overflowScrimColor,
+              overflowTextStyle: resolved.overflowTextStyle,
+            ),
+            media: attachments,
+            width: gridWidth,
+            gap: resolved.gridSpacing ?? gridGap,
           ),
-          media: attachments,
-          width: gridWidth,
-          gap: resolved.gridSpacing ?? gridGap,
         ),
-      ),
     ];
 
-    final caption = message.caption;
-    if (caption != null && caption.trim().isNotEmpty) {
+    if (hasCaption) {
       children.add(
         CometChatMediaCaption(
           caption: caption,

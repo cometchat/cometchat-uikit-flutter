@@ -137,3 +137,16 @@ class CardMessage extends InteractiveMessage {
     return map;
   }
 }
+
+/// Nameable alias for the interactive-category [CardMessage].
+///
+/// The SDK declares its own `CardMessage`, and it owns that name in every
+/// barrel the Kit exports, so this class is exported with `hide CardMessage`
+/// and cannot be named from outside the package. That left
+/// [CometChatUIKit.sendCardMessage] taking a parameter a consumer could see and
+/// not construct — the Kit itself only gets at it by import-aliasing the file.
+///
+/// This alias is exported normally, so callers can write
+/// `CometChatInteractiveCardMessage(...)` and pass it straight in. The class
+/// keeps its original name for anyone already importing the file directly.
+typedef CometChatInteractiveCardMessage = CardMessage;

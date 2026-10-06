@@ -14,6 +14,7 @@ import '../../presentation/formatters/mentions/cometchat_mentions_formatter.dart
 import 'scheduler_utils.dart';
 import '../../../../l10n/translations.dart';
 import '../../../../src/cometchat_ui_kit/cometchat_ui_kit.dart';
+import '../../../../../src/missed_call_rule.dart';
 
 ///[ConversationUtils] is an Utility class that helps to
 ///the last message for any conversation and also
@@ -141,24 +142,24 @@ class ConversationUtils {
     // Strikethrough (~~text~~)
     result = result.replaceAllMapped(RegExp(r'~~(.+?)~~'), (m) => m[1]!);
     // Blockquote (>> or > at line start)
-    result = result.replaceAll(
+    result = result.replaceAllMapped(
       RegExp(r'(^|\n)>{1,2}\s?', multiLine: true),
-      r'$1',
+      (m) => m[1]!,
     );
     // Headings (# ## ### etc.)
-    result = result.replaceAll(
+    result = result.replaceAllMapped(
       RegExp(r'(^|\n)#{1,6}\s+', multiLine: true),
-      r'$1',
+      (m) => m[1]!,
     );
     // Unordered list markers (- or * at line start)
-    result = result.replaceAll(
+    result = result.replaceAllMapped(
       RegExp(r'(^|\n)[*\-]\s+', multiLine: true),
-      r'$1',
+      (m) => m[1]!,
     );
     // Ordered list markers (1. 2. etc.)
-    result = result.replaceAll(
+    result = result.replaceAllMapped(
       RegExp(r'(^|\n)\d+\.\s+', multiLine: true),
-      r'$1',
+      (m) => m[1]!,
     );
     return result.trim();
   }
@@ -359,10 +360,9 @@ class ConversationUtils {
           subtitle = Translations.of(context).outgoingVdeoCall;
         }
       }
-    } else if (call.callStatus == CallStatusConstants.cancelled ||
-        call.callStatus == CallStatusConstants.unanswered ||
-        call.callStatus == CallStatusConstants.rejected ||
-        call.callStatus == CallStatusConstants.busy) {
+    } else if (MissedCallRule.isMissedStatus(call.callStatus)) {
+      // Missed only for the person who did not start the call: the one rule
+      // the call bubbles and the call logs use too.
       if ((callInitiatorUser != null &&
               conversationWithUser != null &&
               callInitiatorUser.uid == conversationWithUser.uid) ||
@@ -381,6 +381,12 @@ class ConversationUtils {
           subtitle = Translations.of(context).unansweredVideoCall;
         }
       }
+    } else if (call.callStatus == CallStatusConstants.rejected) {
+      // Never missed, and the same on both sides: the chat SDK names whoever
+      // declined as the call's initiator, so its direction cannot be trusted.
+      subtitle = Translations.of(context).callRejected;
+    } else if (call.callStatus == CallStatusConstants.busy) {
+      subtitle = Translations.of(context).callBusy;
     }
     return subtitle;
   }
@@ -776,52 +782,46 @@ class ConversationUtils {
           );
         }
       }
-    } else if (call.callStatus == CallStatusConstants.cancelled ||
-        call.callStatus == CallStatusConstants.unanswered ||
-        call.callStatus == CallStatusConstants.rejected ||
-        call.callStatus == CallStatusConstants.busy) {
-      if ((callInitiatorUser != null &&
+    } else if (MissedCallRule.isMissedStatus(call.callStatus)) {
+      // Missed only for the person who did not start the call; the caller's
+      // own cancelled or unanswered call shows as outgoing.
+      final missed =
+          (callInitiatorUser != null &&
               conversationWithUser != null &&
               callInitiatorUser.uid == conversationWithUser.uid) ||
           (callInitiatorGroup != null &&
               conversationWithGroup != null &&
-              callInitiatorGroup.guid == conversationWithGroup.guid)) {
-        if (call.type == MessageTypeConstants.audio) {
-          subtitle = Image.asset(
-            AssetConstants.audioMissed,
-            package: UIConstants.packageName,
-            color: iconColor ?? colorPalette.iconSecondary,
-            height: 16,
-            width: 16,
-          );
-        } else {
-          subtitle = Image.asset(
-            AssetConstants.videoMissed,
-            package: UIConstants.packageName,
-            color: iconColor ?? colorPalette.iconSecondary,
-            height: 16,
-            width: 16,
-          );
-        }
+              callInitiatorGroup.guid == conversationWithGroup.guid);
+      final String asset;
+      if (call.type == MessageTypeConstants.audio) {
+        asset = missed
+            ? AssetConstants.audioMissed
+            : AssetConstants.voiceOutgoing;
       } else {
-        if (call.type == MessageTypeConstants.audio) {
-          subtitle = Image.asset(
-            AssetConstants.audioMissed,
-            package: UIConstants.packageName,
-            color: iconColor ?? colorPalette.iconSecondary,
-            height: 16,
-            width: 16,
-          );
-        } else {
-          subtitle = Image.asset(
-            AssetConstants.videoMissed,
-            package: UIConstants.packageName,
-            color: iconColor ?? colorPalette.iconSecondary,
-            height: 16,
-            width: 16,
-          );
-        }
+        asset = missed
+            ? AssetConstants.videoMissed
+            : AssetConstants.videoOutgoing;
       }
+      subtitle = Image.asset(
+        asset,
+        package: UIConstants.packageName,
+        color: iconColor ?? colorPalette.iconSecondary,
+        height: 16,
+        width: 16,
+      );
+    } else if (call.callStatus == CallStatusConstants.rejected ||
+        call.callStatus == CallStatusConstants.busy) {
+      // Never missed, and with no direction: the chat SDK names whoever
+      // declined (or was busy) as the call's initiator.
+      subtitle = Image.asset(
+        call.type == MessageTypeConstants.audio
+            ? AssetConstants.callNoFill
+            : AssetConstants.videocamNoFill,
+        package: UIConstants.packageName,
+        color: iconColor ?? colorPalette.iconSecondary,
+        height: 16,
+        width: 16,
+      );
     }
     return subtitle;
   }

@@ -8,6 +8,31 @@ import '../../../formatter/markdown/markdown_text_formatter.dart';
 
 ///[FormatterUtils] is an utility class which is used to style the text in the message bubble and the conversation subtitle
 class FormatterUtils {
+  /// Builds the [WidgetSpan] used for any inline run that needs a box —
+  /// a mention pill, inline code, a code block, a tappable link.
+  ///
+  /// Two things every such span needs, and neither is the default:
+  ///
+  /// **The child must not scale its own text.** `RenderParagraph` already
+  /// scales a placeholder: it sizes the box by the ambient text scale and
+  /// paints the child through a matching transform. A `Text` inside that box
+  /// resolves `MediaQuery.textScaler` a second time, so the run ends up scaled
+  /// twice over — at a system font scale of 2.0 a mention occupied an 80px
+  /// line where the surrounding text took 40px. That is ENG-39492: Android's
+  /// larger default display size made it obvious, but nothing about it is
+  /// platform-specific — it is invisible only at a scale of exactly 1.0.
+  ///
+  /// **The box sits on the middle of the line.** The default,
+  /// [PlaceholderAlignment.bottom], hangs the box below the surrounding
+  /// baseline and grows the line box by roughly the font's ascent.
+  static WidgetSpan _inlineSpan({
+    required Widget child,
+    PlaceholderAlignment alignment = PlaceholderAlignment.middle,
+  }) => WidgetSpan(
+    alignment: alignment,
+    child: MediaQuery.withNoTextScaling(child: child),
+  );
+
   /// Ensures a [MarkdownTextFormatter] is always present in the formatters list.
   ///
   /// - If [formatters] is null or empty, returns `[MarkdownTextFormatter()]`.
@@ -280,7 +305,7 @@ class FormatterUtils {
       }
 
       spans.add(
-        WidgetSpan(
+        _inlineSpan(
           child: Container(
             padding: attr.padding,
             decoration: BoxDecoration(
@@ -367,18 +392,16 @@ class FormatterUtils {
       textSpan.add(
         TextSpan(
           text: beforeText,
-          style: textStyle?.merge(
-            TextStyle(
-              color: alignment == BubbleAlignment.right
-                  ? colorPalette.white
-                  : forConversation
-                  ? colorPalette.textSecondary
-                  : colorPalette.textPrimary,
-              fontWeight: typography.body?.regular?.fontWeight,
-              fontSize: typography.body?.regular?.fontSize,
-              fontFamily: typography.body?.regular?.fontFamily,
-            ),
-          ),
+          style: TextStyle(
+            color: alignment == BubbleAlignment.right
+                ? colorPalette.white
+                : forConversation
+                ? colorPalette.textSecondary
+                : colorPalette.textPrimary,
+            fontWeight: typography.body?.regular?.fontWeight,
+            fontSize: typography.body?.regular?.fontSize,
+            fontFamily: typography.body?.regular?.fontFamily,
+          ).merge(textStyle),
         ),
       );
 
@@ -414,7 +437,7 @@ class FormatterUtils {
           final truncatedText = hasMore ? '$firstLine ...' : firstLine;
 
           textSpan.add(
-            WidgetSpan(
+            _inlineSpan(
               alignment: PlaceholderAlignment.middle,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -449,7 +472,7 @@ class FormatterUtils {
                   : '');
 
           textSpan.add(
-            WidgetSpan(
+            _inlineSpan(
               child: Container(
                 padding: attributedText.padding,
                 decoration: BoxDecoration(
@@ -477,25 +500,6 @@ class FormatterUtils {
                           displayText,
                           style:
                               attributedText.style ??
-                              textStyle?.merge(
-                                TextStyle(
-                                  color: alignment == BubbleAlignment.right
-                                      ? colorPalette.white
-                                      : colorPalette.textPrimary,
-                                  fontWeight:
-                                      typography.body?.regular?.fontWeight,
-                                  fontSize: typography.body?.regular?.fontSize,
-                                  fontFamily:
-                                      typography.body?.regular?.fontFamily,
-                                ),
-                              ),
-                        ),
-                      )
-                    : Text(
-                        displayText,
-                        style:
-                            attributedText.style ??
-                            textStyle?.merge(
                               TextStyle(
                                 color: alignment == BubbleAlignment.right
                                     ? colorPalette.white
@@ -505,8 +509,21 @@ class FormatterUtils {
                                 fontSize: typography.body?.regular?.fontSize,
                                 fontFamily:
                                     typography.body?.regular?.fontFamily,
-                              ),
-                            ),
+                              ).merge(textStyle),
+                        ),
+                      )
+                    : Text(
+                        displayText,
+                        style:
+                            attributedText.style ??
+                            TextStyle(
+                              color: alignment == BubbleAlignment.right
+                                  ? colorPalette.white
+                                  : colorPalette.textPrimary,
+                              fontWeight: typography.body?.regular?.fontWeight,
+                              fontSize: typography.body?.regular?.fontSize,
+                              fontFamily: typography.body?.regular?.fontFamily,
+                            ).merge(textStyle),
                       ),
               ),
             ),
@@ -515,7 +532,7 @@ class FormatterUtils {
           // Block elements (code blocks, blockquotes) — need WidgetSpan for
           // full-width layout, borders, and multi-line content
           textSpan.add(
-            WidgetSpan(
+            _inlineSpan(
               child: Container(
                 padding: attributedText.padding,
                 decoration: BoxDecoration(
@@ -586,14 +603,12 @@ class FormatterUtils {
               .trim();
           final spanStyle =
               attributedText.style ??
-              textStyle?.merge(
-                TextStyle(
-                  color: colorPalette.textSecondary,
-                  fontWeight: typography.body?.regular?.fontWeight,
-                  fontSize: typography.body?.regular?.fontSize,
-                  fontFamily: typography.body?.regular?.fontFamily,
-                ),
-              );
+              TextStyle(
+                color: colorPalette.textSecondary,
+                fontWeight: typography.body?.regular?.fontWeight,
+                fontSize: typography.body?.regular?.fontSize,
+                fontFamily: typography.body?.regular?.fontFamily,
+              ).merge(textStyle);
           textSpan.add(
             TextSpan(
               text: collapsedText,
@@ -617,7 +632,7 @@ class FormatterUtils {
           );
         } else if (attributedText.onTap != null) {
           textSpan.add(
-            WidgetSpan(
+            _inlineSpan(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onTap: () => attributedText.onTap!(displayText),
@@ -625,16 +640,14 @@ class FormatterUtils {
                   displayText,
                   style:
                       attributedText.style ??
-                      textStyle?.merge(
-                        TextStyle(
-                          color: alignment == BubbleAlignment.right
-                              ? colorPalette.white
-                              : colorPalette.textPrimary,
-                          fontWeight: typography.body?.regular?.fontWeight,
-                          fontSize: typography.body?.regular?.fontSize,
-                          fontFamily: typography.body?.regular?.fontFamily,
-                        ),
-                      ),
+                      TextStyle(
+                        color: alignment == BubbleAlignment.right
+                            ? colorPalette.white
+                            : colorPalette.textPrimary,
+                        fontWeight: typography.body?.regular?.fontWeight,
+                        fontSize: typography.body?.regular?.fontSize,
+                        fontFamily: typography.body?.regular?.fontFamily,
+                      ).merge(textStyle),
                 ),
               ),
             ),
@@ -645,16 +658,14 @@ class FormatterUtils {
               text: displayText,
               style:
                   attributedText.style ??
-                  textStyle?.merge(
-                    TextStyle(
-                      color: alignment == BubbleAlignment.right
-                          ? colorPalette.white
-                          : colorPalette.textPrimary,
-                      fontWeight: typography.body?.regular?.fontWeight,
-                      fontSize: typography.body?.regular?.fontSize,
-                      fontFamily: typography.body?.regular?.fontFamily,
-                    ),
-                  ),
+                  TextStyle(
+                    color: alignment == BubbleAlignment.right
+                        ? colorPalette.white
+                        : colorPalette.textPrimary,
+                    fontWeight: typography.body?.regular?.fontWeight,
+                    fontSize: typography.body?.regular?.fontSize,
+                    fontFamily: typography.body?.regular?.fontFamily,
+                  ).merge(textStyle),
             ),
           );
         }
@@ -667,18 +678,16 @@ class FormatterUtils {
       textSpan.add(
         TextSpan(
           text: text.substring(start),
-          style: textStyle?.merge(
-            TextStyle(
-              color: alignment == BubbleAlignment.right
-                  ? colorPalette.white
-                  : forConversation
-                  ? colorPalette.textSecondary
-                  : colorPalette.textPrimary,
-              fontWeight: typography.body?.regular?.fontWeight,
-              fontSize: typography.body?.regular?.fontSize,
-              fontFamily: typography.body?.regular?.fontFamily,
-            ),
-          ),
+          style: TextStyle(
+            color: alignment == BubbleAlignment.right
+                ? colorPalette.white
+                : forConversation
+                ? colorPalette.textSecondary
+                : colorPalette.textPrimary,
+            fontWeight: typography.body?.regular?.fontWeight,
+            fontSize: typography.body?.regular?.fontSize,
+            fontFamily: typography.body?.regular?.fontFamily,
+          ).merge(textStyle),
         ),
       );
     }
@@ -880,16 +889,14 @@ class FormatterUtils {
 
     final defaultStyle =
         attributedText.style ??
-        textStyle?.merge(
-          TextStyle(
-            color: alignment == BubbleAlignment.right
-                ? colorPalette.white
-                : colorPalette.textPrimary,
-            fontWeight: typography.body?.regular?.fontWeight,
-            fontSize: typography.body?.regular?.fontSize,
-            fontFamily: typography.body?.regular?.fontFamily,
-          ),
-        );
+        TextStyle(
+          color: alignment == BubbleAlignment.right
+              ? colorPalette.white
+              : colorPalette.textPrimary,
+          fontWeight: typography.body?.regular?.fontWeight,
+          fontSize: typography.body?.regular?.fontSize,
+          fontFamily: typography.body?.regular?.fontFamily,
+        ).merge(textStyle);
 
     // If this is a block element with underlyingText, apply inline formatters
     if (attributedText.isBlockElement &&
@@ -926,7 +933,7 @@ class FormatterUtils {
               children: _buildInlineSpansFromAttrs(
                 displayText,
                 inlineAttrs,
-                defaultStyle ?? const TextStyle(),
+                defaultStyle,
               ),
             ),
           );

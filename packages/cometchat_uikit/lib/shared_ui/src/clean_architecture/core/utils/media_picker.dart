@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +10,7 @@ import 'package:image_picker_platform_interface/image_picker_platform_interface.
 
 import '../constants/ui_kit_constants.dart';
 import 'platform_utils/platform_file_utils.dart' as platform;
+import '../../../logging/cometchat_log.dart';
 
 enum FileType { image, video, audio, any, custom }
 
@@ -98,9 +100,9 @@ class MediaPicker {
         );
       }
     } catch (e, stack) {
-      debugPrint("Exception in pickMultipleMedia: $e");
-      debugPrint("$stack");
-      checkForPhotoPermission();
+      ccLog("Exception in pickMultipleMedia: $e");
+      ccLog("$stack");
+      unawaited(checkForPhotoPermission());
     }
     return picked;
   }
@@ -116,13 +118,13 @@ class MediaPicker {
       if (image != null) {
         return PickedFile(name: image.name, path: image.path);
       } else {
-        checkForPhotoPermission();
+        unawaited(checkForPhotoPermission());
         return null;
       }
     } catch (e, stack) {
-      debugPrint("Exception in takePhoto: $e");
-      debugPrint("$stack");
-      checkForPhotoPermission();
+      ccLog("Exception in takePhoto: $e");
+      ccLog("$stack");
+      unawaited(checkForPhotoPermission());
       return null;
     }
   }
@@ -213,7 +215,7 @@ class MediaPicker {
       // staged and no explanation. Matches the web branch above.
       return files;
     } on PlatformException catch (e, stack) {
-      debugPrint("$stack");
+      ccLog("$stack");
     } catch (e) {
       rethrow;
     }
@@ -289,7 +291,7 @@ class MediaPicker {
       }
       return null;
     } catch (e) {
-      debugPrint("Web file pick failed: $e");
+      ccLog("Web file pick failed: $e");
       return null;
     }
   }
@@ -433,7 +435,7 @@ class MediaPicker {
         return null;
       }
     } on PlatformException catch (e, stack) {
-      debugPrint("$stack");
+      ccLog("$stack");
     } catch (e) {
       rethrow;
     }
@@ -458,7 +460,7 @@ class MediaPicker {
       "checkCameraPermission",
     );
     if (!granted) {
-      debugPrint("Camera permission not granted");
+      ccLog("Camera permission not granted");
     }
   }
 }

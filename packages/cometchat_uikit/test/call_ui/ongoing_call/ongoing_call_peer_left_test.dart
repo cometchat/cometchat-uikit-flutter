@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cometchat_chat_uikit/call_ui/src/call_event_service.dart';
-import 'package:cometchat_chat_uikit/call_ui/src/call_operations/data/datasources/call_operations_datasource.dart';
 import 'package:cometchat_chat_uikit/call_ui/src/call_operations/di/call_operations_service_locator.dart';
 import 'package:cometchat_chat_uikit/call_ui/src/ongoing_call/bloc/ongoing_call_bloc.dart';
 import 'package:cometchat_chat_uikit/call_ui/src/ongoing_call/bloc/ongoing_call_event.dart';
@@ -13,30 +12,11 @@ import 'package:cometchat_chat_uikit/call_ui/src/ongoing_call/bloc/ongoing_call_
 import 'package:cometchat_chat_uikit/call_ui/src/utils/call_extension_constants.dart';
 import 'package:cometchat_chat_uikit/shared_ui/src/cometchat_ui_kit/cometchat_ui_kit.dart';
 
+import '../helpers/call_bloc_harness.dart';
+
 // ===========================================================================
 // Fakes
 // ===========================================================================
-
-/// Only the three methods the peer-left teardown path actually reaches are
-/// implemented. Anything else throws, so a change that widens the path fails
-/// loudly instead of silently hitting the real SDK.
-class _FakeCallOperationsDataSource extends Fake
-    implements CallOperationsDataSource {
-  int endSessionCount = 0;
-  int endCallCount = 0;
-
-  @override
-  Future<void> waitForCallsSdk() async {}
-
-  @override
-  Future<void> endSession() async => endSessionCount++;
-
-  @override
-  Future<Call> endCall(String sessionId) async {
-    endCallCount++;
-    return _call(receiverType: 'user');
-  }
-}
 
 /// Records the events the bloc processes, so a test can assert that the
 /// auto-teardown did — or did not — queue an [EndCallButtonPressed].
@@ -78,6 +58,20 @@ Call _call({required String receiverType}) => Call(
 
 Participant _participant(String uid) => Participant(uid: uid);
 
+/// The peer in the session, as the Calls SDK lists it: what arms the rule.
+ParticipantListChanged _peerPresent() =>
+    ParticipantListChanged([_participant(_myUid), _participant(_peerUid)]);
+
+/// Hands [participant] joining to the bloc's listeners, as the Calls SDK
+/// does (`onParticipantJoined`).
+void _sdkParticipantJoined(Participant participant) {
+  for (final ParticipantEventListeners listener in List.of(
+    CallSession.getInstance()!.participantEventListeners,
+  )) {
+    listener.onParticipantJoined(participant);
+  }
+}
+
 // ===========================================================================
 // Tests — auto-teardown when the remote party leaves a 1-on-1 session
 //
@@ -89,12 +83,11 @@ Participant _participant(String uid) => Participant(uid: uid);
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late _FakeCallOperationsDataSource dataSource;
+  late FakeCallOperationsDataSource dataSource;
 
-  /// The bloc joins no session here: [CallEventService.isCallsSdkReady] is
-  /// false under test, so LoadCallingScreen bails with an error state before
-  /// touching the native SDK. The participant handlers under test are
-  /// unaffected — they are driven directly.
+  /// The bloc joins as on a device: the harness's ready fake Calls SDK, a
+  /// granted permission channel and the fake datasource's `startSession`.
+  /// The participant handlers under test are driven directly.
   _SpyOngoingCallBloc buildBloc({
     CallWorkFlow workFlow = CallWorkFlow.defaultCalling,
   }) => _SpyOngoingCallBloc(
@@ -103,16 +96,27 @@ void main() {
     callWorkFlow: workFlow,
   );
 
+  /// Waits until [bloc] has joined: participant events only arrive once the
+  /// call view is up (the bloc registers its session listeners then).
+  Future<void> joined(OngoingCallBloc bloc) async {
+    if (bloc.state.status == OngoingCallStatus.active) return;
+    await bloc.stream.firstWhere(
+      (OngoingCallState s) => s.status == OngoingCallStatus.active,
+    );
+  }
+
   setUp(() async {
     await CallOperationsServiceLocator.instance.reset();
-    dataSource = _FakeCallOperationsDataSource();
+    dataSource = FakeCallOperationsDataSource();
     CallOperationsServiceLocator.instance.setup(dataSource: dataSource);
+    await installCallJoinDefaults();
 
     CometChatUIKit.loggedInUser = User(uid: _myUid, name: 'Me');
     CallEventService.instance.activeCall = _call(receiverType: 'user');
   });
 
   tearDown(() async {
+    removeCallJoinDefaults();
     CallEventService.instance.activeCall = null;
     CometChatUIKit.loggedInUser = null;
     await CallOperationsServiceLocator.instance.reset();
@@ -126,7 +130,12 @@ void main() {
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
       'ends the call when the list empties on a 1-on-1 call',
       build: buildBloc,
-      act: (bloc) => bloc.add(const ParticipantListChanged([])),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ParticipantListChanged([]));
+      },
       wait: const Duration(milliseconds: 50),
       verify: (bloc) {
         expect(bloc.endCallPresses, 1);
@@ -138,9 +147,15 @@ void main() {
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
       'does not end the call while the peer is still present',
       build: buildBloc,
-      act: (bloc) => bloc.add(
-        ParticipantListChanged([_participant(_myUid), _participant(_peerUid)]),
-      ),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(
+          ParticipantListChanged([
+            _participant(_myUid),
+            _participant(_peerUid),
+          ]),
+        );
+      },
       wait: const Duration(milliseconds: 50),
       verify: (bloc) {
         expect(bloc.endCallPresses, 0);
@@ -152,7 +167,12 @@ void main() {
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
       'ends the call when only the local user remains',
       build: buildBloc,
-      act: (bloc) => bloc.add(ParticipantListChanged([_participant(_myUid)])),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(ParticipantListChanged([_participant(_myUid)]));
+      },
       wait: const Duration(milliseconds: 50),
       verify: (bloc) => expect(bloc.endCallPresses, 1),
     );
@@ -161,6 +181,7 @@ void main() {
       'a peer-present update followed by an empty one ends the call once',
       build: buildBloc,
       act: (bloc) async {
+        await joined(bloc);
         bloc.add(
           ParticipantListChanged([
             _participant(_myUid),
@@ -184,6 +205,7 @@ void main() {
       'ends the call even when the list has not refreshed yet',
       build: buildBloc,
       act: (bloc) async {
+        await joined(bloc);
         // The list still shows both parties; only excludeUid discounts the
         // leaver, so without it this update would look like a live call.
         bloc.add(
@@ -206,6 +228,7 @@ void main() {
       'does not end the call while another participant remains',
       build: buildBloc,
       act: (bloc) async {
+        await joined(bloc);
         bloc.add(
           ParticipantListChanged([
             _participant(_myUid),
@@ -229,7 +252,10 @@ void main() {
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
       'directCalling (meetings) never auto-ends',
       build: () => buildBloc(workFlow: CallWorkFlow.directCalling),
-      act: (bloc) => bloc.add(const ParticipantListChanged([])),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(const ParticipantListChanged([]));
+      },
       wait: const Duration(milliseconds: 50),
       verify: (bloc) {
         expect(bloc.endCallPresses, 0);
@@ -238,25 +264,60 @@ void main() {
     );
 
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
-      'group calls never auto-end',
+      'P4-C10: a group call never auto-ends, even with no other record',
       build: () {
         CallEventService.instance.activeCall = _call(receiverType: 'group');
         return buildBloc();
       },
-      act: (bloc) => bloc.add(const ParticipantListChanged([])),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ParticipantListChanged([]));
+      },
       wait: const Duration(milliseconds: 50),
       verify: (bloc) => expect(bloc.endCallPresses, 0),
     );
 
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
-      'no active call means no auto-end',
+      'P4-C10: no call record: a 1-on-1 call screen (defaultCalling) still '
+      'ends when the peer leaves',
       build: () {
         CallEventService.instance.activeCall = null;
         return buildBloc();
       },
-      act: (bloc) => bloc.add(const ParticipantListChanged([])),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ParticipantListChanged([]));
+      },
       wait: const Duration(milliseconds: 50),
-      verify: (bloc) => expect(bloc.endCallPresses, 0),
+      verify: (bloc) {
+        expect(bloc.endCallPresses, 1);
+        expect(dataSource.endCallCount, 1);
+      },
+    );
+
+    blocTest<_SpyOngoingCallBloc, OngoingCallState>(
+      'P4-C10: the record of another call does not stop it either',
+      build: () {
+        CallEventService.instance.activeCall = Call(
+          sessionId: 'another',
+          receiverUid: 'group-1',
+          type: 'audio',
+          receiverType: 'group',
+        );
+        return buildBloc();
+      },
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ParticipantListChanged([]));
+      },
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) => expect(bloc.endCallPresses, 1),
     );
 
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
@@ -265,7 +326,9 @@ void main() {
       // Deliberately no awaits between the adds: they all land before the
       // first teardown completes and sets isCallEndedByMe, so _peerLeftHandled
       // is the only thing that can stop a second end-call sequence.
-      act: (bloc) {
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
         bloc.add(const ParticipantListChanged([]));
         bloc.add(const ParticipantListChanged([]));
         bloc.add(ParticipantLeft(_participant(_peerUid)));
@@ -282,6 +345,9 @@ void main() {
       'a locally-ended call does not auto-end a second time',
       build: buildBloc,
       act: (bloc) async {
+        await joined(bloc);
+        bloc.add(_peerPresent());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
         bloc.add(const EndCallButtonPressed());
         await Future<void>.delayed(const Duration(milliseconds: 30));
         bloc.add(const ParticipantListChanged([]));
@@ -296,36 +362,72 @@ void main() {
   });
 
   // =========================================================================
-  // Pre-join behaviour
+  // Pre-join behaviour (owner, round 4)
   //
-  // Reviewed on PR #585: an empty participant list is ambiguous — it can mean
-  // "the peer left" or "the peer has not joined yet" — so the question was
-  // whether a `_peerEverJoined` latch is needed to stop a call ending before
-  // it is answered.
-  //
-  // It is not, because this bloc cannot exist before the call is answered.
-  // Every defaultCalling construction site is post-acceptance
-  // (OutgoingCallBloc._onOutgoingCallAccepted, IncomingCallBloc after
-  // acceptCall, and the two VoIP accept paths in master_app); the two
-  // remaining sites pass directCalling, which the first guard rejects.
-  // OutgoingCallBloc — the screen that is up while the callee's device rings
-  // — never joins a session at all. Listeners are also attached only after
-  // startSession succeeds, so no callback can arrive before the local join.
-  //
-  // A latch keyed on `_otherCount(...) > 0` would also be unsafe here: on iOS
-  // the native Calls SDK emits no participant join/leave events, so if a
-  // populated list never arrives the latch would never set and the teardown
-  // this PR adds would silently stop working.
-  //
-  // The test below pins that decision: teardown on an empty list is
-  // unconditional by design, not by oversight.
+  // An empty participant list is ambiguous: "the peer left" or "the peer has
+  // not joined the media yet". After the accept each side joins on its own
+  // (the caller may still be on a permission prompt, then waits for the
+  // Calls SDK, the token and the native join), so the first side in used to
+  // see a list with only itself and end the call at once. The rule is armed
+  // only once another participant has been seen: in a list, joining, or
+  // leaving. There is no "peer never joined" timer (owner); the native 1:1
+  // auto-end and the idle timeout remain the fallbacks.
   // =========================================================================
 
-  group('pre-join behaviour (documents the no-latch decision)', () {
+  group('pre-join behaviour: armed only once the peer was seen', () {
     blocTest<_SpyOngoingCallBloc, OngoingCallState>(
-      'an empty list ends the call even if no peer was ever seen',
+      'P4-E13/P4-E90: an empty list before the peer was ever seen does not '
+      'end the call',
       build: buildBloc,
-      act: (bloc) => bloc.add(const ParticipantListChanged([])),
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(const ParticipantListChanged([]));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(ParticipantListChanged([_participant(_myUid)]));
+      },
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) {
+        expect(bloc.endCallPresses, 0);
+        expect(dataSource.endCallCount, 0);
+        expect(bloc.state.status, OngoingCallStatus.active);
+      },
+    );
+
+    blocTest<_SpyOngoingCallBloc, OngoingCallState>(
+      'P4-E90: the peer joining (onParticipantJoined) arms it: an empty list '
+      'after that ends the call',
+      build: buildBloc,
+      act: (bloc) async {
+        await joined(bloc);
+        _sdkParticipantJoined(_participant(_peerUid));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ParticipantListChanged([]));
+      },
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) => expect(bloc.endCallPresses, 1),
+    );
+
+    blocTest<_SpyOngoingCallBloc, OngoingCallState>(
+      'the logged-in user joining does not arm it',
+      build: buildBloc,
+      act: (bloc) async {
+        await joined(bloc);
+        _sdkParticipantJoined(_participant(_myUid));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ParticipantListChanged([]));
+      },
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) => expect(bloc.endCallPresses, 0),
+    );
+
+    blocTest<_SpyOngoingCallBloc, OngoingCallState>(
+      'a peer leaving was in the session: it ends the call even with no list '
+      'seen first',
+      build: buildBloc,
+      act: (bloc) async {
+        await joined(bloc);
+        bloc.add(ParticipantLeft(_participant(_peerUid)));
+      },
       wait: const Duration(milliseconds: 50),
       verify: (bloc) => expect(bloc.endCallPresses, 1),
     );

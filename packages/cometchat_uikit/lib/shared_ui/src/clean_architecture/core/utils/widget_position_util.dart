@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../logging/cometchat_log.dart';
 
 class WidgetPositionUtil {
   static RelativeRect? getWidgetPosition(
@@ -8,7 +9,7 @@ class WidgetPositionUtil {
     // Check if widget is mounted
     if (widgetKey.currentContext == null ||
         !widgetKey.currentContext!.mounted) {
-      debugPrint("Widget is not mounted, skipping position calculation.");
+      ccLog("Widget is not mounted, skipping position calculation.");
       return null;
     }
 
@@ -30,11 +31,11 @@ class WidgetPositionUtil {
           offset.dy + renderBox.size.height + verticalOffset,
         );
       } else {
-        debugPrint("RenderBox is null, position calculation failed.");
+        ccLog("RenderBox is null, position calculation failed.");
       }
     } catch (e, stackTrace) {
-      debugPrint("Exception while calculating position: $e");
-      debugPrint("Stack trace: $stackTrace");
+      ccLog("Exception while calculating position: $e");
+      ccLog("Stack trace: $stackTrace");
     }
 
     return null;

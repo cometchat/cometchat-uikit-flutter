@@ -1,6 +1,7 @@
 // The analyzer's valid_regexps lint cannot statically verify unicode
 // property escapes (\p{...}), but the regex is valid at runtime with
-// unicode: true. Verified by unit tests.
+// unicode: true. Verified by test/shared_ui/emoji_utils_test.dart, whose
+// first access constructs the RegExp.
 // ignore_for_file: valid_regexps
 
 /// Utility for detecting emoji-only messages and determining display sizes.

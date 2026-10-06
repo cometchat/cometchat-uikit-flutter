@@ -1,5 +1,4 @@
-import 'dart:io' show Platform;
-
+import '../../../helpers/golden_config.dart';
 import 'package:alchemist/alchemist.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:flutter/material.dart';
@@ -7,10 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 /// Whether we're running in CI.
-final bool _isCI =
-    Platform.environment['CI'] == 'true' ||
-    Platform.environment['ALCHEMIST_CI'] == 'true';
-
 // ---------------------------------------------------------------------------
 // Fakes
 // ---------------------------------------------------------------------------
@@ -44,7 +39,6 @@ class _FakeGroup extends Fake implements Group {
 }
 
 class _FakeConversation extends Fake implements Conversation {
-
   // Pin Conversation fields — read by the trailing view's pin glyph.
   @override
   DateTime? get pinnedAt => null;
@@ -181,11 +175,7 @@ Widget _fullScreenConversations({required Brightness brightness}) {
 
 void main() {
   AlchemistConfig.runWithConfig(
-    config: AlchemistConfig(
-      platformGoldensConfig: _isCI
-          ? const PlatformGoldensConfig(enabled: false)
-          : const PlatformGoldensConfig(),
-    ),
+    config: goldenConfig(),
     run: () {
       goldenTest(
         'full screen conversations - light mode',

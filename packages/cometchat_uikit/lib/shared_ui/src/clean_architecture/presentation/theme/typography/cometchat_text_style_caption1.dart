@@ -42,12 +42,19 @@ class CometChatTextStyleCaption1
     );
   }
 
-  static CometChatTextStyleCaption1 of(BuildContext context) =>
-      CometChatTextStyleCaption1(
-        bold: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w700),
-        medium: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w500),
-        regular: _ccTextStyle(context).copyWith(fontWeight: FontWeight.w400),
-      );
+  /// Resolves the default type for this role, then lets a
+  /// [CometChatTextStyleCaption1] supplied through `ThemeData.extensions`
+  /// override it. Merge direction is `default.merge(supplied)` so the
+  /// caller wins; the reverse silently discards their style.
+  static CometChatTextStyleCaption1 of(BuildContext context) {
+    final ext = Theme.of(context).extension<CometChatTextStyleCaption1>();
+    final base = _ccTextStyle(context);
+    return CometChatTextStyleCaption1(
+      bold: base.copyWith(fontWeight: FontWeight.w700).merge(ext?.bold),
+      medium: base.copyWith(fontWeight: FontWeight.w500).merge(ext?.medium),
+      regular: base.copyWith(fontWeight: FontWeight.w400).merge(ext?.regular),
+    );
+  }
 
   static TextStyle _ccTextStyle(BuildContext context) {
     return const TextStyle(fontSize: 12, fontWeight: FontWeight.w700);
