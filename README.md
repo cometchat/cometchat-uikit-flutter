@@ -15,7 +15,7 @@ CometChat UIKit for Flutter provides pre-built UI components to quickly add chat
 | Directory | Description |
 |-----------|-------------|
 | [packages/cometchat_uikit](packages/cometchat_uikit#readme) | The open source UIKit package (local setup, structure, tests) |
-| [packages/cometchat_uikit/skills](packages/cometchat_uikit/skills#readme) | Kiro AI skills for consumers and contributors |
+| [packages/cometchat_uikit/skills](packages/cometchat_uikit/skills#readme) | AI skills for consumers and contributors |
 | [examples/sample_app](examples/sample_app#readme) | Sample app demonstrating UIKit usage |
 | [examples/ai_sample_app](examples/ai_sample_app#readme) | AI-powered sample app with CometChat AI agents |
 
@@ -47,7 +47,7 @@ Add the UIKit to your project's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  cometchat_chat_uikit: ^6.1.0
+  cometchat_chat_uikit: ^6.2.0
 ```
 
 Then run:
@@ -65,10 +65,6 @@ Refer to our [official documentation](https://www.cometchat.com/docs/ui-kit/flut
 For bugs and feature requests in the UIKit itself, open an issue on this repository.
 
 For account, billing, or integration questions, consult our [documentation](https://www.cometchat.com/docs/ui-kit/flutter/v6/overview), create a [support ticket](https://help.cometchat.com/hc/en-us), or seek real-time support via the [CometChat Dashboard](https://app.cometchat.com/).
-
-## Security
-
-To report a security vulnerability, email security@cometchat.com. Please do not open a public issue for security reports.
 
 ## License
 
