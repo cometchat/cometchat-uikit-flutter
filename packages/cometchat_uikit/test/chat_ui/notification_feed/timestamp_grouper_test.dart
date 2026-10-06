@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 import 'package:cometchat_chat_uikit/chat_ui/src/notification_feed/utils/timestamp_grouper.dart';
 
@@ -264,33 +265,78 @@ void main() {
   });
 
   group('getRelativeTime', () {
-    test('returns "Just now" for very recent timestamps', () {
+    // getRelativeTime does not produce relative strings ("3h ago"); it returns
+    // the time of day for today, 'Yesterday', a weekday name within the week,
+    // and dd/MM/yyyy beyond that. These tests previously asserted a relative
+    // format that the function has never implemented, so all three failed on
+    // every run.
+    //
+    // Timestamps are anchored to midday rather than derived by subtracting
+    // from DateTime.now(): subtracting hours crosses midnight when the suite
+    // runs in the small hours, which would silently move a case into the
+    // 'Yesterday' branch.
+
+    test('returns the time of day for a timestamp earlier today', () {
       final now = DateTime.now();
+      final middayToday = DateTime(now.year, now.month, now.day, 12);
+
       final result = getRelativeTime(
-        now.millisecondsSinceEpoch ~/ 1000,
+        middayToday.millisecondsSinceEpoch ~/ 1000,
         'en_US',
       );
-      expect(result, 'Just now');
+
+      expect(result, DateFormat.jm('en_US').format(middayToday));
     });
 
-    test('returns minutes ago for timestamps within the hour', () {
-      final tenMinutesAgo = DateTime.now().subtract(
-        const Duration(minutes: 10),
-      );
+    test("returns 'Yesterday' for a timestamp on the previous day", () {
+      final now = DateTime.now();
+      final middayYesterday = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        12,
+      ).subtract(const Duration(days: 1));
+
       final result = getRelativeTime(
-        tenMinutesAgo.millisecondsSinceEpoch ~/ 1000,
+        middayYesterday.millisecondsSinceEpoch ~/ 1000,
         'en_US',
       );
-      expect(result, '10m ago');
+
+      expect(result, 'Yesterday');
     });
 
-    test('returns hours ago for timestamps within the day', () {
-      final threeHoursAgo = DateTime.now().subtract(const Duration(hours: 3));
+    test('returns the weekday name for a timestamp earlier this week', () {
+      final now = DateTime.now();
+      final threeDaysAgo = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        12,
+      ).subtract(const Duration(days: 3));
+
       final result = getRelativeTime(
-        threeHoursAgo.millisecondsSinceEpoch ~/ 1000,
+        threeDaysAgo.millisecondsSinceEpoch ~/ 1000,
         'en_US',
       );
-      expect(result, '3h ago');
+
+      expect(result, DateFormat.EEEE('en_US').format(threeDaysAgo));
+    });
+
+    test('returns a full date for a timestamp older than a week', () {
+      final now = DateTime.now();
+      final tenDaysAgo = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        12,
+      ).subtract(const Duration(days: 10));
+
+      final result = getRelativeTime(
+        tenDaysAgo.millisecondsSinceEpoch ~/ 1000,
+        'en_US',
+      );
+
+      expect(result, DateFormat('dd/MM/yyyy').format(tenDaysAgo));
     });
   });
 }

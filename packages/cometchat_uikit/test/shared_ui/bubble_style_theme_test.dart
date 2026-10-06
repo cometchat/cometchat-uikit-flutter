@@ -58,9 +58,7 @@ void main() {
           message: fileMessage(),
           alignment: BubbleAlignment.left,
         ),
-        extensions: const [
-          CometChatFilesBubbleStyle(backgroundColor: themed),
-        ],
+        extensions: const [CometChatFilesBubbleStyle(backgroundColor: themed)],
       ),
     );
     await tester.pump();
@@ -77,13 +75,9 @@ void main() {
         CometChatFilesBubble(
           message: fileMessage(),
           alignment: BubbleAlignment.left,
-          style: const CometChatFilesBubbleStyle(
-            backgroundColor: widgetLevel,
-          ),
+          style: const CometChatFilesBubbleStyle(backgroundColor: widgetLevel),
         ),
-        extensions: const [
-          CometChatFilesBubbleStyle(backgroundColor: themed),
-        ],
+        extensions: const [CometChatFilesBubbleStyle(backgroundColor: themed)],
       ),
     );
     await tester.pump();

@@ -267,32 +267,42 @@ void main() {
     // =====================================================================
 
     group('lerp', () {
+      // Plain Color, not Colors.red and friends. Those are MaterialColor, and
+      // Color.lerp returns a plain Color — ColorSwatch's operator== requires a
+      // matching type, so the comparison failed even though every channel was
+      // identical. The colours themselves are arbitrary; only "t=0 yields the
+      // first, t=1 yields the second" is under test.
+      const colorA = Color(0xFFFF0000);
+      const colorB = Color(0xFF0000FF);
+      const colorC = Color(0xFF00FF00);
+      const colorD = Color(0xFFFFA500);
+
       test('lerp at t=0 returns this style', () {
         const styleA = CometChatMessageListStyle(
-          backgroundColor: Colors.red,
-          emptyStateTextColor: Colors.green,
+          backgroundColor: colorA,
+          emptyStateTextColor: colorC,
         );
         const styleB = CometChatMessageListStyle(
-          backgroundColor: Colors.blue,
-          emptyStateTextColor: Colors.orange,
+          backgroundColor: colorB,
+          emptyStateTextColor: colorD,
         );
         final result = styleA.lerp(styleB, 0.0);
-        expect(result.backgroundColor, Colors.red);
-        expect(result.emptyStateTextColor, Colors.green);
+        expect(result.backgroundColor, colorA);
+        expect(result.emptyStateTextColor, colorC);
       });
 
       test('lerp at t=1 returns other style', () {
         const styleA = CometChatMessageListStyle(
-          backgroundColor: Colors.red,
-          emptyStateTextColor: Colors.green,
+          backgroundColor: colorA,
+          emptyStateTextColor: colorC,
         );
         const styleB = CometChatMessageListStyle(
-          backgroundColor: Colors.blue,
-          emptyStateTextColor: Colors.orange,
+          backgroundColor: colorB,
+          emptyStateTextColor: colorD,
         );
         final result = styleA.lerp(styleB, 1.0);
-        expect(result.backgroundColor, Colors.blue);
-        expect(result.emptyStateTextColor, Colors.orange);
+        expect(result.backgroundColor, colorB);
+        expect(result.emptyStateTextColor, colorD);
       });
 
       test('lerp at t=0.5 interpolates colors', () {

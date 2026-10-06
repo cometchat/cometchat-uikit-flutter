@@ -3,6 +3,8 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart';
 
+import 'package:cometchat_chat_uikit/shared_ui/src/cometchat_ui_kit/cometchat_ui_kit.dart'
+    show CometChatUIKit;
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/bloc/message_list_bloc.dart';
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/bloc/message_list_event.dart';
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/bloc/message_list_state.dart';
@@ -134,6 +136,10 @@ class FakeConversation extends Fake implements Conversation {
 
   @override
   int get unreadMessageCount => 0;
+
+  // Read on load once a logged-in user is known (the unread anchor).
+  @override
+  int? get lastReadMessageId => null;
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +513,13 @@ void main() {
       blocTest<MessageListBloc, MessageListState>(
         'state tracks loggedInUser after load',
         build: () {
+          // The bloc takes the logged-in user from the UIKit-level cache, not
+          // the injected getLoggedInUserUseCase: ENG-34111 swapped them to
+          // avoid a platform-channel call per load (see _onLoadMessages).
+          // Seed that cache directly, and restore it afterwards.
+          final previous = CometChatUIKit.loggedInUser;
+          CometChatUIKit.loggedInUser = FakeUser();
+          addTearDown(() => CometChatUIKit.loggedInUser = previous);
           final msgs = [FakeTextMessage(1)];
           when(
             () => repo.getMessages(

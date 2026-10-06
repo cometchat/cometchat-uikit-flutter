@@ -166,7 +166,7 @@ void main() {
 
       final notifier = bloc.getStatusNotifier('uid_1');
       expect(notifier.value, isNotNull);
-      bloc.close();
+      await bloc.close();
     });
 
     test('usersStatusVisibility=false still allows getStatusNotifier', () {
@@ -396,7 +396,7 @@ void main() {
     );
 
     blocTest<UsersBloc, UsersState>(
-      'LoadMoreUsers sets hasMore=false when fewer than 30 returned',
+      'LoadMoreUsers keeps hasMore after a short page, as Android does',
       build: () {
         var callCount = 0;
         when(
@@ -428,7 +428,40 @@ void main() {
       },
       wait: const Duration(milliseconds: 200),
       verify: (bloc) {
+        // Only an empty page ends paging; the SDK answers the request after
+        // the last page from its page count.
         final state = bloc.state as UsersLoaded;
+        expect(state.users, hasLength(35));
+        expect(state.hasMore, isTrue);
+      },
+    );
+
+    blocTest<UsersBloc, UsersState>(
+      'LoadMoreUsers sets hasMore=false when a page comes back empty',
+      build: () {
+        var callCount = 0;
+        when(
+          () => repo.getUsers(
+            limit: any(named: 'limit'),
+            searchKeyword: any(named: 'searchKeyword'),
+            usersRequestBuilder: any(named: 'usersRequestBuilder'),
+          ),
+        ).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) return Success(_generateUsers(5));
+          return const Success(<User>[]);
+        });
+        return _makeBloc(repo);
+      },
+      act: (bloc) async {
+        bloc.add(const LoadUsers());
+        await Future.delayed(const Duration(milliseconds: 100));
+        bloc.add(const LoadMoreUsers());
+      },
+      wait: const Duration(milliseconds: 200),
+      verify: (bloc) {
+        final state = bloc.state as UsersLoaded;
+        expect(state.users, hasLength(5));
         expect(state.hasMore, isFalse);
       },
     );

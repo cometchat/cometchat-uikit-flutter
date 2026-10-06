@@ -140,9 +140,20 @@ void _stubRepo(MockMessageListRepository repo, {List<BaseMessage>? messages}) {
 // Tests
 // ---------------------------------------------------------------------------
 
+/// A fixed anchor instead of the wall clock.
+///
+/// These cases assert calendar-day arithmetic on their own fixtures — "an hour
+/// ago is still today", "two messages five minutes apart share a separator".
+/// Anchored to `DateTime.now()` those statements are only true for 23 of every
+/// 24 hours: inside the first hour after midnight, "an hour ago" is yesterday,
+/// and the suite went red for reasons unrelated to any change (ENG-38856).
+/// Mid-afternoon on a mid-month day keeps every offset used below — up to 30
+/// days back — clear of a day, month or year boundary.
+final _now = DateTime(2026, 6, 15, 14, 30);
+
 void main() {
   setUpAll(() {
-    registerFallbackValue(FakeTextMessage(0, sentAt: DateTime.now()));
+    registerFallbackValue(FakeTextMessage(0, sentAt: _now));
     registerFallbackValue(FakeMessagesRequest());
     registerFallbackValue(FakeConversation());
   });
@@ -164,7 +175,7 @@ void main() {
 
     group('Today messages', () {
       test('message sent today has sentAt on same day as now', () {
-        final now = DateTime.now();
+        final now = _now;
         final message = FakeTextMessage(1, sentAt: now);
         final sentDate = message.sentAt!;
         expect(sentDate.year, equals(now.year));
@@ -173,14 +184,14 @@ void main() {
       });
 
       test('message sent 1 hour ago is still today', () {
-        final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
+        final oneHourAgo = _now.subtract(const Duration(hours: 1));
         final message = FakeTextMessage(1, sentAt: oneHourAgo);
-        final now = DateTime.now();
+        final now = _now;
         expect(message.sentAt!.day, equals(now.day));
       });
 
       test('message sent at midnight boundary is today', () {
-        final now = DateTime.now();
+        final now = _now;
         final midnight = DateTime(now.year, now.month, now.day, 0, 0, 1);
         final message = FakeTextMessage(1, sentAt: midnight);
         expect(message.sentAt!.day, equals(now.day));
@@ -193,9 +204,9 @@ void main() {
 
     group('Yesterday messages', () {
       test('message sent yesterday has sentAt one day before today', () {
-        final yesterday = DateTime.now().subtract(const Duration(days: 1));
+        final yesterday = _now.subtract(const Duration(days: 1));
         final message = FakeTextMessage(1, sentAt: yesterday);
-        final now = DateTime.now();
+        final now = _now;
         final diff = DateTime(now.year, now.month, now.day)
             .difference(
               DateTime(
@@ -209,9 +220,7 @@ void main() {
       });
 
       test('message sent 36 hours ago may be yesterday', () {
-        final thirtyySixHoursAgo = DateTime.now().subtract(
-          const Duration(hours: 36),
-        );
+        final thirtyySixHoursAgo = _now.subtract(const Duration(hours: 36));
         final message = FakeTextMessage(1, sentAt: thirtyySixHoursAgo);
         expect(message.sentAt, isNotNull);
         // Depending on current time, this could be yesterday or 2 days ago
@@ -224,9 +233,9 @@ void main() {
 
     group('Older messages', () {
       test('message sent 2 days ago is older than yesterday', () {
-        final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2));
+        final twoDaysAgo = _now.subtract(const Duration(days: 2));
         final message = FakeTextMessage(1, sentAt: twoDaysAgo);
-        final now = DateTime.now();
+        final now = _now;
         final diff = DateTime(now.year, now.month, now.day)
             .difference(
               DateTime(
@@ -240,9 +249,9 @@ void main() {
       });
 
       test('message sent 7 days ago is older', () {
-        final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+        final weekAgo = _now.subtract(const Duration(days: 7));
         final message = FakeTextMessage(1, sentAt: weekAgo);
-        final now = DateTime.now();
+        final now = _now;
         final diff = DateTime(now.year, now.month, now.day)
             .difference(
               DateTime(
@@ -256,9 +265,9 @@ void main() {
       });
 
       test('message sent 30 days ago is older', () {
-        final monthAgo = DateTime.now().subtract(const Duration(days: 30));
+        final monthAgo = _now.subtract(const Duration(days: 30));
         final message = FakeTextMessage(1, sentAt: monthAgo);
-        final now = DateTime.now();
+        final now = _now;
         final diff = DateTime(now.year, now.month, now.day)
             .difference(
               DateTime(
@@ -272,9 +281,9 @@ void main() {
       });
 
       test('message from previous year is older', () {
-        final lastYear = DateTime(DateTime.now().year - 1, 6, 15, 10, 30);
+        final lastYear = DateTime(_now.year - 1, 6, 15, 10, 30);
         final message = FakeTextMessage(1, sentAt: lastYear);
-        expect(message.sentAt!.year, lessThan(DateTime.now().year));
+        expect(message.sentAt!.year, lessThan(_now.year));
       });
     });
 
@@ -284,7 +293,7 @@ void main() {
 
     group('Date separator logic', () {
       test('messages on same day share a date separator', () {
-        final now = DateTime.now();
+        final now = _now;
         final msg1 = FakeTextMessage(1, sentAt: now);
         final msg2 = FakeTextMessage(
           2,
@@ -297,7 +306,7 @@ void main() {
       });
 
       test('messages on different days have different date separators', () {
-        final today = DateTime.now();
+        final today = _now;
         final yesterday = today.subtract(const Duration(days: 1));
         final msg1 = FakeTextMessage(1, sentAt: today);
         final msg2 = FakeTextMessage(2, sentAt: yesterday);
@@ -316,7 +325,7 @@ void main() {
       });
 
       test('messages spanning multiple days produce multiple separators', () {
-        final now = DateTime.now();
+        final now = _now;
         final messages = [
           FakeTextMessage(1, sentAt: now),
           FakeTextMessage(2, sentAt: now.subtract(const Duration(days: 1))),
@@ -368,7 +377,7 @@ void main() {
 
     group('Message ordering by timestamp', () {
       test('messages are loaded and state preserves sentAt order', () async {
-        final now = DateTime.now();
+        final now = _now;
         final messages = [
           FakeTextMessage(1, sentAt: now.subtract(const Duration(minutes: 30))),
           FakeTextMessage(2, sentAt: now.subtract(const Duration(minutes: 20))),
@@ -396,7 +405,7 @@ void main() {
 
       test('null sentAt message is still stored in state', () async {
         // Edge case: message with null sentAt
-        final messages = [FakeTextMessage(1, sentAt: DateTime.now())];
+        final messages = [FakeTextMessage(1, sentAt: _now)];
         _stubRepo(repo, messages: messages);
 
         final bloc = _makeBloc(repo);
@@ -420,7 +429,7 @@ void main() {
 
     group('Edge cases', () {
       test('message at exact midnight boundary', () {
-        final now = DateTime.now();
+        final now = _now;
         final midnight = DateTime(now.year, now.month, now.day);
         final justBeforeMidnight = midnight.subtract(
           const Duration(seconds: 1),

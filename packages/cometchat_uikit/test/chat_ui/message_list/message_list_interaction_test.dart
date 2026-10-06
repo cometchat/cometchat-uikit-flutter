@@ -3,6 +3,8 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart';
 
+import 'package:cometchat_chat_uikit/shared_ui/src/clean_architecture/core/constants/enums.dart'
+    as core_enums;
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/bloc/message_list_bloc.dart';
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/bloc/message_list_event.dart';
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/bloc/message_list_state.dart';
@@ -333,7 +335,11 @@ void main() {
       blocTest<MessageListBloc, MessageListState>(
         'LoadOlderMessages is no-op when already loading older',
         build: () {
-          final initialMsgs = [FakeTextMessage(10)];
+          // A full page. The initial load sets hasMoreOlder from
+          // `intercepted.length >= 30`, so a shorter page makes the bloc
+          // conclude there is nothing older and LoadOlderMessages correctly
+          // no-ops — which is not what this test is about.
+          final initialMsgs = List.generate(30, (i) => FakeTextMessage(i + 1));
           when(
             () => repo.getMessages(
               conversationWith: any(named: 'conversationWith'),
@@ -380,7 +386,11 @@ void main() {
       blocTest<MessageListBloc, MessageListState>(
         'LoadOlderMessages is no-op when hasMoreOlder is false',
         build: () {
-          final initialMsgs = [FakeTextMessage(10)];
+          // A full page. The initial load sets hasMoreOlder from
+          // `intercepted.length >= 30`, so a shorter page makes the bloc
+          // conclude there is nothing older and LoadOlderMessages correctly
+          // no-ops — which is not what this test is about.
+          final initialMsgs = List.generate(30, (i) => FakeTextMessage(i + 1));
           when(
             () => repo.getMessages(
               conversationWith: any(named: 'conversationWith'),
@@ -787,12 +797,30 @@ void main() {
             ),
           );
           await Future.delayed(const Duration(milliseconds: 100));
+          // Production dispatches the enum's toString(), and a new message
+          // enters the list on `inProgress`; `sent` then updates that pending
+          // entry in place. This test used to send the bare string 'sent',
+          // which matches neither branch, and expect an insert.
+          // As in production: the pending copy has no server id yet, and the
+          // copy the SDK returns carries one, matched back to it by muid.
           bloc.add(
-            MessageSentByUser(message: FakeTextMessage(2), status: 'sent'),
+            MessageSentByUser(
+              message: FakeTextMessage(0, muid: 'muid_2'),
+              status: core_enums.MessageStatus.inProgress.toString(),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 20));
+          bloc.add(
+            MessageSentByUser(
+              message: FakeTextMessage(2, muid: 'muid_2'),
+              status: core_enums.MessageStatus.sent.toString(),
+            ),
           );
         },
         verify: (bloc) {
-          expect(bloc.state.messages.length, 2);
+          // Inserted once on inProgress, not duplicated on sent, and the
+          // server copy (id 2) takes the pending entry's place.
+          expect(bloc.state.messages.map((m) => m.id).toList(), [1, 2]);
         },
       );
     });

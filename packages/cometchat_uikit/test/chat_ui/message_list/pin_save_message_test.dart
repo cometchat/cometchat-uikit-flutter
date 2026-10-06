@@ -36,16 +36,15 @@ BaseMessage _message({
   DateTime? pinnedAt,
   String? pinnedBy,
   DateTime? savedAt,
-}) =>
-    BaseMessage(
-      id: id,
-      receiverUid: 'r1',
-      type: 'text',
-      receiverType: 'group',
-      pinnedAt: pinnedAt,
-      pinnedBy: pinnedBy,
-      savedAt: savedAt,
-    );
+}) => BaseMessage(
+  id: id,
+  receiverUid: 'r1',
+  type: 'text',
+  receiverType: 'group',
+  pinnedAt: pinnedAt,
+  pinnedBy: pinnedBy,
+  savedAt: savedAt,
+);
 
 void main() {
   group('Option ids', () {
@@ -56,10 +55,17 @@ void main() {
       expect(MessageOptionConstants.unsaveMessage, 'unsaveMessage');
       expect(legacy_constants.MessageOptionConstants.pinMessage, 'pinMessage');
       expect(
-          legacy_constants.MessageOptionConstants.unpinMessage, 'unpinMessage');
-      expect(legacy_constants.MessageOptionConstants.saveMessage, 'saveMessage');
-      expect(legacy_constants.MessageOptionConstants.unsaveMessage,
-          'unsaveMessage');
+        legacy_constants.MessageOptionConstants.unpinMessage,
+        'unpinMessage',
+      );
+      expect(
+        legacy_constants.MessageOptionConstants.saveMessage,
+        'saveMessage',
+      );
+      expect(
+        legacy_constants.MessageOptionConstants.unsaveMessage,
+        'unsaveMessage',
+      );
     });
   });
 
@@ -143,29 +149,35 @@ void main() {
 
     // Pinned messages moved from a standalone header icon into the ⋯
     // overflow menu, so the entry only exists once the menu is opened.
-    testWidgets('pinned entry is reachable from the ⋯ menu by default',
-        (tester) async {
+    testWidgets('pinned entry is reachable from the ⋯ menu by default', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(visible: true));
       await tester.pump();
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
-      expect(find.byIcon(Icons.push_pin_outlined), findsNothing,
-          reason: 'the entry lives in the menu, not the header itself');
+      expect(
+        find.byIcon(Icons.push_pin_outlined),
+        findsNothing,
+        reason: 'the entry lives in the menu, not the header itself',
+      );
 
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
     });
 
-    testWidgets('no ⋯ menu when visibility is off and nothing else to show',
-        (tester) async {
+    testWidgets('no ⋯ menu when visibility is off and nothing else to show', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(visible: false));
       await tester.pump();
       expect(find.byIcon(Icons.more_vert), findsNothing);
       expect(find.byIcon(Icons.push_pin_outlined), findsNothing);
     });
 
-    testWidgets('no pin icon in thread mode (parentMessage set)',
-        (tester) async {
+    testWidgets('no pin icon in thread mode (parentMessage set)', (
+      tester,
+    ) async {
       CometChatUIKit.authenticationSettings =
           (UIKitSettingsBuilder()..enableThreadSubscription = false).build();
       await tester.pumpWidget(
@@ -177,8 +189,7 @@ void main() {
   });
 
   group('Localization', () {
-    test('base class ships English defaults (non-breaking for subclasses)',
-        () {
+    test('base class ships English defaults (non-breaking for subclasses)', () {
       final en = TranslationsEn();
       expect(en.pinMessageOption, 'Pin message');
       expect(en.unpinMessageOption, 'Unpin message');
@@ -194,8 +205,10 @@ void main() {
       expect(en.noSavedMessages, isNotEmpty);
       expect(en.pinConfirmTitle, isNotEmpty);
       expect(en.saveConfirmMessage, isNotEmpty);
-      expect(en.actionPermissionDenied,
-          'You don\'t have permission to perform this action.');
+      expect(
+        en.actionPermissionDenied,
+        'You don\'t have permission to perform this action.',
+      );
       expect(en.pinSaveFailed, isNotEmpty);
     });
 

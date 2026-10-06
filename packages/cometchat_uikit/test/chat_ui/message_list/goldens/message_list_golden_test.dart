@@ -1,283 +1,179 @@
-import 'dart:io';
+/// Golden pins for the message-list bubble, composed the way
+/// `CometChatMessageList._buildMessageItem` composes it: a
+/// [CometChatMessageBubble] carrying a [CometChatTextBubble] as its content
+/// view and a [CometChatReceipt] as its status-info view.
+///
+/// The previous version of this file rendered a bare `Text(message.text)` in a
+/// `Scaffold`, so it was a golden of Flutter's own text layout and would have
+/// stayed green through any regression in the Kit. It also shipped without
+/// baselines, so both variants failed on every run. Both are fixed here.
+///
+///   flutter test test/chat_ui/message_list/goldens/                  # verify
+///   flutter test test/chat_ui/message_list/goldens/ --update-goldens # rebake
+library;
+
+import 'dart:io' show Platform;
 
 import 'package:alchemist/alchemist.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import 'package:flutter/material.dart';
+
+/// GitHub Actions sets CI=true. Platform goldens use the system font and
+/// cannot match a container, so only the Ahem variant runs there.
+final bool _isCI =
+    Platform.environment['CI'] == 'true' ||
+    Platform.environment['ALCHEMIST_CI'] == 'true';
 
 // ---------------------------------------------------------------------------
-// Fakes for golden variants
+// Harness
 // ---------------------------------------------------------------------------
 
-class _FakeUser extends Fake implements User {
-  final String _uid;
-  final String _name;
-
-  _FakeUser({String uid = 'user1', String name = 'Alice'})
-    : _uid = uid,
-      _name = name;
-
-  @override
-  String get uid => _uid;
-
-  @override
-  String get name => _name;
-
-  @override
-  String? get avatar => null;
-
-  @override
-  String get status => 'online';
-}
-
-class _FakeTextMessage extends Fake implements TextMessage {
-  final int _id;
-  final String _text;
-  final User _sender;
-  final DateTime _sentAt;
-  final DateTime? _readAt;
-  final DateTime? _deliveredAt;
-
-  _FakeTextMessage({
-    required int id,
-    required String text,
-    required User sender,
-    DateTime? sentAt,
-    DateTime? readAt,
-    DateTime? deliveredAt,
-  }) : _id = id,
-       _text = text,
-       _sender = sender,
-       _sentAt = sentAt ?? DateTime(2024, 6, 15, 14, 30),
-       _readAt = readAt,
-       _deliveredAt = deliveredAt;
-
-  @override
-  int get id => _id;
-
-  @override
-  String get text => _text;
-
-  @override
-  String get muid => 'muid_$_id';
-
-  @override
-  int get parentMessageId => 0;
-
-  @override
-  String get type => 'text';
-
-  @override
-  String get category => 'message';
-
-  @override
-  User? get sender => _sender;
-
-  @override
-  DateTime? get sentAt => _sentAt;
-
-  @override
-  DateTime? get readAt => _readAt;
-
-  @override
-  DateTime? get deliveredAt => _deliveredAt;
-
-  @override
-  int get replyCount => 0;
-
-  @override
-  set replyCount(int value) {}
-
-  @override
-  List<ReactionCount> get reactions => const [];
-}
-
-// ---------------------------------------------------------------------------
-// Variant factories
-// ---------------------------------------------------------------------------
-
-/// Sent text message (read receipt)
-_FakeTextMessage _sentReadMessage() => _FakeTextMessage(
-  id: 1,
-  text: 'Hey, how are you?',
-  sender: _FakeUser(uid: 'me', name: 'Me'),
-  readAt: DateTime(2024, 6, 15, 14, 31),
-  deliveredAt: DateTime(2024, 6, 15, 14, 30, 30),
-);
-
-/// Sent text message (delivered receipt)
-_FakeTextMessage _sentDeliveredMessage() => _FakeTextMessage(
-  id: 2,
-  text: 'Check this out!',
-  sender: _FakeUser(uid: 'me', name: 'Me'),
-  deliveredAt: DateTime(2024, 6, 15, 14, 32),
-);
-
-/// Sent text message (sent only, no delivery/read)
-_FakeTextMessage _sentOnlyMessage() => _FakeTextMessage(
-  id: 3,
-  text: 'Just sent this',
-  sender: _FakeUser(uid: 'me', name: 'Me'),
-);
-
-/// Received text message
-_FakeTextMessage _receivedMessage() => _FakeTextMessage(
-  id: 4,
-  text: 'I am doing great, thanks!',
-  sender: _FakeUser(uid: 'alice', name: 'Alice'),
-);
-
-/// Long text message (tests wrapping)
-_FakeTextMessage _longTextMessage() => _FakeTextMessage(
-  id: 5,
-  text:
-      'This is a much longer message that should wrap across multiple '
-      'lines to test how the message bubble handles text overflow and '
-      'proper line breaking behavior in the UI.',
-  sender: _FakeUser(uid: 'alice', name: 'Alice'),
-);
-
-/// Emoji-only message (tests scaled bubbles)
-_FakeTextMessage _emojiOnlyMessage() => _FakeTextMessage(
-  id: 6,
-  text: '👍🎉',
-  sender: _FakeUser(uid: 'alice', name: 'Alice'),
-);
-
-// ---------------------------------------------------------------------------
-// Helper: themed row
-// ---------------------------------------------------------------------------
-
-/// Wraps a scenario child in theme + directionality, deliberately WITHOUT a
-/// MaterialApp or Scaffold.
-///
-/// Alchemist lays each scenario out in a table cell that imposes no bounds.
-/// Scaffold expands to fill its parent, so nesting one here meant it was asked
-/// to lay out at Size(0.0, Infinity) and threw before any golden could be
-/// captured. Sizing only the Scaffold's body did not help — the Scaffold
-/// itself was the unbounded box. The scenarios render plain Text, so no
-/// localization is needed at this level; the group below supplies it once, the
-/// way the conversations goldens do.
-Widget _themedRow(Brightness brightness, Widget child) {
-  final isDark = brightness == Brightness.dark;
+Widget _themed({required Brightness brightness, required Widget bubble}) {
   return MediaQuery(
-    data: MediaQueryData(platformBrightness: brightness),
+    // The text bubble caps itself at 75% of MediaQuery width, so a zero-size
+    // MediaQueryData collapses it to one character per line.
+    data: MediaQueryData(
+      platformBrightness: brightness,
+      size: const Size(320, 320),
+    ),
     child: Theme(
-      data: isDark ? ThemeData.dark() : ThemeData.light(),
+      data: brightness == Brightness.dark
+          ? ThemeData.dark()
+          : ThemeData.light(),
+      // The bubble is a Row/Column tree built outside MaterialApp.
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: Material(
-          color: isDark ? const Color(0xFF121212) : const Color(0xFFFFFFFF),
-          child: Center(child: child),
+          color: brightness == Brightness.dark
+              ? const Color(0xFF141414)
+              : const Color(0xFFFFFFFF),
+          child: Align(alignment: Alignment.centerLeft, child: bubble),
         ),
       ),
     ),
   );
 }
 
+/// The composition under test — the same slots the message list fills.
+Widget _bubble({
+  required String text,
+  required BubbleAlignment alignment,
+  ReceiptStatus? receipt,
+  int emojiCount = 0,
+}) {
+  return CometChatMessageBubble(
+    alignment: alignment,
+    contentPadding: emojiCount > 0 ? EdgeInsets.zero : null,
+    contentView: CometChatTextBubble(
+      text: text,
+      alignment: alignment,
+      emojiCount: emojiCount,
+    ),
+    statusInfoView: receipt == null
+        ? null
+        : CometChatReceipt(status: receipt, size: 16),
+  );
+}
+
 // ---------------------------------------------------------------------------
-// Golden tests
+// Variants
 // ---------------------------------------------------------------------------
+
+const _outgoing = BubbleAlignment.right;
+const _incoming = BubbleAlignment.left;
+
+const _longText =
+    'This is a much longer message that should wrap across multiple lines to '
+    'test how the message bubble handles text overflow and proper line '
+    'breaking behavior in the UI.';
 
 void main() {
-  final isCI = Platform.environment.containsKey('CI');
+  AlchemistConfig.runWithConfig(
+    config: AlchemistConfig(
+      platformGoldensConfig: _isCI
+          ? const PlatformGoldensConfig(enabled: false)
+          : const PlatformGoldensConfig(),
+    ),
+    run: () {
+      _variantGolden(
+        'message_list_sent_read',
+        'outgoing bubble, read receipt',
+        () => _bubble(
+          text: 'Read on both sides',
+          alignment: _outgoing,
+          receipt: ReceiptStatus.read,
+        ),
+      );
+      _variantGolden(
+        'message_list_sent_delivered',
+        'outgoing bubble, delivered receipt',
+        () => _bubble(
+          text: 'Delivered, not read',
+          alignment: _outgoing,
+          receipt: ReceiptStatus.delivered,
+        ),
+      );
+      _variantGolden(
+        'message_list_sent_only',
+        'outgoing bubble, sent receipt',
+        () => _bubble(
+          text: 'Just sent this',
+          alignment: _outgoing,
+          receipt: ReceiptStatus.sent,
+        ),
+      );
+      _variantGolden(
+        'message_list_received',
+        'incoming bubble, no receipt',
+        () => _bubble(text: 'I am doing great, thanks!', alignment: _incoming),
+      );
+      _variantGolden(
+        'message_list_long_text',
+        'incoming bubble, multi-line wrapping',
+        () => _bubble(text: _longText, alignment: _incoming),
+        height: 260,
+      );
+      _variantGolden(
+        'message_list_emoji_only',
+        'emoji-only bubble, scaled and unpadded',
+        () => _bubble(
+          text: '\u{1F44D}\u{1F389}',
+          alignment: _incoming,
+          emojiCount: 2,
+        ),
+      );
+    },
+  );
+}
 
+void _variantGolden(
+  String fileName,
+  String description,
+  Widget Function() bubble, {
+  double height = 140,
+}) {
   goldenTest(
-    'message_list_variants_light_dark',
-    fileName: 'message_list_variants',
+    description,
+    fileName: fileName,
     builder: () => Localizations(
       locale: const Locale('en'),
       delegates: Translations.localizationsDelegates,
       child: GoldenTestGroup(
-        scenarioConstraints: const BoxConstraints.tightFor(
-          width: 375,
-          height: 80,
+        scenarioConstraints: BoxConstraints.tightFor(
+          width: 320,
+          height: height,
         ),
         children: [
           GoldenTestScenario(
-            name: 'sent_read_light',
-            child: _themedRow(Brightness.light, Text(_sentReadMessage().text)),
+            name: 'light',
+            child: _themed(brightness: Brightness.light, bubble: bubble()),
           ),
           GoldenTestScenario(
-            name: 'sent_read_dark',
-            child: _themedRow(Brightness.dark, Text(_sentReadMessage().text)),
-          ),
-          GoldenTestScenario(
-            name: 'sent_delivered_light',
-            child: _themedRow(
-              Brightness.light,
-              Text(_sentDeliveredMessage().text),
-            ),
-          ),
-          GoldenTestScenario(
-            name: 'sent_delivered_dark',
-            child: _themedRow(
-              Brightness.dark,
-              Text(_sentDeliveredMessage().text),
-            ),
-          ),
-          GoldenTestScenario(
-            name: 'sent_only_light',
-            child: _themedRow(Brightness.light, Text(_sentOnlyMessage().text)),
-          ),
-          GoldenTestScenario(
-            name: 'sent_only_dark',
-            child: _themedRow(Brightness.dark, Text(_sentOnlyMessage().text)),
-          ),
-          GoldenTestScenario(
-            name: 'received_light',
-            child: _themedRow(Brightness.light, Text(_receivedMessage().text)),
-          ),
-          GoldenTestScenario(
-            name: 'received_dark',
-            child: _themedRow(Brightness.dark, Text(_receivedMessage().text)),
-          ),
-          GoldenTestScenario(
-            name: 'long_text_light',
-            child: _themedRow(
-              Brightness.light,
-              Text(
-                _longTextMessage().text,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ),
-          ),
-          GoldenTestScenario(
-            name: 'long_text_dark',
-            child: _themedRow(
-              Brightness.dark,
-              Text(
-                _longTextMessage().text,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ),
-          ),
-          GoldenTestScenario(
-            name: 'emoji_only_light',
-            child: _themedRow(
-              Brightness.light,
-              Text(
-                _emojiOnlyMessage().text,
-                style: const TextStyle(fontSize: 32),
-              ),
-            ),
-          ),
-          GoldenTestScenario(
-            name: 'emoji_only_dark',
-            child: _themedRow(
-              Brightness.dark,
-              Text(
-                _emojiOnlyMessage().text,
-                style: const TextStyle(fontSize: 32),
-              ),
-            ),
+            name: 'dark',
+            child: _themed(brightness: Brightness.dark, bubble: bubble()),
           ),
         ],
       ),
     ),
-    skip: isCI, // Skip platform goldens in CI, only run CI variant (Ahem font)
   );
 }

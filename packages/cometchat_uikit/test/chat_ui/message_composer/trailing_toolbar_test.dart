@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'package:cometchat_chat_uikit/chat_ui/src/message_composer/widgets/rich_text_toolbar/rich_text_span.dart';
-import 'package:cometchat_chat_uikit/shared_ui/src/rich_text_formatting/domain/entities/format_type.dart';
-import 'package:cometchat_chat_uikit/chat_ui/src/message_composer/widgets/rich_text_toolbar/rich_text_editing_controller.dart';
-import 'package:cometchat_chat_uikit/chat_ui/src/message_composer/widgets/rich_text_toolbar/cometchat_rich_text_toolbar.dart';
 
 // Trailing Toolbar Buttons DD — Flutter acceptance (§8.1 structural +
 // §8.2 S1–S4 exercised at the controller level, where the enablers live).
