@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 ///[ImageModerationFilter] is a widget that renders an overlay filter over an image with graphic content
 ///
@@ -62,7 +63,7 @@ class _ImageModerationFilterState extends State<ImageModerationFilter> {
 
         return false;
       } catch (e) {
-        debugPrint("$e");
+        ccLog("$e");
       }
     }
     return false;
@@ -77,7 +78,9 @@ class _ImageModerationFilterState extends State<ImageModerationFilter> {
           CometChatConfirmDialog(
             context: context,
             title: Text(Translations.of(context).areYouSureUnsafeContent),
-            messageText: const Text("Do image change"),
+            // The title asks the question. Without a messageText the dialog
+            // falls back to its block-contact message, which is wrong here.
+            messageText: const SizedBox.shrink(),
             confirmButtonText: Translations.of(context).yes,
             cancelButtonText: Translations.of(context).cancel,
             onConfirm: (dialogContext) {

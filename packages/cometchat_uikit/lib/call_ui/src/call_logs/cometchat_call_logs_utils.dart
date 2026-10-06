@@ -4,6 +4,7 @@ import '../../../cometchat_chat_uikit.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../shared_ui/src/logging/cometchat_log.dart';
 
 class CallLogsUtils {
   // This will return the date separator title eg: Today, yesterday...
@@ -23,7 +24,7 @@ class CallLogsUtils {
       dateTime = format.parse(date);
     } on FormatException catch (e) {
       if (kDebugMode) {
-        print("Error parsing date string: $e");
+        ccLog("Error parsing date string: $e");
       }
       return const SizedBox();
     }
@@ -121,7 +122,55 @@ class CallLogsUtils {
     return "${hours > 0 ? "${hours}h " : ""}${minutes}m ${seconds.toString().padLeft(2, '0')}s";
   }
 
+  /// The name a call-log row shows: the group's for a group call, whoever
+  /// started it, and for a 1:1 call the other participant's, the one who is
+  /// not [loggedInUser]. An empty string when there is none, when
+  /// [loggedInUser] is null, or when [loggedInUser] took no part in the call.
+  static String getDisplayName(User? loggedInUser, CallLog? callLog) {
+    final receiver = callLog?.receiver;
+    if (receiver is CallGroup) return receiver.name ?? "";
+    return _otherParticipant(loggedInUser, callLog)?.name ?? "";
+  }
+
+  /// The avatar a call-log row shows: the group's icon for a group call,
+  /// whoever started it, and for a 1:1 call the other participant's avatar.
+  /// An empty string when there is none (see [getDisplayName]).
+  static String getAvatarUrl(User? loggedInUser, CallLog? callLog) {
+    final receiver = callLog?.receiver;
+    if (receiver is CallGroup) return receiver.icon ?? "";
+    return _otherParticipant(loggedInUser, callLog)?.avatar ?? "";
+  }
+
+  /// Who a call-log row is about: the group's guid for a group call, whoever
+  /// started it, and for a 1:1 call the other participant's uid. An empty
+  /// string when there is none (see [getDisplayName]).
+  static String getOtherParticipantId(User? loggedInUser, CallLog? callLog) {
+    final receiver = callLog?.receiver;
+    if (receiver is CallGroup) return receiver.guid ?? "";
+    return _otherParticipant(loggedInUser, callLog)?.uid ?? "";
+  }
+
+  /// The participant of a 1:1 [callLog] who is not [loggedInUser]; null for
+  /// any other log, or when [loggedInUser] is null or not in it.
+  static CallUser? _otherParticipant(User? loggedInUser, CallLog? callLog) {
+    final initiator = callLog?.initiator;
+    final receiver = callLog?.receiver;
+    if (loggedInUser == null ||
+        initiator is! CallUser ||
+        receiver is! CallUser) {
+      return null;
+    }
+    if (initiator.uid == loggedInUser.uid) return receiver;
+    if (receiver.uid == loggedInUser.uid) return initiator;
+    return null;
+  }
+
   // This will return the receiver avatar
+  @Deprecated(
+    'Use CallLogsUtils.getAvatarUrl, which shows the group\'s icon for every '
+    'group call; this one shows the initiator\'s avatar for a group call '
+    'somebody else started. Will be removed in 7.0.0.',
+  )
   static String receiverAvatar(User? loggedInUser, CallLog? callLog) {
     if (loggedInUser != null && callLog != null) {
       if (callLog.initiator is CallUser && callLog.receiver is CallUser) {
@@ -147,6 +196,11 @@ class CallLogsUtils {
   }
 
   // This will return the receiver name
+  @Deprecated(
+    'Use CallLogsUtils.getDisplayName, which names the group for every group '
+    'call; this one names the initiator of a group call somebody else '
+    'started. Will be removed in 7.0.0.',
+  )
   static String receiverName(User? loggedInUser, CallLog? callLog) {
     if (loggedInUser != null && callLog != null) {
       if (callLog.initiator is CallUser && callLog.receiver is CallUser) {
@@ -172,6 +226,11 @@ class CallLogsUtils {
   }
 
   // This will return the receiver uid for User and  guid for Group
+  @Deprecated(
+    'Use CallLogsUtils.getOtherParticipantId, which gives the guid for every '
+    'group call; this one gives the initiator\'s uid for a group call '
+    'somebody else started. Will be removed in 7.0.0.',
+  )
   static String returnReceiverId(User? loggedInUser, CallLog? callLog) {
     if (loggedInUser != null && callLog != null) {
       if (callLog.initiator is CallUser && callLog.receiver is CallUser) {

@@ -1,31 +1,15 @@
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:flutter/material.dart';
 
-///[MessageTranslationConfiguration] is a data class that has configuration properties
-///to customize the functionality and appearance of `MessageTranslationExtension`
-///
-/// ```dart
-/// MessageTranslationConfiguration translationConfig = MessageTranslationConfiguration(
-///     optionTitle: 'Translate',
-///     optionIconUrl: 'https://example.com/translate-icon.png',
-///     style: MessageTranslationBubbleStyle(
-///         infoTextStyle: TextStyle(
-///             color: Colors.black,
-///             fontSize: 14,
-///         ),
-///     ),
-///     optionStyle: MessageTranslationOptionStyle(
-///         titleStyle: TextStyle(
-///             color: Colors.black,
-///             fontSize: 16,
-///         ),
-///         iconTint: Colors.blue,
-///     ),
-///     theme: CometChatTheme(palette: Palette(),typography: Typography()),
-/// );
-///
-/// ```
+///[MessageTranslationConfiguration] configured the v5 message translation extension. No v6 API accepts it:
+/// the extension is enabled from the CometChat Dashboard, and the
+/// deprecation message names the components that now configure what it
+/// described.
+@Deprecated(
+  'Has no effect: no v6 API accepts it. The Translate option shows while the message-translation extension is enabled; hide it with CometChatMessageList.hideTranslateMessageOption, style it with CometChatMessageListStyle.messageOptionSheetStyle, and style the translation with CometChatIncomingMessageBubbleStyle.messageTranslationBubbleStyle and CometChatOutgoingMessageBubbleStyle.messageTranslationBubbleStyle. Will be removed in 7.0.0.',
+)
 class MessageTranslationConfiguration {
+  /// Creates a [MessageTranslationConfiguration].
   MessageTranslationConfiguration({
     this.optionTitle,
     this.optionIcon,

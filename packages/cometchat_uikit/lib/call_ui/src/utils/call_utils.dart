@@ -2,57 +2,93 @@ import 'package:flutter/material.dart';
 
 import '../../../cometchat_calls_uikit.dart';
 import '../../../cometchat_chat_uikit.dart';
+import '../../../src/missed_call_rule.dart';
 
 /// [CallUtils] is a utility class that contains methods to perform call related operations.
+///
+/// A call is missed when it went unanswered or was cancelled, for the person
+/// who did not start it. One rule drives the call bubbles' text, icon and
+/// colour, [isMissedCall], the call logs and the Chats list: a rejected or
+/// busy call is never missed and reads the same on both sides. (The chat SDK
+/// gives realtime and history call messages the user who acted as
+/// `callInitiator`, the callee who declined, say; only the statuses the
+/// caller sends say reliably who started a call.)
 class CallUtils {
-  /// Returns the call status message.
+  /// The uid of [call]'s initiator: null when it has none or it is a group.
+  /// Read with a type check, where a hard cast threw for both.
+  static String? _initiatorUid(Call call) {
+    final initiator = call.callInitiator;
+    return initiator is User ? initiator.uid : null;
+  }
+
+  /// Whether [loggedInUser] started [call], as its initiator says.
+  static bool _startedBy(Call call, User? loggedInUser) {
+    final uid = _initiatorUid(call);
+    return uid != null && loggedInUser != null && uid == loggedInUser.uid;
+  }
+
+  /// The one missed rule, for a 1:1 call message.
+  static bool _isMissedForMe(Call call, User? loggedInUser) =>
+      call.receiverType == ReceiverTypeConstants.user &&
+      MissedCallRule.isMissed(
+        status: call.callStatus,
+        startedByMe: _startedBy(call, loggedInUser),
+      );
+
+  /// Returns the call status message: the text of a call action bubble,
+  /// after a leading space.
+  ///
+  /// Each status reads as its outcome. The direction only counts for the
+  /// statuses the caller sends:
+  ///
+  /// | Status | Caller | Callee |
+  /// | --- | --- | --- |
+  /// | initiated | Outgoing Call | Incoming Call |
+  /// | ongoing | Call accepted | Call accepted |
+  /// | ended | Call ended | Call ended |
+  /// | cancelled | Call cancelled | Missed voice call / Missed video call |
+  /// | unanswered | Call unanswered | Missed voice call / Missed video call |
+  /// | rejected | Call rejected | Call rejected |
+  /// | busy | Call busy | Call busy |
+  ///
+  /// Any other status reads "Voice call" or "Video call". A message that is
+  /// not a [Call] gives just the space.
   static String getCallStatus(
     BuildContext context,
     BaseMessage baseMessage,
     User? loggedInUser,
   ) {
-    String callMessageText = "";
-    //check if the message is a call message and the receiver type is user
-    if (baseMessage is Call) {
-      Call call = baseMessage;
-      User initiator = call.callInitiator as User;
-      //check if the call is initiated
-      if (call.callStatus == CallStatusConstants.initiated) {
-        //check if the logged in user is the initiator
-        if (!isLoggedInUser(initiator, loggedInUser)) {
-          callMessageText = Translations.of(context).incomingCall;
-        } else {
-          callMessageText = Translations.of(context).outgoingCall;
-        }
-      } else if (call.callStatus == CallStatusConstants.ongoing) {
-        callMessageText = Translations.of(context).callAccepted;
-      } else if (call.callStatus == CallStatusConstants.ended) {
-        callMessageText = Translations.of(context).callEnded;
-      } else if (call.callStatus == CallStatusConstants.unanswered) {
-        if (isLoggedInUser(initiator, loggedInUser)) {
-          callMessageText = Translations.of(context).callUnanswered;
-        } else {
-          callMessageText = Translations.of(context).missedCall;
-        }
-      } else if (call.callStatus == CallStatusConstants.cancelled) {
-        if (isLoggedInUser(initiator, loggedInUser)) {
-          callMessageText = Translations.of(context).callCancelled;
-        } else {
-          callMessageText = Translations.of(context).missedCall;
-        }
-      } else if (call.callStatus == CallStatusConstants.rejected) {
-        if (isLoggedInUser(initiator, loggedInUser)) {
-          callMessageText = Translations.of(context).callRejected;
-        } else {
-          callMessageText = Translations.of(context).missedCall;
-        }
-      } else if (call.callStatus == CallStatusConstants.busy) {
-        if (isLoggedInUser(initiator, loggedInUser)) {
-          callMessageText = Translations.of(context).callBusy;
-        } else {
-          callMessageText = Translations.of(context).missedCall;
-        }
-      }
+    if (baseMessage is! Call) return " ";
+    final call = baseMessage;
+    final translations = Translations.of(context);
+    final video = isVideoCall(call);
+    if (_isMissedForMe(call, loggedInUser)) {
+      return video
+          ? " ${translations.missedVideoCall}"
+          : " ${translations.missedVoiceCall}";
+    }
+    final String callMessageText;
+    switch (call.callStatus) {
+      case CallStatusConstants.initiated:
+        callMessageText = _startedBy(call, loggedInUser)
+            ? translations.outgoingCall
+            : translations.incomingCall;
+      case CallStatusConstants.ongoing:
+        callMessageText = translations.callAccepted;
+      case CallStatusConstants.ended:
+        callMessageText = translations.callEnded;
+      case CallStatusConstants.cancelled:
+        callMessageText = translations.callCancelled;
+      case CallStatusConstants.unanswered:
+        callMessageText = translations.callUnanswered;
+      case CallStatusConstants.rejected:
+        callMessageText = translations.callRejected;
+      case CallStatusConstants.busy:
+        callMessageText = translations.callBusy;
+      default:
+        callMessageText = video
+            ? translations.videoCall
+            : translations.voiceCall;
     }
     return " $callMessageText";
   }
@@ -88,23 +124,11 @@ class CallUtils {
     return message;
   }
 
-  ///[isMissedCall] returns true if the call is missed call.
-  static bool isMissedCall(Call call, User? loggedInUser) {
-    if (call.receiverType == ReceiverTypeConstants.user) {
-      User initiator = (call.callInitiator as User);
-      if (call.callStatus == CallStatusConstants.unanswered) {
-        return !isLoggedInUser(initiator, loggedInUser);
-      } else if (call.callStatus == CallStatusConstants.cancelled) {
-        return !isLoggedInUser(initiator, loggedInUser);
-      } else if (call.callStatus == CallStatusConstants.rejected) {
-        return !isLoggedInUser(initiator, loggedInUser);
-      } else if (call.callStatus == CallStatusConstants.busy) {
-        return !isLoggedInUser(initiator, loggedInUser);
-      }
-    }
-
-    return false;
-  }
+  ///[isMissedCall] returns true if [call] is a missed call for
+  ///[loggedInUser]: a 1:1 call that went unanswered or was cancelled, which
+  ///[loggedInUser] did not start. A rejected or busy call is never missed.
+  static bool isMissedCall(Call call, User? loggedInUser) =>
+      _isMissedForMe(call, loggedInUser);
 
   /// Returns true if the call is initiated by the logged in user.
   static bool callLogLoggedInUser(CallLog? callLog, User? loggedInUser) {
@@ -129,14 +153,31 @@ class CallUtils {
     return false;
   }
 
-  /// [getStatus] return call status
+  /// [isMissedCallLog] returns true if [callLog] is a missed call for
+  /// [loggedInUser]: one that went unanswered or was cancelled, which
+  /// [loggedInUser] did not start (as [callLogLoggedInUser] reads it). A
+  /// rejected or busy call is never missed. The call logs' icon
+  /// ([getCallIcon]), title colour ([getCallStatusColor]) and label
+  /// ([getStatus]) all follow it, as the call bubbles follow [isMissedCall].
+  static bool isMissedCallLog(CallLog? callLog, User? loggedInUser) =>
+      callLog != null &&
+      MissedCallRule.isMissed(
+        status: callLog.status,
+        startedByMe: callLogLoggedInUser(callLog, loggedInUser),
+      );
+
+  /// [getStatus] return call status: the label of a call-log row, after a
+  /// leading space. A missed call ([isMissedCallLog]) reads "Missed Call";
+  /// otherwise an initiated or ended call reads by direction, an ongoing one
+  /// "Ongoing call", an unanswered or cancelled one (yours) "Unanswered Call"
+  /// or "Cancelled Call", and a rejected or busy one "Call rejected" or
+  /// "Call busy" on both sides. A missing log, user or context gives the
+  /// empty string.
   static String getStatus(
     BuildContext? context,
     CallLog? callLog,
     User? loggedInUser,
   ) {
-    String callMessageText = "";
-
     if (callLog == null || loggedInUser == null) {
       return "";
     }
@@ -145,55 +186,37 @@ class CallUtils {
       return "";
     }
 
-    //check if the call is initiated
-    if (callLog.status == CallStatusConstants.initiated) {
-      //check if the logged in user is the initiator
-      if (!callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).incomingCall;
-      } else {
-        callMessageText = Translations.of(context).outgoingCall;
-      }
-    } else if (callLog.status == CallStatusConstants.ongoing) {
-      if (callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).ongoingCall;
-      } else {
-        callMessageText = Translations.of(context).ongoingCall;
-      }
-    } else if (callLog.status == CallStatusConstants.ended) {
-      if (callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).outgoingCall;
-      } else {
-        callMessageText = Translations.of(context).incomingCall;
-      }
-    } else if (callLog.status == CallStatusConstants.unanswered) {
-      if (callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).unansweredCall;
-      } else {
-        callMessageText = Translations.of(context).missedCall;
-      }
-    } else if (callLog.status == CallStatusConstants.cancelled) {
-      if (callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).cancelledCall;
-      } else {
-        callMessageText = Translations.of(context).missedCall;
-      }
-    } else if (callLog.status == CallStatusConstants.rejected) {
-      if (callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).rejectedCall;
-      } else {
-        callMessageText = Translations.of(context).missedCall;
-      }
-    } else if (callLog.status == CallStatusConstants.busy) {
-      if (callLogLoggedInUser(callLog, loggedInUser)) {
-        callMessageText = Translations.of(context).unansweredCall;
-      } else {
-        callMessageText = Translations.of(context).missedCall;
-      }
+    final translations = Translations.of(context);
+    if (isMissedCallLog(callLog, loggedInUser)) {
+      return " ${translations.missedCall}";
+    }
+    final mine = callLogLoggedInUser(callLog, loggedInUser);
+    final String callMessageText;
+    switch (callLog.status) {
+      case CallStatusConstants.initiated:
+      case CallStatusConstants.ended:
+        callMessageText = mine
+            ? translations.outgoingCall
+            : translations.incomingCall;
+      case CallStatusConstants.ongoing:
+        callMessageText = translations.ongoingCall;
+      case CallStatusConstants.unanswered:
+        callMessageText = translations.unansweredCall;
+      case CallStatusConstants.cancelled:
+        callMessageText = translations.cancelledCall;
+      case CallStatusConstants.rejected:
+        callMessageText = translations.callRejected;
+      case CallStatusConstants.busy:
+        callMessageText = translations.callBusy;
+      default:
+        callMessageText = "";
     }
     return " $callMessageText";
   }
 
-  /// [getCallIcon] Return call status icon
+  /// [getCallIcon] Return call status icon: the missed icon for a missed call
+  /// ([isMissedCallLog]), otherwise outgoing or incoming by direction,
+  /// whatever the status.
   static Widget getCallIcon(
     BuildContext context,
     CallLog callLog,
@@ -206,100 +229,41 @@ class CallUtils {
     Widget? outgoingCallIcon,
     Widget? missedCallIcon,
   }) {
-    bool isInitiatedByUser = callLogLoggedInUser(callLog, loggedInUser);
-    isAudioCall(callLog);
-
-    // Define default icons if not provided
-    Widget incoming =
-        incomingCallIcon ??
+    if (isMissedCallLog(callLog, loggedInUser)) {
+      return missedCallIcon ??
+          Icon(
+            Icons.call_missed_outgoing_rounded,
+            color: style.missedCallIconColor ?? colorPalette.error,
+            size: 16,
+          );
+    }
+    if (callLogLoggedInUser(callLog, loggedInUser)) {
+      return outgoingCallIcon ??
+          Icon(
+            Icons.call_made_outlined,
+            color: style.outgoingCallIconColor ?? colorPalette.success,
+            size: 16,
+          );
+    }
+    return incomingCallIcon ??
         Icon(
           Icons.call_received_outlined,
           color: style.incomingCallIconColor ?? colorPalette.success,
           size: 16,
         );
-
-    Widget outgoing =
-        outgoingCallIcon ??
-        Icon(
-          Icons.call_made_outlined,
-          color: style.outgoingCallIconColor ?? colorPalette.success,
-          size: 16,
-        );
-
-    Widget missed =
-        missedCallIcon ??
-        Icon(
-          Icons.call_missed_outgoing_rounded,
-          color: style.missedCallIconColor ?? colorPalette.error,
-          size: 16,
-        );
-
-    // Helper function to select icon based on initiator and call type
-    Widget selectIcon(bool isInitiatedByUser) {
-      return isInitiatedByUser ? outgoing : incoming;
-    }
-
-    // Switch on call status to determine the appropriate icon
-    switch (callLog.status) {
-      case CallStatusConstants.initiated:
-      case CallStatusConstants.ongoing:
-      case CallStatusConstants.ended:
-        return selectIcon(isInitiatedByUser);
-
-      case CallStatusConstants.unanswered:
-      case CallStatusConstants.cancelled:
-      case CallStatusConstants.rejected:
-      case CallStatusConstants.busy:
-        return isInitiatedByUser ? outgoing : missed;
-
-      default:
-        return const SizedBox(); // Return empty widget for unknown statuses
-    }
   }
 
-  /// [getCallStatusColor] returns call status color
+  /// [getCallStatusColor] returns call status color: the error colour for a
+  /// missed call ([isMissedCallLog]), textPrimary for every other one.
   static Color getCallStatusColor(
     CallLog callLog,
     User? loggedInUser,
     CometChatColorPalette colorPalette,
   ) {
-    bool isInitiatedByUser = callLogLoggedInUser(callLog, loggedInUser);
-
-    switch (callLog.status) {
-      case CallStatusConstants.initiated:
-        return colorPalette.textPrimary ??
-            Colors.transparent; // Incoming or outgoing call
-
-      case CallStatusConstants.ongoing:
-        return colorPalette.textPrimary ?? Colors.transparent; // Ongoing call
-
-      case CallStatusConstants.ended:
-        return colorPalette.textPrimary ??
-            Colors.transparent; // Outgoing or incoming call
-
-      case CallStatusConstants.unanswered:
-        return isInitiatedByUser
-            ? colorPalette.textPrimary ??
-                  Colors
-                      .transparent // Unanswered call by user
-            : colorPalette.error ?? Colors.transparent; // Missed call
-
-      case CallStatusConstants.cancelled:
-      case CallStatusConstants.rejected:
-        return isInitiatedByUser
-            ? colorPalette.textPrimary ??
-                  Colors
-                      .transparent // User cancelled/rejected
-            : colorPalette.error ?? Colors.transparent; // Missed call
-
-      case CallStatusConstants.busy:
-        return colorPalette.textPrimary ??
-            Colors.transparent; // Unanswered call
-
-      default:
-        return colorPalette.error ??
-            Colors.transparent; // Unknown or missed call
+    if (isMissedCallLog(callLog, loggedInUser)) {
+      return colorPalette.error ?? Colors.transparent;
     }
+    return colorPalette.textPrimary ?? Colors.transparent;
   }
 
   static bool isAudioCall(CallLog callLog) {
@@ -314,87 +278,59 @@ class CallUtils {
     return false;
   }
 
+  /// The icon asset of a call action bubble: the missed glyph for a missed
+  /// call (see [isMissedCall]), a direction glyph while a call is initiated,
+  /// and the plain call glyph for every other status.
   static String getCallIconByStatus(
     BuildContext context,
     BaseMessage baseMessage,
     User? loggedInUser,
     bool isAudio,
   ) {
-    String callIcon = "";
-    //check if the message is a call message and the receiver type is user
-    if (baseMessage is Call) {
-      Call call = baseMessage;
-      User initiator = call.callInitiator as User;
-      //check if the call is initiated
-      if (call.callStatus == CallStatusConstants.initiated) {
-        //check if the logged in user is the initiator
-        if (!isLoggedInUser(initiator, loggedInUser)) {
-          callIcon = isAudio
-              ? AssetConstants.incomingAudioCallNoFill
-              : AssetConstants.incomingVideoCallNoFill;
-        } else {
-          callIcon = isAudio
-              ? AssetConstants.outgoingAudioCallNoFill
-              : AssetConstants.outgoingVideoCallNoFill;
-        }
-      } else if (!isLoggedInUser(initiator, loggedInUser) &&
-          (call.callStatus == CallStatusConstants.cancelled ||
-              call.callStatus == CallStatusConstants.unanswered ||
-              call.callStatus == CallStatusConstants.busy)) {
-        callIcon = isAudio
-            ? AssetConstants.audioMissed
-            : AssetConstants.videoMissed;
-      } else {
-        callIcon = isAudio
-            ? AssetConstants.callNoFill
-            : AssetConstants.videocamNoFill;
-      }
+    if (baseMessage is! Call) return "";
+    final call = baseMessage;
+    if (_isMissedForMe(call, loggedInUser)) {
+      return isAudio ? AssetConstants.audioMissed : AssetConstants.videoMissed;
     }
-    return callIcon;
+    if (call.callStatus == CallStatusConstants.initiated) {
+      if (_startedBy(call, loggedInUser)) {
+        return isAudio
+            ? AssetConstants.outgoingAudioCallNoFill
+            : AssetConstants.outgoingVideoCallNoFill;
+      }
+      return isAudio
+          ? AssetConstants.incomingAudioCallNoFill
+          : AssetConstants.incomingVideoCallNoFill;
+    }
+    return isAudio ? AssetConstants.callNoFill : AssetConstants.videocamNoFill;
   }
 
+  /// The colour of a call action bubble's text, and of its icon: the error
+  /// colour for a missed call (see [isMissedCall]), textSecondary otherwise.
   static Color getCallTextColor(
     BuildContext context,
     BaseMessage baseMessage,
     User? loggedInUser,
     CometChatColorPalette colorPalette,
   ) {
-    Color callTextColor = colorPalette.textSecondary ?? Colors.transparent;
-    if (baseMessage is Call &&
-        baseMessage.receiverType == ReceiverTypeConstants.user) {
-      Call call = baseMessage;
-      User initiator = call.callInitiator as User;
-
-      if (!isLoggedInUser(initiator, loggedInUser) &&
-          (call.callStatus == CallStatusConstants.cancelled ||
-              call.callStatus == CallStatusConstants.unanswered ||
-              call.callStatus == CallStatusConstants.busy)) {
-        callTextColor = colorPalette.error ?? Colors.transparent;
-      }
+    if (baseMessage is Call && _isMissedForMe(baseMessage, loggedInUser)) {
+      return colorPalette.error ?? Colors.transparent;
     }
-    return callTextColor;
+    return colorPalette.textSecondary ?? Colors.transparent;
   }
 
+  /// The colour of a call icon: the error colour for a missed call (see
+  /// [isMissedCall]), iconSecondary otherwise. The call action bubbles paint
+  /// their icon with [getCallTextColor] instead, so it matches their text.
   static Color getCallIconColor(
     BuildContext context,
     BaseMessage baseMessage,
     User? loggedInUser,
     CometChatColorPalette colorPalette,
   ) {
-    Color callTextColor = colorPalette.iconSecondary ?? Colors.transparent;
-    if (baseMessage is Call &&
-        baseMessage.receiverType == ReceiverTypeConstants.user) {
-      Call call = baseMessage;
-      User initiator = call.callInitiator as User;
-
-      if (!isLoggedInUser(initiator, loggedInUser) &&
-          (call.callStatus == CallStatusConstants.ended ||
-              call.callStatus == CallStatusConstants.cancelled ||
-              call.callStatus == CallStatusConstants.unanswered ||
-              call.callStatus == CallStatusConstants.busy)) {
-        callTextColor = colorPalette.error ?? Colors.transparent;
-      }
+    if (baseMessage is Call && _isMissedForMe(baseMessage, loggedInUser)) {
+      return colorPalette.error ?? Colors.transparent;
     }
-    return callTextColor;
+    return colorPalette.iconSecondary ?? Colors.transparent;
   }
 }

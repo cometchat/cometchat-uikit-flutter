@@ -51,19 +51,61 @@ class AttachmentUtils {
   static const _videoExts = {'mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi', '3gp'};
   static const _audioExts = {'mp3', 'm4a', 'wav', 'aac', 'ogg', 'opus', 'flac'};
 
-  /// Lower-cased extension from the file name (falling back to `fileExtension`).
-  static String _ext(Attachment a) {
-    final n = a.fileName.toLowerCase();
+  /// Lower-cased extension from a file name, falling back to a supplied
+  /// `fileExtension` when the name carries none.
+  static String _extOf(String fileName, String fileExtension) {
+    final n = fileName.toLowerCase();
     final dot = n.lastIndexOf('.');
     if (dot >= 0 && dot < n.length - 1) return n.substring(dot + 1);
-    return a.fileExtension.toLowerCase();
+    return fileExtension.toLowerCase();
   }
+
+  /// Lower-cased extension from the file name (falling back to `fileExtension`).
+  static String _ext(Attachment a) => _extOf(a.fileName, a.fileExtension);
+
+  /// Kind detection by **mimeType OR extension** over the raw pair, for callers
+  /// that classify a file before an [Attachment] exists — notably the composer's
+  /// staging tray. Sharing one rule keeps the tray preview identical to the kind
+  /// the message is actually sent as; classifying the preview on mimeType alone
+  /// made e.g. `.m4v`/`.flac` stage as generic file cards and `.ogg` reported as
+  /// `video/ogg` preview as video, then send as audio.
+  /// MIME types are case-insensitive (RFC 2045 §5.1) and a picker or server can
+  /// hand back `IMAGE/JPEG`, so the type is folded before matching — as [isGif]
+  /// already did.
+  static bool _mimeIs(String mimeType, String prefix) =>
+      mimeType.toLowerCase().startsWith(prefix);
+
+  static bool isImageOf(
+    String mimeType,
+    String fileName, {
+    String fileExtension = '',
+  }) =>
+      _mimeIs(mimeType, 'image/') ||
+      _imageExts.contains(_extOf(fileName, fileExtension));
+
+  /// See [isVideo] for why audio wins over an ambiguous `video/*` mime.
+  static bool isVideoOf(
+    String mimeType,
+    String fileName, {
+    String fileExtension = '',
+  }) =>
+      !isAudioOf(mimeType, fileName, fileExtension: fileExtension) &&
+      (_mimeIs(mimeType, 'video/') ||
+          _videoExts.contains(_extOf(fileName, fileExtension)));
+
+  static bool isAudioOf(
+    String mimeType,
+    String fileName, {
+    String fileExtension = '',
+  }) =>
+      _mimeIs(mimeType, 'audio/') ||
+      _audioExts.contains(_extOf(fileName, fileExtension));
 
   /// Kind detection by **mimeType OR extension** — the server's mimeType is not
   /// always reliable (e.g. a video can arrive without a `video/*` type), so we
   /// also fall back to the file extension.
   static bool isImage(Attachment a) =>
-      a.fileMimeType.startsWith('image/') || _imageExts.contains(_ext(a));
+      isImageOf(a.fileMimeType, a.fileName, fileExtension: a.fileExtension);
 
   /// A `video/*` mime does NOT win over an unambiguous audio extension. Ogg is
   /// registered as both `audio/ogg` and `video/ogg`, and servers report the
@@ -73,11 +115,10 @@ class AttachmentUtils {
   /// button. None of [_audioExts] is a video container, so preferring audio
   /// here is safe.
   static bool isVideo(Attachment a) =>
-      !isAudio(a) &&
-      (a.fileMimeType.startsWith('video/') || _videoExts.contains(_ext(a)));
+      isVideoOf(a.fileMimeType, a.fileName, fileExtension: a.fileExtension);
 
   static bool isAudio(Attachment a) =>
-      a.fileMimeType.startsWith('audio/') || _audioExts.contains(_ext(a));
+      isAudioOf(a.fileMimeType, a.fileName, fileExtension: a.fileExtension);
 
   /// `image/*` or `video/*` — the kinds that go into the media grid and the
   /// fullscreen pager.

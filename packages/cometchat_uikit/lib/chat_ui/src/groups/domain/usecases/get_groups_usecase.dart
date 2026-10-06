@@ -1,5 +1,6 @@
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 import '../../../../../shared_ui/src/clean_architecture/core/result.dart';
+import '../../data/repositories/groups_repository_impl.dart';
 import '../repositories/groups_repository.dart';
 
 /// Use case for getting groups with pagination and search support
@@ -30,6 +31,7 @@ class GetGroupsUseCase {
     int limit = 30,
     String? searchKeyword,
     bool? joinedOnly,
+    GroupsRequestBuilder? groupsRequestBuilder,
   }) async {
     // Validate input parameters (Requirement 3.6)
     if (limit <= 0) {
@@ -46,7 +48,18 @@ class GetGroupsUseCase {
       );
     }
 
-    return await repository.getGroups(
+    // The builder goes only to the kit's own repository: the interface keeps
+    // its 6.1.1 signature, so an app's implementation does not take one.
+    final repo = repository;
+    if (repo is GroupsRepositoryImpl) {
+      return await repo.getGroups(
+        limit: limit,
+        searchKeyword: searchKeyword,
+        joinedOnly: joinedOnly,
+        groupsRequestBuilder: groupsRequestBuilder,
+      );
+    }
+    return await repo.getGroups(
       limit: limit,
       searchKeyword: searchKeyword,
       joinedOnly: joinedOnly,

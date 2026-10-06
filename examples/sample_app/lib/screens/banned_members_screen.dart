@@ -40,8 +40,8 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
     _uiGroupListenerId = '${ts}_banned_ui';
     CometChat.addGroupListener(_groupListenerId, this);
     CometChatGroupEvents.addGroupsListener(_uiGroupListenerId, this);
-    _request = BannedGroupMembersRequestBuilder(guid: widget.group.guid)
-        .build();
+    _request =
+        BannedGroupMembersRequestBuilder(guid: widget.group.guid).build();
     _initLoggedInUser();
     _loadBannedMembers();
   }
@@ -264,9 +264,9 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
                   _isLoading = true;
                   _bannedMembers.clear();
                 });
-                _request = BannedGroupMembersRequestBuilder(
-                        guid: widget.group.guid)
-                    .build();
+                _request =
+                    BannedGroupMembersRequestBuilder(guid: widget.group.guid)
+                        .build();
                 _loadBannedMembers();
               },
               child: const Text('Retry'),
@@ -368,8 +368,7 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
                 width: MediaQuery.of(context).size.width * 0.4,
                 decoration: BoxDecoration(
                   color: Colors.grey,
-                  borderRadius:
-                      BorderRadius.circular(_spacing.radius2 ?? 0),
+                  borderRadius: BorderRadius.circular(_spacing.radius2 ?? 0),
                 ),
               ),
             ],

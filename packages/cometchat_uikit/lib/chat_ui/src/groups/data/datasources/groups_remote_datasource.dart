@@ -28,6 +28,10 @@ abstract class GroupsRemoteDataSource {
   /// [limit] - Maximum number of groups to fetch (default: 30)
   /// [searchKeyword] - Optional keyword to filter groups by name
   /// [joinedOnly] - If true, only returns groups the user has joined
+  ///
+  /// The signature is 6.1.1's, so an app's own implementation keeps
+  /// compiling. [GroupsRemoteDataSourceImpl.getGroups] also takes a
+  /// `groupsRequestBuilder` to build the first request from.
   Future<List<Group>> getGroups({
     int limit = 30,
     String? searchKeyword,
@@ -77,42 +81,54 @@ class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
     int limit = 30,
     String? searchKeyword,
     bool? joinedOnly,
+    GroupsRequestBuilder? groupsRequestBuilder,
   }) async {
     try {
       // Build a new request only if we don't have one yet (first call or after reset)
       if (_currentRequest == null) {
-        final requestBuilder = GroupsRequestBuilder()..limit = limit;
+        if (groupsRequestBuilder != null) {
+          _currentRequest = _buildFromAppBuilder(
+            groupsRequestBuilder,
+            limit: limit,
+            searchKeyword: searchKeyword,
+            joinedOnly: joinedOnly,
+          );
+        } else {
+          final requestBuilder = GroupsRequestBuilder()..limit = limit;
 
-        if (searchKeyword != null && searchKeyword.isNotEmpty) {
-          requestBuilder.searchKeyword = searchKeyword;
+          if (searchKeyword != null && searchKeyword.isNotEmpty) {
+            requestBuilder.searchKeyword = searchKeyword;
+          }
+
+          if (joinedOnly != null) {
+            requestBuilder.joinedOnly = joinedOnly;
+          }
+
+          _currentRequest = requestBuilder.build();
         }
-
-        if (joinedOnly != null) {
-          requestBuilder.joinedOnly = joinedOnly;
-        }
-
-        _currentRequest = requestBuilder.build();
       }
 
       final completer = Completer<List<Group>>();
 
-      _currentRequest!.fetchNext(
-        onSuccess: (List<Group> groups) {
-          if (!completer.isCompleted) {
-            completer.complete(groups);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              GroupsRemoteDataSourceException(
-                message: exception.message ?? 'Failed to fetch groups',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        _currentRequest!.fetchNext(
+          onSuccess: (List<Group> groups) {
+            if (!completer.isCompleted) {
+              completer.complete(groups);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                GroupsRemoteDataSourceException(
+                  message: exception.message ?? 'Failed to fetch groups',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -127,6 +143,40 @@ class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
         message: 'Unexpected error while fetching groups: ${e.toString()}',
         originalException: e is Exception ? e : null,
       );
+    }
+  }
+
+  /// Builds the request from the app's own [builder], with the search box's
+  /// keyword and [joinedOnly] on top, then puts the builder back as it was.
+  ///
+  /// The builder is the app's object and outlives this request: writing into
+  /// it and leaving the values there overwrote the app's limit with the kit's
+  /// page size, and left a cleared search's keyword filtering every later
+  /// load. It cannot be copied instead — its page is private — so its fields
+  /// are set only for the synchronous `build()`, which copies them into the
+  /// request, and restored in `finally`. The app's limit wins; [limit] fills
+  /// in only when the app set none.
+  GroupsRequest _buildFromAppBuilder(
+    GroupsRequestBuilder builder, {
+    required int limit,
+    String? searchKeyword,
+    bool? joinedOnly,
+  }) {
+    final appLimit = builder.limit;
+    final appSearchKeyword = builder.searchKeyword;
+    final appJoinedOnly = builder.joinedOnly;
+    try {
+      builder.limit = appLimit ?? limit;
+      if (searchKeyword != null && searchKeyword.isNotEmpty) {
+        builder.searchKeyword = searchKeyword;
+      }
+      if (joinedOnly != null) builder.joinedOnly = joinedOnly;
+      return builder.build();
+    } finally {
+      builder
+        ..limit = appLimit
+        ..searchKeyword = appSearchKeyword
+        ..joinedOnly = appJoinedOnly;
     }
   }
 

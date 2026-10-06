@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sample_app/main.dart';
 import 'package:sample_app/app_credentials.dart';
@@ -31,15 +32,7 @@ class AppLauncher {
     const storage = FlutterSecureStorage();
     await storage.deleteAll();
 
-    // Pre-seed credentials into SharedPreferences so the app
-    // has valid config on first launch.
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('cc_app_id', TestCredentials.appId);
-    await prefs.setString('cc_region', TestCredentials.region);
-    await prefs.setString('cc_auth_key', TestCredentials.authKey);
-
-    // Load into static state
-    await AppCredentials.loadSavedCredentials();
+    await _applyCredentials();
 
     // Launch the real app
     await tester.pumpWidget(const BlocSampleApp());
@@ -57,18 +50,64 @@ class AppLauncher {
   }
 
   /// Launch app without login (for testing login flow itself).
+  ///
+  /// &quot;Without login&quot; has to be made true, not assumed. Wiping
+  /// FlutterSecureStorage clears the iOS Keychain, but the SDK keeps its own
+  /// session store, so on Android a preceding case that logged in leaves this
+  /// one launching straight into the home screen. Measured on an A015: with
+  /// the credentials unblocked, E2E-001 logs in and E2E-002 then never sees a
+  /// login form. An explicit logout is what makes the name accurate.
   static Future<void> launchOnly(WidgetTester tester) async {
     const storage = FlutterSecureStorage();
     await storage.deleteAll();
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('cc_app_id', TestCredentials.appId);
-    await prefs.setString('cc_region', TestCredentials.region);
-    await prefs.setString('cc_auth_key', TestCredentials.authKey);
-    await AppCredentials.loadSavedCredentials();
+    await _applyCredentials();
+
+    // Best-effort: there may be no session to end, and a failure here must
+    // not mask the assertion the caller is about to make.
+    try {
+      await CometChatUIKit.logout();
+    } catch (_) {
+      // No active session, or the SDK was never initialised.
+    }
 
     await tester.pumpWidget(const BlocSampleApp());
     await pumpFor(tester, const Duration(seconds: 8));
+  }
+
+
+  /// True when a real `--dart-define` was supplied for the app under test.
+  ///
+  /// [TestCredentials] falls back to `YOUR_APP_ID` / `YOUR_REGION` /
+  /// `YOUR_AUTH_KEY` placeholders, and those are not inert: writing them into
+  /// SharedPreferences overwrites whatever credentials the sample app ships
+  /// with, so the SDK dies at startup with ERR_INVALID_REGION and every suite
+  /// fails before it reaches the screen it is testing. Measured on an iPhone
+  /// 17 Pro simulator and on an Android A015: 19 of 19 cases stopped there.
+  static bool get _hasSuppliedCredentials =>
+      !TestCredentials.appId.startsWith('YOUR_') &&
+      !TestCredentials.region.startsWith('YOUR_') &&
+      !TestCredentials.authKey.startsWith('YOUR_');
+
+  /// Point the app at the E2E credentials when they were supplied, and get
+  /// out of the way when they were not.
+  ///
+  /// The keys are *removed* rather than left alone in the second case, so a
+  /// device polluted by an earlier placeholder run recovers on the next one —
+  /// `AppCredentials.loadSavedCredentials` then falls back to the app's own
+  /// defaults instead of reading `YOUR_APP_ID` back out of prefs.
+  static Future<void> _applyCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_hasSuppliedCredentials) {
+      await prefs.setString('cc_app_id', TestCredentials.appId);
+      await prefs.setString('cc_region', TestCredentials.region);
+      await prefs.setString('cc_auth_key', TestCredentials.authKey);
+    } else {
+      await prefs.remove('cc_app_id');
+      await prefs.remove('cc_region');
+      await prefs.remove('cc_auth_key');
+    }
+    await AppCredentials.loadSavedCredentials();
   }
 
   static Future<void> _performLogin(WidgetTester tester) async {

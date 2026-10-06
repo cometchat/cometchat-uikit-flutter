@@ -105,13 +105,14 @@ class MessageComposerSecondaryButtons extends StatelessWidget {
         Colors.grey;
 
     return Semantics(
-      label: 'Attachment button',
+      label: Translations.of(context).attachmentButton,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: secondaryButtonIconBackgroundColor,
           borderRadius: secondaryButtonBorderRadius,
         ),
         child: _buildAttachmentButton(
+          context,
           effectiveColorPalette,
           effectiveSpacing,
           iconColor,
@@ -121,6 +122,7 @@ class MessageComposerSecondaryButtons extends StatelessWidget {
   }
 
   Widget _buildAttachmentButton(
+    BuildContext context,
     CometChatColorPalette colorPalette,
     CometChatSpacing spacing,
     Color iconColor,
@@ -157,7 +159,7 @@ class MessageComposerSecondaryButtons extends StatelessWidget {
     }
 
     final button = Semantics(
-      label: 'Add attachment',
+      label: Translations.of(context).addAttachment,
       button: true,
       enabled: !disabled,
       child: GestureDetector(

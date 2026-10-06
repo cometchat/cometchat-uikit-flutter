@@ -73,6 +73,15 @@ void main() {
     await CleanupHelper.unblockAll();
   });
 
+  // Backstop. The tearDown above already unblocks after each test, but a block
+  // left on the shared app is not a local failure: it breaks every later run's
+  // seeding with ERR_BLOCKED_RECEIVER, CI's E2E suites included. One more
+  // attempt at the end of the file costs a request and removes that failure
+  // mode if a per-test tearDown is ever skipped.
+  tearDownAll(() async {
+    await CleanupHelper.unblockAll();
+  });
+
   group('Block/Unblock: B blocks A (A is the UI user)', () {
     // RT-BLOCK-001: B blocks A while A has the chat open — A sees blocked state.
     testWidgets('RT-BLOCK-001: B blocks A, A sees blocked state',

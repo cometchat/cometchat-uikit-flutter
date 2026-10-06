@@ -1,4 +1,32 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+  # ENG-38688 LINT3: the LINT1 rules with no backlog are errors, not infos.
+  # The two still carrying a backlog follow once `dart tool/analyze_gate.dart
+  # --update` reports they reached zero; add them here then. No effect on the
+  # pub.dev score: pana keeps its own severity for rules it enables, and never
+  # enables these from our list.
+  errors:
+    avoid_print: error
+    unawaited_futures: error
+    require_trailing_commas: error
 include: package:flutter_lints/flutter.yaml
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+# ENG-38688 LINT1. Written as a LIST on purpose: pana (the pub.dev score) only
+# passes a package's `linter: rules:` through when they are a map
+# (`rule: true`), so a list keeps these rules, and their backlog, out of the
+# pub.dev static-analysis score while our own CI still enforces them. Do not
+# convert this to map form. The two rules with a backlog are ratcheted by
+# tool/analyze_gate.dart against tool/lint_backlog.json.
+linter:
+  rules:
+    - public_member_api_docs
+    - avoid_print
+    - avoid_dynamic_calls
+    - unawaited_futures
+    - require_trailing_commas

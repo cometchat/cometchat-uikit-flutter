@@ -18,6 +18,10 @@ import '../../../../cometchat_chat_uikit.dart';
 /// optimized rebuilds - only the affected conversation item rebuilds when
 /// typing status changes.
 class ConversationsList extends StatelessWidget {
+  /// Generic list-item style applied to every row; see
+  /// [CometChatConversationListItem.listItemStyle].
+  final ListItemStyle? listItemStyle;
+
   const ConversationsList({
     super.key,
     required this.conversationsBloc,
@@ -39,7 +43,6 @@ class ConversationsList extends StatelessWidget {
     this.trailingView,
     this.leadingView,
     this.titleView,
-    this.listItemStyle,
     this.avatarHeight,
     this.avatarWidth,
     this.avatarPadding,
@@ -75,6 +78,7 @@ class ConversationsList extends StatelessWidget {
     this.onLoad,
     this.onEmpty,
     this.onError,
+    this.listItemStyle,
   });
 
   /// The BLoC managing conversations state.
@@ -136,9 +140,6 @@ class ConversationsList extends StatelessWidget {
   /// Custom title view builder.
   final Widget? Function(BuildContext context, Conversation conversation)?
   titleView;
-
-  /// Custom style for the list item.
-  final ListItemStyle? listItemStyle;
 
   /// Height for the avatar.
   final double? avatarHeight;
@@ -362,6 +363,7 @@ class ConversationsList extends StatelessWidget {
               conversation,
               selectedConversations,
               typingIndicators,
+              isLastRow: index == conversations.length - 1,
             );
             if (itemWrapperBuilder != null) {
               return itemWrapperBuilder!(context, conversation, item);
@@ -373,13 +375,15 @@ class ConversationsList extends StatelessWidget {
     );
   }
 
-  /// Builds a single list item for a conversation.
+  /// Builds a single list item for a conversation. [isLastRow] marks the
+  /// last loaded conversation.
   Widget _buildListItem(
     BuildContext context,
     Conversation conversation,
     Set<String> selectedConversations,
-    List<TypingIndicator> typingIndicators,
-  ) {
+    List<TypingIndicator> typingIndicators, {
+    required bool isLastRow,
+  }) {
     // Use custom listItemView if provided
     if (listItemView != null) {
       return listItemView!(conversation);
@@ -394,10 +398,40 @@ class ConversationsList extends StatelessWidget {
     // The last message has a parentMessageId (is a reply in a thread)
     final shouldHideThreadIndicator = _shouldHideThreadIndicator(conversation);
 
+    // The row style: CometChatConversationsStyle.itemStyle, under the
+    // item-level fields CometChatConversationsStyle carries itself. merge
+    // lets only the non-null ones win, so an unset field keeps itemStyle's.
+    final rowStyle =
+        (style.itemStyle ?? const CometChatConversationListItemStyle()).merge(
+          CometChatConversationListItemStyle(
+            titleTextStyle: style.itemTitleTextStyle,
+            titleTextColor: style.itemTitleTextColor,
+            subtitleTextStyle: style.itemSubtitleTextStyle,
+            subtitleTextColor: style.itemSubtitleTextColor,
+            backgroundColor: style.backgroundColor,
+            selectedBackgroundColor: style.listItemSelectedBackgroundColor,
+            messageTypeIconTint: style.messageTypeIconColor,
+            checkBoxBackgroundColor: style.checkBoxBackgroundColor,
+            checkBoxCheckedBackgroundColor:
+                style.checkBoxCheckedBackgroundColor,
+            // Resolved rather than cast: the style takes any geometry.
+            checkBoxBorderRadius: style.checkBoxBorderRadius?.resolve(
+              Directionality.of(context),
+            ),
+            checkBoxStrokeColor: style.checkBoxBorder?.color,
+            checkBoxStrokeWidth: style.checkBoxBorder?.width,
+            checkBoxSelectIconTint: style.checkboxSelectedIconColor,
+            privateGroupIconBackground: style.privateGroupIconBackground,
+            protectedGroupIconBackground: style.protectedGroupIconBackground,
+          ),
+        );
+
     return CometChatConversationListItem(
       conversation: conversation,
       onItemClick: (conv) => _handleItemTap(conv, selectedConversations),
-      onItemLongClick: onItemLongPress != null
+      onItemLongClick:
+          onItemLongPress != null ||
+              activateSelection == ActivateSelection.onLongClick
           ? (conv) => _handleItemLongPress(conv, selectedConversations)
           : null,
       onSelectionToggle: () => _handleSelectionToggle(conversation),
@@ -408,6 +442,9 @@ class ConversationsList extends StatelessWidget {
       hideReceipts: !(receiptsVisibility ?? true),
       hideThreadIndicator: shouldHideThreadIndicator,
       typingIndicators: typingIndicators,
+      // Android draws no separator after the last row, whichever style
+      // asks for one.
+      hideSeparator: isLastRow,
       textFormatters: textFormatters,
       dateTimeFormatterCallback: dateTimeFormatterCallback,
       avatarHeight: avatarHeight,
@@ -417,8 +454,19 @@ class ConversationsList extends StatelessWidget {
       statusIndicatorHeight: statusIndicatorHeight,
       statusIndicatorWidth: statusIndicatorWidth,
       statusIndicatorBorderRadius: statusIndicatorBorderRadius,
+      typingIndicatorText: typingIndicatorText,
+      datePattern: datePattern,
+      datePadding: datePadding,
+      dateHeight: dateHeight,
+      dateWidth: dateWidth,
+      dateBackgroundIsTransparent: dateBackgroundIsTransparent,
+      badgeWidth: badgeWidth,
+      badgeHeight: badgeHeight,
+      badgePadding: badgePadding,
       privateGroupIcon: privateGroupIcon,
       protectedGroupIcon: protectedGroupIcon,
+      privateGroupIconBackground: style.privateGroupIconBackground,
+      protectedGroupIconBackground: style.protectedGroupIconBackground,
       readIcon: readIcon,
       deliveredIcon: deliveredIcon,
       sentIcon: sentIcon,
@@ -444,14 +492,8 @@ class ConversationsList extends StatelessWidget {
       dateStyle: datesStyle,
       badgeStyle: style.badgeStyle,
       typingIndicatorStyle: typingStyle,
-      // Pass item-level text styles from CometChatConversationsStyle
-      style: CometChatConversationListItemStyle(
-        titleTextStyle: style.itemTitleTextStyle,
-        titleTextColor: style.itemTitleTextColor,
-        subtitleTextStyle: style.itemSubtitleTextStyle,
-        subtitleTextColor: style.itemSubtitleTextColor,
-        backgroundColor: style.backgroundColor,
-      ),
+      listItemStyle: listItemStyle,
+      style: rowStyle,
     );
   }
 
@@ -460,10 +502,10 @@ class ConversationsList extends StatelessWidget {
     Conversation conversation,
     Set<String> selectedConversations,
   ) {
-    if (activateSelection == ActivateSelection.onClick ||
-        (activateSelection == ActivateSelection.onLongClick &&
-                selectedConversations.isNotEmpty) &&
-            !(selectionMode == null || selectionMode == SelectionMode.none)) {
+    if ((activateSelection == ActivateSelection.onClick ||
+            (activateSelection == ActivateSelection.onLongClick &&
+                selectedConversations.isNotEmpty)) &&
+        !(selectionMode == null || selectionMode == SelectionMode.none)) {
       conversationsBloc.add(
         ToggleConversationSelection(conversation.conversationId ?? ''),
       );

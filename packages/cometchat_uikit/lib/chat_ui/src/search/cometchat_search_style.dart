@@ -339,6 +339,12 @@ class CometChatSearchStyle extends ThemeExtension<CometChatSearchStyle> {
   }
 
   @override
+  /// Interpolates every declared prop.
+  ///
+  /// Previously this rebuilt the style from six of the forty-nine, so any
+  /// animated theme transition nulled the other forty-three mid-flight and
+  /// the search screen lost its styling until the animation settled.
+  /// ENG-39119.
   CometChatSearchStyle lerp(
     ThemeExtension<CometChatSearchStyle>? other,
     double t,
@@ -352,9 +358,29 @@ class CometChatSearchStyle extends ThemeExtension<CometChatSearchStyle> {
         t,
       ),
       searchTextColor: Color.lerp(searchTextColor, other.searchTextColor, t),
+      searchTextStyle: TextStyle.lerp(
+        searchTextStyle,
+        other.searchTextStyle,
+        t,
+      ),
       searchPlaceHolderTextColor: Color.lerp(
         searchPlaceHolderTextColor,
         other.searchPlaceHolderTextColor,
+        t,
+      ),
+      searchPlaceHolderTextStyle: TextStyle.lerp(
+        searchPlaceHolderTextStyle,
+        other.searchPlaceHolderTextStyle,
+        t,
+      ),
+      searchBorder: BorderSide.lerp(
+        searchBorder ?? BorderSide.none,
+        other.searchBorder ?? BorderSide.none,
+        t,
+      ),
+      searchBorderRadius: BorderRadius.lerp(
+        searchBorderRadius,
+        other.searchBorderRadius,
         t,
       ),
       searchBackIconColor: Color.lerp(
@@ -367,6 +393,180 @@ class CometChatSearchStyle extends ThemeExtension<CometChatSearchStyle> {
         other.searchClearIconColor,
         t,
       ),
+      searchFilterChipBackgroundColor: Color.lerp(
+        searchFilterChipBackgroundColor,
+        other.searchFilterChipBackgroundColor,
+        t,
+      ),
+      searchFilterChipSelectedBackgroundColor: Color.lerp(
+        searchFilterChipSelectedBackgroundColor,
+        other.searchFilterChipSelectedBackgroundColor,
+        t,
+      ),
+      searchFilterChipTextColor: Color.lerp(
+        searchFilterChipTextColor,
+        other.searchFilterChipTextColor,
+        t,
+      ),
+      searchFilterChipSelectedTextColor: Color.lerp(
+        searchFilterChipSelectedTextColor,
+        other.searchFilterChipSelectedTextColor,
+        t,
+      ),
+      searchFilterChipTextStyle: TextStyle.lerp(
+        searchFilterChipTextStyle,
+        other.searchFilterChipTextStyle,
+        t,
+      ),
+      searchFilterChipSelectedTextStyle: TextStyle.lerp(
+        searchFilterChipSelectedTextStyle,
+        other.searchFilterChipSelectedTextStyle,
+        t,
+      ),
+      searchFilterChipBorder: BoxBorder.lerp(
+        searchFilterChipBorder,
+        other.searchFilterChipBorder,
+        t,
+      ),
+      searchFilterChipSelectedBorder: BoxBorder.lerp(
+        searchFilterChipSelectedBorder,
+        other.searchFilterChipSelectedBorder,
+        t,
+      ),
+      searchFilterChipBorderRadius: BorderRadius.lerp(
+        searchFilterChipBorderRadius,
+        other.searchFilterChipBorderRadius,
+        t,
+      ),
+      searchFilterIconColor: Color.lerp(
+        searchFilterIconColor,
+        other.searchFilterIconColor,
+        t,
+      ),
+      searchFilterSelectedIconColor: Color.lerp(
+        searchFilterSelectedIconColor,
+        other.searchFilterSelectedIconColor,
+        t,
+      ),
+      sectionHeaderTextColor: Color.lerp(
+        sectionHeaderTextColor,
+        other.sectionHeaderTextColor,
+        t,
+      ),
+      sectionHeaderTextStyle: TextStyle.lerp(
+        sectionHeaderTextStyle,
+        other.sectionHeaderTextStyle,
+        t,
+      ),
+      searchConversationTitleTextColor: Color.lerp(
+        searchConversationTitleTextColor,
+        other.searchConversationTitleTextColor,
+        t,
+      ),
+      searchConversationTitleTextStyle: TextStyle.lerp(
+        searchConversationTitleTextStyle,
+        other.searchConversationTitleTextStyle,
+        t,
+      ),
+      searchConversationSubtitleTextColor: Color.lerp(
+        searchConversationSubtitleTextColor,
+        other.searchConversationSubtitleTextColor,
+        t,
+      ),
+      searchConversationSubtitleTextStyle: TextStyle.lerp(
+        searchConversationSubtitleTextStyle,
+        other.searchConversationSubtitleTextStyle,
+        t,
+      ),
+      searchConversationItemBackgroundColor: Color.lerp(
+        searchConversationItemBackgroundColor,
+        other.searchConversationItemBackgroundColor,
+        t,
+      ),
+      searchMessageSenderTextColor: Color.lerp(
+        searchMessageSenderTextColor,
+        other.searchMessageSenderTextColor,
+        t,
+      ),
+      searchMessageSenderTextStyle: TextStyle.lerp(
+        searchMessageSenderTextStyle,
+        other.searchMessageSenderTextStyle,
+        t,
+      ),
+      searchMessagePreviewTextColor: Color.lerp(
+        searchMessagePreviewTextColor,
+        other.searchMessagePreviewTextColor,
+        t,
+      ),
+      searchMessagePreviewTextStyle: TextStyle.lerp(
+        searchMessagePreviewTextStyle,
+        other.searchMessagePreviewTextStyle,
+        t,
+      ),
+      searchMessageDateTextColor: Color.lerp(
+        searchMessageDateTextColor,
+        other.searchMessageDateTextColor,
+        t,
+      ),
+      searchMessageDateTextStyle: TextStyle.lerp(
+        searchMessageDateTextStyle,
+        other.searchMessageDateTextStyle,
+        t,
+      ),
+      emptyStateTextColor: Color.lerp(
+        emptyStateTextColor,
+        other.emptyStateTextColor,
+        t,
+      ),
+      emptyStateTextStyle: TextStyle.lerp(
+        emptyStateTextStyle,
+        other.emptyStateTextStyle,
+        t,
+      ),
+      emptyStateSubTitleTextColor: Color.lerp(
+        emptyStateSubTitleTextColor,
+        other.emptyStateSubTitleTextColor,
+        t,
+      ),
+      emptyStateSubTitleTextStyle: TextStyle.lerp(
+        emptyStateSubTitleTextStyle,
+        other.emptyStateSubTitleTextStyle,
+        t,
+      ),
+      errorStateTextColor: Color.lerp(
+        errorStateTextColor,
+        other.errorStateTextColor,
+        t,
+      ),
+      errorStateTextStyle: TextStyle.lerp(
+        errorStateTextStyle,
+        other.errorStateTextStyle,
+        t,
+      ),
+      errorStateSubTitleTextColor: Color.lerp(
+        errorStateSubTitleTextColor,
+        other.errorStateSubTitleTextColor,
+        t,
+      ),
+      errorStateSubTitleTextStyle: TextStyle.lerp(
+        errorStateSubTitleTextStyle,
+        other.errorStateSubTitleTextStyle,
+        t,
+      ),
+      seeMoreTextColor: Color.lerp(seeMoreTextColor, other.seeMoreTextColor, t),
+      seeMoreTextStyle: TextStyle.lerp(
+        seeMoreTextStyle,
+        other.seeMoreTextStyle,
+        t,
+      ),
+      avatarStyle: avatarStyle?.lerp(other.avatarStyle, t) ?? other.avatarStyle,
+      statusIndicatorStyle:
+          statusIndicatorStyle?.lerp(other.statusIndicatorStyle, t) ??
+          other.statusIndicatorStyle,
+      badgeStyle: badgeStyle?.lerp(other.badgeStyle, t) ?? other.badgeStyle,
+      receiptStyle:
+          receiptStyle?.lerp(other.receiptStyle, t) ?? other.receiptStyle,
+      dateStyle: dateStyle?.lerp(other.dateStyle, t) ?? other.dateStyle,
     );
   }
 }

@@ -40,7 +40,7 @@ class CometChatSavedMessagesStyle {
   ///[iconColor] color of the app-bar icons
   final Color? iconColor;
 
-  ///[unsaveIconColor] color of the per-row unsave icon
+  ///[unsaveIconColor] color of the icon in the unsave confirmation dialog
   final Color? unsaveIconColor;
 
   ///[separatorColor] color of the row separators

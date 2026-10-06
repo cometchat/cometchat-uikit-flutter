@@ -29,6 +29,14 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
   final LoadMoreGroupsUseCase loadMoreGroupsUseCase;
   final GetLoggedInUserUseCase getLoggedInUserUseCase;
 
+  /// Caller-supplied request builder, mirroring UsersBloc.usersRequestBuilder.
+  /// Threaded down to GroupsRemoteDataSource, which builds each first page
+  /// from it with the search keyword on top, and leaves it unchanged.
+  final GroupsRequestBuilder? groupsRequestBuilder;
+
+  /// Groups per page: the app builder's limit, as Android uses it, else 30.
+  int get _pageSize => groupsRequestBuilder?.limit ?? 30;
+
   // Pagination state tracking
   bool _isLoadingMore = false;
 
@@ -83,6 +91,7 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     LoadMoreGroupsUseCase? loadMoreGroupsUseCase,
     GetLoggedInUserUseCase? getLoggedInUserUseCase,
     this.disableSDKListeners = false,
+    this.groupsRequestBuilder,
   }) : getGroupsUseCase =
            getGroupsUseCase ?? _getServiceLocator().getGroupsUseCase,
        loadMoreGroupsUseCase =
@@ -595,8 +604,9 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     }
 
     final result = await getGroupsUseCase(
-      limit: 30,
+      limit: _pageSize,
       searchKeyword: event.searchKeyword,
+      groupsRequestBuilder: groupsRequestBuilder,
     );
 
     if (result is Success<List<Group>>) {
@@ -605,6 +615,12 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
         emit(const GroupsEmpty());
       } else if (groups.isNotEmpty) {
         replaceAll(groups);
+        // A fresh first page reopens paging. A silent reload keeps the
+        // previous state's hasMore otherwise, which is false once a search's
+        // pages ran out, or once a refreshed list had been paged to its end.
+        if (state is GroupsLoaded) {
+          emit((state as GroupsLoaded).copyWith(hasMore: true));
+        }
       }
     } else if (result is Failure && !isSilentRefresh) {
       emit(GroupsError(message: result.message));
@@ -628,7 +644,7 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     emit(currentState.copyWith(isLoadingMore: true));
 
     final result = await loadMoreGroupsUseCase(
-      limit: 30,
+      limit: _pageSize,
       searchKeyword: _currentSearchKeyword,
       currentGroups: currentState.groups,
     );
@@ -644,15 +660,14 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
       }
 
       final allGroups = [...currentState.groups, ...newGroups];
-      final hasMorePages = newGroups.length >= 30;
       replaceAll(allGroups);
-      // Always emit the correct hasMore and isLoadingMore after replaceAll
+      // Only an empty page ends paging, as on Android. A short page proves
+      // nothing here: this use case drops groups the list already holds, and
+      // real-time events add groups ahead of the cursor. The request after the
+      // last page is answered by the SDK from its page count.
       if (state is GroupsLoaded) {
         emit(
-          (state as GroupsLoaded).copyWith(
-            hasMore: hasMorePages,
-            isLoadingMore: false,
-          ),
+          (state as GroupsLoaded).copyWith(hasMore: true, isLoadingMore: false),
         );
       }
     } else if (result is Failure) {
@@ -740,8 +755,9 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     emit(const GroupsLoading());
 
     final result = await getGroupsUseCase(
-      limit: 30,
+      limit: _pageSize,
       searchKeyword: event.keyword,
+      groupsRequestBuilder: groupsRequestBuilder,
     );
 
     if (isClosed) return;
@@ -760,16 +776,26 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     }
   }
 
-  /// Restore original groups after search is cleared
+  /// Restore original groups after search is cleared, then reload the first
+  /// page.
+  ///
+  /// The search replaced the SDK request, so the cursor that paged the
+  /// original list is gone. A load-more from a reset cursor fetched page one
+  /// again — from a default builder, since load-more does not carry
+  /// [groupsRequestBuilder] — deduped it to nothing and ended the list. A
+  /// fresh first page, built from [groupsRequestBuilder] as Android rebuilds
+  /// its request on clear, gives later pages a cursor to follow. The restored
+  /// list shows in the meantime.
   ///
   /// Requirements: 7.2
   void _onRestoreOriginalGroups(
     _RestoreOriginalGroups event,
     Emitter<GroupsState> emit,
   ) {
-    // Reset the SDK request cursor so next pagination uses the non-search request
+    // Drop the search's request so nothing pages on from it before the reload
     getGroupsUseCase.resetRequest();
     replaceAll(event.groups);
+    add(const LoadGroups(silent: true));
   }
 
   /// Toggle group selection (will be fully implemented in Task 5.10)

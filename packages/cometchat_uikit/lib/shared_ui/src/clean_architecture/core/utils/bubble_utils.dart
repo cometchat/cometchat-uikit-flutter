@@ -27,8 +27,14 @@ class BubbleUtils {
     return platform.downloadFileToLocal(fileUrl, fileName);
   }
 
-  static Future<String?> isFileDownloaded(String fileName) async {
+  /// Resolves an already-downloaded copy of [fileName]. Pass [fileUrl] whenever
+  /// it is known: the local cache is keyed per attachment, and without the URL
+  /// a shared file name resolves to whichever sender's copy landed first.
+  static Future<String?> isFileDownloaded(
+    String fileName, {
+    String? fileUrl,
+  }) async {
     if (kIsWeb) return null;
-    return platform.getDownloadedFilePath(fileName);
+    return platform.getDownloadedFilePath(fileName, fileUrl: fileUrl);
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 import '../../../../../shared_ui/src/constants/ui_kit_constants.dart';
+import '../../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// Exception thrown when remote data source operations fail.
 class GroupMembersRemoteDataSourceException implements Exception {
@@ -79,55 +80,79 @@ class GroupMembersRemoteDataSourceImpl implements GroupMembersRemoteDataSource {
   /// Current search keyword for request management.
   String? _currentSearchKeyword;
 
+  /// The app builder [_currentRequest] was built from, if any.
+  GroupMembersRequestBuilder? _currentRequestBuilder;
+
+  /// [groupMembersRequestBuilder], when given, is the app's own builder: the
+  /// request is built from it, so its limit, scopes, status and search keyword
+  /// apply, with [guid] and a non-empty [searchKeyword] on top. See
+  /// [_buildFromAppBuilder]. Without it the request is built from a fresh
+  /// builder, as before.
   @override
   Future<List<GroupMember>> getGroupMembers({
     required String guid,
     int limit = 30,
     String? searchKeyword,
+    GroupMembersRequestBuilder? groupMembersRequestBuilder,
   }) async {
     try {
       // Check if we need to create a new request
-      // (different guid, different search keyword, or no existing request)
+      // (different guid, different search keyword, different app builder,
+      // or no existing request)
       final needsNewRequest =
           _currentRequest == null ||
           _currentGuid != guid ||
-          _currentSearchKeyword != searchKeyword;
+          _currentSearchKeyword != searchKeyword ||
+          !identical(_currentRequestBuilder, groupMembersRequestBuilder);
 
       if (needsNewRequest) {
-        // Create a new request builder
-        final requestBuilder = GroupMembersRequestBuilder(guid)..limit = limit;
+        if (groupMembersRequestBuilder != null) {
+          _currentRequest = _buildFromAppBuilder(
+            groupMembersRequestBuilder,
+            guid: guid,
+            limit: limit,
+            searchKeyword: searchKeyword,
+          );
+        } else {
+          // Create a new request builder
+          final requestBuilder = GroupMembersRequestBuilder(guid)
+            ..limit = limit;
 
-        if (searchKeyword != null && searchKeyword.isNotEmpty) {
-          requestBuilder.searchKeyword = searchKeyword;
+          if (searchKeyword != null && searchKeyword.isNotEmpty) {
+            requestBuilder.searchKeyword = searchKeyword;
+          }
+
+          // Build the request
+          _currentRequest = requestBuilder.build();
         }
-
-        // Build the request
-        _currentRequest = requestBuilder.build();
         _currentGuid = guid;
         _currentSearchKeyword = searchKeyword;
+        _currentRequestBuilder = groupMembersRequestBuilder;
       }
 
       // Create a completer to convert callback-based API to Future
       final completer = Completer<List<GroupMember>>();
 
       // Fetch group members
-      _currentRequest!.fetchNext(
-        onSuccess: (List<GroupMember> members) {
-          if (!completer.isCompleted) {
-            completer.complete(members);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              GroupMembersRemoteDataSourceException(
-                message: exception.message ?? 'Failed to fetch group members',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        _currentRequest!.fetchNext(
+          onSuccess: (List<GroupMember> members) {
+            if (!completer.isCompleted) {
+              completer.complete(members);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                GroupMembersRemoteDataSourceException(
+                  message: exception.message ?? 'Failed to fetch group members',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -144,6 +169,52 @@ class GroupMembersRemoteDataSourceImpl implements GroupMembersRemoteDataSource {
             'Unexpected error while fetching group members: ${e.toString()}',
         originalException: e is Exception ? e : null,
       );
+    }
+  }
+
+  /// Builds the request from the app's own [builder], with the list's group
+  /// and the search box's keyword on top, then puts the builder back as it
+  /// was.
+  ///
+  /// The builder is the app's object and outlives this request, so its fields
+  /// are set only for the synchronous `build()`, which copies them into the
+  /// request, and restored in `finally` — a cleared search's keyword must not
+  /// filter later loads. It cannot be copied instead: its page is private.
+  ///
+  /// [guid] wins over the builder's own: the list shows, and its kick, ban and
+  /// scope actions act on, the widget's group, so members of any other group
+  /// must not load into it. A mismatch is logged in debug builds. The app's
+  /// limit wins over [limit], which fills in only when the app set none. The
+  /// builder's scopes and status are the app's and are not touched.
+  GroupMembersRequest _buildFromAppBuilder(
+    GroupMembersRequestBuilder builder, {
+    required String guid,
+    required int limit,
+    String? searchKeyword,
+  }) {
+    final appGuid = builder.guid;
+    final appLimit = builder.limit;
+    final appSearchKeyword = builder.searchKeyword;
+    if (appGuid != guid) {
+      ccLog(
+        'CometChatGroupMembers: groupMembersRequestBuilder is for group '
+        '"$appGuid", but the list shows group "$guid"; loading "$guid" with '
+        "the builder's other settings.",
+      );
+    }
+    try {
+      builder
+        ..guid = guid
+        ..limit = appLimit ?? limit;
+      if (searchKeyword != null && searchKeyword.isNotEmpty) {
+        builder.searchKeyword = searchKeyword;
+      }
+      return builder.build();
+    } finally {
+      builder
+        ..guid = appGuid
+        ..limit = appLimit
+        ..searchKeyword = appSearchKeyword;
     }
   }
 
@@ -369,5 +440,6 @@ class GroupMembersRemoteDataSourceImpl implements GroupMembersRemoteDataSource {
     _currentRequest = null;
     _currentGuid = null;
     _currentSearchKeyword = null;
+    _currentRequestBuilder = null;
   }
 }

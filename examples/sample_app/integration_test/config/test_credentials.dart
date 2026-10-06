@@ -17,58 +17,58 @@ class TestCredentials {
 
   static const String appId = String.fromEnvironment(
     'COMETCHAT_APP_ID',
-    defaultValue: 'YOUR_APP_ID',
+    defaultValue: '',
   );
 
   static const String region = String.fromEnvironment(
     'COMETCHAT_REGION',
-    defaultValue: 'YOUR_REGION', // e.g. us, eu, in
+    defaultValue: '', // e.g. us, eu, in
   );
 
   static const String authKey = String.fromEnvironment(
     'COMETCHAT_AUTH_KEY',
-    defaultValue: 'YOUR_AUTH_KEY',
+    defaultValue: '',
   );
 
   static const String restApiKey = String.fromEnvironment(
     'COMETCHAT_REST_API_KEY',
-    defaultValue: 'YOUR_REST_API_KEY',
+    defaultValue: '',
   );
 
   // ─── User A: The UI user (drives the Flutter app) ──────────────────────────
 
   static const String userAUid = String.fromEnvironment(
     'TEST_USER_A_UID',
-    defaultValue: 'cometchat-uid-2',
+    defaultValue: '',
   );
 
   static const String userAName = String.fromEnvironment(
     'TEST_USER_A_NAME',
-    defaultValue: 'George Alan',
+    defaultValue: '',
   );
 
   // ─── User B: The SDK-only user (headless, no UI) ───────────────────────────
 
   static const String userBUid = String.fromEnvironment(
     'TEST_USER_B_UID',
-    defaultValue: 'cometchat-uid-3',
+    defaultValue: '',
   );
 
   static const String userBName = String.fromEnvironment(
     'TEST_USER_B_NAME',
-    defaultValue: 'Nancy Grace',
+    defaultValue: '',
   );
 
   // ─── Test Group ────────────────────────────────────────────────────────────
 
   static const String testGroupGuid = String.fromEnvironment(
     'TEST_GROUP_GUID',
-    defaultValue: 'supergroup',
+    defaultValue: '',
   );
 
   static const String testGroupName = String.fromEnvironment(
     'TEST_GROUP_NAME',
-    defaultValue: 'SuperGroup',
+    defaultValue: '',
   );
 
   // ─── REST API base URL ─────────────────────────────────────────────────────

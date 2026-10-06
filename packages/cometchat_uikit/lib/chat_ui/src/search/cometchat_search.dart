@@ -48,6 +48,7 @@ class CometChatSearch extends StatefulWidget {
     this.searchAudioMessageView,
     this.conversationsRequestBuilder,
     this.messagesRequestBuilder,
+    this.searchBloc,
   });
 
   final VoidCallback? onBack;
@@ -75,7 +76,24 @@ class CometChatSearch extends StatefulWidget {
   final Widget? Function(BuildContext, Conversation)? conversationTailView;
   final bool? usersStatusVisibility;
   final bool? receiptsVisibility;
+
+  /// [searchBloc] injects the bloc instead of letting the component build
+  /// one.
+  ///
+  /// Mirrors `CometChatUsers.usersBloc`, `CometChatGroups.groupsBloc` and
+  /// `CometChatConversations.conversationsBloc`. Search was the only one of
+  /// the four without the seam, and because every builder here passes
+  /// `bloc: _searchBloc` explicitly, an ambient BlocProvider could not stand
+  /// in for it either — which left most of this component's props impossible
+  /// to render-verify. ENG-39114.
+  ///
+  /// An injected bloc is owned by the caller and is not closed on dispose.
+  final SearchBloc? searchBloc;
   final bool? groupTypeVisibility;
+
+  /// Labels the month separators in the message results, which default to
+  /// "September, 2026". Only `otherDays` is used: it gets the send time of
+  /// the first message under the separator, and null keeps the default.
   final DateTimeFormatterCallback? dateSeparatorFormatterCallback;
   final DateTimeFormatterCallback? timeSeparatorFormatterCallback;
   final Widget? Function(BuildContext, TextMessage)? searchTextMessageView;
@@ -92,6 +110,7 @@ class CometChatSearch extends StatefulWidget {
 
 class _CometChatSearchState extends State<CometChatSearch> {
   late final SearchBloc _searchBloc;
+  bool _isExternalBloc = false;
   late final TextEditingController _textController;
   late final FocusNode _focusNode;
 
@@ -119,15 +138,21 @@ class _CometChatSearchState extends State<CometChatSearch> {
     } else {
       derivedScope = SearchScope.conversations;
     }
-    _searchBloc = SearchBloc(
-      user: widget.user,
-      group: widget.group,
-      initialScope: derivedScope,
-      conversationsRequestBuilder: widget.conversationsRequestBuilder,
-      messagesRequestBuilder: widget.messagesRequestBuilder,
-      searchFilters: widget.searchFilters,
-      searchScopes: widget.searchIn,
-    );
+    if (widget.searchBloc != null) {
+      _searchBloc = widget.searchBloc!;
+      _isExternalBloc = true;
+    } else {
+      _searchBloc = SearchBloc(
+        user: widget.user,
+        group: widget.group,
+        initialScope: derivedScope,
+        conversationsRequestBuilder: widget.conversationsRequestBuilder,
+        messagesRequestBuilder: widget.messagesRequestBuilder,
+        searchFilters: widget.searchFilters,
+        searchScopes: widget.searchIn,
+      );
+      _isExternalBloc = false;
+    }
     _textController = TextEditingController();
     _focusNode = FocusNode();
   }
@@ -153,31 +178,96 @@ class _CometChatSearchState extends State<CometChatSearch> {
 
   @override
   void dispose() {
-    _searchBloc.close();
+    if (!_isExternalBloc) {
+      _searchBloc.close();
+    }
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
+  /// Reports search state transitions to the caller's callbacks, once per
+  /// entry into each status. ENG-39104: all four callbacks were declared,
+  /// documented, and read nowhere under `lib/chat_ui/src/search/`.
+  ///
+  /// Search differs from the Users and Groups lists in carrying two
+  /// independent result sets in one state, so each is tracked separately —
+  /// messages arriving must not re-report conversations. `onEmpty` fires only
+  /// when every list in scope has settled empty, which is the condition an
+  /// integrator would show a "nothing found" affordance for.
+  SearchStatus? _lastConversationsStatus;
+  SearchStatus? _lastMessagesStatus;
+  bool _reportedEmpty = false;
+  bool _reportedError = false;
+
+  void _reportSearchState(SearchState state) {
+    final conversationsChanged =
+        state.conversationsStatus != _lastConversationsStatus;
+    final messagesChanged = state.messagesStatus != _lastMessagesStatus;
+    _lastConversationsStatus = state.conversationsStatus;
+    _lastMessagesStatus = state.messagesStatus;
+
+    if (state.conversationsStatus == SearchStatus.error ||
+        state.messagesStatus == SearchStatus.error) {
+      if (!_reportedError) {
+        _reportedError = true;
+        widget.onError?.call(Exception(state.errorMessage ?? 'Search failed'));
+      }
+      return;
+    }
+    _reportedError = false;
+
+    if (conversationsChanged &&
+        state.conversationsStatus == SearchStatus.loaded &&
+        state.conversations.isNotEmpty) {
+      widget.onConversationsLoad?.call(state.conversations);
+    }
+    if (messagesChanged &&
+        state.messagesStatus == SearchStatus.loaded &&
+        state.messages.isNotEmpty) {
+      widget.onMessagesLoad?.call(state.messages);
+    }
+
+    // Only the lists the current scope actually shows count toward empty.
+    final conversationsSettledEmpty =
+        !state.showConversations ||
+        state.conversationsStatus == SearchStatus.empty;
+    final messagesSettledEmpty =
+        !state.showMessages || state.messagesStatus == SearchStatus.empty;
+
+    if (conversationsSettledEmpty && messagesSettledEmpty) {
+      if (!_reportedEmpty) {
+        _reportedEmpty = true;
+        widget.onEmpty?.call();
+      }
+    } else {
+      _reportedEmpty = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _searchBloc,
-      child: Scaffold(
-        backgroundColor: style.backgroundColor ?? colorPalette.background1,
-        body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              vertical: spacing.padding3 ?? 0,
-              horizontal: spacing.padding4 ?? 0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSearchBar(),
-                _buildFilterChips(),
-                Expanded(child: _buildResults()),
-              ],
+    return BlocListener<SearchBloc, SearchState>(
+      bloc: _searchBloc,
+      listener: (context, state) => _reportSearchState(state),
+      child: BlocProvider.value(
+        value: _searchBloc,
+        child: Scaffold(
+          backgroundColor: style.backgroundColor ?? colorPalette.background1,
+          body: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: spacing.padding3 ?? 0,
+                horizontal: spacing.padding4 ?? 0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchBar(),
+                  _buildFilterChips(),
+                  Expanded(child: _buildResults()),
+                ],
+              ),
             ),
           ),
         ),
@@ -214,16 +304,20 @@ class _CometChatSearchState extends State<CometChatSearch> {
           hintText: (widget.user != null || widget.group != null)
               ? "${cc.Translations.of(context).search} in ${widget.user?.name ?? widget.group?.name ?? ""}"
               : cc.Translations.of(context).search,
-          prefixIcon: GestureDetector(
-            onTap: widget.onBack ?? () => Navigator.of(context).pop(),
-            child:
-                widget.searchBackIcon ??
-                Icon(
-                  Icons.arrow_back,
-                  color:
-                      style.searchBackIconColor ?? colorPalette.iconSecondary,
-                  size: 24,
-                ),
+          prefixIcon: Semantics(
+            button: true,
+            label: cc.Translations.of(context).back,
+            child: GestureDetector(
+              onTap: widget.onBack ?? () => Navigator.of(context).pop(),
+              child:
+                  widget.searchBackIcon ??
+                  Icon(
+                    Icons.arrow_back,
+                    color:
+                        style.searchBackIconColor ?? colorPalette.iconSecondary,
+                    size: 24,
+                  ),
+            ),
           ),
           suffixIcon: BlocBuilder<SearchBloc, SearchState>(
             bloc: _searchBloc,
@@ -232,20 +326,24 @@ class _CometChatSearchState extends State<CometChatSearch> {
               if (state.searchText.isEmpty) {
                 return const SizedBox(width: 24);
               }
-              return GestureDetector(
-                onTap: () {
-                  _textController.clear();
-                  _searchBloc.add(const SearchTextChanged(''));
-                },
-                child:
-                    widget.searchClearIcon ??
-                    Icon(
-                      Icons.close,
-                      color:
-                          style.searchClearIconColor ??
-                          colorPalette.iconSecondary,
-                      size: 24,
-                    ),
+              return Semantics(
+                button: true,
+                label: cc.Translations.of(context).clearSearch,
+                child: GestureDetector(
+                  onTap: () {
+                    _textController.clear();
+                    _searchBloc.add(const SearchTextChanged(''));
+                  },
+                  child:
+                      widget.searchClearIcon ??
+                      Icon(
+                        Icons.close,
+                        color:
+                            style.searchClearIconColor ??
+                            colorPalette.iconSecondary,
+                        size: 24,
+                      ),
+                ),
               );
             },
           ),
@@ -436,10 +534,29 @@ class _CometChatSearchState extends State<CometChatSearch> {
     ];
   }
 
+  /// The tap behaviour every conversation row shares: report to the caller,
+  /// then re-run the search once navigation has settled so results that are no
+  /// longer matching (a now-read chat under the unread filter) drop out.
+  Future<void> _handleConversationTap(Conversation conversation) async {
+    widget.onConversationClicked?.call(conversation);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted && !_searchBloc.isClosed) {
+      _searchBloc.add(const RefreshCurrentSearch());
+    }
+  }
+
   Widget _buildConversationItem(Conversation conversation) {
     if (widget.conversationItemView != null) {
-      return widget.conversationItemView!(context, conversation) ??
-          const SizedBox.shrink();
+      final customView = widget.conversationItemView!(context, conversation);
+      if (customView == null) return const SizedBox.shrink();
+      // Wrapped rather than returned bare: the early return used to skip the
+      // GestureDetector below, so supplying a custom row silently disabled
+      // onConversationClicked. _buildMessageItem already wraps its own custom
+      // view the same way, which is the precedent followed here.
+      return GestureDetector(
+        onTap: () => _handleConversationTap(conversation),
+        child: customView,
+      );
     }
 
     User? conversationWithUser;
@@ -456,7 +573,9 @@ class _CometChatSearchState extends State<CometChatSearch> {
           isSelected: false,
           user: conversationWithUser,
           group: conversationWithGroup,
-          onlineStatusIndicatorColor: colorPalette.success,
+          onlineStatusIndicatorColor:
+              style.statusIndicatorStyle?.backgroundColor ??
+              colorPalette.success,
           privateGroupIcon: null,
           protectedGroupIcon: null,
           privateGroupIconBackground: null,
@@ -482,16 +601,7 @@ class _CometChatSearchState extends State<CometChatSearch> {
     }
 
     return GestureDetector(
-      onTap: () async {
-        widget.onConversationClicked?.call(conversation);
-        // After the user returns from the conversation, re-trigger the search
-        // to refresh results (e.g., unread filter should exclude now-read chats).
-        // Wait for the next frame to ensure navigation has completed.
-        await WidgetsBinding.instance.endOfFrame;
-        if (mounted && !_searchBloc.isClosed) {
-          _searchBloc.add(const RefreshCurrentSearch());
-        }
-      },
+      onTap: () => _handleConversationTap(conversation),
       child: CometChatListItem(
         avatarHeight: 48,
         avatarWidth: 48,
@@ -503,13 +613,15 @@ class _CometChatSearchState extends State<CometChatSearch> {
         avatarStyle: style.avatarStyle ?? const CometChatAvatarStyle(),
         statusIndicatorColor: statusIndicatorUtils.statusIndicatorColor,
         statusIndicatorIcon: statusIndicatorUtils.icon,
+        // The caller's statusIndicatorStyle is merged over the inline default
+        // rather than ignored — it was declared and never read. ENG-39121.
         statusIndicatorStyle: CometChatStatusIndicatorStyle(
           border: Border.all(
             width: spacing.spacing ?? 0,
             color: colorPalette.background1 ?? Colors.transparent,
           ),
           backgroundColor: colorPalette.success,
-        ),
+        ).merge(style.statusIndicatorStyle),
         hideSeparator: true,
         contentPadding: EdgeInsets.zero,
         style: ListItemStyle(
@@ -559,12 +671,64 @@ class _CometChatSearchState extends State<CometChatSearch> {
             .merge(style.searchConversationSubtitleTextStyle)
             .copyWith(color: style.searchConversationSubtitleTextColor);
 
-    return ConversationSubtitleUtils.getConversationSubtitle(
+    final body = ConversationSubtitleUtils.getConversationSubtitle(
       conversation,
       context,
       subtitleStyle,
       colorPalette.iconSecondary ?? Colors.grey,
     );
+
+    final receipt = _buildConversationReceipt(conversation);
+    if (receipt == null) return body;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        receipt,
+        SizedBox(width: spacing.padding1 ?? 4),
+        Expanded(child: body),
+      ],
+    );
+  }
+
+  /// The delivery receipt for a conversation row, or null when there is
+  /// nothing to show.
+  ///
+  /// ENG-39113: `receiptsVisibility` was declared and read nowhere, because
+  /// Search rendered no receipt at all. The gating mirrors
+  /// `CometChatConversationListItem._shouldShowReceipt` so the two surfaces
+  /// agree — a receipt belongs to an *outgoing* message, so it appears only
+  /// when the last message was sent by the logged-in user.
+  Widget? _buildConversationReceipt(Conversation conversation) {
+    if (widget.receiptsVisibility == false) return null;
+
+    final lastMessage = conversation.lastMessage;
+    if (lastMessage == null) return null;
+    if (lastMessage.deletedAt != null) return null;
+    if (lastMessage.sender?.uid != CometChatUIKit.loggedInUser?.uid) {
+      return null;
+    }
+
+    return CometChatReceipt(
+      status: _receiptStatusOf(lastMessage),
+      style: style.receiptStyle,
+    );
+  }
+
+  /// Same ladder as `CometChatConversationListItem._getReceiptStatus`, mapped
+  /// onto the shared `ReceiptStatus` enum rather than its private strings.
+  ReceiptStatus _receiptStatusOf(BaseMessage message) {
+    if (message.readAt != null && message.readAt!.millisecondsSinceEpoch > 0) {
+      return ReceiptStatus.read;
+    }
+    if (message.deliveredAt != null &&
+        message.deliveredAt!.millisecondsSinceEpoch > 0) {
+      return ReceiptStatus.delivered;
+    }
+    if (message.sentAt != null && message.sentAt!.millisecondsSinceEpoch > 0) {
+      return ReceiptStatus.sent;
+    }
+    return ReceiptStatus.waiting;
   }
 
   Widget _getConversationTail(Conversation conversation) {
@@ -585,18 +749,7 @@ class _CometChatSearchState extends State<CometChatSearch> {
                 date: lastMessageTime,
                 padding: const EdgeInsets.all(0),
                 isTransparentBackground: true,
-                style: CometChatDateStyle(
-                  backgroundColor: colorPalette.transparent,
-                  textStyle: TextStyle(
-                    color:
-                        style.searchMessageDateTextColor ??
-                        colorPalette.textSecondary,
-                    fontSize: typography.caption1?.regular?.fontSize,
-                    fontWeight: typography.caption1?.regular?.fontWeight,
-                    fontFamily: typography.caption1?.regular?.fontFamily,
-                  ).merge(style.searchMessageDateTextStyle),
-                  border: Border.all(width: 0, color: Colors.transparent),
-                ),
+                style: _rowDateStyle(colorPalette.textSecondary),
                 pattern: DateTimePattern.dayDateTimeFormat,
                 dateTimeFormatterCallback:
                     widget.timeSeparatorFormatterCallback,
@@ -984,22 +1137,35 @@ class _CometChatSearchState extends State<CometChatSearch> {
     );
   }
 
+  /// The date style for a result row: the search's defaults underneath, the
+  /// style's [CometChatSearchStyle.dateStyle] over them, and the search-specific
+  /// date colour and text style over that. With no dateStyle this is exactly
+  /// the style the rows always had.
+  CometChatDateStyle _rowDateStyle(Color? defaultTextColor) {
+    final base = CometChatDateStyle(
+      backgroundColor: colorPalette.transparent,
+      textStyle: TextStyle(
+        color: defaultTextColor,
+        fontSize: typography.caption1?.regular?.fontSize,
+        fontWeight: typography.caption1?.regular?.fontWeight,
+        fontFamily: typography.caption1?.regular?.fontFamily,
+      ),
+      border: Border.all(width: 0, color: Colors.transparent),
+    ).merge(style.dateStyle);
+    return base.copyWith(
+      textStyle: (base.textStyle ?? const TextStyle())
+          .copyWith(color: style.searchMessageDateTextColor)
+          .merge(style.searchMessageDateTextStyle),
+    );
+  }
+
   /// Builds a CometChatDate widget for message trailing.
   Widget _buildMessageDate(BaseMessage message) {
     return CometChatDate(
       date: message.sentAt ?? DateTime.now(),
       padding: const EdgeInsets.all(0),
       isTransparentBackground: true,
-      style: CometChatDateStyle(
-        backgroundColor: colorPalette.transparent,
-        textStyle: TextStyle(
-          color: style.searchMessageDateTextColor ?? colorPalette.textTertiary,
-          fontSize: typography.caption1?.regular?.fontSize,
-          fontWeight: typography.caption1?.regular?.fontWeight,
-          fontFamily: typography.caption1?.regular?.fontFamily,
-        ).merge(style.searchMessageDateTextStyle),
-        border: Border.all(width: 0, color: Colors.transparent),
-      ),
+      style: _rowDateStyle(colorPalette.textTertiary),
       pattern: DateTimePattern.dayDateFormat,
       dateTimeFormatterCallback: widget.timeSeparatorFormatterCallback,
     );
@@ -1049,7 +1215,7 @@ class _CometChatSearchState extends State<CometChatSearch> {
 
     return Semantics(
       button: true,
-      label: 'Message from $title',
+      label: Translations.of(context).messageFrom(title),
       child: GestureDetector(
         onTap: () => widget.onMessageClicked?.call(message),
         behavior: HitTestBehavior.opaque,
@@ -1119,9 +1285,11 @@ class _CometChatSearchState extends State<CometChatSearch> {
         padding: EdgeInsets.fromLTRB(0, spacing.padding2 ?? 0, 0, 0),
         child: CometChatDate(
           date: date,
-          customDateString: '${_monthName(date.month)}, ${date.year}',
+          // The label is always resolved here. Handing CometChatDate the
+          // formatter with no pattern made it format the separator as a time
+          // of day, so month separators read like "3:45 pm".
+          customDateString: _monthSeparatorLabel(date),
           padding: EdgeInsets.zero,
-          dateTimeFormatterCallback: widget.dateSeparatorFormatterCallback,
           style: CometChatDateStyle(
             backgroundColor: colorPalette.transparent,
             borderRadius: BorderRadius.zero,
@@ -1133,7 +1301,7 @@ class _CometChatSearchState extends State<CometChatSearch> {
               letterSpacing: 0,
               color: colorPalette.textSecondary,
             ),
-          ),
+          ).merge(style.dateStyle),
         ),
       );
     }
@@ -1143,6 +1311,20 @@ class _CometChatSearchState extends State<CometChatSearch> {
   bool _isSameMonth({DateTime? dt1, DateTime? dt2}) {
     if (dt1 == null || dt2 == null) return false;
     return dt1.year == dt2.year && dt1.month == dt2.month;
+  }
+
+  /// The text of the separator above each month's message results, such as
+  /// "September, 2026".
+  ///
+  /// [widget.dateSeparatorFormatterCallback]'s `otherDays` can replace it: it
+  /// is called with the send time of the first message listed under the
+  /// separator, and returning null keeps the default.
+  String _monthSeparatorLabel(DateTime date) {
+    final defaultLabel = '${_monthName(date.month)}, ${date.year}';
+    return widget.dateSeparatorFormatterCallback?.otherDays(
+          date.millisecondsSinceEpoch,
+        ) ??
+        defaultLabel;
   }
 
   String _monthName(int month) {

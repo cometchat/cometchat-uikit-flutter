@@ -37,7 +37,7 @@ class CometChatPinnedMessagesStyle {
   ///[iconColor] color of the header close icon
   final Color? iconColor;
 
-  ///[unpinIconColor] color of the per-row unpin icon
+  ///[unpinIconColor] color of the icon in the unpin confirmation dialog
   final Color? unpinIconColor;
 
   ///[separatorColor] color of the row separators
@@ -50,6 +50,7 @@ class CometChatPinnedMessagesStyle {
     if (other == null) return this;
     return CometChatPinnedMessagesStyle(
       backgroundColor: other.backgroundColor ?? backgroundColor,
+      appBarColor: other.appBarColor ?? appBarColor,
       titleTextStyle: other.titleTextStyle ?? titleTextStyle,
       itemTitleTextStyle: other.itemTitleTextStyle ?? itemTitleTextStyle,
       itemSubtitleTextStyle:

@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- The outgoing call's ringback sets the communication mode and route
+         (setMode, setCommunicationDevice, setSpeakerphoneOn), which do
+         nothing without it. It used to arrive only through the Calls SDK's
+         manifest. A normal permission: granted at install. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <queries>
         <!-- If your app makes calls -->
         <intent>

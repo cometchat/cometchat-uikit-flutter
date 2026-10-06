@@ -42,6 +42,13 @@ class OngoingCallState extends Equatable {
   /// Error message when status is error
   final String? errorMessage;
 
+  /// The code of the error when status is error: the code `onError` got
+  /// (for a call screen that could not join, `CALLS_NOT_READY`,
+  /// `PERMISSION_DENIED`, `PERMISSION_PERMANENTLY_DENIED`, `JOIN_TIMEOUT`
+  /// or `JOIN_FAILED`; for a failed end, the SDK's own code), or null when
+  /// there is none.
+  final String? errorCode;
+
   const OngoingCallState({
     this.status = OngoingCallStatus.loading,
     this.callingWidget,
@@ -49,6 +56,7 @@ class OngoingCallState extends Equatable {
     this.participantsList = const [],
     this.isCallEndedByMe = false,
     this.errorMessage,
+    this.errorCode,
   });
 
   @override
@@ -59,6 +67,7 @@ class OngoingCallState extends Equatable {
     participantsList,
     isCallEndedByMe,
     errorMessage,
+    errorCode,
   ];
 
   /// Create a copy of this state with updated fields
@@ -69,6 +78,7 @@ class OngoingCallState extends Equatable {
     List<Participant>? participantsList,
     bool? isCallEndedByMe,
     String? errorMessage,
+    String? errorCode,
   }) {
     return OngoingCallState(
       status: status ?? this.status,
@@ -76,7 +86,10 @@ class OngoingCallState extends Equatable {
       usersList: usersList ?? this.usersList,
       participantsList: participantsList ?? this.participantsList,
       isCallEndedByMe: isCallEndedByMe ?? this.isCallEndedByMe,
+      // Both describe one error: like errorMessage, a copy without a new
+      // code has none.
       errorMessage: errorMessage,
+      errorCode: errorCode,
     );
   }
 }

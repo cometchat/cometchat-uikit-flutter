@@ -20,7 +20,7 @@ class WebAudioRecorder {
   Future<void> pauseRecording() async {}
   Future<void> resumeRecording() async {}
   Future<void> dispose() async {
-    _amplitudeController.close();
+    unawaited(_amplitudeController.close());
   }
 
   String? get recordedBlobUrl => null;

@@ -268,28 +268,33 @@ class _CometChatEmojiKeyboardState extends State<CometChatEmojiKeyboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (int i = 0; i < emojiData.length; i++)
-              GestureDetector(
-                onTap: () => _scrollToCategory(i),
-                child: Container(
-                  height: 32,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: _currentCategory == i
-                        ? colorPalette.extendedPrimary100
-                        : colorPalette.transparent,
-                    borderRadius: BorderRadius.circular(
-                      spacing.radiusMax ?? 24,
-                    ),
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      emojiData[i].symbolURL,
-                      package: UIConstants.packageName,
-                      height: 17,
-                      width: 17,
+              Semantics(
+                button: true,
+                label: emojiData[i].name,
+                child: GestureDetector(
+                  onTap: () => _scrollToCategory(i),
+                  child: Container(
+                    height: 32,
+                    width: 32,
+                    decoration: BoxDecoration(
                       color: _currentCategory == i
-                          ? colorPalette.iconHighlight
-                          : colorPalette.iconSecondary,
+                          ? colorPalette.extendedPrimary100
+                          : colorPalette.transparent,
+                      borderRadius: BorderRadius.circular(
+                        spacing.radiusMax ?? 24,
+                      ),
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        emojiData[i].symbolURL,
+                        excludeFromSemantics: true,
+                        package: UIConstants.packageName,
+                        height: 17,
+                        width: 17,
+                        color: _currentCategory == i
+                            ? colorPalette.iconHighlight
+                            : colorPalette.iconSecondary,
+                      ),
                     ),
                   ),
                 ),

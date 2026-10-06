@@ -9,6 +9,8 @@ import '../../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dar
 import 'cometchat_flag_message_dialog.dart';
 import 'cometchat_message_action_overlay.dart';
 import 'cometchat_message_swipe.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../shared_ui/src/clean_architecture/core/utils/ui_event_target.dart';
 
 /// Callback for thread replies click
 typedef ThreadRepliesClick =
@@ -76,6 +78,26 @@ class CometChatMessageListController {
 }
 
 class CometChatMessageList extends StatefulWidget {
+  /// Whether mentions are disabled. When true, the list renders messages
+  /// without a [CometChatMentionsFormatter], including one passed in
+  /// [textFormatters].
+  final bool? disableMentions;
+
+  /// Label for the @all mention, shown in place of the localized "Notify All".
+  ///
+  /// Applies to the kit's default formatters; when [textFormatters] is given,
+  /// set it on the [CometChatMentionsFormatter] in that list instead.
+  final String? mentionAllLabel;
+
+  /// Id for the @all mention (default: "all").
+  ///
+  /// Applies to the kit's default formatters; when [textFormatters] is given,
+  /// set it on the [CometChatMentionsFormatter] in that list instead.
+  final String? mentionAllLabelId;
+
+  /// Text shown when the list is empty. Ignored when [emptyStateView] is set.
+  final String? emptyStateText;
+
   const CometChatMessageList({
     super.key,
     this.user,
@@ -130,9 +152,6 @@ class CometChatMessageList extends StatefulWidget {
     this.reactionsRequestBuilder,
     this.textFormatters,
     this.additionalConfigurations,
-    this.disableMentions,
-    this.mentionAllLabel,
-    this.mentionAllLabelId,
     this.padding,
     this.margin,
     this.width,
@@ -168,7 +187,6 @@ class CometChatMessageList extends StatefulWidget {
     ],
     this.suggestedMessages,
     this.hideSuggestedMessages = false,
-    this.emptyStateText,
     this.errorStateText,
     this.dateTimeFormatterCallback,
     this.enableSwipeToReply = true,
@@ -180,6 +198,10 @@ class CometChatMessageList extends StatefulWidget {
     this.flagReasonLocalizer,
     this.hideFlagRemarkField = false,
     this.loadLastAgentConversation = false,
+    this.disableMentions,
+    this.mentionAllLabel,
+    this.mentionAllLabelId,
+    this.emptyStateText,
   }) : assert(
          user != null || group != null,
          "One of user or group should be passed",
@@ -221,7 +243,14 @@ class CometChatMessageList extends StatefulWidget {
   final OnEmpty? onEmpty;
   final Function(CometChatMessageListControllerProtocol controller)?
   stateCallBack;
+
+  ///[customSoundForMessages] asset path of the sound played when a message
+  ///from someone else arrives in this conversation. Silent when
+  ///[disableSoundForMessages] is true; the kit's incoming sound when null.
   final String? customSoundForMessages;
+
+  ///[customSoundForMessagePackage] package that holds
+  ///[customSoundForMessages], when the asset ships in another package.
   final String? customSoundForMessagePackage;
   final Widget? readIcon;
   final Widget? deliveredIcon;
@@ -235,6 +264,9 @@ class CometChatMessageList extends StatefulWidget {
   final bool enableMultipleAttachments;
 
   final bool? hideTimestamp;
+
+  ///[datePattern] builds the timestamp shown on each bubble. Takes precedence
+  ///over [dateTimeFormatterCallback]'s `time`.
   final String Function(BaseMessage message)? datePattern;
   final String Function(DateTime dateTime)? dateSeparatorPattern;
   final CometChatDateStyle? dateSeparatorStyle;
@@ -254,9 +286,6 @@ class CometChatMessageList extends StatefulWidget {
   final ReactionsRequestBuilder? reactionsRequestBuilder;
   final List<CometChatTextFormatter>? textFormatters;
   final AdditionalConfigurations? additionalConfigurations;
-  final bool? disableMentions;
-  final String? mentionAllLabel;
-  final String? mentionAllLabelId;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final double? width;
@@ -294,6 +323,11 @@ class CometChatMessageList extends StatefulWidget {
   ///sheet (the option renders only while the message is saved).
   final bool? hideUnsaveMessageOption;
   final bool? hideReplyOption;
+
+  ///[hideTranslateMessageOption] hides the Translate option on text
+  ///messages. The option shows only while the `message-translation`
+  ///extension is enabled for the app; tapping it shows the message
+  ///translated into the app language under the original.
   final bool? hideTranslateMessageOption;
   final bool? hideShareMessageOption;
   final bool? hideModerationView;
@@ -301,9 +335,11 @@ class CometChatMessageList extends StatefulWidget {
   final bool? enableSmartReplies;
   final int? smartRepliesDelayDuration;
   final List<String>? smartRepliesKeywords;
+
+  ///[suggestedMessages] the prompts offered in an empty AI-assistant
+  ///conversation. Replaces the list read from the assistant's metadata.
   final List<String>? suggestedMessages;
   final bool? hideSuggestedMessages;
-  final String? emptyStateText;
   final String? errorStateText;
   final DateTimeFormatterCallback? dateTimeFormatterCallback;
 
@@ -369,6 +405,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   // Flag to track if theme has been initialized
   bool _themeInitialized = false;
 
+  // Whether the message-translation extension is enabled for the app. Asked
+  // once per list; null until the SDK answers (and after an error), which
+  // keeps the Translate option hidden.
+  bool? _translationEnabled;
+
   // Track brightness to detect theme changes
   Brightness? _cachedBrightness;
 
@@ -410,6 +451,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     _initializeTemplates();
     _initializeAdapter();
     _subscribeToOperations();
+    _checkTranslationExtension();
     // When goToMessageId is set, skip normal load — jump directly
     if (widget.goToMessageId != null) {
       _isJumpingToMessage.value = true;
@@ -538,6 +580,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         categories: categories,
         hideDeletedMessages: widget.hideDeletedMessages,
         disableSoundForMessages: widget.disableSoundForMessages,
+        customSoundForMessages: widget.customSoundForMessages,
+        customSoundForMessagePackage: widget.customSoundForMessagePackage,
         disableReceipts: widget.disableReceipts,
         hideReplies: widget.hideReplies,
         withParent: widget.withParent,
@@ -695,8 +739,27 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     }
   }
 
+  /// One [GlobalKey] per message, so the bubble keeps the same element — and
+  /// therefore the same State — across rebuilds of the list.
+  ///
+  /// Keyed the same way the list keys its items: muid where there is one,
+  /// because it spans the optimistic-to-acknowledged transition, else the id.
+  /// A message with neither gets a throwaway key rather than sharing
+  /// `id:0` with every other unsent message — duplicate GlobalKeys are a hard
+  /// framework error, and an unidentifiable message is rare and transient.
+  final Map<String, GlobalKey> _bubbleKeys = <String, GlobalKey>{};
+
+  GlobalKey _bubbleKeyFor(BaseMessage message) {
+    final String? identity = message.muid.isNotEmpty
+        ? 'muid:${message.muid}'
+        : (message.id > 0 ? 'id:${message.id}' : null);
+    if (identity == null) return GlobalKey();
+    return _bubbleKeys.putIfAbsent(identity, GlobalKey.new);
+  }
+
   @override
   void dispose() {
+    _bubbleKeys.clear();
     widget.controller?._detach(this);
     CometChatUIEvents.removeUiListener(_uiEventListenerId);
     WidgetsBinding.instance.removeObserver(this);
@@ -723,12 +786,18 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   // UI Event Listener — showPanel / hidePanel for AI panels
   // ============================================================
 
-  bool _isForThisWidget(Map<String, dynamic>? id) {
-    if (id == null) return false;
-    if (widget.user != null && id['uid'] == widget.user!.uid) return true;
-    if (widget.group != null && id['guid'] == widget.group!.guid) return true;
-    return false;
-  }
+  /// The id this list answers to. Includes `parentMessageId`, without which a
+  /// panel raised for the parent conversation also opened inside a thread view
+  /// on the same conversation.
+  Map<String, dynamic> get _messageListId => buildUiEventId(
+    uid: widget.user?.uid,
+    guid: widget.group?.guid,
+    parentMessageId: widget.parentMessageId ?? 0,
+  );
+
+  /// Unlike the composer, an unaddressed event targets no list.
+  bool _isForThisWidget(Map<String, dynamic>? id) =>
+      uiEventTargets(id, _messageListId, nullTargetsAll: false);
 
   @override
   void showPanel(
@@ -759,15 +828,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     if (widget.enableConversationStarters != true) return;
     if (widget.parentMessageId != null) return; // Not in threads
 
-    final id = <String, dynamic>{};
-    if (widget.user != null) {
-      id['uid'] = widget.user!.uid;
-    } else if (widget.group != null) {
-      id['guid'] = widget.group!.guid;
-    }
-
     CometChatUIEvents.showPanel(
-      id,
+      _messageListId,
       CustomUIPosition.messageListBottom,
       (context) => CometChatAIConversationStarterView(
         user: widget.user,
@@ -809,10 +871,10 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         group = message.receiver as Group?;
       }
 
-      final id = <String, dynamic>{};
-      id[AIUtils.extensionKey] = AIFeatureConstants.aiSmartReplies;
-      if (user != null) id['uid'] = user.uid;
-      if (group != null) id['guid'] = group.guid;
+      final id = <String, dynamic>{
+        ..._messageListId,
+        AIUtils.extensionKey: AIFeatureConstants.aiSmartReplies,
+      };
 
       CometChatUIEvents.showPanel(
         id,
@@ -1044,6 +1106,15 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   }
 
   Widget _buildContent(BuildContext context, MessageListState state) {
+    return Column(
+      children: [
+        Expanded(child: _buildStatusContent(context, state)),
+        _buildBottomPanel(),
+      ],
+    );
+  }
+
+  Widget _buildStatusContent(BuildContext context, MessageListState state) {
     switch (state.status) {
       case MessageListStatus.initial:
       case MessageListStatus.loading:
@@ -1072,7 +1143,20 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     if (widget.emptyStateView != null) {
       return Center(child: widget.emptyStateView!(context));
     }
-    return const SizedBox(width: double.infinity);
+    // Shared empty view. With no copy supplied it renders empty Text widgets,
+    // so the default appearance is unchanged — but the emptyState* style
+    // props now reach a real render path.
+    return UIStateUtils.getDefaultEmptyStateView(
+      context,
+      _colorPalette,
+      _typography,
+      _spacing,
+      emptyStateText: widget.emptyStateText,
+      emptyStateTextColor: _style.emptyStateTextColor,
+      emptyStateTextStyle: _style.emptyStateTextStyle,
+      emptyStateSubtitleColor: _style.emptyStateSubtitleColor,
+      emptyStateSubtitleStyle: _style.emptyStateSubtitleStyle,
+    );
   }
 
   /// Whether the current user is an AI agent.
@@ -1081,7 +1165,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
 
   /// Builds the AI greeting view matching v5 pattern:
   /// Avatar + greeting message + introductory message + suggested message chips.
-  /// Data comes from user.metadata fields set on the CometChat dashboard.
+  /// Data comes from user.metadata fields set on the CometChat dashboard;
+  /// [CometChatMessageList.suggestedMessages] replaces the metadata chips.
   Widget _buildAIGreetingView() {
     final user = widget.user;
     final greetingMessage =
@@ -1090,9 +1175,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         '';
     final introMessage =
         user?.metadata?[AIConstants.introductoryMessage]?.toString() ?? '';
-    final suggestedMessages = List<String>.from(
-      user?.metadata?[AIConstants.suggestedMessages] ?? [],
-    );
+    final suggestedMessages =
+        widget.suggestedMessages ??
+        List<String>.from(user?.metadata?[AIConstants.suggestedMessages] ?? []);
 
     return Center(
       child: Padding(
@@ -1111,11 +1196,19 @@ class _CometChatMessageListState extends State<CometChatMessageList>
               if (greetingMessage.isNotEmpty)
                 Text(
                   greetingMessage,
-                  style: TextStyle(
-                    fontSize: _typography.heading4?.medium?.fontSize,
-                    fontWeight: _typography.heading4?.medium?.fontWeight,
-                    color: _colorPalette.textPrimary,
-                  ),
+                  style:
+                      TextStyle(
+                            fontSize: _typography.heading4?.medium?.fontSize,
+                            fontWeight:
+                                _typography.heading4?.medium?.fontWeight,
+                            color:
+                                _style.emptyChatGreetingTitleTextColor ??
+                                _colorPalette.textPrimary,
+                          )
+                          .merge(_style.emptyChatGreetingTitleTextStyle)
+                          .copyWith(
+                            color: _style.emptyChatGreetingTitleTextColor,
+                          ),
                   textAlign: TextAlign.center,
                 ),
               if (introMessage.isNotEmpty)
@@ -1123,11 +1216,18 @@ class _CometChatMessageListState extends State<CometChatMessageList>
                   padding: EdgeInsets.only(top: _spacing.padding1 ?? 4),
                   child: Text(
                     introMessage,
-                    style: TextStyle(
-                      fontSize: _typography.body?.regular?.fontSize,
-                      fontWeight: _typography.body?.regular?.fontWeight,
-                      color: _colorPalette.textTertiary,
-                    ),
+                    style:
+                        TextStyle(
+                              fontSize: _typography.body?.regular?.fontSize,
+                              fontWeight: _typography.body?.regular?.fontWeight,
+                              color:
+                                  _style.emptyChatGreetingSubtitleTextColor ??
+                                  _colorPalette.textTertiary,
+                            )
+                            .merge(_style.emptyChatGreetingSubtitleTextStyle)
+                            .copyWith(
+                              color: _style.emptyChatGreetingSubtitleTextColor,
+                            ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -1214,25 +1314,23 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     if (widget.errorStateView != null) {
       return Center(child: widget.errorStateView!(context));
     }
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline, size: 48, color: _colorPalette.error),
-          SizedBox(height: _spacing.padding3 ?? 12),
-          Text(
-            widget.errorStateText ??
-                Translations.of(context).somethingWentWrongError,
-            style: TextStyle(color: _colorPalette.textPrimary),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: _spacing.padding4 ?? 16),
-          ElevatedButton(
-            onPressed: _loadMessages,
-            child: Text(Translations.of(context).tryAgain),
-          ),
-        ],
-      ),
+    // Shared error view, same as Users/Groups/Conversations — it is the only
+    // place the errorState* style props have to land.
+    return UIStateUtils.getDefaultErrorStateView(
+      context,
+      _colorPalette,
+      _typography,
+      _spacing,
+      _loadMessages,
+      errorStateText:
+          widget.errorStateText ??
+          Translations.of(context).somethingWentWrongError,
+      errorStateTextColor: _style.errorStateTextColor,
+      errorStateTextStyle: _style.errorStateTextStyle,
+      errorStateSubtitleColor: _style.errorStateSubtitleColor,
+      errorStateSubtitleStyle: _style.errorStateSubtitleStyle,
+      user: widget.user,
+      group: widget.group,
     );
   }
 
@@ -1310,15 +1408,27 @@ class _CometChatMessageListState extends State<CometChatMessageList>
                 parentMessageId: widget.parentMessageId,
               ) ??
               const SizedBox.shrink(),
-        // AI bottom panel (smart replies, conversation starters, etc.)
-        ValueListenableBuilder<Widget?>(
-          valueListenable: _bottomPanelWidget,
-          builder: (context, panel, _) {
-            if (panel == null) return const SizedBox.shrink();
-            return panel;
-          },
-        ),
       ],
+    );
+  }
+
+  /// The AI bottom panel — smart replies, conversation starters and anything
+  /// else published through [CometChatUIEvents.showPanel] at
+  /// [CustomUIPosition.messageListBottom].
+  ///
+  /// Rendered by [_buildContent] for every status, not just the ones that
+  /// build the list. Conversation starters are published on the `empty`
+  /// status, and the empty path draws only the greeting view, so keeping this
+  /// slot inside `_buildMessageListContent` meant a starter panel was built,
+  /// stored and never drawn — visible only once the conversation stopped being
+  /// empty, which is exactly when starters are no longer wanted (ENG-38853).
+  Widget _buildBottomPanel() {
+    return ValueListenableBuilder<Widget?>(
+      valueListenable: _bottomPanelWidget,
+      builder: (context, panel, _) {
+        if (panel == null) return const SizedBox.shrink();
+        return panel;
+      },
     );
   }
 
@@ -1429,6 +1539,10 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       alignment = BubbleAlignment.left; // Stream bubbles always left
     } else if (isCenterAligned) {
       alignment = BubbleAlignment.center;
+    } else if (widget.alignment == ChatAlignment.leftAligned) {
+      // leftAligned collapses the outgoing/incoming split: every bubble,
+      // including the logged-in user's own, renders on the left.
+      alignment = BubbleAlignment.left;
     } else {
       alignment = isOutgoing ? BubbleAlignment.right : BubbleAlignment.left;
     }
@@ -1760,8 +1874,14 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     final compositeKey =
         '$messageKey-$editedHash-$deletedHash-$pinnedHash-$savedHash';
 
-    // Create a GlobalKey to measure the bubble size for the action overlay
-    final bubbleKey = GlobalKey();
+    // A GlobalKey so the action overlay can measure the bubble — but the SAME
+    // key for this message every build. A fresh GlobalKey here changed the
+    // Material's key on every rebuild, so Widget.canUpdate said false and the
+    // framework threw the bubble's whole element subtree away and re-inflated
+    // it. Every message's State was recreated whenever the list rebuilt, which
+    // is what kept the audio bubbles flickering even once their list items
+    // were keyed and correctly relocated (ENG-39490).
+    final bubbleKey = _bubbleKeyFor(message);
 
     // Opens the message-options menu. Bound to long-press (touch) and, for a
     // pointer-context-menu affordance, secondary tap / right-click (web +
@@ -1876,19 +1996,19 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     // Build the new message indicator if this is the unread anchor
     final newMessageIndicator = _getNewMessageIndicator(message);
 
-    // Wrap with date separator if needed
-    if (dateSeparator != null || newMessageIndicator != null) {
-      return Column(
-        key: ValueKey<String>(compositeKey),
-        mainAxisSize: MainAxisSize.min,
-        children: [?dateSeparator, ?newMessageIndicator, swipeableWidget],
-      );
-    }
+    // One root widget either way. Returning a Column when this message needs
+    // a separator and a KeyedSubtree when it doesn't changed the item's root
+    // *type*, and a type change defeats element reuse no matter what the key
+    // says — so a message gaining or losing a separator (the unread anchor
+    // moves on every send) rebuilt its whole subtree from scratch.
+    final child = (dateSeparator != null || newMessageIndicator != null)
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [?dateSeparator, ?newMessageIndicator, swipeableWidget],
+          )
+        : swipeableWidget;
 
-    return KeyedSubtree(
-      key: ValueKey<String>(compositeKey),
-      child: swipeableWidget,
-    );
+    return KeyedSubtree(key: ValueKey<String>(compositeKey), child: child);
   }
 
   /// Whether the hover ⋯ actions button should be offered for [message] — only
@@ -2038,7 +2158,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         quoted is TextMessage) {
       final rawText = quoted.text;
       final formatters = FormatterUtils.ensureMarkdownFormatter(
-        widget.textFormatters,
+        _givenTextFormatters(),
       );
       // Bind the formatters to the QUOTED message so mentions in the reply
       // preview resolve to user names (<@uid:..> → @Name) using the quoted
@@ -2093,6 +2213,12 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     }
 
     final isOutgoing = alignment == BubbleAlignment.right;
+    // An outgoing bubble's messagePreviewStyle overrides the defaults below
+    // field by field. A colour set inside its title or subtitle text style
+    // also beats the default colour, which the preview applies last.
+    final customPreviewStyle = isOutgoing
+        ? _cachedOutgoingStyle?.messagePreviewStyle
+        : null;
     // Use semi-transparent white overlay for outgoing (shows on purple bubble)
     // Use neutral background for incoming (shows on white/light bubble)
     final bgColor = isOutgoing
@@ -2124,19 +2250,25 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           messagePreviewTitleStyle: isOutgoing
               ? const TextStyle(color: Colors.white)
               : null,
-          messagePreviewTitleColor: isOutgoing
+          messagePreviewTitleColor:
+              customPreviewStyle?.messagePreviewTitleStyle?.color != null
+              ? null
+              : isOutgoing
               ? Colors.white
               : _colorPalette.textPrimary,
           messagePreviewSubtitleStyle: isOutgoing
               ? TextStyle(color: Colors.white.withValues(alpha: 0.85))
               : null,
-          messagePreviewSubtitleColor: isOutgoing
+          messagePreviewSubtitleColor:
+              customPreviewStyle?.messagePreviewSubtitleStyle?.color != null
+              ? null
+              : isOutgoing
               ? Colors.white.withValues(alpha: 0.85)
               : _colorPalette.textSecondary,
           replyMessagePreviewCloseIconColor: isOutgoing
               ? Colors.white
               : _colorPalette.iconSecondary,
-        ),
+        ).merge(customPreviewStyle),
       ),
     );
   }
@@ -2255,21 +2387,29 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           widget.additionalConfigurations;
       if (configurations == null) {
         final formatters =
-            widget.textFormatters ??
+            _givenTextFormatters() ??
+            _mentionConfiguredDefaults() ??
             MessageTemplateUtils.getDefaultTextFormatters();
         if (formatters.isNotEmpty) {
-          if (message is TextMessage) {
-            for (final formatter in formatters) {
+          for (final formatter in formatters) {
+            if (message is TextMessage) {
               formatter.message = message;
+            }
+            // The list-level mentions style is the only styling hook an
+            // integrator has for the default formatter.
+            if (formatter is CometChatMentionsFormatter) {
+              formatter.style ??= _style.mentionsStyle;
             }
           }
           configurations = AdditionalConfigurations(
             textFormatters: formatters,
             showMarkAsUnreadOption: widget.showMarkAsUnreadOption,
+            actionBubbleStyle: _style.actionBubbleStyle,
           );
         } else {
           configurations = AdditionalConfigurations(
             showMarkAsUnreadOption: widget.showMarkAsUnreadOption,
+            actionBubbleStyle: _style.actionBubbleStyle,
           );
         }
       }
@@ -2277,6 +2417,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       // configurations keep an explicit value if they set one).
       configurations.enableMultipleAttachments ??=
           widget.enableMultipleAttachments;
+      configurations = _withDirectionalBubbleStyles(configurations, alignment);
       return template!.contentView!(
         message,
         context,
@@ -2296,6 +2437,128 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       '[${message.type}]',
       style: TextStyle(color: _colorPalette.textPrimary),
     );
+  }
+
+  /// [CometChatMessageList.textFormatters], without its mentions formatters
+  /// when [CometChatMessageList.disableMentions] is true.
+  List<CometChatTextFormatter>? _givenTextFormatters() {
+    final given = widget.textFormatters;
+    if (given == null || widget.disableMentions != true) return given;
+    return [
+      for (final formatter in given)
+        if (formatter is! CometChatMentionsFormatter) formatter,
+    ];
+  }
+
+  /// The kit's default formatters with [CometChatMessageList.disableMentions],
+  /// [CometChatMessageList.mentionAllLabel] and
+  /// [CometChatMessageList.mentionAllLabelId] applied, or null (each call
+  /// site keeps its own default) when none of them is set.
+  List<CometChatTextFormatter>? _mentionConfiguredDefaults() {
+    final disableMentions = widget.disableMentions == true;
+    if (!disableMentions &&
+        widget.mentionAllLabel == null &&
+        widget.mentionAllLabelId == null) {
+      return null;
+    }
+    return [
+      for (final formatter in MessageTemplateUtils.getDefaultTextFormatters())
+        if (formatter is! CometChatMentionsFormatter)
+          formatter
+        else if (!disableMentions)
+          CometChatMentionsFormatter(
+            mentionAllLabel: widget.mentionAllLabel,
+            mentionAllLabelId: widget.mentionAllLabelId,
+          ),
+    ];
+  }
+
+  /// The border [BubbleUIBuilder.getAdditionalConfigurations] gives an inner
+  /// bubble style: the surrounding message bubble already draws the
+  /// direction style's border, so the content must not draw it again.
+  static final Border _innerBubbleBorder = Border.all(
+    color: Colors.transparent,
+    width: 0,
+  );
+
+  /// [configurations] with the extension bubble styles it leaves unset
+  /// filled from the outgoing ([BubbleAlignment.right]) or incoming
+  /// ([BubbleAlignment.left]) message bubble style, the way Android applies
+  /// them per direction. Values already set — by the app or the list — win.
+  ///
+  /// An app-supplied object is shared by every row, so it is never written
+  /// to: when there is something to fill, a copy is filled and returned;
+  /// when there is nothing, the app's object passes through as-is. A
+  /// list-built object is per-message and is filled in place.
+  AdditionalConfigurations _withDirectionalBubbleStyles(
+    AdditionalConfigurations configurations,
+    BubbleAlignment alignment,
+  ) {
+    if (alignment == BubbleAlignment.center) return configurations;
+    final outgoing = alignment == BubbleAlignment.right;
+    final out = _cachedOutgoingStyle;
+    final inc = _cachedIncomingStyle;
+
+    final polls = configurations.pollsBubbleStyle != null
+        ? null
+        : (outgoing ? out?.pollsBubbleStyle : inc?.pollsBubbleStyle)?.copyWith(
+            border: _innerBubbleBorder,
+          );
+    final sticker = configurations.stickerBubbleStyle != null
+        ? null
+        : (outgoing ? out?.stickerBubbleStyle : inc?.stickerBubbleStyle)
+              ?.copyWith(border: _innerBubbleBorder);
+    final document = configurations.collaborativeDocumentBubbleStyle != null
+        ? null
+        : (outgoing
+                  ? out?.collaborativeDocumentBubbleStyle
+                  : inc?.collaborativeDocumentBubbleStyle)
+              ?.copyWith(border: _innerBubbleBorder);
+    final whiteboard = configurations.collaborativeWhiteboardBubbleStyle != null
+        ? null
+        : (outgoing
+                  ? out?.collaborativeWhiteboardBubbleStyle
+                  : inc?.collaborativeWhiteboardBubbleStyle)
+              ?.copyWith(border: _innerBubbleBorder);
+    // The link preview card is drawn inside the text bubble, not as the
+    // bubble itself, so its style carries over whole — border included.
+    final linkPreview = configurations.linkPreviewBubbleStyle != null
+        ? null
+        : (outgoing
+              ? out?.linkPreviewBubbleStyle
+              : inc?.linkPreviewBubbleStyle);
+    // Likewise the translation, which sits inside the text bubble.
+    final translation = configurations.messageTranslationBubbleStyle != null
+        ? null
+        : (outgoing
+              ? out?.messageTranslationBubbleStyle
+              : inc?.messageTranslationBubbleStyle);
+
+    if (polls == null &&
+        sticker == null &&
+        document == null &&
+        whiteboard == null &&
+        linkPreview == null &&
+        translation == null) {
+      return configurations;
+    }
+    if (identical(configurations, widget.additionalConfigurations)) {
+      return configurations.copyWith(
+        pollsBubbleStyle: polls,
+        stickerBubbleStyle: sticker,
+        collaborativeDocumentBubbleStyle: document,
+        collaborativeWhiteboardBubbleStyle: whiteboard,
+        linkPreviewBubbleStyle: linkPreview,
+        messageTranslationBubbleStyle: translation,
+      );
+    }
+    return configurations
+      ..pollsBubbleStyle ??= polls
+      ..stickerBubbleStyle ??= sticker
+      ..collaborativeDocumentBubbleStyle ??= document
+      ..collaborativeWhiteboardBubbleStyle ??= whiteboard
+      ..linkPreviewBubbleStyle ??= linkPreview
+      ..messageTranslationBubbleStyle ??= translation;
   }
 
   /// Build content view for the overlay with fresh formatters that have message set.
@@ -2320,7 +2583,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     if (template?.contentView != null) {
       // Always create fresh formatters with message set for the overlay
       final formatters =
-          widget.textFormatters?.map((f) => f).toList() ??
+          _givenTextFormatters()?.toList() ??
+          _mentionConfiguredDefaults() ??
           MessageTemplateUtils.getDefaultTextFormatters();
       if (message is TextMessage) {
         for (final formatter in formatters) {
@@ -2333,6 +2597,14 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         linkPreviewBubbleStyle:
             widget.additionalConfigurations?.linkPreviewBubbleStyle,
         deletedBubbleStyle: widget.additionalConfigurations?.deletedBubbleStyle,
+        pollsBubbleStyle: widget.additionalConfigurations?.pollsBubbleStyle,
+        stickerBubbleStyle: widget.additionalConfigurations?.stickerBubbleStyle,
+        collaborativeDocumentBubbleStyle:
+            widget.additionalConfigurations?.collaborativeDocumentBubbleStyle,
+        collaborativeWhiteboardBubbleStyle:
+            widget.additionalConfigurations?.collaborativeWhiteboardBubbleStyle,
+        messageTranslationBubbleStyle:
+            widget.additionalConfigurations?.messageTranslationBubbleStyle,
         showMarkAsUnreadOption: widget.showMarkAsUnreadOption,
         enableMultipleAttachments: widget.enableMultipleAttachments,
       );
@@ -2340,7 +2612,10 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         message,
         context,
         alignment,
-        additionalConfigurations: configurations,
+        additionalConfigurations: _withDirectionalBubbleStyles(
+          configurations,
+          alignment,
+        ),
       );
     }
 
@@ -2367,7 +2642,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       text: message.text,
       style: textBubbleStyle,
       alignment: alignment,
-      formatters: FormatterUtils.ensureMarkdownFormatter(widget.textFormatters),
+      formatters: FormatterUtils.ensureMarkdownFormatter(
+        _givenTextFormatters(),
+      ),
     );
   }
 
@@ -2724,7 +3001,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       }
       statusItems.add(
         Text(
-          _formatTime(message.sentAt!),
+          _formatTime(message, message.sentAt!),
           style: TextStyle(
             fontSize: _typography.caption2?.regular?.fontSize ?? 10,
             color: dateStyle?.textStyle?.color ?? dateColor,
@@ -2863,32 +3140,35 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       valueListenable: notifier,
       builder: (context, replyCount, _) {
         if (replyCount == 0) return const SizedBox.shrink();
-        return GestureDetector(
-          onTap: () {
-            if (widget.onThreadRepliesClick != null) {
-              widget.onThreadRepliesClick!(
-                message,
-                context,
-                template: _resolveTemplate(message),
-              );
-            }
-          },
-          child: Padding(
-            padding: EdgeInsets.only(top: _spacing.padding2 ?? 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.subdirectory_arrow_right,
-                  size: 16,
-                  color: iconColor,
-                ),
-                SizedBox(width: _spacing.padding1 ?? 4),
-                Text(
-                  '$replyCount ${replyCount == 1 ? Translations.of(context).reply : Translations.of(context).replies}',
-                  style: textStyle,
-                ),
-              ],
+        return Semantics(
+          button: true,
+          child: GestureDetector(
+            onTap: () {
+              if (widget.onThreadRepliesClick != null) {
+                widget.onThreadRepliesClick!(
+                  message,
+                  context,
+                  template: _resolveTemplate(message),
+                );
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.only(top: _spacing.padding2 ?? 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.subdirectory_arrow_right,
+                    size: 16,
+                    color: iconColor,
+                  ),
+                  SizedBox(width: _spacing.padding1 ?? 4),
+                  Text(
+                    '$replyCount ${replyCount == 1 ? Translations.of(context).reply : Translations.of(context).replies}',
+                    style: textStyle,
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -2896,8 +3176,19 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     );
   }
 
-  /// Format timestamp
-  String _formatTime(DateTime dateTime) {
+  /// The timestamp shown on a bubble: [CometChatMessageList.datePattern] when
+  /// set, else the `time` of the list's [DateTimeFormatterCallback], else the
+  /// app-wide one, else `h:mm am/pm`. Same fallback order as [CometChatDate].
+  String _formatTime(BaseMessage message, DateTime dateTime) {
+    final custom = widget.datePattern?.call(message);
+    if (custom != null) return custom;
+    final millis = dateTime.millisecondsSinceEpoch;
+    final fromCallback =
+        widget.dateTimeFormatterCallback?.time(millis) ??
+        CometChatUIKit.authenticationSettings?.dateTimeFormatterCallback?.time(
+          millis,
+        );
+    if (fromCallback != null) return fromCallback;
     final hour = dateTime.hour;
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'pm' : 'am';
@@ -3027,6 +3318,26 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     );
   }
 
+  /// Maps the list-level [CometChatMessageListStyle.messageOptionSheetStyle]
+  /// onto the action overlay's own style. The overlay is what v6 shows in
+  /// place of the v5 option sheet, so this is where that style has to land.
+  /// `border` has no overlay equivalent and is not mapped.
+  CometChatMessageActionOverlayStyle? _optionSheetOverlayStyle() {
+    final sheet = _style.messageOptionSheetStyle;
+    if (sheet == null) return null;
+    final radius = sheet.borderRadius;
+    return CometChatMessageActionOverlayStyle(
+      optionsBackgroundColor: sheet.backgroundColor,
+      optionsBorderRadius: radius is BorderRadius ? radius : null,
+      optionTitleStyle: sheet.titleColor != null
+          ? (sheet.titleTextStyle ?? const TextStyle()).copyWith(
+              color: sheet.titleColor,
+            )
+          : sheet.titleTextStyle,
+      optionIconColor: sheet.iconColor,
+    );
+  }
+
   /// Show message action overlay on long press
   Future<void> _showMessageActions(
     BaseMessage message,
@@ -3073,7 +3384,6 @@ class _CometChatMessageListState extends State<CometChatMessageList>
               hideUnsaveMessageOption: widget.hideUnsaveMessageOption,
               hideReplyOption: widget.hideReplyOption,
               hideShareMessageOption: widget.hideShareMessageOption,
-              hideReactionOption: widget.hideReactionOption,
               hideTranslateMessageOption: widget.hideTranslateMessageOption,
             );
         final options = template!.options!(
@@ -3108,10 +3418,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         }
       },
       addReactionIcon: widget.addReactionIcon,
+      style: _optionSheetOverlayStyle(),
     );
 
     if (result != null && result.onItemClick != null) {
-      debugPrint(
+      ccLog(
         '[MessageList] _showMessageActions: result received, id=${result.id}',
       );
       // Wait for Hero animation to complete and UI to settle before executing action
@@ -3126,7 +3437,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         result.onItemClick();
       }
     } else {
-      debugPrint(
+      ccLog(
         '[MessageList] _showMessageActions: result is null or onItemClick is null',
       );
     }
@@ -3139,11 +3450,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   ) {
     if (options == null) return [];
 
-    debugPrint(
+    ccLog(
       '[MessageList] _filterAndConvertOptions: options count=${options.length}',
     );
     for (final opt in options) {
-      debugPrint('[MessageList] Option: id=${opt.id}, title=${opt.title}');
+      ccLog('[MessageList] Option: id=${opt.id}, title=${opt.title}');
     }
 
     final filtered = options.where((option) {
@@ -3159,7 +3470,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         case MessageOptionConstants.sendMessagePrivately:
           return widget.hideMessagePrivatelyOption != true;
         case MessageOptionConstants.replyInThreadMessage:
-          debugPrint(
+          ccLog(
             '[MessageList] replyInThreadMessage filter: hideReplyInThreadOption=${widget.hideReplyInThreadOption}',
           );
           return widget.hideReplyInThreadOption != true;
@@ -3185,6 +3496,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           return widget.hideReplyOption != true;
         case MessageOptionConstants.shareMessage:
           return widget.hideShareMessageOption != true;
+        case MessageOptionConstants.translateMessage:
+          // Only once the SDK has said the extension is enabled — while the
+          // answer is unknown, or it failed, the option stays hidden.
+          return _translationEnabled == true &&
+              widget.hideTranslateMessageOption != true;
         case MessageOptionConstants.markAsUnread:
           return widget.showMarkAsUnreadOption == true;
         case MessageOptionConstants.reportMessage:
@@ -3194,7 +3510,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       }
     }).toList();
 
-    debugPrint('[MessageList] Filtered options count=${filtered.length}');
+    ccLog('[MessageList] Filtered options count=${filtered.length}');
 
     return filtered.map((option) {
       // Create ActionItem with no-argument onItemClick (since ActionItem.onItemClick is called without args)
@@ -3211,10 +3527,10 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           titleColor: option.messageOptionSheetStyle?.titleColor,
         ),
         onItemClick: () {
-          debugPrint('[MessageList] Option clicked: ${option.id}');
+          ccLog('[MessageList] Option clicked: ${option.id}');
           // Handle inline reply option
           if (option.id == MessageOptionConstants.replyMessage) {
-            debugPrint(
+            ccLog(
               '[MessageList] Inline reply clicked for message id=${message.id}',
             );
             CometChatMessageEvents.ccReplyToMessage(message);
@@ -3223,12 +3539,12 @@ class _CometChatMessageListState extends State<CometChatMessageList>
 
           // Handle reply in thread option specially
           if (option.id == MessageOptionConstants.replyInThreadMessage) {
-            debugPrint(
+            ccLog(
               '[MessageList] Reply in thread clicked, onThreadRepliesClick: ${widget.onThreadRepliesClick != null}, mounted: $mounted',
             );
             if (widget.onThreadRepliesClick != null && mounted) {
               final templateKey = '${message.category}_${message.type}';
-              debugPrint(
+              ccLog(
                 '[MessageList] Navigating to thread with templateKey: $templateKey',
               );
               widget.onThreadRepliesClick!(
@@ -3237,7 +3553,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
                 template: _resolveTemplate(message),
               );
             } else {
-              debugPrint(
+              ccLog(
                 '[MessageList] Cannot navigate: onThreadRepliesClick=${widget.onThreadRepliesClick != null}, mounted=$mounted',
               );
             }
@@ -3279,6 +3595,12 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           // Handle share message option
           if (option.id == MessageOptionConstants.shareMessage) {
             _handleShareMessage(message);
+            return;
+          }
+
+          // Handle translate message option
+          if (option.id == MessageOptionConstants.translateMessage) {
+            _handleTranslateMessage(message);
             return;
           }
 
@@ -3398,6 +3720,83 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     } finally {
       _threadSubscriptionInFlight.remove(threadId);
     }
+  }
+
+  /// Asks the SDK whether the `message-translation` extension is enabled,
+  /// once per list, and remembers the answer for the option filter.
+  void _checkTranslationExtension() {
+    CometChat.isExtensionEnabled(
+      ExtensionConstants.messageTranslation,
+      onSuccess: (bool enabled) {
+        if (mounted) _translationEnabled = enabled;
+      },
+      onError: (CometChatException e) {
+        ccLog('[MessageList] message-translation check failed: ${e.code}');
+      },
+    );
+  }
+
+  /// One in-flight translation per messageId, shared across list instances.
+  static final Set<int> _translateInFlight = {};
+
+  /// Handle the Translate action, as Android does: ask the
+  /// `message-translation` extension for the app language, store the answer
+  /// on the message as `metadata['translated_message']`, and re-render the
+  /// row, which then shows the translation under the original. A failure
+  /// shows a toast; an empty answer changes nothing.
+  Future<void> _handleTranslateMessage(BaseMessage message) async {
+    if (!mounted ||
+        message is! TextMessage ||
+        message.id == 0 ||
+        _translateInFlight.contains(message.id)) {
+      return;
+    }
+    final language =
+        Localizations.maybeLocaleOf(context)?.languageCode ??
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    _translateInFlight.add(message.id);
+    try {
+      await CometChat.callExtension(
+        ExtensionConstants.messageTranslation,
+        'POST',
+        ExtensionUrls.translate,
+        {
+          'msgId': message.id,
+          'text': message.text,
+          'languages': [language],
+        },
+        onSuccess: (Map<String, dynamic> response) {
+          final translated = _translatedText(response);
+          if (!mounted || translated == null || translated.isEmpty) return;
+          message.metadata = {
+            ...?message.metadata,
+            'translated_message': translated,
+          };
+          _blocAdapter.updateElement(message);
+        },
+        onError: (CometChatException e) {
+          if (mounted) {
+            _showThreadToast(Translations.of(context).somethingWentWrongError);
+          }
+        },
+      );
+    } finally {
+      _translateInFlight.remove(message.id);
+    }
+  }
+
+  /// The first translation in a `message-translation` response
+  /// (`data.translations[0].message_translated`), or null when there is
+  /// none.
+  static String? _translatedText(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is! Map) return null;
+    final translations = data['translations'];
+    if (translations is! List || translations.isEmpty) return null;
+    final first = translations.first;
+    if (first is! Map) return null;
+    final text = first['message_translated'];
+    return text is String ? text : null;
   }
 
   /// One in-flight pin/save request per messageId, shared across list
@@ -3573,7 +3972,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     if (kIsWeb) {
       final text = textToShare.isNotEmpty ? textToShare : (fileUrl ?? '');
       if (text.isNotEmpty) {
-        Clipboard.setData(ClipboardData(text: text));
+        unawaited(Clipboard.setData(ClipboardData(text: text)));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -3602,11 +4001,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         });
       }
     } catch (e) {
-      debugPrint('[MessageList] Share failed: $e');
+      ccLog('[MessageList] Share failed: $e');
       // Fallback: copy to clipboard if share fails
       final text = textToShare.isNotEmpty ? textToShare : (fileUrl ?? '');
       if (text.isNotEmpty) {
-        Clipboard.setData(ClipboardData(text: text));
+        unawaited(Clipboard.setData(ClipboardData(text: text)));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -3654,7 +4053,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
             );
           },
           onError: (error) {
-            debugPrint('[MessageList] Delete failed: $error');
+            ccLog('[MessageList] Delete failed: $error');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -3680,7 +4079,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       message: message,
       template: template,
       messageInformationStyle: _style.messageInformationStyle,
-      textFormatters: widget.textFormatters,
+      textFormatters: _givenTextFormatters() ?? _mentionConfiguredDefaults(),
     );
   }
 
@@ -3696,6 +4095,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           selectedReaction: selectedReaction,
           reactionRequestBuilder: widget.reactionsRequestBuilder,
           onReactionListItemClick: widget.onReactionListItemClick,
+          style: _style.reactionListStyle,
         );
       },
     );
@@ -3789,15 +4189,19 @@ class _MessageHoverActionsState extends State<_MessageHoverActions> {
       color: widget.backgroundColor ?? Colors.black54,
       shape: const CircleBorder(),
       elevation: 1,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: widget.onActions,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(
-            Icons.more_horiz,
-            size: 16,
-            color: widget.iconColor ?? Colors.white,
+      child: Semantics(
+        button: true,
+        label: Translations.of(context).more,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: widget.onActions,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              Icons.more_horiz,
+              size: 16,
+              color: widget.iconColor ?? Colors.white,
+            ),
           ),
         ),
       ),

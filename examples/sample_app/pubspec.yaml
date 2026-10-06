@@ -1,15 +1,20 @@
 name: sample_app
 description: "A sample app"
 publish_to: 'none'
-version: 6.1.1
+# The sample app is versioned independently of the cometchat_chat_uikit
+# release it demonstrates; only the dependency constraint below tracks the
+# library. The build number feeds Android versionCode via flutter.versionCode,
+# so it must only ever increase.
+version: 6.2.0
 
 environment:
-  sdk: ^3.6.0
+  sdk: '>=3.10.8 <4.0.0'
+  flutter: '>=3.38.9'
 
 dependencies:
   flutter:
     sdk: flutter
-  cometchat_chat_uikit: ^6.1.1
+  cometchat_chat_uikit: ^6.2.0
 
 dev_dependencies:
   flutter_test:
@@ -17,7 +22,6 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  http: ^1.2.1
 
 flutter:
   uses-material-design: true

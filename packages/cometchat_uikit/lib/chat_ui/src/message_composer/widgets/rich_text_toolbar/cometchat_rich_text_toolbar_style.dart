@@ -191,6 +191,9 @@ class CometChatRichTextToolbarStyle
       buttonSize: lerpDouble(buttonSize, other?.buttonSize, t),
       iconSize: lerpDouble(iconSize, other?.iconSize, t),
       dividerColor: Color.lerp(dividerColor, other?.dividerColor, t),
+      // Absent from the constructor call, so every animated theme transition
+      // collapsed the toolbar's padding. ENG-39124.
+      padding: EdgeInsetsGeometry.lerp(padding, other?.padding, t),
     );
   }
 }

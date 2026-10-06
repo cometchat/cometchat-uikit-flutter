@@ -1,9 +1,11 @@
 // @dart=3.0
 
+import 'dart:async';
 import 'package:cometchat_sdk/cometchat_sdk.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared_ui/src/clean_architecture/core/utils/attachment_utils.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 import '../../../../shared_ui/src/clean_architecture/core/utils/platform_utils/platform_file_utils.dart'
     as platform;
 
@@ -68,9 +70,15 @@ class AttachmentTile {
   int get percent =>
       size == 0 ? 0 : ((loaded / size) * 100).clamp(0, 100).round();
 
-  bool get isImage => mimeType.startsWith('image/');
-  bool get isVideo => mimeType.startsWith('video/');
-  bool get isAudio => mimeType.startsWith('audio/');
+  /// Kind of the staged file, by the **same rule the send path uses**
+  /// ([AttachmentUtils]) — mimeType OR extension. Classifying the tray on
+  /// mimeType alone disagreed with what was actually sent: a `.m4v`/`.flac`
+  /// picked up with a generic mimeType previewed as a plain file card but sent
+  /// as video/audio, and an `.ogg` reported as `video/ogg` previewed as video
+  /// but sent as audio.
+  bool get isImage => AttachmentUtils.isImageOf(mimeType, name);
+  bool get isVideo => AttachmentUtils.isVideoOf(mimeType, name);
+  bool get isAudio => AttachmentUtils.isAudioOf(mimeType, name);
 
   /// True for a failed upload (retryable) or a rejected one (over the
   /// count/size limit — not retryable).
@@ -182,7 +190,8 @@ class AttachmentTrayController extends ChangeNotifier {
   /// The attachments to send (done tiles, in order).
   List<Attachment> get doneAttachments => _tiles
       .where(
-          (t) => t.status == AttachmentTileStatus.done && t.attachment != null)
+        (t) => t.status == AttachmentTileStatus.done && t.attachment != null,
+      )
       .map((t) => t.attachment!)
       .toList();
 
@@ -220,8 +229,9 @@ class AttachmentTrayController extends ChangeNotifier {
         'No conversation context (receiverId/receiverType) for upload',
       );
     }
-    debugPrint(
-        '🟦 [stage] files=${files.map((f) => "${f.name}|${f.mimeType}|size=${f.size}|path=${f.path}").toList()}');
+    ccLog(
+      '🟦 [stage] files=${files.map((f) => "${f.name}|${f.mimeType}|size=${f.size}|path=${f.path}").toList()}',
+    );
 
     final request = _ensureRequest();
 
@@ -260,7 +270,7 @@ class AttachmentTrayController extends ChangeNotifier {
       if ((tile.isVideo || tile.isAudio) &&
           localThumb != null &&
           localThumb.isNotEmpty) {
-        _probeDuration(tile, localThumb);
+        unawaited(_probeDuration(tile, localThumb));
       }
     }
     _safeNotify();
@@ -439,7 +449,7 @@ class AttachmentTrayController extends ChangeNotifier {
   // ---- Upload event handlers (called by _TrayUploadListener) ----
 
   void _onProgress(String fileId, int loaded, int total, int percent) {
-    debugPrint('⬆️ [prog] $fileId $loaded/$total ($percent%)');
+    ccLog('⬆️ [prog] $fileId $loaded/$total ($percent%)');
     final t = _byId(fileId);
     if (t == null) return;
     t.loaded = loaded;
@@ -447,7 +457,7 @@ class AttachmentTrayController extends ChangeNotifier {
   }
 
   void _onFileUploaded(String fileId, Attachment attachment) {
-    debugPrint('✅ [uploaded] $fileId url=${attachment.fileUrl}');
+    ccLog('✅ [uploaded] $fileId url=${attachment.fileUrl}');
     final t = _byId(fileId);
     if (t == null) return;
     t.status = AttachmentTileStatus.done;
@@ -462,7 +472,7 @@ class AttachmentTrayController extends ChangeNotifier {
   }
 
   void _onFileError(String fileId, CometChatException error) {
-    debugPrint('🟥 [tray] onFileError $fileId — '
+    ccLog('🟥 [tray] onFileError $fileId — '
         'code=${error.code} details=${error.details} msg=${error.message}');
     final t = _byId(fileId);
     if (t == null) return;
@@ -472,7 +482,7 @@ class AttachmentTrayController extends ChangeNotifier {
   }
 
   void _onFileFailure(String fileId, CometChatException error) {
-    debugPrint('🟧 [tray] onFileFailure $fileId — '
+    ccLog('🟧 [tray] onFileFailure $fileId — '
         'code=${error.code} details=${error.details} msg=${error.message}');
     final t = _byId(fileId);
     if (t == null) return;
@@ -482,7 +492,7 @@ class AttachmentTrayController extends ChangeNotifier {
   }
 
   void _onComplete(UploadResult result) {
-    debugPrint('🏁 [complete] ok=${result.successful.length} '
+    ccLog('🏁 [complete] ok=${result.successful.length} '
         'rejected=${result.rejected.length} failed=${result.failed}');
     // Tiles are updated incrementally above; just re-evaluate canSend.
     _safeNotify();

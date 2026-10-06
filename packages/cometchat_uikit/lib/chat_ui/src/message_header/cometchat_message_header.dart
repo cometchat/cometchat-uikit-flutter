@@ -4,9 +4,7 @@ import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
 import '../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
 import '../../../call_ui/src/call_buttons/cometchat_call_buttons.dart';
-import 'bloc/message_header_bloc.dart';
-import 'bloc/message_header_event.dart';
-import 'bloc/message_header_state.dart';
+import '../../../src/calling_configuration_resolver.dart';
 import 'package:intl/intl.dart';
 
 /// [CometChatMessageHeader] is a widget which shows [user]/[group] details using [CometChatListItem]
@@ -68,6 +66,7 @@ class CometChatMessageHeader extends StatefulWidget
     this.newChatButtonClick,
     this.newChatIcon,
     this.chatHistoryIcon,
+    this.messageHeaderBloc,
   }) : assert(
          user != null || group != null,
          "One of user or group should be passed",
@@ -76,6 +75,12 @@ class CometChatMessageHeader extends StatefulWidget
          user == null || group == null,
          "Only one of user or group should be passed",
        );
+
+  ///[messageHeaderBloc] Optional external MessageHeaderBloc instance.
+  ///If provided, it is used instead of creating one internally and the
+  ///widget does not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc].
+  final MessageHeaderBloc? messageHeaderBloc;
 
   /// [backButton] used to set back button widget
   final WidgetBuilder? backButton;
@@ -154,8 +159,9 @@ class CometChatMessageHeader extends StatefulWidget
   /// "Search" entry that invokes it.
   final VoidCallback? onSearchTap;
 
-  /// [onHeaderTap] fires when the avatar/name/subtitle area is tapped —
-  /// typically wired to open the info screen.
+  /// [onHeaderTap] fires when the avatar/name/subtitle area is tapped, or
+  /// the [listItemView] that replaces it — typically wired to open the info
+  /// screen.
   final VoidCallback? onHeaderTap;
 
   /// [onPinnedMessagesTap] when set, the ⋯ menu's pinned-messages entry
@@ -338,10 +344,14 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
         visualDensity: VisualDensity.standard,
       ),
       builder: (context, controller, child) => IconButton(
+        tooltip: Translations.of(context).more,
         iconSize: 26,
         icon: Icon(
           Icons.more_vert,
-          color: headerStyle.backIconColor ?? colorPalette.iconPrimary,
+          color:
+              headerStyle.menuIconColor ??
+              headerStyle.backIconColor ??
+              colorPalette.iconPrimary,
         ),
         onPressed: () =>
             controller.isOpen ? controller.close() : controller.open(),
@@ -381,6 +391,7 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
   }
 
   late MessageHeaderBloc _bloc;
+  bool _isExternalBloc = false;
   late CometChatMessageHeaderStyle headerStyle;
   late CometChatColorPalette colorPalette;
   late CometChatTypography typography;
@@ -393,9 +404,15 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
   @override
   void initState() {
     super.initState();
-    _bloc = MessageHeaderBloc(
-      usersStatusVisibility: widget.usersStatusVisibility ?? true,
-    );
+    if (widget.messageHeaderBloc != null) {
+      _bloc = widget.messageHeaderBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = MessageHeaderBloc(
+        usersStatusVisibility: widget.usersStatusVisibility ?? true,
+      );
+      _isExternalBloc = false;
+    }
 
     // Set initial user or group
     if (widget.user != null) {
@@ -449,7 +466,9 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
 
   @override
   void dispose() {
-    _bloc.close();
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 
@@ -524,19 +543,24 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
         return widget.backButton!(context);
       }
       Widget leading;
-      leading = GestureDetector(
-        onTap:
-            widget.onBack ??
-            () {
-              Navigator.pop(context);
-            },
-        child:
-            style.backIcon ??
-            Image.asset(
-              AssetConstants.back,
-              package: UIConstants.packageName,
-              color: style.backIconColor ?? colorPalette.iconPrimary,
-            ),
+      leading = Semantics(
+        button: true,
+        label: cc.Translations.of(context).back,
+        child: GestureDetector(
+          onTap:
+              widget.onBack ??
+              () {
+                Navigator.pop(context);
+              },
+          child:
+              style.backIcon ??
+              Image.asset(
+                AssetConstants.back,
+                excludeFromSemantics: true,
+                package: UIConstants.packageName,
+                color: style.backIconColor ?? colorPalette.iconPrimary,
+              ),
+        ),
       );
 
       return leading;
@@ -714,7 +738,12 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
 
   Widget _getListItem(BuildContext context, MessageHeaderState state) {
     if (widget.listItemView != null) {
-      return widget.listItemView!(widget.group, widget.user, context);
+      // The custom view replaces the item, not the header's tap: it gets the
+      // same tap target the default item does (its own controls win first).
+      return GestureDetector(
+        onTap: widget.onHeaderTap,
+        child: widget.listItemView!(widget.group, widget.user, context),
+      );
     }
 
     // Safety check - if both user and group are null, show empty widget
@@ -755,6 +784,9 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
               headerStyle.onlineStatusColor ??
               colorPalette.success,
           usersStatusVisibility: !_hideUserPresence(state),
+          // Without this the helper never takes its group branch, so the
+          // private/protected badge icons and their backgrounds were inert.
+          groupTypeVisibility: true,
           privateGroupIconBackground: headerStyle.privateGroupBadgeIconColor,
           protectedGroupIconBackground:
               headerStyle.passwordProtectedGroupBadgeIconColor,
@@ -884,6 +916,7 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
     required IconData icon,
     required Color color,
     required VoidCallback onPressed,
+    required String tooltip,
     EdgeInsetsGeometry? padding,
   }) {
     return Padding(
@@ -893,6 +926,7 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
         height: 30,
         child: IconButton(
           onPressed: onPressed,
+          tooltip: tooltip,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           icon: Icon(icon, color: color, size: 24),
@@ -910,6 +944,7 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
               colorPalette.iconSecondary ??
               Colors.transparent,
           icon: widget.newChatIcon ?? Icons.add,
+          tooltip: Translations.of(context).newChat,
           onPressed:
               widget.newChatButtonClick ??
               () {
@@ -924,6 +959,7 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
               colorPalette.iconSecondary ??
               Colors.transparent,
           icon: widget.chatHistoryIcon ?? Icons.history,
+          tooltip: Translations.of(context).chatHistory,
           onPressed:
               widget.chatHistoryButtonClick ??
               () {
@@ -944,8 +980,7 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
       return null;
     }
 
-    final callingConfig =
-        CometChatUIKit.authenticationSettings?.callingConfiguration;
+    final callingConfig = CallingConfigurationResolver.resolved;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1141,6 +1176,15 @@ class _ThreadNotificationBellState extends State<_ThreadNotificationBell>
   }
 
   @override
+  void didUpdateWidget(covariant _ThreadNotificationBell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A new root is a different thread: show its state, not the last one's.
+    if (widget.parentMessage.id != oldWidget.parentMessage.id) {
+      _subscribed = widget.parentMessage.threadSubscribed;
+    }
+  }
+
+  @override
   void dispose() {
     CometChatMessageEvents.removeMessagesListener(_listenerId);
     super.dispose();
@@ -1155,21 +1199,21 @@ class _ThreadNotificationBellState extends State<_ThreadNotificationBell>
   Future<void> _toggle() async {
     if (_inFlight) return;
     _inFlight = true;
+    // The thread tapped, held across the await: parentMessage may have moved
+    // on to another root by the time the server answers.
+    final message = widget.parentMessage;
     final target = !_subscribed;
     setState(() => _subscribed = target); // optimistic flip
     try {
       final result = target
-          ? await CometChat.subscribeToThread(widget.parentMessage.id)
-          : await CometChat.unsubscribeFromThread(widget.parentMessage.id);
+          ? await CometChat.subscribeToThread(message.id)
+          : await CometChat.unsubscribeFromThread(message.id);
       if (!mounted) return;
       if (result != null) {
         // The message object is the state (stateless redesign) — stamp it,
         // then tell the other surfaces through the kit event bus.
-        widget.parentMessage.threadSubscribed = target;
-        CometChatMessageEvents.ccThreadSubscriptionChanged(
-          widget.parentMessage.id,
-          target,
-        );
+        message.threadSubscribed = target;
+        CometChatMessageEvents.ccThreadSubscriptionChanged(message.id, target);
         CometChatThreadToast.show(
           context,
           target
@@ -1177,7 +1221,9 @@ class _ThreadNotificationBellState extends State<_ThreadNotificationBell>
               : Translations.of(context).threadMutedToast,
         );
       } else {
-        setState(() => _subscribed = !target); // revert
+        if (message.id == widget.parentMessage.id) {
+          setState(() => _subscribed = !target); // revert
+        }
         CometChatThreadToast.show(
           context,
           Translations.of(context).threadSubscriptionFailed,

@@ -22,18 +22,20 @@ class AIAssistantChatHistoryRemoteDataSourceImpl
     MessagesRequest request,
   ) async {
     final completer = Completer<Result<List<BaseMessage>>>();
-    request.fetchPrevious(
-      onSuccess: (List<BaseMessage> list) {
-        completer.complete(Success(list));
-      },
-      onError: (CometChatException e) {
-        completer.complete(
-          Failure(
-            message: e.message ?? 'Failed to fetch messages',
-            code: e.code,
-          ),
-        );
-      },
+    unawaited(
+      request.fetchPrevious(
+        onSuccess: (List<BaseMessage> list) {
+          completer.complete(Success(list));
+        },
+        onError: (CometChatException e) {
+          completer.complete(
+            Failure(
+              message: e.message ?? 'Failed to fetch messages',
+              code: e.code,
+            ),
+          );
+        },
+      ),
     );
     return completer.future;
   }
@@ -41,19 +43,21 @@ class AIAssistantChatHistoryRemoteDataSourceImpl
   @override
   Future<Result<BaseMessage>> deleteMessage(int messageId) async {
     final completer = Completer<Result<BaseMessage>>();
-    CometChat.deleteMessage(
-      messageId,
-      onSuccess: (BaseMessage updatedMessage) {
-        completer.complete(Success(updatedMessage));
-      },
-      onError: (CometChatException e) {
-        completer.complete(
-          Failure(
-            message: e.message ?? 'Failed to delete message',
-            code: e.code,
-          ),
-        );
-      },
+    unawaited(
+      CometChat.deleteMessage(
+        messageId,
+        onSuccess: (BaseMessage updatedMessage) {
+          completer.complete(Success(updatedMessage));
+        },
+        onError: (CometChatException e) {
+          completer.complete(
+            Failure(
+              message: e.message ?? 'Failed to delete message',
+              code: e.code,
+            ),
+          );
+        },
+      ),
     );
     return completer.future;
   }
@@ -79,20 +83,22 @@ class AIAssistantChatHistoryRemoteDataSourceImpl
     String conversationType,
   ) async {
     final completer = Completer<Result<Conversation?>>();
-    CometChat.getConversation(
-      conversationWith,
-      conversationType,
-      onSuccess: (Conversation conversation) {
-        completer.complete(Success(conversation));
-      },
-      onError: (CometChatException e) {
-        completer.complete(
-          Failure(
-            message: e.message ?? 'Failed to get conversation',
-            code: e.code,
-          ),
-        );
-      },
+    unawaited(
+      CometChat.getConversation(
+        conversationWith,
+        conversationType,
+        onSuccess: (Conversation conversation) {
+          completer.complete(Success(conversation));
+        },
+        onError: (CometChatException e) {
+          completer.complete(
+            Failure(
+              message: e.message ?? 'Failed to get conversation',
+              code: e.code,
+            ),
+          );
+        },
+      ),
     );
     return completer.future;
   }

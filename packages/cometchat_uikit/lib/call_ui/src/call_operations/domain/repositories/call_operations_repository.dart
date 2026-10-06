@@ -28,6 +28,9 @@ abstract class CallOperationsRepository {
   /// Start a call session with the given session ID and settings.
   /// The SDK generates the call token internally.
   /// Returns the calling widget on success.
+  ///
+  /// Since 6.2.0 this does not start the Android ongoing-call service: see
+  /// `CallOperationsDataSource.startSession`.
   Future<Result<Widget>> startSession(
     String sessionId,
     SessionSettings settings,

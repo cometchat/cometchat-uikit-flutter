@@ -5,11 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-import 'inline_audio_recorder_bloc.dart';
-import 'inline_audio_recorder_event.dart';
-import 'inline_audio_recorder_state.dart';
-import 'inline_audio_recorder_style.dart';
-import 'audio_waveform_visualizer.dart';
+import '../../../../../shared_ui/src/logging/cometchat_log.dart';
 import 'web_audio_recorder_stub.dart'
     if (dart.library.js_interop) 'web_audio_recorder.dart';
 
@@ -160,7 +156,7 @@ class _CometChatInlineAudioRecorderState
         );
       }
     } catch (e) {
-      debugPrint('[InlineAudioRecorder] Web recording error: $e');
+      ccLog('[InlineAudioRecorder] Web recording error: $e');
       _bloc.add(RecordingError(e.toString()));
     }
   }
@@ -176,7 +172,7 @@ class _CometChatInlineAudioRecorderState
       }
       return null;
     } catch (e) {
-      debugPrint('[InlineAudioRecorder] Web stop error: $e');
+      ccLog('[InlineAudioRecorder] Web stop error: $e');
       return null;
     }
   }
@@ -186,14 +182,14 @@ class _CometChatInlineAudioRecorderState
     try {
       await _channel.invokeMethod('releaseMediaResources', {});
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Released all media resources');
+        ccLog('[InlineAudioRecorder] Released all media resources');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error releasing media resources: $e');
+        ccLog('[InlineAudioRecorder] Error releasing media resources: $e');
       }
       // Fallback: try to stop recording individually
-      _stopNativeRecording();
+      unawaited(_stopNativeRecording());
     }
   }
 
@@ -201,26 +197,26 @@ class _CometChatInlineAudioRecorderState
   Future<void> _startNativeRecording() async {
     try {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Starting native recording...');
+        ccLog('[InlineAudioRecorder] Starting native recording...');
       }
 
       final result = await _channel.invokeMethod('startRecordingAudio', {});
 
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Native recording started: $result');
+        ccLog('[InlineAudioRecorder] Native recording started: $result');
       }
 
       if (result == true) {
         _bloc.add(const StartRecording());
       } else {
         if (kDebugMode) {
-          debugPrint('[InlineAudioRecorder] Failed to start native recording');
+          ccLog('[InlineAudioRecorder] Failed to start native recording');
         }
         _bloc.add(const RecordingError('Failed to start recording'));
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error starting native recording: $e');
+        ccLog('[InlineAudioRecorder] Error starting native recording: $e');
       }
       _bloc.add(RecordingError(e.toString()));
     }
@@ -230,15 +226,13 @@ class _CometChatInlineAudioRecorderState
   Future<String?> _stopNativeRecording() async {
     try {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Stopping native recording...');
+        ccLog('[InlineAudioRecorder] Stopping native recording...');
       }
 
       final result = await _channel.invokeMethod('stopRecordingAudio', {});
 
       if (kDebugMode) {
-        debugPrint(
-          '[InlineAudioRecorder] Native recording stopped, path: $result',
-        );
+        ccLog('[InlineAudioRecorder] Native recording stopped, path: $result');
       }
 
       if (result is String && result.isNotEmpty) {
@@ -248,7 +242,7 @@ class _CometChatInlineAudioRecorderState
       return null;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error stopping native recording: $e');
+        ccLog('[InlineAudioRecorder] Error stopping native recording: $e');
       }
       return null;
     }
@@ -259,11 +253,11 @@ class _CometChatInlineAudioRecorderState
     try {
       await _channel.invokeMethod('pauseRecordingAudio', {});
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Native recording paused');
+        ccLog('[InlineAudioRecorder] Native recording paused');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error pausing native recording: $e');
+        ccLog('[InlineAudioRecorder] Error pausing native recording: $e');
       }
     }
   }
@@ -271,13 +265,11 @@ class _CometChatInlineAudioRecorderState
   /// Extract waveform from the recorded file and update state
   Future<void> _extractAndSetWaveform() async {
     if (kDebugMode) {
-      debugPrint(
-        '[InlineAudioRecorder] Extracting waveform from recorded file...',
-      );
+      ccLog('[InlineAudioRecorder] Extracting waveform from recorded file...');
     }
     final waveform = await _extractWaveform(sampleCount: 50);
     if (kDebugMode) {
-      debugPrint(
+      ccLog(
         '[InlineAudioRecorder] Extracted waveform: ${waveform.length} samples',
       );
     }
@@ -292,14 +284,14 @@ class _CometChatInlineAudioRecorderState
     try {
       final result = await _channel.invokeMethod('resumeRecordingAudio', {});
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Native recording resumed: $result');
+        ccLog('[InlineAudioRecorder] Native recording resumed: $result');
       }
       // If result is true, it was a true resume
       // If result is false or the method had to restart, it's a fresh start
       return result == true;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error resuming native recording: $e');
+        ccLog('[InlineAudioRecorder] Error resuming native recording: $e');
       }
       return false;
     }
@@ -310,11 +302,11 @@ class _CometChatInlineAudioRecorderState
     try {
       await _channel.invokeMethod('playRecordedAudio', {});
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Playing recorded audio');
+        ccLog('[InlineAudioRecorder] Playing recorded audio');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error playing recorded audio: $e');
+        ccLog('[InlineAudioRecorder] Error playing recorded audio: $e');
       }
     }
   }
@@ -324,11 +316,11 @@ class _CometChatInlineAudioRecorderState
     try {
       await _channel.invokeMethod('pausePlayingRecordedAudio', {});
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Paused playing recorded audio');
+        ccLog('[InlineAudioRecorder] Paused playing recorded audio');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error pausing playback: $e');
+        ccLog('[InlineAudioRecorder] Error pausing playback: $e');
       }
     }
   }
@@ -338,11 +330,11 @@ class _CometChatInlineAudioRecorderState
     try {
       await _channel.invokeMethod('resumePlayingRecordedAudio', {});
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Resumed playing recorded audio');
+        ccLog('[InlineAudioRecorder] Resumed playing recorded audio');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error resuming playback: $e');
+        ccLog('[InlineAudioRecorder] Error resuming playback: $e');
       }
     }
   }
@@ -354,11 +346,11 @@ class _CometChatInlineAudioRecorderState
         'position': positionMs,
       });
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Seeked to position: $positionMs ms');
+        ccLog('[InlineAudioRecorder] Seeked to position: $positionMs ms');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error seeking audio: $e');
+        ccLog('[InlineAudioRecorder] Error seeking audio: $e');
       }
     }
   }
@@ -370,7 +362,7 @@ class _CometChatInlineAudioRecorderState
         'sampleCount': sampleCount,
       });
       if (kDebugMode) {
-        debugPrint(
+        ccLog(
           '[InlineAudioRecorder] Extracted waveform with ${(result as List?)?.length ?? 0} samples',
         );
       }
@@ -380,7 +372,7 @@ class _CometChatInlineAudioRecorderState
       return [];
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[InlineAudioRecorder] Error extracting waveform: $e');
+        ccLog('[InlineAudioRecorder] Error extracting waveform: $e');
       }
       return [];
     }
@@ -454,7 +446,7 @@ class _CometChatInlineAudioRecorderState
 
   Widget _buildDeleteButton(InlineAudioRecorderState state) {
     return Semantics(
-      label: 'Delete recording',
+      label: Translations.of(context).deleteRecording,
       button: true,
       child: GestureDetector(
         onTap: () async {
@@ -545,7 +537,7 @@ class _CometChatInlineAudioRecorderState
               // Extract waveform after file is finalized (playRecordedAudio stops the recorder)
               // Only extract if we don't have extracted waveform yet
               if (currentState.extractedWaveform.isEmpty) {
-                _extractAndSetWaveform();
+                unawaited(_extractAndSetWaveform());
               }
             }
           }
@@ -606,10 +598,10 @@ class _CometChatInlineAudioRecorderState
         : state.amplitudes;
 
     if (kDebugMode && !isAnimating) {
-      debugPrint(
+      ccLog(
         '[InlineAudioRecorder] _buildWaveform: extractedWaveform.length=${state.extractedWaveform.length}, amplitudes.length=${state.amplitudes.length}',
       );
-      debugPrint(
+      ccLog(
         '[InlineAudioRecorder] _buildWaveform: using ${state.extractedWaveform.isNotEmpty ? "extractedWaveform" : "amplitudes"} with ${playbackAmplitudes.length} samples',
       );
     }
@@ -696,7 +688,7 @@ class _CometChatInlineAudioRecorderState
 
   Widget _buildPauseButton() {
     return Semantics(
-      label: 'Pause recording',
+      label: Translations.of(context).pauseRecording,
       button: true,
       child: GestureDetector(
         onTap: () async {
@@ -781,7 +773,7 @@ class _CometChatInlineAudioRecorderState
     final canSend = state.hasRecording || state.duration > Duration.zero;
 
     return Semantics(
-      label: 'Send audio message',
+      label: Translations.of(context).sendAudioMessage,
       button: true,
       enabled: canSend,
       child: GestureDetector(
@@ -803,7 +795,7 @@ class _CometChatInlineAudioRecorderState
                   final bytes = kIsWeb ? _webRecorder?.recordedBytes : null;
                   widget.onSubmit?.call(filePath, fileBytes: bytes);
                 } else if (kDebugMode) {
-                  debugPrint(
+                  ccLog(
                     '[InlineAudioRecorder] No file path available for submission',
                   );
                 }

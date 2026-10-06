@@ -16,6 +16,10 @@ abstract class GroupsRepository {
   /// [joinedOnly] - If true, only return groups the user has joined
   ///
   /// Returns [Result<List<Group>>] - Success with list of groups or Failure
+  ///
+  /// The signature is 6.1.1's, so an app's own implementation keeps
+  /// compiling. [GroupsRepositoryImpl.getGroups] also takes the
+  /// `groupsRequestBuilder` from [CometChatGroups.groupsRequestBuilder].
   Future<Result<List<Group>>> getGroups({
     int limit = 30,
     String? searchKeyword,

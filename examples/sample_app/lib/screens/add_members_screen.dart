@@ -29,7 +29,12 @@ class _AddMembersScreenState extends State<AddMembersScreen> {
     if (!UsersServiceLocator.instance.isInitialized) {
       UsersServiceLocator.instance.setup();
     }
-    _usersBloc = UsersBloc();
+    // Include AI agents (`@agentic`) alongside regular users so an agent can be
+    // added to a group for testing — the default user query excludes them.
+    _usersBloc = UsersBloc(
+      usersRequestBuilder: UsersRequestBuilder()
+        ..roles = ['default', AIConstants.aiRole],
+    );
     _usersBloc.add(const LoadUsers());
     _initLoggedInUser();
   }
@@ -65,9 +70,8 @@ class _AddMembersScreenState extends State<AddMembersScreen> {
     final state = _usersBloc.state;
     if (state is! UsersLoaded) return;
 
-    final selectedUsers = state.users
-        .where((u) => state.selectedUsers.contains(u.uid))
-        .toList();
+    final selectedUsers =
+        state.users.where((u) => state.selectedUsers.contains(u.uid)).toList();
     if (selectedUsers.isEmpty) return;
 
     // Guard: _loggedInUser must be initialized before adding members
@@ -236,14 +240,12 @@ class _AddMembersScreenState extends State<AddMembersScreen> {
                   ),
                   child: Center(
                     child: _isLoading
-                        ? CircularProgressIndicator(
-                            color: _colorPalette.white)
+                        ? CircularProgressIndicator(color: _colorPalette.white)
                         : Text(
                             cc.Translations.of(context).addMembers,
                             style: TextStyle(
                               color: _colorPalette.buttonIconColor,
-                              fontSize:
-                                  _typography.button?.medium?.fontSize,
+                              fontSize: _typography.button?.medium?.fontSize,
                               fontFamily:
                                   _typography.button?.medium?.fontFamily,
                               fontWeight:

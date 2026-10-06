@@ -92,23 +92,25 @@ class ConversationsRemoteDataSourceImpl
       final completer = Completer<List<Conversation>>();
 
       // Fetch conversations - don't await, the completer handles completion
-      _currentRequest!.fetchNext(
-        onSuccess: (List<Conversation> conversations) {
-          if (!completer.isCompleted) {
-            completer.complete(conversations);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              RemoteDataSourceException(
-                message: exception.message ?? 'Failed to fetch conversations',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        _currentRequest!.fetchNext(
+          onSuccess: (List<Conversation> conversations) {
+            if (!completer.isCompleted) {
+              completer.complete(conversations);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                RemoteDataSourceException(
+                  message: exception.message ?? 'Failed to fetch conversations',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;

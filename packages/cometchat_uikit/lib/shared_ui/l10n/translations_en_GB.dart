@@ -526,6 +526,14 @@ class TranslationsEnGb extends Translations {
       'You don\'t have permission to perform this action.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Allow microphone access to answer calls.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Allow camera and microphone access to answer video calls.';
+
+  @override
   String get pinSaveFailed => 'Couldn\'t update. Please try again.';
 
   @override
@@ -1516,4 +1524,87 @@ class TranslationsEnGb extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get openInBrowser => 'Open in browser';
+
+  @override
+  String get failedToLoadSticker => 'Failed to load sticker';
+
+  @override
+  String get enterDisplayText => 'Enter display text';
+
+  @override
+  String get clearSearch => 'Clear search';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get startRecording => 'Start recording';
+
+  @override
+  String get stopRecording => 'Stop recording';
+
+  @override
+  String get pauseRecording => 'Pause recording';
+
+  @override
+  String get deleteRecording => 'Delete recording';
+
+  @override
+  String get recordVoiceMessage => 'Record voice message';
+
+  @override
+  String get reorderOption => 'Reorder option';
+
+  @override
+  String get play => 'Play';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get scrollToBottom => 'Scroll to bottom';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Attachment options menu opened';
+
+  @override
+  String get richTextFormattingToolbar => 'Rich text formatting toolbar';
+
+  @override
+  String get closeFormattingToolbar => 'Close formatting toolbar';
+
+  @override
+  String get sendAudioMessage => 'Send audio message';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Message composer auxiliary actions';
+
+  @override
+  String get attachmentButton => 'Attachment button';
+
+  @override
+  String get addAttachment => 'Add attachment';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Suggestion list with $count items';
+
+  @override
+  String messageFrom(String sender) => 'Message from $sender';
 }

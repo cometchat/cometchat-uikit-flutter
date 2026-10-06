@@ -17,7 +17,12 @@ enum IncomingCallStatus {
   /// Call was successfully rejected
   rejected,
 
-  /// Call was cancelled by the caller
+  /// The call stopped ringing here without being answered or declined
+  /// here: the caller cancelled it or gave up, the same user answered or
+  /// declined it on another device, it rang for 60 seconds with nobody
+  /// acting on it (or longer, counted on return from the background), or a
+  /// logout ended it during the permission prompt. Nothing was sent to the
+  /// server. A host showing the bloc on a screen of its own closes it here.
   cancelled,
 
   /// An error occurred during accept/reject

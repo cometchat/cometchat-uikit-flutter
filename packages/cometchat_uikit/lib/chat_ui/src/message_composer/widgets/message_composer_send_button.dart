@@ -133,6 +133,7 @@ class MessageComposerSendButton extends StatelessWidget {
               height: buttonSize,
               width: buttonSize,
               child: IconButton(
+                tooltip: Translations.of(context).sendMessage,
                 padding: const EdgeInsets.all(0),
                 icon: _buildIcon(effectiveColorPalette),
                 // Null disables the IconButton for real; passing the callback

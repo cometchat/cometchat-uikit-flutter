@@ -71,6 +71,9 @@ class CallLogsErrorView extends StatelessWidget {
       effectiveTypography,
       effectiveSpacing,
       onRetry,
+      // `errorMessage` was accepted and then dropped on the floor — the helper
+      // has taken an errorStateSubtitle all along.
+      errorStateSubtitle: errorMessage,
       errorStateTextColor: effectiveStyle.errorStateTextColor,
       errorStateTextStyle: effectiveStyle.errorStateTextStyle,
       errorStateSubtitleColor: effectiveStyle.errorStateSubTitleTextColor,

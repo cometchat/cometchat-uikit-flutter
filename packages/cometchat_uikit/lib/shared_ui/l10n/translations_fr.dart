@@ -526,6 +526,14 @@ class TranslationsFr extends Translations {
       'Vous n\'avez pas l\'autorisation d\'effectuer cette action.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Autorisez l\'accès au micro pour répondre aux appels.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Autorisez l\'accès à la caméra et au micro pour répondre aux appels vidéo.';
+
+  @override
   String get pinSaveFailed =>
       'Impossible de mettre à jour. Veuillez réessayer.';
 
@@ -1528,4 +1536,89 @@ class TranslationsFr extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Retour';
+
+  @override
+  String get openInBrowser => 'Ouvrir dans le navigateur';
+
+  @override
+  String get failedToLoadSticker => "Échec du chargement de l'autocollant";
+
+  @override
+  String get enterDisplayText => 'Saisir le texte affiché';
+
+  @override
+  String get clearSearch => 'Effacer la recherche';
+
+  @override
+  String get done => 'Terminé';
+
+  @override
+  String get download => 'Télécharger';
+
+  @override
+  String get startRecording => "Démarrer l'enregistrement";
+
+  @override
+  String get stopRecording => "Arrêter l'enregistrement";
+
+  @override
+  String get pauseRecording => "Mettre l'enregistrement en pause";
+
+  @override
+  String get deleteRecording => "Supprimer l'enregistrement";
+
+  @override
+  String get recordVoiceMessage => 'Enregistrer un message vocal';
+
+  @override
+  String get reorderOption => "Réorganiser l'option";
+
+  @override
+  String get play => 'Lire';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get next => 'Suivant';
+
+  @override
+  String get previous => 'Précédent';
+
+  @override
+  String get scrollToBottom => 'Faire défiler vers le bas';
+
+  @override
+  String get attachmentOptionsMenuOpened =>
+      'Menu des options de pièce jointe ouvert';
+
+  @override
+  String get richTextFormattingToolbar =>
+      "Barre d'outils de mise en forme du texte";
+
+  @override
+  String get closeFormattingToolbar => 'Fermer la barre de mise en forme';
+
+  @override
+  String get sendAudioMessage => 'Envoyer le message audio';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Actions auxiliaires de la zone de rédaction';
+
+  @override
+  String get attachmentButton => 'Bouton des pièces jointes';
+
+  @override
+  String get addAttachment => 'Ajouter une pièce jointe';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Liste de suggestions comportant $count éléments';
+
+  @override
+  String messageFrom(String sender) => 'Message de $sender';
 }

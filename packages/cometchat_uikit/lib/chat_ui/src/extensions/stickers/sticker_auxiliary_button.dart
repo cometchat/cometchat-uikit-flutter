@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../../cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/clean_architecture/core/utils/ui_event_target.dart';
 
 ///[StickerAuxiliaryButton] is the widget that represents the `StickersExtension`
 ///in the auxiliary button view of the [CometChatMessageComposer].
 ///
-///Always shows the sticker icon. When the sticker panel is open the icon is
-///tinted with the primary (purple) colour; otherwise it uses the secondary tint.
-///Tapping toggles the sticker panel open/closed.
+///While the sticker panel is closed it shows [stickerButtonIcon], or the
+///outline sticker icon tinted with [stickerIconTint] (secondary icon colour by
+///default). While the panel is open it shows [keyboardButtonIcon], or the
+///filled sticker icon tinted with [keyboardIconTint] (primary colour by
+///default). Custom icons are shown as given, untinted. Tapping toggles the
+///sticker panel open/closed.
 class StickerAuxiliaryButton extends StatefulWidget {
   const StickerAuxiliaryButton({
     super.key,
@@ -17,12 +21,19 @@ class StickerAuxiliaryButton extends StatefulWidget {
     this.onStickerTap,
     this.stickerIconTint,
     this.keyboardIconTint,
+    this.composerId,
   });
 
-  ///[stickerButtonIcon] custom icon widget for the sticker button
+  ///[composerId] identifies the composer this button belongs to, so panel
+  ///events raised by a different composer (a thread opened beside this one)
+  ///do not reset this button's icon. Null keeps the old behaviour of reacting
+  ///to any composer's panel.
+  final Map<String, dynamic>? composerId;
+
+  ///[stickerButtonIcon] custom icon shown while the sticker panel is closed
   final Widget? stickerButtonIcon;
 
-  ///[keyboardButtonIcon] kept for API compatibility (unused)
+  ///[keyboardButtonIcon] custom icon shown while the sticker panel is open
   final Widget? keyboardButtonIcon;
 
   ///[onStickerTap] called when the button is tapped while the panel is closed
@@ -31,10 +42,10 @@ class StickerAuxiliaryButton extends StatefulWidget {
   ///[onKeyboardTap] called when the button is tapped while the panel is open
   final Function()? onKeyboardTap;
 
-  ///[stickerIconTint] colour override for the inactive state
+  ///[stickerIconTint] tints the default icon while the panel is closed
   final Color? stickerIconTint;
 
-  ///[keyboardIconTint] colour override for the active state
+  ///[keyboardIconTint] tints the default icon while the panel is open
   final Color? keyboardIconTint;
 
   @override
@@ -54,7 +65,13 @@ class _StickerAuxiliaryButtonState extends State<StickerAuxiliaryButton>
   @override
   void initState() {
     super.initState();
-    _listenerId = "StickerAuxiliaryButtonListener";
+    // Was the constant "StickerAuxiliaryButtonListener". The listener map is
+    // keyed by this string, so a second composer's button silently evicted the
+    // first one's — leaving that button registered nowhere and permanently
+    // deaf to hidePanel, with its icon stuck in the open state.
+    _listenerId =
+        'StickerAuxiliaryButtonListener_'
+        '${identityHashCode(this)}';
     CometChatUIEvents.addUiListener(_listenerId, this);
   }
 
@@ -66,6 +83,13 @@ class _StickerAuxiliaryButtonState extends State<StickerAuxiliaryButton>
 
   @override
   void hidePanel(Map<String, dynamic>? id, CustomUIPosition uiPosition) {
+    // A button built without a composerId keeps the old behaviour and reacts
+    // to any composer's panel; one that has an id only reacts to its own.
+    final composerId = widget.composerId;
+    if (composerId != null &&
+        !uiEventTargets(id, composerId, nullTargetsAll: true)) {
+      return;
+    }
     if (uiPosition == CustomUIPosition.composerBottom &&
         !_isStickerPanelClosed) {
       setState(() {
@@ -94,23 +118,32 @@ class _StickerAuxiliaryButtonState extends State<StickerAuxiliaryButton>
     final Color activeColor =
         widget.keyboardIconTint ?? colorPalette.primary ?? Colors.purple;
 
-    // Outlined icon when inactive, filled icon when active
-    final Widget icon =
-        widget.stickerButtonIcon ??
-        Image.asset(
-          _isStickerPanelClosed
-              ? AssetConstants.smile
-              : AssetConstants.stickerFilled,
-          package: UIConstants.packageName,
-          height: 24,
-          width: 24,
-          color: _isStickerPanelClosed ? inactiveColor : activeColor,
-        );
+    // Closed: the custom sticker icon, else the tinted outline icon.
+    // Open: the custom active icon, else the tinted filled icon — a custom
+    // closed-state icon is never carried into the open state (as Android).
+    final Widget icon = _isStickerPanelClosed
+        ? widget.stickerButtonIcon ??
+              Image.asset(
+                AssetConstants.smile,
+                package: UIConstants.packageName,
+                height: 24,
+                width: 24,
+                color: inactiveColor,
+              )
+        : widget.keyboardButtonIcon ??
+              Image.asset(
+                AssetConstants.stickerFilled,
+                package: UIConstants.packageName,
+                height: 24,
+                width: 24,
+                color: activeColor,
+              );
 
     return SizedBox(
       height: 24,
       width: 24,
       child: IconButton(
+        tooltip: Translations.of(context).sticker,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         onPressed: () {

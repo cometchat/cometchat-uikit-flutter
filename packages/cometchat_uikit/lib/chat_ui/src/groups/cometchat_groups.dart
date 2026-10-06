@@ -21,10 +21,23 @@ import '../../../cometchat_chat_uikit.dart' as cc;
 /// );
 /// ```
 class CometChatGroups extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Custom groups request builder protocol.
+  @Deprecated(
+    'Has no effect. Use groupsRequestBuilder, which is honoured from 6.2.0. Will be removed in 7.0.0.',
+  )
+  final GroupsBuilderProtocol? groupsProtocol;
+
+  /// Tag of a controller from the GetX-based implementation.
+  @Deprecated(
+    'Has no effect. To supply your own bloc, use groupsBloc. Will be removed in 7.0.0.',
+  )
+  final String? controllerTag;
+
   const CometChatGroups({
     super.key,
     this.groupsBloc,
-    this.groupsProtocol,
     this.subtitleView,
     this.listItemView,
     this.groupsStyle,
@@ -49,21 +62,22 @@ class CometChatGroups extends StatefulWidget {
     this.onBack,
     this.onItemTap,
     this.onItemLongPress,
+    this.setOptions,
+    this.addOptions,
     this.onError,
     this.submitIcon,
     this.hideAppbar = false,
-    this.controllerTag,
     this.height,
     this.width,
     this.searchKeyword,
     this.onLoad,
     this.onEmpty,
     this.groupTypeVisibility = true,
-    this.setOptions,
-    this.addOptions,
     this.titleView,
     this.leadingView,
     this.trailingView,
+    this.groupsProtocol,
+    this.controllerTag,
   });
 
   /// [groupsBloc] Optional external GroupsBloc instance.
@@ -72,12 +86,11 @@ class CometChatGroups extends StatefulWidget {
   /// Requirement: 9.2
   final GroupsBloc? groupsBloc;
 
-  /// [groupsProtocol] set custom groups request builder protocol
-  /// @deprecated Use groupsBloc for custom implementations
-  final GroupsBuilderProtocol? groupsProtocol;
-
-  /// [groupsRequestBuilder] custom request builder
-  /// @deprecated Use groupsBloc for custom implementations
+  /// [groupsRequestBuilder] sets the request the list fetches groups with:
+  /// its limit is the page size, and its filters (tags, joinedOnly, search
+  /// keyword) apply to every page. A keyword typed into the search box
+  /// replaces the builder's own while the search runs; the builder itself is
+  /// never changed. Ignored when [groupsBloc] is given — pass it to that bloc.
   final GroupsRequestBuilder? groupsRequestBuilder;
 
   /// [subtitleView] to set subtitle for each group
@@ -149,15 +162,32 @@ class CometChatGroups extends StatefulWidget {
   /// [onItemLongPress] callback triggered on pressing for long on a group item
   final Function(BuildContext context, Group group)? onItemLongPress;
 
+  /// [setOptions] sets the list of actions a long press on a group offers.
+  /// [addOptions], when also set, is appended to it: both are shown,
+  /// [setOptions] first, as on Android. Starting a long-press selection comes
+  /// first, then [onItemLongPress], when set, takes the long press instead.
+  final List<CometChatOption>? Function(
+    Group group,
+    GroupsBloc bloc,
+    BuildContext context,
+  )?
+  setOptions;
+
+  /// [addOptions] appends to the actions a long press on a group offers:
+  /// its entries follow those of [setOptions], as on Android. The menu has no
+  /// built-in entries, so on its own it is the whole menu.
+  final List<CometChatOption>? Function(
+    Group group,
+    GroupsBloc bloc,
+    BuildContext context,
+  )?
+  addOptions;
+
   /// [submitIcon] will override the default submit icon
   final Widget? submitIcon;
 
   /// [hideAppbar] toggle visibility for app bar
   final bool? hideAppbar;
-
-  /// Group tag to create from, if this is passed its parent responsibility to close this
-  /// @deprecated Use groupsBloc parameter for external bloc injection
-  final String? controllerTag;
 
   /// [onError] callback triggered on error
   final OnError? onError;
@@ -179,22 +209,6 @@ class CometChatGroups extends StatefulWidget {
 
   /// [groupTypeVisibility] Hide the group type icon which is visible on the group icon.
   final bool? groupTypeVisibility;
-
-  /// [setOptions] sets List of actions available on the long press of list item
-  final List<CometChatOption>? Function(
-    Group group,
-    GroupsBloc bloc,
-    BuildContext context,
-  )?
-  setOptions;
-
-  /// [addOptions] adds into the current List of actions available on the long press of list item
-  final List<CometChatOption>? Function(
-    Group group,
-    GroupsBloc bloc,
-    BuildContext context,
-  )?
-  addOptions;
 
   /// [trailingView] to set tailView for each group
   final Widget? Function(BuildContext context, Group group)? trailingView;
@@ -244,7 +258,9 @@ class _CometChatGroupsState extends State<CometChatGroups>
       _initializeServiceLocator();
 
       // Create BLoC with dependencies from service locator
-      groupsBloc = GroupsBloc();
+      groupsBloc = GroupsBloc(
+        groupsRequestBuilder: widget.groupsRequestBuilder,
+      );
       _isExternalBloc = false;
     }
 
@@ -277,6 +293,20 @@ class _CometChatGroupsState extends State<CometChatGroups>
     colorPalette = CometChatThemeHelper.getColorPalette(context);
     spacing = CometChatThemeHelper.getSpacing(context);
 
+    _resolveStyles();
+  }
+
+  @override
+  void didUpdateWidget(covariant CometChatGroups oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // didChangeDependencies re-resolves only on a theme or brightness change,
+    // so a groupsStyle that changes after the first build is picked up here.
+    if (oldWidget.groupsStyle != widget.groupsStyle) _resolveStyles();
+  }
+
+  /// Merges [CometChatGroups.groupsStyle] over the theme's groups style, and
+  /// the avatar and status indicator styles over theirs.
+  void _resolveStyles() {
     style = CometChatThemeHelper.getTheme<CometChatGroupsStyle>(
       context: context,
       defaultTheme: CometChatGroupsStyle.of,
@@ -303,6 +333,33 @@ class _CometChatGroupsState extends State<CometChatGroups>
     super.dispose();
   }
 
+  /// Reports a state transition to the caller's callbacks exactly once per
+  /// entry into that state. ENG-39104: `onLoad`, `onEmpty` and `onError` were
+  /// declared, documented and never read — GroupsList does not even take them
+  /// — so an integrator's "no groups yet" affordance never ran.
+  ///
+  /// Keyed on the state's runtime type rather than the state itself: a loaded
+  /// state that gains a group is still `loaded`, and re-reporting on every such
+  /// rebuild would turn `onLoad` into a per-frame callback.
+  Type? _lastReportedState;
+
+  void _reportGroupsState(GroupsState state) {
+    if (state.runtimeType == _lastReportedState) return;
+    _lastReportedState = state.runtimeType;
+
+    if (state is GroupsError) {
+      widget.onError?.call(Exception(state.message));
+    } else if (state is GroupsEmpty) {
+      widget.onEmpty?.call();
+    } else if (state is GroupsLoaded) {
+      if (state.groups.isEmpty) {
+        widget.onEmpty?.call();
+      } else {
+        widget.onLoad?.call(state.groups);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Required for AutomaticKeepAliveClientMixin
@@ -310,67 +367,85 @@ class _CometChatGroupsState extends State<CometChatGroups>
 
     // Use BlocProvider to provide GroupsBloc to child widgets (Requirement 5.1)
     return RepaintBoundary(
-      child: BlocProvider.value(
-        value: groupsBloc,
-        child: ClipRRect(
-          borderRadius: style.borderRadius ?? BorderRadius.circular(0),
-          child: CometChatListBase(
-            titleView: _buildTitleView(),
-            titleSpacing: widget.showBackButton ? 0 : 16,
-            hideSearch: widget.hideSearch,
-            backIcon: _buildBackIcon(),
-            placeholder: widget.searchPlaceholder,
-            showBackButton: widget.showBackButton,
-            searchBoxIcon: widget.searchBoxIcon,
-            onSearch: (keyword) => groupsBloc.add(SearchGroups(keyword)),
-            hideAppBar: widget.hideAppbar,
-            searchText: widget.searchKeyword,
-            searchPadding: EdgeInsets.symmetric(
-              horizontal: spacing.padding4 ?? 0,
-              vertical: spacing.padding3 ?? 0,
-            ),
-            searchContentPadding: EdgeInsets.symmetric(
-              horizontal: spacing.padding3 ?? 0,
-              vertical: spacing.padding2 ?? 0,
-            ),
-            searchBoxHeight: 40,
-            menuOptions: [
-              if (widget.appBarOptions != null)
-                ...widget.appBarOptions!(context),
-              _buildSelectionWidget(),
-            ],
-            onBack: widget.onBack,
-            style: _buildListBaseStyle(),
-            container: GroupsList(
-              groupsBloc: groupsBloc,
-              style: style,
-              colorPalette: colorPalette,
-              spacing: spacing,
-              typography: typography,
-              scrollController: widget.scrollController,
-              loadingStateView: widget.loadingStateView,
-              emptyStateView: widget.emptyStateView,
-              errorStateView: widget.errorStateView,
-              listItemView: widget.listItemView,
-              subtitleView: widget.subtitleView,
-              trailingView: widget.trailingView,
-              leadingView: widget.leadingView,
-              titleView: widget.titleView,
-              hideGroupTypeIcon: !(widget.groupTypeVisibility ?? true),
-              selectionMode: widget.selectionMode,
-              activateSelection: widget.activateSelection,
-              onItemTap: widget.onItemTap,
-              onItemLongPress: widget.onItemLongPress,
-              avatarStyle: avatarStyle,
-              statusIndicatorStyle: statusIndicatorStyle,
-              privateGroupIcon: widget.privateGroupIcon,
-              protectedGroupIcon: widget.passwordGroupIcon,
+      child: BlocListener<GroupsBloc, GroupsState>(
+        bloc: groupsBloc,
+        listener: (context, state) => _reportGroupsState(state),
+        child: BlocProvider.value(
+          value: groupsBloc,
+          child: ClipRRect(
+            borderRadius: style.borderRadius ?? BorderRadius.circular(0),
+            child: CometChatListBase(
+              titleView: _buildTitleView(),
+              titleSpacing: widget.showBackButton ? 0 : 16,
+              hideSearch: widget.hideSearch,
+              backIcon: _buildBackIcon(),
+              placeholder: widget.searchPlaceholder,
+              showBackButton: widget.showBackButton,
+              searchBoxIcon: widget.searchBoxIcon,
+              onSearch: (keyword) => groupsBloc.add(SearchGroups(keyword)),
+              hideAppBar: widget.hideAppbar,
+              searchText: widget.searchKeyword,
+              searchPadding: EdgeInsets.symmetric(
+                horizontal: spacing.padding4 ?? 0,
+                vertical: spacing.padding3 ?? 0,
+              ),
+              searchContentPadding: EdgeInsets.symmetric(
+                horizontal: spacing.padding3 ?? 0,
+                vertical: spacing.padding2 ?? 0,
+              ),
+              searchBoxHeight: 40,
+              menuOptions: [
+                if (widget.appBarOptions != null)
+                  ...widget.appBarOptions!(context),
+                _buildSelectionWidget(),
+              ],
+              onBack: widget.onBack,
+              style: _buildListBaseStyle(),
+              container: GroupsList(
+                groupsBloc: groupsBloc,
+                style: style,
+                colorPalette: colorPalette,
+                spacing: spacing,
+                typography: typography,
+                scrollController: widget.scrollController,
+                loadingStateView: widget.loadingStateView,
+                emptyStateView: widget.emptyStateView,
+                errorStateView: widget.errorStateView,
+                hideError: widget.hideError,
+                listItemView: widget.listItemView,
+                subtitleView: widget.subtitleView,
+                trailingView: widget.trailingView,
+                leadingView: widget.leadingView,
+                titleView: widget.titleView,
+                hideGroupTypeIcon: !(widget.groupTypeVisibility ?? true),
+                selectionMode: widget.selectionMode,
+                activateSelection: widget.activateSelection,
+                onItemTap: widget.onItemTap,
+                onItemLongPress: widget.onItemLongPress,
+                options: widget.setOptions == null && widget.addOptions == null
+                    ? null
+                    : _longPressOptions,
+                avatarStyle: avatarStyle,
+                statusIndicatorStyle: statusIndicatorStyle,
+                privateGroupIcon: widget.privateGroupIcon,
+                protectedGroupIcon: widget.passwordGroupIcon,
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  /// The long-press menu for [group]: the [CometChatGroups.setOptions]
+  /// entries, then the [CometChatGroups.addOptions] ones. Android's
+  /// CometChatGroups joins the two lists; GroupsList opens nothing when the
+  /// result is empty.
+  List<CometChatOption> _longPressOptions(BuildContext context, Group group) =>
+      [
+        ...?widget.setOptions?.call(group, groupsBloc, context),
+        ...?widget.addOptions?.call(group, groupsBloc, context),
+      ];
 
   /// Builds the title view for the app bar
   Widget _buildTitleView() {
@@ -404,6 +479,7 @@ class _CometChatGroupsState extends State<CometChatGroups>
             state is GroupsLoaded && state.selectedGroups.isNotEmpty;
         return hasSelection
             ? IconButton(
+                tooltip: Translations.of(context).clearSearch,
                 onPressed: () => groupsBloc.add(const ClearGroupSelection()),
                 icon: Icon(
                   Icons.clear,
@@ -414,10 +490,14 @@ class _CometChatGroupsState extends State<CometChatGroups>
               )
             : (widget.backButton ??
                   IconButton(
+                    tooltip: Translations.of(context).back,
                     onPressed: widget.onBack,
                     icon: Icon(
                       Icons.arrow_back,
-                      color: colorPalette.iconPrimary,
+                      // Resolve the style before the palette: ListBase applies
+                      // backIconTint as IconButton.color, which cannot reach an
+                      // icon that sets its own. ENG-39105.
+                      color: style.backIconColor ?? colorPalette.iconPrimary,
                       size: 24,
                     ),
                     padding: EdgeInsets.zero,
@@ -487,6 +567,7 @@ class _CometChatGroupsState extends State<CometChatGroups>
       builder: (context, state) {
         if (state is GroupsLoaded && state.selectedGroups.isNotEmpty) {
           return IconButton(
+            tooltip: Translations.of(context).done,
             onPressed: () {
               final selectedGroups = groupsBloc.getSelectedGroups();
               widget.onSelection?.call(selectedGroups);

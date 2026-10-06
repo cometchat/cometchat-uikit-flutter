@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a component, prop or capability for the Flutter UIKit.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests for the UIKit are welcome here. Requests about the
+        CometChat platform itself (APIs, dashboard, plans) are better raised
+        through the [help desk](https://help.cometchat.com/hc/en-us).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the use case rather than the implementation. What are you trying to build that the UIKit makes hard today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: A new component, a new prop on an existing component, a theming hook, or something else.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried instead?
+      description: Workarounds you have used, and why they fall short.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Relevant platforms
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - Web
+    validations:
+      required: false

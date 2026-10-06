@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-
 import '../../../cometchat_chat_uikit.dart';
+import '../../../shared_ui/src/logging/cometchat_log.dart';
 
 ///[ExtensionModerator] is an utility class that scans for information of applied extensions inside the metadata of a [BaseMessage]
 class ExtensionModerator {
@@ -79,7 +78,7 @@ class ExtensionModerator {
         return null;
       }
     } catch (e, stack) {
-      debugPrint("$stack");
+      ccLog("$stack");
     }
     return null;
   }

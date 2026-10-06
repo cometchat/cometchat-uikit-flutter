@@ -121,7 +121,7 @@ class _MessageComposerAuxiliaryButtonsState
     final bool hasAuxOptions = widget.auxiliaryOptions != null;
 
     return Semantics(
-      label: 'Message composer auxiliary actions',
+      label: Translations.of(context).messageComposerAuxiliaryActions,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: widget.auxiliaryButtonIconBackgroundColor,
@@ -139,49 +139,64 @@ class _MessageComposerAuxiliaryButtonsState
               // Animated mic button first; trailing gap lives inside the
               // SizeTransition so it collapses together with the mic when text
               // is typed (no phantom spacing left behind).
-              SizeTransition(
-                axis: Axis.horizontal,
-                sizeFactor: _sizeAnimation,
+              _buildAnimatedVoiceRecordingButton(
+                effectiveColorPalette,
                 axisAlignment: -1.0, // Collapse toward the left (+ button)
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: FadeTransition(
-                    opacity: _opacityAnimation,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: hasAuxOptions ? 12.0 : 0.0,
-                      ),
-                      child: _buildVoiceRecordingButton(
-                        effectiveColorPalette,
-                        needsLeftMargin: false,
-                      ),
-                    ),
-                  ),
-                ),
+                needsLeftMargin: false,
+                padding: EdgeInsets.only(right: hasAuxOptions ? 12.0 : 0.0),
               ),
               if (hasAuxOptions) widget.auxiliaryOptions!,
             ] else ...[
               if (hasAuxOptions) widget.auxiliaryOptions!,
               // Animated mic button — slides toward send button while width collapses
-              SizeTransition(
-                axis: Axis.horizontal,
-                sizeFactor: _sizeAnimation,
+              _buildAnimatedVoiceRecordingButton(
+                effectiveColorPalette,
                 axisAlignment: 1.0, // Collapse toward the right (send button)
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: FadeTransition(
-                    opacity: _opacityAnimation,
-                    child: _buildVoiceRecordingButton(
-                      effectiveColorPalette,
-                      needsLeftMargin: hasAuxOptions,
-                    ),
-                  ),
-                ),
+                needsLeftMargin: hasAuxOptions,
               ),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  /// Wraps the mic in its hide animation, and drops the subtree entirely once
+  /// it has finished collapsing. Without this the button stays in the tree at
+  /// zero size and zero opacity while `hideVoiceRecordingButton` is true — it
+  /// is invisible, but it is still a focusable, screen-reader-announced
+  /// "Record voice message" control that the integrator asked to remove.
+  Widget _buildAnimatedVoiceRecordingButton(
+    CometChatColorPalette colorPalette, {
+    required double axisAlignment,
+    required bool needsLeftMargin,
+    EdgeInsetsGeometry? padding,
+  }) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        if (!_isVisible && _controller.value == 0.0) {
+          return const SizedBox.shrink();
+        }
+        Widget button = _buildVoiceRecordingButton(
+          colorPalette,
+          needsLeftMargin: needsLeftMargin,
+        );
+        if (padding != null) {
+          button = Padding(padding: padding, child: button);
+        }
+        return SizeTransition(
+          axis: Axis.horizontal,
+          sizeFactor: _sizeAnimation,
+          // `alignment` needs Flutter 3.41; the package floor stays at 3.38.9 (DEPR1).
+          // ignore: deprecated_member_use
+          axisAlignment: axisAlignment,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(opacity: _opacityAnimation, child: button),
+          ),
+        );
+      },
     );
   }
 
@@ -195,18 +210,20 @@ class _MessageComposerAuxiliaryButtonsState
         Colors.grey;
 
     return Semantics(
-      label: 'Record voice message',
+      label: Translations.of(context).recordVoiceMessage,
       button: true,
       child: Container(
         height: 24,
         width: 24,
         margin: needsLeftMargin ? const EdgeInsets.only(left: 12) : null,
         child: IconButton(
+          tooltip: Translations.of(context).recordVoiceMessage,
           padding: const EdgeInsets.all(0),
           constraints: const BoxConstraints(),
           icon:
               widget.voiceRecordingIcon ??
               Image.asset(
+                excludeFromSemantics: true,
                 AssetConstants.microphone,
                 package: UIConstants.packageName,
                 height: 24,

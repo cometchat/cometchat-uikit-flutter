@@ -20,6 +20,15 @@ class CallingConfiguration {
   ///[callButtonsConfiguration] is a object of [CallButtonsConfiguration] which sets the configuration for call buttons
   final CallButtonsConfiguration? callButtonsConfiguration;
 
-  ///[groupSessionSettingsBuilder] is used to configure the meet session settings
+  /// The session settings a group meeting joins with: for its host, who
+  /// starts it from the call buttons, and for every member who joins it
+  /// from its bubble. A `callSettingsBuilder` (the call buttons' own, or
+  /// [CallButtonsConfiguration.callSettingsBuilder] for a Join) wins over
+  /// it.
+  ///
+  /// For an audio meeting the UI Kit adds the audio session type, a paused
+  /// camera and a hidden video toggle and camera switch while the call
+  /// screen builds the settings, and takes them off again: this builder is
+  /// never changed. A video meeting uses it as it is.
   final SessionSettingsBuilder? groupSessionSettingsBuilder;
 }

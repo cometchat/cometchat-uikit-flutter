@@ -1041,6 +1041,16 @@ abstract class Translations {
   String get actionPermissionDenied =>
       'You don\'t have permission to perform this action.';
 
+  /// Shown when an incoming voice call cannot be answered because microphone
+  /// access was refused, and the call component has no `onError`.
+  String get microphoneRequiredToAnswerCall =>
+      'Allow microphone access to answer calls.';
+
+  /// As [microphoneRequiredToAnswerCall], for a video call: it needs the
+  /// camera and the microphone.
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Allow camera and microphone access to answer video calls.';
+
   String get pinSaveFailed => 'Couldn\'t update. Please try again.';
 
   String get conversationPinnedToast => 'Conversation pinned';
@@ -2511,6 +2521,47 @@ abstract class Translations {
   ///Concrete for the same reason as [fileSaved].
   String get invalidFile => 'Invalid File';
 
+  ///Screen-reader announcement made when the composer's attachment options
+  ///menu opens. Concrete for the same reason as [fileSaved].
+  String get attachmentOptionsMenuOpened => 'Attachment options menu opened';
+
+  ///Accessibility label for the composer's `Aa` rich-text format toggle.
+  ///Concrete for the same reason as [fileSaved].
+  String get richTextFormattingToolbar => 'Rich text formatting toolbar';
+
+  ///Accessibility label for the button that dismisses the composer's
+  ///rich-text formatting toolbar. Concrete for the same reason as [fileSaved].
+  String get closeFormattingToolbar => 'Close formatting toolbar';
+
+  ///Accessibility label for the inline audio recorder's send button.
+  ///Concrete for the same reason as [fileSaved].
+  String get sendAudioMessage => 'Send audio message';
+
+  ///Accessibility label for the composer's auxiliary button cluster
+  ///(stickers / mic / host-supplied options). Concrete for the same reason as
+  ///[fileSaved].
+  String get messageComposerAuxiliaryActions =>
+      'Message composer auxiliary actions';
+
+  ///Accessibility label for the container holding the composer's attachment
+  ///control. Concrete for the same reason as [fileSaved].
+  String get attachmentButton => 'Attachment button';
+
+  ///Accessibility label for the composer's tappable "add attachment" icon.
+  ///Concrete for the same reason as [fileSaved].
+  String get addAttachment => 'Add attachment';
+
+  ///Accessibility label for the composer's mention/command suggestion list.
+  ///[count] is the number of suggestions currently offered. Concrete for the
+  ///same reason as [fileSaved].
+  String suggestionListWithItems(int count) =>
+      'Suggestion list with $count items';
+
+  ///Accessibility label for a message result row in search. [sender] is the
+  ///display name shown on the row. Concrete for the same reason as
+  ///[fileSaved].
+  String messageFrom(String sender) => 'Message from $sender';
+
   ///In en, this translates to :
   ///**'You can change roles to manage group permissions and responsibilities.'
   String get changeScopeSubtitle;
@@ -2835,6 +2886,69 @@ abstract class Translations {
   ///In en, this translates to :
   ///**'Harassment'
   String get harassment;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **Back**
+  String get back;
+
+  /// No description provided for @openInBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **Open in browser**
+  String get openInBrowser;
+
+  /// No description provided for @failedToLoadSticker.
+  ///
+  /// In en, this message translates to:
+  /// **Failed to load sticker**
+  String get failedToLoadSticker;
+
+  /// No description provided for @enterDisplayText.
+  ///
+  /// In en, this message translates to:
+  /// **Enter display text**
+  String get enterDisplayText;
+
+  /// No description provided for @clearSearch.
+  String get clearSearch;
+
+  /// No description provided for @done.
+  String get done;
+
+  /// No description provided for @startRecording.
+  String get startRecording;
+
+  /// No description provided for @stopRecording.
+  String get stopRecording;
+
+  /// No description provided for @pauseRecording.
+  String get pauseRecording;
+
+  /// No description provided for @deleteRecording.
+  String get deleteRecording;
+
+  /// No description provided for @recordVoiceMessage.
+  String get recordVoiceMessage;
+
+  /// No description provided for @reorderOption.
+  String get reorderOption;
+
+  /// No description provided for @play.
+  String get play;
+
+  /// No description provided for @pause.
+  String get pause;
+
+  /// No description provided for @next.
+  String get next;
+
+  /// No description provided for @previous.
+  String get previous;
+
+  /// No description provided for @scrollToBottom.
+  String get scrollToBottom;
 }
 
 class _TranslationsDelegate extends LocalizationsDelegate<Translations> {

@@ -22,12 +22,10 @@ import 'message_composer_auxiliary_buttons.dart';
 import 'message_composer_suggestion_list.dart';
 import 'attachment_options_overlay.dart';
 
-// Import rich text formatting
-import '../../../../../shared_ui/src/rich_text_formatting/domain/entities/format_type.dart';
-
 // Import inline audio recorder
-import 'inline_audio_recorder/inline_audio_recorder.dart';
 import '../utils/composer_attachment_utils.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../shared_ui/src/clean_architecture/core/utils/ui_event_target.dart';
 
 ///
 /// [CometChatMessageComposer] component allows users to
@@ -64,6 +62,26 @@ import '../utils/composer_attachment_utils.dart';
 ///
 ///
 class CometChatMessageComposer extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Custom AI icon.
+  @Deprecated(
+    'Has no effect. The Flutter composer has no AI button; add your own through auxiliaryButtonView. Will be removed in 7.0.0.',
+  )
+  final Widget? aiIcon;
+
+  /// Path of the icon for the AI button.
+  @Deprecated(
+    'Has no effect. The Flutter composer has no AI button; add your own through auxiliaryButtonView. Will be removed in 7.0.0.',
+  )
+  final String? aiIconURL;
+
+  /// Package to load the AI icon from.
+  @Deprecated(
+    'Has no effect. The Flutter composer has no AI button; add your own through auxiliaryButtonView. Will be removed in 7.0.0.',
+  )
+  final String? aiIconPackageName;
+
   const CometChatMessageComposer({
     super.key,
     this.user,
@@ -94,9 +112,6 @@ class CometChatMessageComposer extends StatefulWidget {
     this.hideVoiceRecordingButton,
     this.useInlineAudioRecorder = true,
     this.voiceRecordingIcon,
-    this.aiIcon,
-    this.aiIconURL,
-    this.aiIconPackageName,
     this.textFormatters,
     this.disableMentions,
     this.textEditingController,
@@ -110,6 +125,8 @@ class CometChatMessageComposer extends StatefulWidget {
     this.hideSendButton,
     this.hideAttachmentButton,
     this.hideStickersButton,
+    this.stickerIcon,
+    this.stickerActiveIcon,
     this.hideAudioAttachmentOption,
     this.hideFileAttachmentOption,
     this.hideImageAttachmentOption,
@@ -140,6 +157,9 @@ class CometChatMessageComposer extends StatefulWidget {
     this.attachmentErrorAlertStyle,
     this.attachmentErrorSnackBarBuilder,
     this.onAttachmentErrorTap,
+    this.aiIcon,
+    this.aiIconURL,
+    this.aiIconPackageName,
   }) : assert(
          user != null || group != null,
          "One of user or group should be passed",
@@ -168,6 +188,10 @@ class CometChatMessageComposer extends StatefulWidget {
   final AttachmentTrayController? attachmentTrayController;
 
   /// Invoked by the tray's Add affordance when [attachmentTrayController] is set.
+  /// Documented as firing when the user taps **+** on the tray, but the tray
+  /// renders no add affordance, so nothing invokes it — see ENG-38930. Kept
+  /// rather than removed because it is a documented property; it starts
+  /// working the moment the tray grows the button.
   final VoidCallback? onAttachmentTrayAdd;
 
   /// Invoked by the tray's Send affordance (shown only when the tray can send).
@@ -243,15 +267,6 @@ class CometChatMessageComposer extends StatefulWidget {
   final Widget? voiceRecordingIcon;
 
   final int parentMessageId;
-
-  ///[attachmentIcon] custom ai icon
-  final Widget? aiIcon;
-
-  ///[aiIconURL] path of the icon to show in the ai button
-  final String? aiIconURL;
-
-  ///[aiIconPackageName] package name to show icon from
-  final String? aiIconPackageName;
 
   ///[disableMentions] disables mentions in the composer
   final bool? disableMentions;
@@ -336,6 +351,16 @@ class CometChatMessageComposer extends StatefulWidget {
 
   ///[hideStickersButton] is a [bool] that can be used to hide/display sticker button
   final bool? hideStickersButton;
+
+  ///[stickerIcon] replaces the sticker button's icon while the sticker
+  ///keyboard is closed. Shown as given — tint it yourself; the default icon is
+  ///tinted with [CometChatMessageComposerStyle.stickerIconColor].
+  final Widget? stickerIcon;
+
+  ///[stickerActiveIcon] replaces the sticker button's icon while the sticker
+  ///keyboard is open. Shown as given — tint it yourself; the default icon is
+  ///tinted with [CometChatMessageComposerStyle.stickerActiveIconColor].
+  final Widget? stickerActiveIcon;
 
   ///[hideImageAttachmentOption] is a [bool] that can be used to hide/display image attachment option
   final bool? hideImageAttachmentOption;
@@ -1206,14 +1231,18 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     }
 
     // Reinitialize auxiliary options if relevant props changed
-    if (widget.hideStickersButton != oldWidget.hideStickersButton) {
+    final stickerButtonChanged =
+        widget.hideStickersButton != oldWidget.hideStickersButton ||
+        widget.stickerIcon != oldWidget.stickerIcon ||
+        widget.stickerActiveIcon != oldWidget.stickerActiveIcon;
+    if (stickerButtonChanged) {
       _auxiliaryOptions = _initAuxiliaryOptions();
     }
 
     // Force rebuild if any visual property changed
     if (widget.messageComposerStyle != oldWidget.messageComposerStyle ||
         richTextPropsChanged ||
-        widget.hideStickersButton != oldWidget.hideStickersButton ||
+        stickerButtonChanged ||
         widget.hideSendButton != oldWidget.hideSendButton ||
         widget.hideAttachmentButton != oldWidget.hideAttachmentButton ||
         widget.hideVoiceRecordingButton != oldWidget.hideVoiceRecordingButton ||
@@ -1518,21 +1547,17 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     };
   }
 
-  Map<String, dynamic> _buildComposerId() {
-    final Map<String, dynamic> composerId = {};
-    if (widget.parentMessageId != 0) {
-      composerId['parentMessageId'] = widget.parentMessageId;
-    }
-    if (widget.group != null) {
-      composerId['guid'] = widget.group!.guid;
-    } else if (widget.user != null) {
-      composerId['uid'] = widget.user!.uid;
-    }
-    return composerId;
-  }
+  Map<String, dynamic> _buildComposerId() => buildUiEventId(
+    uid: widget.user?.uid,
+    guid: widget.group?.guid,
+    parentMessageId: widget.parentMessageId,
+  );
 
   void _initializeFormatters() {
-    _formatters = widget.textFormatters ?? [];
+    // Copy rather than alias: the list is mutated below (mention formatter
+    // swap, defaults appended), and an integrator passing `const [...]`
+    // would otherwise crash with "Cannot add to an unmodifiable list".
+    _formatters = List<CometChatTextFormatter>.of(widget.textFormatters ?? []);
 
     int mentionFormatterIndex = _formatters.indexWhere(
       (element) => element is CometChatMentionsFormatter,
@@ -1585,6 +1610,12 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     }
 
     return StickerAuxiliaryButton(
+      composerId: _composerId,
+      stickerButtonIcon: widget.stickerIcon,
+      keyboardButtonIcon: widget.stickerActiveIcon,
+      stickerIconTint:
+          _style.stickerIconColor ?? _style.auxiliaryButtonIconColor,
+      keyboardIconTint: _style.stickerActiveIconColor,
       onStickerTap: () {
         // Capture the keyboard height before dismissing so we can size the
         // sticker keyboard to match. Use stable height if available (avoids
@@ -1629,6 +1660,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
           CustomUIPosition.composerBottom,
           (context) => CometChatStickerKeyboard(
             height: stickerContentHeight,
+            style: _style.stickerKeyboardStyle,
             onStickerTap: (Sticker sticker) {
               _bloc.add(
                 SendCustomMessage(
@@ -1962,6 +1994,12 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     }
 
     final colorPalette = CometChatThemeHelper.getColorPalette(context);
+    // The popup's own fill matches the keyboard inside it.
+    final keyboardBackground =
+        CometChatThemeHelper.getTheme<CometChatStickerKeyboardStyle>(
+          context: context,
+          defaultTheme: CometChatStickerKeyboardStyle.of,
+        ).merge(_style.stickerKeyboardStyle).backgroundColor;
     // Use the root overlay to ensure correct positioning in nested navigator layouts
     final overlay = Overlay.of(context, rootOverlay: true);
 
@@ -2005,12 +2043,16 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
               elevation: 8,
               borderRadius: BorderRadius.circular(12),
               clipBehavior: Clip.antiAlias,
-              color: colorPalette.background1 ?? Colors.white,
+              color:
+                  keyboardBackground ??
+                  colorPalette.background1 ??
+                  Colors.white,
               child: SizedBox(
                 width: popupWidth.clamp(0, composerWidth.toDouble()),
                 height: popupHeight,
                 child: CometChatStickerKeyboard(
                   height: popupHeight - 16,
+                  style: _style.stickerKeyboardStyle,
                   onStickerTap: (Sticker sticker) {
                     _bloc.add(
                       SendCustomMessage(
@@ -2620,7 +2662,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
 
     // Reset the tray UI + release the SDK upload group (attachments are
     // already captured in [msgs]).
-    tray.clear();
+    unawaited(tray.clear());
 
     for (final msg in msgs) {
       msg.parentMessageId = widget.parentMessageId;
@@ -2974,7 +3016,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     if (tray != null) {
       // The server-authoritative upload limits actually in force (from the app
       // settings the SDK cached); they cap the OS picker's selection count.
-      debugPrint(
+      ccLog(
         '📎 [limits] maxFileCount=${tray.maxFileCount} '
         'maxFileSize=${tray.maxFileSize}B '
         '(${(tray.maxFileSize / (1024 * 1024)).toStringAsFixed(1)} MB) '
@@ -3086,7 +3128,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     try {
       await tray.stage(accepted);
     } on AttachmentStageException catch (e) {
-      debugPrint(
+      ccLog(
         '🟥 [stage] AttachmentStageException: ${e.message}'
         '${e.cause != null ? ' (cause: ${e.cause})' : ''}',
       );
@@ -3095,8 +3137,8 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     } catch (e, stack) {
       // Never swallow this: it drives the generic "something went wrong" toast,
       // and without the cause there's nothing to debug from a release build.
-      debugPrint('🟥 [stage] unexpected error: $e');
-      debugPrint('$stack');
+      ccLog('🟥 [stage] unexpected error: $e');
+      ccLog('$stack');
       if (!mounted) return;
       _showComposerToast(Translations.of(context).somethingWentWrongError);
     }
@@ -4283,7 +4325,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
   Widget _buildFormatToggleButton() {
     final iconColor = _colorPalette.iconSecondary ?? Colors.grey;
     return Semantics(
-      label: 'Rich text formatting toolbar',
+      label: Translations.of(context).richTextFormattingToolbar,
       button: true,
       toggled: _isToolbarToggleOpen,
       child: Material(
@@ -4307,7 +4349,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
   Widget _buildToolbarCloseButton() {
     final iconColor = _colorPalette.iconSecondary ?? Colors.grey;
     return Semantics(
-      label: 'Close formatting toolbar',
+      label: Translations.of(context).closeFormattingToolbar,
       button: true,
       child: Material(
         color: Colors.transparent,
@@ -4387,6 +4429,21 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
               value: _bloc,
               child: MultiBlocListener(
                 listeners: [
+                  // The bloc can re-key this composer after it was built: an AI
+                  // agent chat (loadLastAgentConversation) learns its thread's
+                  // parentMessageId only after loading. The bloc then accepts
+                  // only panels raised under the new id, so the widget and its
+                  // formatters must raise them under that id too.
+                  BlocListener<MessageComposerBloc, MessageComposerState>(
+                    listenWhen: (previous, current) =>
+                        !mapEquals(previous.composerId, current.composerId),
+                    listener: (context, state) {
+                      _composerId = state.composerId;
+                      for (final formatter in _formatters) {
+                        formatter.composerId = _composerId;
+                      }
+                    },
+                  ),
                   BlocListener<MessageComposerBloc, MessageComposerState>(
                     listenWhen: (previous, current) =>
                         previous.composeText != current.composeText &&
@@ -4720,6 +4777,8 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
                 parent: _previewAnimController,
                 curve: Curves.easeOutCubic,
               ),
+              // `alignment` needs Flutter 3.41; the package floor stays at 3.38.9 (DEPR1).
+              // ignore: deprecated_member_use
               axisAlignment: 1.0, // grow from bottom edge (towards top)
               child: FadeTransition(
                 opacity: _previewFadeAnimation,
@@ -5006,7 +5065,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
 
     // On wide screens, constrain width and align to the right
     if (isWideScreen) {
-      debugPrint(
+      ccLog(
         '[StickerPanel] isWideScreen=true, screenWidth=$screenWidth, aligning to end',
       );
       return Row(
@@ -5019,7 +5078,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
         ],
       );
     }
-    debugPrint('[StickerPanel] isWideScreen=false, screenWidth=$screenWidth');
+    ccLog('[StickerPanel] isWideScreen=false, screenWidth=$screenWidth');
     return panel;
   }
 
@@ -5063,8 +5122,6 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
           _buildMessageInput(state),
           CometChatAttachmentTray(
             controller: _tray!,
-            onAdd: widget.onAttachmentTrayAdd ?? () {},
-            onSend: widget.onAttachmentTraySend,
             style: _style.attachmentTrayStyle,
             attachmentErrorAlertStyle: widget.attachmentErrorAlertStyle,
             attachmentErrorSnackBarBuilder:
@@ -5138,8 +5195,6 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
               if (_tray != null)
                 CometChatAttachmentTray(
                   controller: _tray!,
-                  onAdd: widget.onAttachmentTrayAdd ?? () {},
-                  onSend: widget.onAttachmentTraySend,
                   style: _style.attachmentTrayStyle,
                   attachmentErrorAlertStyle: widget.attachmentErrorAlertStyle,
                   attachmentErrorSnackBarBuilder:

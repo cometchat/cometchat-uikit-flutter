@@ -62,35 +62,43 @@ class UsersRemoteDataSourceImpl implements UsersRemoteDataSource {
     try {
       // Build a new request only if we don't have one yet (first call or after reset)
       if (_currentRequest == null) {
-        final requestBuilder = usersRequestBuilder ?? UsersRequestBuilder();
-        requestBuilder.limit = limit;
+        if (usersRequestBuilder != null) {
+          _currentRequest = _buildFromAppBuilder(
+            usersRequestBuilder,
+            searchKeyword: searchKeyword,
+          );
+        } else {
+          final requestBuilder = UsersRequestBuilder()..limit = limit;
 
-        if (searchKeyword != null && searchKeyword.isNotEmpty) {
-          requestBuilder.searchKeyword = searchKeyword;
+          if (searchKeyword != null && searchKeyword.isNotEmpty) {
+            requestBuilder.searchKeyword = searchKeyword;
+          }
+
+          _currentRequest = requestBuilder.build();
         }
-
-        _currentRequest = requestBuilder.build();
       }
 
       final completer = Completer<List<User>>();
 
-      _currentRequest!.fetchNext(
-        onSuccess: (List<User> users) {
-          if (!completer.isCompleted) {
-            completer.complete(users);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              UsersRemoteDataSourceException(
-                message: exception.message ?? 'Failed to fetch users',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        _currentRequest!.fetchNext(
+          onSuccess: (List<User> users) {
+            if (!completer.isCompleted) {
+              completer.complete(users);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                UsersRemoteDataSourceException(
+                  message: exception.message ?? 'Failed to fetch users',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -105,6 +113,31 @@ class UsersRemoteDataSourceImpl implements UsersRemoteDataSource {
         message: 'Unexpected error while fetching users: ${e.toString()}',
         originalException: e is Exception ? e : null,
       );
+    }
+  }
+
+  /// Builds the request from the app's own [builder], with the search box's
+  /// keyword on top, then puts the builder's keyword back.
+  ///
+  /// The builder is the app's object and outlives this request: writing into
+  /// it and leaving the values there overwrote the app's limit with the kit's
+  /// page size, and left a cleared search's keyword filtering every later
+  /// load. It cannot be copied instead — its page is private — so the keyword
+  /// is set only for the synchronous `build()`, which copies it into the
+  /// request, and restored in `finally`. The builder's limit is its own and
+  /// is not touched.
+  UsersRequest _buildFromAppBuilder(
+    UsersRequestBuilder builder, {
+    String? searchKeyword,
+  }) {
+    final appSearchKeyword = builder.searchKeyword;
+    try {
+      if (searchKeyword != null && searchKeyword.isNotEmpty) {
+        builder.searchKeyword = searchKeyword;
+      }
+      return builder.build();
+    } finally {
+      builder.searchKeyword = appSearchKeyword;
     }
   }
 

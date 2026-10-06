@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import '../../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// A widget that displays an audio waveform visualization that responds
 /// to actual audio amplitude levels from the microphone.
@@ -142,7 +143,7 @@ class _AudioWaveformVisualizerState extends State<AudioWaveformVisualizer>
         _onAmplitudeReceived,
         onError: (error) {
           if (kDebugMode) {
-            debugPrint('[AudioWaveformVisualizer] ERROR: $error');
+            ccLog('[AudioWaveformVisualizer] ERROR: $error');
           }
           if (error.toString().contains('MissingPluginException')) {
             Future.delayed(const Duration(milliseconds: 300), () {
@@ -155,7 +156,7 @@ class _AudioWaveformVisualizerState extends State<AudioWaveformVisualizer>
       );
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[AudioWaveformVisualizer] Exception: $e');
+        ccLog('[AudioWaveformVisualizer] Exception: $e');
       }
     }
   }

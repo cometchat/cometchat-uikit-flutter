@@ -18,10 +18,10 @@ import '../helpers_v2/pump_helper.dart';
 /// to the v2 helper stack. No v1 helpers, no app-screen imports.
 ///
 /// Approach: launchAndLogin lands on the Chats tab for the happy paths.
-/// Invalid login uses launchOnly + a bad UID and asserts (tolerantly) that the
-/// app does not reach the Chats tab. Logout opens the profile popup and taps
-/// Logout, expecting a return to the login form. All checks are graceful —
-/// never empty, never crash.
+/// Invalid login uses launchOnly + a bad UID, asserts the login form was
+/// reached before touching it, and then asserts the app neither reaches the
+/// Chats tab nor leaves the form. Logout opens the profile popup and taps
+/// Logout, expecting a return to the login form.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -35,33 +35,61 @@ void main() {
           reason: 'HomeScreen should show Chats tab after login');
     });
 
-    // E2E-002: Invalid credentials shows error / does not navigate
+    // E2E-002: Invalid credentials must not reach the home screen.
+    //
+    // This case used to assert nothing about the app. Its body was three
+    // nested `if`s around `expect(true, isTrue)`, so it reported green
+    // whenever the login form did not render — which is exactly what happens
+    // when the SDK fails to initialise. Measured: run with placeholder
+    // credentials, BlocSampleApp shows its init-error screen, no
+    // TextFormField exists, the whole body is skipped, and the case passes
+    // while the app under test is not even usable. It was the one case in a
+    // 19-case dry run that could not fail.
+    //
+    // The fix is a precondition. Reaching the login form is asserted first,
+    // so a dead SDK fails here rather than passing silently, and the negative
+    // assertion only runs once the app is known to be alive enough to reject
+    // a login.
     testWidgets('E2E-002: Invalid UID stays on login', (tester) async {
       await AppLauncher.launchOnly(tester);
 
-      // Find UID field and enter invalid UID
-      final fields = find.byType(TextFormField);
-      if (fields.evaluate().isNotEmpty) {
-        await tester.enterText(fields.first, 'invalid_uid_xyz_12345');
-        await tester.pump(const Duration(milliseconds: 300));
+      // On an init failure the app renders "Error: <code>" over a Retry
+      // button instead of the login form. Both assertions below fail in that
+      // state, which is the point of them.
+      expect(find.textContaining('Error:'), findsNothing,
+          reason: 'E2E-002: the app did not initialise, so this case cannot '
+              'say anything about how an invalid UID is handled');
 
-        // Tap Continue
-        final continueBtn = find.text('Continue');
-        if (continueBtn.evaluate().isNotEmpty) {
-          await tester.tap(continueBtn);
-          await pumpFor(tester, const Duration(seconds: 10));
+      final uidField = find.byType(TextFormField);
+      expect(uidField, findsWidgets,
+          reason: 'E2E-002: the login form should be on screen before a UID '
+              'is entered');
 
-          // Should NOT navigate to HomeScreen.
-          // Either stays on login or shows an error. In a clean state, we
-          // should not see the Chats tab. If a cached session exists in the
-          // test environment, this check is tolerant and does not fail.
-          final chats = find.text('Chats');
-          if (chats.evaluate().isEmpty) {
-            // Stayed on login/error — pass.
-            expect(true, isTrue);
-          }
-        }
-      }
+      await tester.enterText(uidField.first, 'invalid_uid_xyz_12345');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Unfocus so the FocusTrap overlay is removed; while it is up, an
+      // AbsorbPointer swallows the tap. Same dance as AppLauncher.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final continueBtn = find.text('Continue');
+      expect(continueBtn, findsWidgets,
+          reason: 'E2E-002: the login form should offer Continue');
+      await tester.ensureVisible(continueBtn.first);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(continueBtn.first, warnIfMissed: false);
+      await pumpFor(tester, const Duration(seconds: 10));
+
+      // The behaviour under test: a rejected login does not reach the home
+      // screen, and leaves the user on the login form rather than on an error
+      // screen or a blank route.
+      expect(find.text('Chats'), findsNothing,
+          reason: 'E2E-002: an invalid UID must not reach the home screen');
+      expect(find.byType(TextFormField), findsWidgets,
+          reason: 'E2E-002: the login form should still be on screen after a '
+              'rejected login');
     });
 
     // E2E-003: Logout returns to LoginScreen

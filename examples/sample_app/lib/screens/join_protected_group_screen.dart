@@ -82,7 +82,8 @@ class _JoinProtectedGroupScreenState extends State<JoinProtectedGroupScreen> {
         setState(() {
           _isLoading = false;
           _isError = true;
-          _errorMessage = e.message ?? 'Something went wrong. Please try again.';
+          _errorMessage =
+              e.message ?? 'Something went wrong. Please try again.';
         });
       },
     );
@@ -105,43 +106,25 @@ class _JoinProtectedGroupScreenState extends State<JoinProtectedGroupScreen> {
                 top: Radius.circular(_spacing.radius6 ?? 0),
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Drag handle
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                      vertical: _spacing.padding3 ?? 0),
-                  child: Container(
-                    height: 4,
-                    width: 32,
-                    decoration: BoxDecoration(
-                      color: _colorPalette.neutral500,
-                      borderRadius:
-                          BorderRadius.circular(_spacing.radiusMax ?? 0),
-                    ),
-                  ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: _spacing.padding5 ?? 0,
+                left: _spacing.padding6 ?? 0,
+                right: _spacing.padding6 ?? 0,
+                bottom: _spacing.padding10 ?? 0,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildAvatar(),
+                    _buildPasswordInput(),
+                    _buildErrorBanner(),
+                    _buildJoinButton(),
+                  ],
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      top: _spacing.padding5 ?? 0,
-                      left: _spacing.padding6 ?? 0,
-                      right: _spacing.padding6 ?? 0,
-                      bottom: _spacing.padding10 ?? 0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildAvatar(),
-                        _buildPasswordInput(),
-                        _buildErrorBanner(),
-                        _buildJoinButton(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -356,21 +339,30 @@ class _JoinProtectedGroupScreenState extends State<JoinProtectedGroupScreen> {
   }
 }
 
-/// Show the Join Protected Group bottom sheet.
+/// Show the Join Protected Group bottom sheet (mobile + web).
 Future<void> showJoinProtectedGroup({
   required BuildContext context,
   required CometChatColorPalette colorPalette,
   required Group group,
 }) {
+  final screenSize = MediaQuery.of(context).size;
+  final isWide = screenSize.width >= 600;
+
   return showModalBottomSheet(
     backgroundColor: colorPalette.background1,
     context: context,
     isDismissible: true,
     useSafeArea: true,
     isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: IntrinsicHeight(
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    constraints: isWide ? const BoxConstraints(maxWidth: 480) : null,
+    builder: (ctx) => SizedBox(
+      height: screenSize.height * 0.5,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: JoinProtectedGroupScreen(group: group),
       ),
     ),

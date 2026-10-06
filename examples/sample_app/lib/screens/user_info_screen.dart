@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
+import 'package:cometchat_chat_uikit/shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
 import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
+
+import 'package:sample_app/utils/call_error_snackbar.dart';
 
 import 'messages_screen.dart';
 import 'thread_screen.dart';
@@ -13,7 +15,15 @@ import 'thread_screen.dart';
 class UserInfoScreen extends StatefulWidget {
   final User user;
 
-  const UserInfoScreen({super.key, required this.user});
+  const UserInfoScreen({
+    super.key,
+    required this.user,
+    this.hideAppBar = false,
+  });
+
+  /// Drops this screen's own header. Set it when the host already
+  /// renders a title bar — the desktop side panel does.
+  final bool hideAppBar;
 
   @override
   State<UserInfoScreen> createState() => _UserInfoScreenState();
@@ -33,6 +43,11 @@ class _UserInfoScreenState extends State<UserInfoScreen>
   late final String _userListenerId;
   late final String _uiUserListenerId;
 
+  /// Places the Voice and Video calls, through the UI Kit as the chat
+  /// header's call buttons do: the same checks, the same outgoing screen
+  /// and configuration, and errors as SnackBars.
+  late final CallButtonsBloc _callButtonsBloc;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +57,15 @@ class _UserInfoScreenState extends State<UserInfoScreen>
     _uiUserListenerId = '${ts}_user_info_ui';
     CometChat.addUserListener(_userListenerId, this);
     CometChatUserEvents.addUsersListener(_uiUserListenerId, this);
+    final calling = CometChatUIKit.authenticationSettings?.callingConfiguration;
+    _callButtonsBloc = CallButtonsBloc(
+      user: _user,
+      // The configuration the chat header's call buttons use.
+      outgoingCallConfiguration:
+          calling?.callButtonsConfiguration?.outgoingCallConfiguration ??
+          calling?.outgoingCallConfiguration,
+      errorCallback: showCallButtonsError,
+    );
     _initLoggedInUser();
   }
 
@@ -61,6 +85,7 @@ class _UserInfoScreenState extends State<UserInfoScreen>
   void dispose() {
     CometChat.removeUserListener(_userListenerId);
     CometChatUserEvents.removeUsersListener(_uiUserListenerId);
+    _callButtonsBloc.close();
     super.dispose();
   }
 
@@ -305,60 +330,6 @@ class _UserInfoScreenState extends State<UserInfoScreen>
     );
   }
 
-  Future<void> _initiateCall(String callType) async {
-    // Android 14+ (API 34+) requires RECORD_AUDIO (and CAMERA for video)
-    // to be granted at runtime BEFORE the Calls SDK starts its
-    // foreground service of type `microphone`. Otherwise the OS throws
-    // SecurityException in OngoingCallService.onCreate and the app crashes.
-    final needed = callType == CallTypeConstants.videoCall
-        ? [Permission.microphone, Permission.camera]
-        : [Permission.microphone];
-    final statuses = await needed.request();
-    final allGranted = statuses.values.every((s) => s.isGranted);
-    if (!allGranted) {
-      if (!mounted) return;
-      final denied = statuses.entries
-          .where((e) => !e.value.isGranted)
-          .map((e) => e.key == Permission.camera ? 'camera' : 'microphone')
-          .join(' and ');
-      _showError('Please allow $denied access to start the call.');
-      // If user chose "Don't allow again", nudge them to Settings.
-      if (statuses.values.any((s) => s.isPermanentlyDenied)) {
-        await openAppSettings();
-      }
-      return;
-    }
-
-    final call = Call(
-      receiverUid: _user.uid,
-      receiverType: ReceiverTypeConstants.user,
-      type: callType,
-    );
-    CometChatUIKitCalls.initiateCall(
-      call,
-      onSuccess: (Call returnedCall) {
-        returnedCall.category = MessageCategoryConstants.call;
-        CometChatCallEvents.ccOutgoingCall(returnedCall);
-        // Use CallNavigationContext.navigatorKey so the outgoing call screen
-        // is on the same navigator that OutgoingCallBloc uses for pushReplacement
-        // when the receiver accepts. Using local context causes a mismatch.
-        final navContext = CallNavigationContext.navigatorKey.currentContext;
-        if (navContext != null && navContext.mounted) {
-          Navigator.push(
-            navContext,
-            MaterialPageRoute(
-              builder: (_) => CometChatOutgoingCall(
-                call: returnedCall,
-                user: _user,
-              ),
-            ),
-          );
-        }
-      },
-      onError: (e) => debugPrint('Error initiating call: ${e.message}'),
-    );
-  }
-
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -383,25 +354,27 @@ class _UserInfoScreenState extends State<UserInfoScreen>
     final presence = _getPresenceText();
     return Scaffold(
       backgroundColor: _colorPalette.background1,
-      appBar: AppBar(
-        backgroundColor: _colorPalette.background1,
-        centerTitle: false,
-        titleSpacing: 0,
-        leading: IconButton(
-          padding: EdgeInsets.zero,
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: _colorPalette.iconPrimary),
-        ),
-        title: Text(
-          cc.Translations.of(context).userInfo,
-          style: TextStyle(
-            fontSize: _typography.heading2?.bold?.fontSize,
-            fontFamily: _typography.heading2?.bold?.fontFamily,
-            fontWeight: _typography.heading2?.bold?.fontWeight,
-            color: _colorPalette.textPrimary,
-          ),
-        ),
-      ),
+      appBar: widget.hideAppBar
+          ? null
+          : AppBar(
+              backgroundColor: _colorPalette.background1,
+              centerTitle: false,
+              titleSpacing: 0,
+              leading: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back, color: _colorPalette.iconPrimary),
+              ),
+              title: Text(
+                cc.Translations.of(context).userInfo,
+                style: TextStyle(
+                  fontSize: _typography.heading2?.bold?.fontSize,
+                  fontFamily: _typography.heading2?.bold?.fontFamily,
+                  fontWeight: _typography.heading2?.bold?.fontWeight,
+                  color: _colorPalette.textPrimary,
+                ),
+              ),
+            ),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -480,9 +453,13 @@ class _UserInfoScreenState extends State<UserInfoScreen>
             Divider(color: _colorPalette.borderLight, height: 1),
             // Search
             _buildSearchTile(),
-            // Pin & Save entry
-            _buildPinnedMessagesTile(),
-            Divider(color: _colorPalette.borderLight, height: 1),
+            // Pin & Save: pinned messages only — pinning the conversation
+            // itself lives on the chat list row's long-press menu.
+            _buildNeutralTile(
+              cc.Translations.of(context).pinnedMessagesTitle,
+              Icon(Icons.push_pin_outlined, color: _colorPalette.iconPrimary),
+              _viewPinnedMessages,
+            ),
             // Block / Unblock
             _buildActionTile(
               _blockedByMe
@@ -598,70 +575,162 @@ class _UserInfoScreenState extends State<UserInfoScreen>
   }
 
   Widget _buildCallButtons() {
-    return Padding(
-      padding: EdgeInsets.only(
-        top: _spacing.padding5 ?? 0,
-        left: _spacing.padding5 ?? 0,
-        right: _spacing.padding5 ?? 0,
-      ),
-      child: Row(
-        children: [
-          _buildCallTile(
-            Icons.call_outlined,
-            cc.Translations.of(context).voice,
-            () => _initiateCall(CallTypeConstants.audioCall),
+    return StreamBuilder<CallButtonsState>(
+      stream: _callButtonsBloc.stream,
+      initialData: _callButtonsBloc.state,
+      builder: (context, snapshot) {
+        // Off while a call is being placed, as the header's buttons are.
+        final enabled = snapshot.data?.isDisabled != true;
+        return Padding(
+          padding: EdgeInsets.only(
+            top: _spacing.padding5 ?? 0,
+            left: _spacing.padding5 ?? 0,
+            right: _spacing.padding5 ?? 0,
           ),
-          SizedBox(width: _spacing.padding2),
-          _buildCallTile(
-            Icons.videocam_outlined,
-            cc.Translations.of(context).video,
-            () => _initiateCall(CallTypeConstants.videoCall),
+          child: Row(
+            children: [
+              _buildCallTile(
+                Icons.call_outlined,
+                cc.Translations.of(context).voice,
+                enabled
+                    ? () => _callButtonsBloc.add(const InitiateVoiceCall())
+                    : null,
+              ),
+              SizedBox(width: _spacing.padding2),
+              _buildCallTile(
+                Icons.videocam_outlined,
+                cc.Translations.of(context).video,
+                enabled
+                    ? () => _callButtonsBloc.add(const InitiateVideoCall())
+                    : null,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildCallTile(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildCallTile(IconData icon, String label, VoidCallback? onTap) {
     return Expanded(
       child: Semantics(
         button: true,
+        enabled: onTap != null,
         label: label,
         child: GestureDetector(
           onTap: onTap,
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              vertical: _spacing.padding2 ?? 0,
-              horizontal: _spacing.padding3 ?? 0,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: _colorPalette.borderDefault ?? Colors.transparent,
+          child: Opacity(
+            opacity: onTap == null ? 0.5 : 1,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                vertical: _spacing.padding2 ?? 0,
+                horizontal: _spacing.padding3 ?? 0,
               ),
-              borderRadius: BorderRadius.circular(_spacing.radius2 ?? 0),
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(bottom: _spacing.padding2 ?? 0),
-                  child: Icon(icon, color: _colorPalette.iconHighlight, size: 24),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _colorPalette.borderDefault ?? Colors.transparent,
                 ),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    overflow: TextOverflow.ellipsis,
-                    fontSize: _typography.caption1?.regular?.fontSize,
-                    fontFamily: _typography.caption1?.regular?.fontFamily,
-                    fontWeight: _typography.caption1?.regular?.fontWeight,
-                    color: _colorPalette.textSecondary,
+                borderRadius: BorderRadius.circular(_spacing.radius2 ?? 0),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(bottom: _spacing.padding2 ?? 0),
+                    child: Icon(
+                      icon,
+                      color: _colorPalette.iconHighlight,
+                      size: 24,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      overflow: TextOverflow.ellipsis,
+                      fontSize: _typography.caption1?.regular?.fontSize,
+                      fontFamily: _typography.caption1?.regular?.fontFamily,
+                      fontWeight: _typography.caption1?.regular?.fontWeight,
+                      color: _colorPalette.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// Like [_buildActionTile] but with neutral (non-destructive) styling.
+  Widget _buildNeutralTile(String title, Widget icon, VoidCallback? onTap) {
+    return Semantics(
+      button: true,
+      label: title,
+      child: ListTile(
+        enableFeedback: false,
+        minLeadingWidth: 0,
+        minTileHeight: 0,
+        minVerticalPadding: 0,
+        onTap: onTap,
+        leading: icon,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: _spacing.padding5 ?? 0,
+          vertical: _spacing.padding3 ?? 0,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: _typography.heading4?.regular?.fontSize,
+            fontFamily: _typography.heading4?.regular?.fontFamily,
+            fontWeight: _typography.heading4?.regular?.fontWeight,
+            color: _colorPalette.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _viewPinnedMessages() {
+    CometChatPinnedMessages.show(
+      context,
+      user: widget.user,
+      onItemTap: (message) {
+        // Pop UserInfo, then open the conversation jumped to the message
+        // (thread replies open their thread screen).
+        final navigator = Navigator.of(context);
+        final user = widget.user;
+        if (message.parentMessageId > 0) {
+          CometChatHelper.getMessageDetails(
+            message.parentMessageId,
+            onSuccess: (parent) {
+              if (parent == null) return;
+              navigator.pop(); // pop UserInfo
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (_) => ThreadScreen(
+                    user: user,
+                    message: parent,
+                    goToMessageId: message.id,
+                  ),
+                ),
+              );
+            },
+            onError: (_) {},
+          );
+          return;
+        }
+        navigator.pop(); // pop UserInfo
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            settings: const RouteSettings(name: 'messages'),
+            builder: (_) => MessagesScreen(
+              user: user,
+              goToMessageId: message.id,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -692,68 +761,4 @@ class _UserInfoScreenState extends State<UserInfoScreen>
       ),
     );
   }
-
-  /// Pin & Save: the conversation's pinned messages. Pinning the conversation
-  /// itself lives on the chat-list row's long-press menu instead.
-  Widget _buildPinnedMessagesTile() {
-    return ListTile(
-      onTap: _viewPinnedMessages,
-      leading:
-          Icon(Icons.push_pin_outlined, color: _colorPalette.iconPrimary),
-      contentPadding: EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
-      title: Text(
-        cc.Translations.of(context).pinnedMessagesTitle,
-        style: TextStyle(
-          fontSize: _typography.heading4?.regular?.fontSize,
-          fontFamily: _typography.heading4?.regular?.fontFamily,
-          fontWeight: _typography.heading4?.regular?.fontWeight,
-          color: _colorPalette.textPrimary,
-        ),
-      ),
-    );
-  }
-
-  void _viewPinnedMessages() {
-    CometChatPinnedMessages.show(
-      context,
-      user: _user,
-      onItemTap: (message) {
-        // Capture the navigator before popping this screen, then open the
-        // conversation aimed at the message. A pinned reply opens its thread.
-        final navigator = Navigator.of(context);
-        final user = _user;
-        if (message.parentMessageId > 0) {
-          CometChatHelper.getMessageDetails(
-            message.parentMessageId,
-            onSuccess: (parent) {
-              if (parent == null) return;
-              navigator.pop();
-              navigator.push(
-                MaterialPageRoute(
-                  builder: (_) => ThreadScreen(
-                    user: user,
-                    message: parent,
-                    goToMessageId: message.id,
-                  ),
-                ),
-              );
-            },
-            onError: (_) {},
-          );
-          return;
-        }
-        navigator.pop();
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'messages'),
-            builder: (_) => MessagesScreen(
-              user: user,
-              goToMessageId: message.id,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
 }

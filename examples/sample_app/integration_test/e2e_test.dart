@@ -22,43 +22,131 @@
 ///   flutter test integration_test/suites/<suite>_test.dart -d <device>
 library;
 
-// ── Consolidated suites (36 files, 358 test cases) ──────────────────────────
+// ---------------------------------------------------------------------------
+// Aggregator entry point — added when the tree was flattened out of the
+// accidental `integration_test/integration_test/` nesting.
 //
-//   suites/auth_test.dart                      Login / logout (E2E-001..004)
-//   suites/users_test.dart                     Users tab (E2E-010..013)
-//   suites/conversations_test.dart             Conversation list + nav (1TO1-001..005, E2E-005..009, RT-MSG-011..015)
-//   suites/message_header_test.dart            Header identity/presence/call buttons (1TO1-006..014, E2E-026..029)
-//   suites/messaging/send_message_test.dart    Sending text + variants (1TO1-015..025, E2E-019..025)
-//   suites/messaging/receive_message_test.dart Receiving realtime (1TO1-026..030, RT-MSG-001..010)
-//   suites/messaging/edit_message_test.dart    Edit (1TO1-031..035, RT-EDIT-001..003)
-//   suites/messaging/delete_message_test.dart  Delete (1TO1-036..040, RT-DEL-001..005)
-//   suites/message_actions_test.dart           Long-press actions (1TO1-074..082)
-//   suites/media_messages_test.dart            Image/video/audio/file (1TO1-089..093, E2E-021/022/073..077)
-//   suites/reactions_test.dart                 Reactions (1TO1-045..048, E2E-036..039, RT-REACT-001..005)
-//   suites/thread_replies_test.dart            Threads (1TO1-049..053, E2E-040..043, RT-THREAD-001..003)
-//   suites/typing_indicator_test.dart          Typing (1TO1-054..057, RT-TYPE-001..006)
-//   suites/read_receipts_test.dart             Receipts (1TO1-041..044, E2E-044..047, RT-RCPT-001..008)
-//   suites/presence_test.dart                  Presence (RT-PRES-001..006)
-//   suites/block_user_test.dart                Block/unblock (1TO1-058..062, RT-BLOCK-001..004)
-//   suites/user_info_test.dart                 User info screen (1TO1-063..069)
-//   suites/pagination_test.dart                Pagination (1TO1-070..073)
-//   suites/composer_test.dart                  Composer affordances (1TO1-083..088)
-//   suites/search_test.dart                    Search (E2E-053..056)
-//   suites/calls_test.dart                     Calls (1TO1-094..096, E2E-048..052, RT-CALL-001..006)
-//   suites/connection_test.dart                Reconnection / network (E2E-060..063, RT-CONN-001..003)
-//   suites/configuration_test.dart             Orientation / theme (E2E-064..067)
-//   suites/groups_test.dart                    Groups + members (E2E-014..018/030..035/068..072, RT-GRP-001..007)
-//   suites/edge_cases_test.dart                Edge/stress/lifecycle (1TO1-097..103, RT-EDGE-001..010)
-//   suites/ui_surfaces_test.dart               Avatar/badge/date (E2E-057..059)
+// Until then this file was documentation only: it had no `main()`, so nothing
+// could target the 50-suite tree as a unit and it ran in no pipeline. It now
+// mirrors `all_e2e_tests.dart`, which does the same for the two legacy suites:
+// each suite's `main()` registers its own groups against the shared binding
+// (`IntegrationTestWidgetsFlutterBinding.ensureInitialized()` is idempotent),
+// so calling them in sequence builds one run out of all 50 files.
 //
-//   ── Group suites (GRP-*, RT-GRP-*) ──
-//   suites/groups_extended_test.dart           Group create/join/leave flows (GRP-001..012, GRP-090)
-//   suites/group_composer_test.dart            Group composer + mentions/@all (GRP-013..022)
-//   suites/group_message_actions_test.dart     Group msg edit/delete/copy + permissions (GRP-023..031, GRP-081..089)
-//   suites/group_media_messages_test.dart      Group media send/receive (GRP-032..038)
-//   suites/group_reactions_test.dart           Group reactions + multi-reactor (GRP-039..044)
-//   suites/group_thread_messages_test.dart     Group threads + sender names (GRP-045..051)
-//   suites/group_header_test.dart              Group header identity + details nav (GRP-052..058)
-//   suites/group_members_test.dart             Group details/permissions/scope/ban/transfer (GRP-059..080)
-//   suites/groups_realtime_test.dart           Live incoming group content (RT-GRP-008..015)
-//   suites/composer_voice_test.dart            Voice recorder surface (1TO1-104)
+//   flutter drive --driver=test_driver/integration_test.dart \
+//     --target=integration_test/e2e_test.dart -d DEVICE
+//
+// Prefer the runner scripts for day-to-day work — they run suite by suite, so
+// one failure does not cost the whole run and results land per suite:
+//
+//   ./integration_test/run_ios.sh        ./integration_test/run_android.sh
+//
+// `calls_test.dart` and `composer_voice_test.dart` need WebRTC and audio
+// recording, so this target is device-only; the web wrappers stay per suite.
+// ---------------------------------------------------------------------------
+
+import 'suites/accessibility_audit_test.dart' as accessibility_audit_test;
+import 'suites/ai_assistant_test.dart' as ai_assistant_test;
+import 'suites/auth_test.dart' as auth_test;
+import 'suites/block_user_test.dart' as block_user_test;
+import 'suites/calls_test.dart' as calls_test;
+import 'suites/composer_draft_test.dart' as composer_draft_test;
+import 'suites/composer_test.dart' as composer_test;
+import 'suites/composer_voice_test.dart' as composer_voice_test;
+import 'suites/configuration_test.dart' as configuration_test;
+import 'suites/connection_test.dart' as connection_test;
+import 'suites/conversation_gap_test.dart' as conversation_gap_test;
+import 'suites/conversations_test.dart' as conversations_test;
+import 'suites/edge_cases_test.dart' as edge_cases_test;
+import 'suites/group_composer_test.dart' as group_composer_test;
+import 'suites/group_header_test.dart' as group_header_test;
+import 'suites/group_media_messages_test.dart' as group_media_messages_test;
+import 'suites/group_members_test.dart' as group_members_test;
+import 'suites/group_message_actions_test.dart' as group_message_actions_test;
+import 'suites/group_reactions_test.dart' as group_reactions_test;
+import 'suites/group_thread_messages_test.dart' as group_thread_messages_test;
+import 'suites/groups_extended_test.dart' as groups_extended_test;
+import 'suites/groups_realtime_test.dart' as groups_realtime_test;
+import 'suites/groups_test.dart' as groups_test;
+import 'suites/media_messages_test.dart' as media_messages_test;
+import 'suites/media_viewer_and_tools_test.dart' as media_viewer_and_tools_test;
+import 'suites/mentions_one_to_one_test.dart' as mentions_one_to_one_test;
+import 'suites/message_actions_test.dart' as message_actions_test;
+import 'suites/message_header_test.dart' as message_header_test;
+import 'suites/message_information_test.dart' as message_information_test;
+import 'suites/messaging/delete_message_test.dart'
+    as messaging_delete_message_test;
+import 'suites/messaging/edit_message_test.dart' as messaging_edit_message_test;
+import 'suites/messaging/receive_message_test.dart'
+    as messaging_receive_message_test;
+import 'suites/messaging/send_message_test.dart' as messaging_send_message_test;
+import 'suites/notification_feed_test.dart' as notification_feed_test;
+import 'suites/pagination_test.dart' as pagination_test;
+import 'suites/pinned_messages_test.dart' as pinned_messages_test;
+import 'suites/polls_test.dart' as polls_test;
+import 'suites/presence_test.dart' as presence_test;
+import 'suites/reactions_test.dart' as reactions_test;
+import 'suites/read_receipts_test.dart' as read_receipts_test;
+import 'suites/rich_text_composer_test.dart' as rich_text_composer_test;
+import 'suites/saved_messages_test.dart' as saved_messages_test;
+import 'suites/search_in_conversation_test.dart' as search_in_conversation_test;
+import 'suites/search_test.dart' as search_test;
+import 'suites/swipe_to_reply_test.dart' as swipe_to_reply_test;
+import 'suites/thread_replies_test.dart' as thread_replies_test;
+import 'suites/typing_indicator_test.dart' as typing_indicator_test;
+import 'suites/ui_surfaces_test.dart' as ui_surfaces_test;
+import 'suites/user_info_test.dart' as user_info_test;
+import 'suites/users_test.dart' as users_test;
+
+void main() {
+  accessibility_audit_test.main();
+  ai_assistant_test.main();
+  auth_test.main();
+  block_user_test.main();
+  calls_test.main();
+  composer_draft_test.main();
+  composer_test.main();
+  composer_voice_test.main();
+  configuration_test.main();
+  connection_test.main();
+  conversation_gap_test.main();
+  conversations_test.main();
+  edge_cases_test.main();
+  group_composer_test.main();
+  group_header_test.main();
+  group_media_messages_test.main();
+  group_members_test.main();
+  group_message_actions_test.main();
+  group_reactions_test.main();
+  group_thread_messages_test.main();
+  groups_extended_test.main();
+  groups_realtime_test.main();
+  groups_test.main();
+  media_messages_test.main();
+  media_viewer_and_tools_test.main();
+  mentions_one_to_one_test.main();
+  message_actions_test.main();
+  message_header_test.main();
+  message_information_test.main();
+  messaging_delete_message_test.main();
+  messaging_edit_message_test.main();
+  messaging_receive_message_test.main();
+  messaging_send_message_test.main();
+  notification_feed_test.main();
+  pagination_test.main();
+  pinned_messages_test.main();
+  polls_test.main();
+  presence_test.main();
+  reactions_test.main();
+  read_receipts_test.main();
+  rich_text_composer_test.main();
+  saved_messages_test.main();
+  search_in_conversation_test.main();
+  search_test.main();
+  swipe_to_reply_test.main();
+  thread_replies_test.main();
+  typing_indicator_test.main();
+  ui_surfaces_test.main();
+  user_info_test.main();
+  users_test.main();
+}

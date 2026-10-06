@@ -10,15 +10,29 @@ import 'package:flutter/material.dart';
 /// [AttachmentTrayController]; rebuilds as upload events arrive and renders
 /// nothing while empty. Sending is handled by the composer's own send button.
 class CometChatAttachmentTray extends StatelessWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Add hook.
+  @Deprecated(
+    'Has no effect. The tray has no add button. Will be removed in 7.0.0.',
+  )
+  final VoidCallback? onAdd;
+
+  /// Send hook.
+  @Deprecated(
+    'Has no effect. The tray has no send button; the composer calls onAttachmentTraySend. Will be removed in 7.0.0.',
+  )
+  final VoidCallback? onSend;
+
   const CometChatAttachmentTray({
     super.key,
     required this.controller,
-    this.onAdd,
-    this.onSend,
     this.style,
     this.attachmentErrorAlertStyle,
     this.attachmentErrorSnackBarBuilder,
     this.onAttachmentErrorTap,
+    this.onAdd,
+    this.onSend,
   });
 
   final AttachmentTrayController controller;
@@ -27,12 +41,6 @@ class CometChatAttachmentTray extends StatelessWidget {
   ///defaults. Also reachable via
   ///[CometChatMessageComposerStyle.attachmentTrayStyle].
   final CometChatAttachmentTrayStyle? style;
-
-  /// Optional Add hook (the picker / attachment menu drives staging).
-  final VoidCallback? onAdd;
-
-  /// Optional Send hook (the composer's send button calls this when staged).
-  final VoidCallback? onSend;
 
   ///[attachmentErrorAlertStyle] styles the alert shown when tapping a tile that
   ///was rejected. Not raised on desktop web, where hovering already reveals a

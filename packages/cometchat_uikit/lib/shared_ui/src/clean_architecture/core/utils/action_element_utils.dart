@@ -1,3 +1,4 @@
+import 'dart:async';
 import "package:cometchat_sdk/cometchat_sdk.dart" hide CardMessage;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import '../constants/ui_kit_constants.dart';
 import '../../presentation/views/misc/web_view/web_view_style.dart';
 import '../../presentation/views/misc/web_view/cometchat_web_view.dart';
 import '../../../utils/network_utils.dart';
+import '../../../logging/cometchat_log.dart';
 
 class ActionElementUtils {
   static final defaultHeader = {
@@ -72,7 +74,7 @@ class ActionElementUtils {
           return true;
         } else {
           if (kDebugMode) {
-            print(
+            ccLog(
               "Error in API Action ${response.statusCode} ${response.body}",
             );
           }
@@ -85,13 +87,15 @@ class ActionElementUtils {
           element.action! as URLNavigationAction;
 
       if (context != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CometChatWebView(
-              title: "WEB",
-              webViewUrl: apiNavigationAction.url,
-              webViewStyle: const WebViewStyle(),
+        unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CometChatWebView(
+                title: "WEB",
+                webViewUrl: apiNavigationAction.url,
+                webViewStyle: const WebViewStyle(),
+              ),
             ),
           ),
         );

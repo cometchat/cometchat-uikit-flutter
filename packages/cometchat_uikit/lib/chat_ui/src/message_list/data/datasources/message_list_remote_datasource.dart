@@ -337,42 +337,47 @@ class MessageListRemoteDataSourceImpl implements MessageListRemoteDataSource {
 
   Future<List<BaseMessage>> _fetchPrevious(MessagesRequest request) async {
     final completer = Completer<List<BaseMessage>>();
-    request.fetchPrevious(
-      onSuccess: (List<BaseMessage> messages) {
-        if (!completer.isCompleted) completer.complete(messages);
-      },
-      onError: (CometChatException exception) {
-        if (!completer.isCompleted) {
-          completer.completeError(
-            MessageListRemoteDataSourceException(
-              message: exception.message ?? 'Failed to fetch previous messages',
-              code: exception.code,
-              originalException: exception,
-            ),
-          );
-        }
-      },
+    unawaited(
+      request.fetchPrevious(
+        onSuccess: (List<BaseMessage> messages) {
+          if (!completer.isCompleted) completer.complete(messages);
+        },
+        onError: (CometChatException exception) {
+          if (!completer.isCompleted) {
+            completer.completeError(
+              MessageListRemoteDataSourceException(
+                message:
+                    exception.message ?? 'Failed to fetch previous messages',
+                code: exception.code,
+                originalException: exception,
+              ),
+            );
+          }
+        },
+      ),
     );
     return await completer.future;
   }
 
   Future<List<BaseMessage>> _fetchNext(MessagesRequest request) async {
     final completer = Completer<List<BaseMessage>>();
-    request.fetchNext(
-      onSuccess: (List<BaseMessage> messages) {
-        if (!completer.isCompleted) completer.complete(messages);
-      },
-      onError: (CometChatException exception) {
-        if (!completer.isCompleted) {
-          completer.completeError(
-            MessageListRemoteDataSourceException(
-              message: exception.message ?? 'Failed to fetch next messages',
-              code: exception.code,
-              originalException: exception,
-            ),
-          );
-        }
-      },
+    unawaited(
+      request.fetchNext(
+        onSuccess: (List<BaseMessage> messages) {
+          if (!completer.isCompleted) completer.complete(messages);
+        },
+        onError: (CometChatException exception) {
+          if (!completer.isCompleted) {
+            completer.completeError(
+              MessageListRemoteDataSourceException(
+                message: exception.message ?? 'Failed to fetch next messages',
+                code: exception.code,
+                originalException: exception,
+              ),
+            );
+          }
+        },
+      ),
     );
     return await completer.future;
   }

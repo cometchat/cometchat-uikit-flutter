@@ -526,6 +526,14 @@ class TranslationsEs extends Translations {
       'No tienes permiso para realizar esta acción.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Permite el acceso al micrófono para contestar llamadas.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Permite el acceso a la cámara y al micrófono para contestar videollamadas.';
+
+  @override
   String get pinSaveFailed => 'No se pudo actualizar. Inténtalo de nuevo.';
 
   @override
@@ -1523,4 +1531,88 @@ class TranslationsEs extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Atrás';
+
+  @override
+  String get openInBrowser => 'Abrir en el navegador';
+
+  @override
+  String get failedToLoadSticker => 'No se pudo cargar la pegatina';
+
+  @override
+  String get enterDisplayText => 'Introduce el texto visible';
+
+  @override
+  String get clearSearch => 'Borrar búsqueda';
+
+  @override
+  String get done => 'Listo';
+
+  @override
+  String get download => 'Descargar';
+
+  @override
+  String get startRecording => 'Iniciar grabación';
+
+  @override
+  String get stopRecording => 'Detener grabación';
+
+  @override
+  String get pauseRecording => 'Pausar grabación';
+
+  @override
+  String get deleteRecording => 'Eliminar grabación';
+
+  @override
+  String get recordVoiceMessage => 'Grabar mensaje de voz';
+
+  @override
+  String get reorderOption => 'Reordenar opción';
+
+  @override
+  String get play => 'Reproducir';
+
+  @override
+  String get pause => 'Pausar';
+
+  @override
+  String get next => 'Siguiente';
+
+  @override
+  String get previous => 'Anterior';
+
+  @override
+  String get scrollToBottom => 'Desplazarse al final';
+
+  @override
+  String get attachmentOptionsMenuOpened =>
+      'Menú de opciones de archivos adjuntos abierto';
+
+  @override
+  String get richTextFormattingToolbar => 'Barra de formato de texto';
+
+  @override
+  String get closeFormattingToolbar => 'Cerrar la barra de formato';
+
+  @override
+  String get sendAudioMessage => 'Enviar mensaje de audio';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Acciones auxiliares del redactor de mensajes';
+
+  @override
+  String get attachmentButton => 'Botón de archivos adjuntos';
+
+  @override
+  String get addAttachment => 'Añadir archivo adjunto';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Lista de sugerencias con $count elementos';
+
+  @override
+  String messageFrom(String sender) => 'Mensaje de $sender';
 }

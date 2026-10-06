@@ -68,6 +68,16 @@ void main() {
   // ───────────────────────────────────────────────────────────────────────
   // User A typing flow (fully drivable via the composer)
   // ───────────────────────────────────────────────────────────────────────
+
+  // Backstop. The tearDown above already unblocks after each test, but a block
+  // left on the shared app is not a local failure: it breaks every later run's
+  // seeding with ERR_BLOCKED_RECEIVER, CI's E2E suites included. One more
+  // attempt at the end of the file costs a request and removes that failure
+  // mode if a per-test tearDown is ever skipped.
+  tearDownAll(() async {
+    await CleanupHelper.unblockAll();
+  });
+
   group('TypingIndicator: User A typing flow', () {
     // 1TO1-056: testTypingEventSentWhenUserTypes
     testWidgets('1TO1-056: A types in composer, typing event fires',

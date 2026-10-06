@@ -165,8 +165,7 @@ class _TransferOwnershipScreenState extends State<TransferOwnershipScreen> {
               submitIcon: const SizedBox(),
               activateSelection: ActivateSelection.onClick,
               group: widget.group,
-              setOptions: (group, groupMember, controller, context) =>
-                  const [],
+              setOptions: (group, groupMember, controller, context) => const [],
             ),
           ),
           Container(
@@ -202,14 +201,12 @@ class _TransferOwnershipScreenState extends State<TransferOwnershipScreen> {
                   ),
                   child: Center(
                     child: _isLoading
-                        ? CircularProgressIndicator(
-                            color: _colorPalette.white)
+                        ? CircularProgressIndicator(color: _colorPalette.white)
                         : Text(
                             'Ownership Transfer',
                             style: TextStyle(
                               color: _colorPalette.buttonIconColor,
-                              fontSize:
-                                  _typography.button?.medium?.fontSize,
+                              fontSize: _typography.button?.medium?.fontSize,
                               fontFamily:
                                   _typography.button?.medium?.fontFamily,
                               fontWeight:

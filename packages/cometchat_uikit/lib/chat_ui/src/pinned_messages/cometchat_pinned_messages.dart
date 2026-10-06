@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart'
-    show MessageTemplateUtils, MarkdownTextFormatter, UIStateUtils;
 
 import '../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
@@ -79,7 +77,7 @@ class CometChatPinnedMessages extends StatefulWidget {
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 280),
         reverseTransitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (_, animation, __) => CometChatPinnedMessages(
+        pageBuilder: (_, animation, _) => CometChatPinnedMessages(
           user: user,
           group: group,
           onItemTap: onItemTap,
@@ -88,7 +86,7 @@ class CometChatPinnedMessages extends StatefulWidget {
           showBackButton: showBackButton,
           hideAppBar: hideAppBar,
         ),
-        transitionsBuilder: (_, animation, __, child) {
+        transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(
             opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
             child: SlideTransition(
@@ -228,10 +226,43 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
 
   // ── live sync ─────────────────────────────────────────────────────────
 
+  /// Whether a live pin event belongs to the conversation this screen lists.
+  ///
+  /// Matched exactly on the receiver fields: a substring test on the
+  /// conversation id let a screen for user `e` take pins from `me_user_bob`,
+  /// and group `g1` take them from `group_g10`. A message without receiver
+  /// fields falls back to the SDK's conversation-id shapes, `group_<guid>`
+  /// and `<uid>_user_<uid>`, and one carrying neither is kept, as before.
   bool _inScope(BaseMessage message) {
-    final conversationWith = widget.group?.guid ?? widget.user?.uid ?? '';
-    if (conversationWith.isEmpty) return true;
-    return message.conversationId?.contains(conversationWith) ?? true;
+    final group = widget.group;
+    final user = widget.user;
+    if (group == null && user == null) return true;
+    final conversationId = message.conversationId;
+    final hasReceiver = message.receiverUid.isNotEmpty;
+    if (!hasReceiver && conversationId == null) return true;
+
+    if (group != null) {
+      if (hasReceiver) {
+        return message.receiverType == ReceiverTypeConstants.group &&
+            message.receiverUid == group.guid;
+      }
+      return conversationId == 'group_${group.guid}';
+    }
+
+    final peer = user!.uid;
+    final me = CometChatUIKit.loggedInUser?.uid;
+    if (hasReceiver) {
+      if (message.receiverType != ReceiverTypeConstants.user) return false;
+      final participants = {message.sender?.uid, message.receiverUid};
+      return participants.contains(peer) &&
+          (me == null || participants.contains(me));
+    }
+    if (me == null) {
+      return conversationId!.startsWith('${peer}_user_') ||
+          conversationId.endsWith('_user_$peer');
+    }
+    return conversationId == '${me}_user_$peer' ||
+        conversationId == '${peer}_user_$me';
   }
 
   void _applyPinned(BaseMessage message) {
@@ -325,7 +356,11 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
       actionsPadding: const EdgeInsets.only(left: 24, right: 24),
       icon: Icon(
         Icons.push_pin,
-        color: CometChatThemeHelper.getColorPalette(context).iconHighlight,
+        color:
+            const CometChatPinnedMessagesStyle()
+                .merge(widget.style)
+                .unpinIconColor ??
+            CometChatThemeHelper.getColorPalette(context).iconHighlight,
         size: 32,
       ),
       title: Text(translations.unpinConfirmTitle, textAlign: TextAlign.center),
@@ -400,6 +435,7 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
               titleSpacing: widget.showBackButton ? 0 : 16,
               leading: widget.showBackButton
                   ? IconButton(
+                      tooltip: Translations.of(context).back,
                       icon: Icon(
                         Icons.arrow_back,
                         color: style.iconColor ?? colorPalette.iconPrimary,

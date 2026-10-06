@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 
+import '../../../../shared_ui/l10n/translations.dart';
 import '../cometchat_notification_feed_style.dart';
 
 /// Horizontal scrollable row of filter chips for the notification feed.
 ///
-/// Always renders N+1 chips: "All" (hardcoded first) + server categories.
+/// Always renders N+1 chips: a localized "All" chip (always first) + server
+/// categories.
 /// Active chip uses filled style, inactive uses border style.
 /// Each chip shows an optional unread badge count.
 class NotificationFeedFilterChips extends StatelessWidget {
@@ -48,7 +50,7 @@ class NotificationFeedFilterChips extends StatelessWidget {
           children: [
             // "All" chip — always first
             _buildChip(
-              label: 'All',
+              label: Translations.of(context).all,
               isActive: activeCategory == null,
               unreadCount: totalUnreadCount,
               onTap: () => onCategorySelected(null),

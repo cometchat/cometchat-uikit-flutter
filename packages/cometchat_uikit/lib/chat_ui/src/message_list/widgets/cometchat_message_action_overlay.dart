@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// Style class for [CometChatMessageActionOverlay]
 @immutable
@@ -297,16 +298,14 @@ class _CometChatMessageActionOverlayState
   }
 
   Future<void> _dismiss([ActionItem? result]) async {
-    debugPrint('[Overlay] _dismiss called with result: ${result?.id}');
+    ccLog('[Overlay] _dismiss called with result: ${result?.id}');
     // Use reverse animation only when Hero animation is active (heroTag provided)
     // This ensures smooth Hero flight back to original position
     if (widget.heroTag != null) {
-      debugPrint('[Overlay] Running reverse animation');
+      ccLog('[Overlay] Running reverse animation');
       await _animationController.reverse();
     }
-    debugPrint(
-      '[Overlay] mounted=$mounted, popping with result: ${result?.id}',
-    );
+    ccLog('[Overlay] mounted=$mounted, popping with result: ${result?.id}');
     if (mounted) {
       Navigator.of(context).pop(result);
     }

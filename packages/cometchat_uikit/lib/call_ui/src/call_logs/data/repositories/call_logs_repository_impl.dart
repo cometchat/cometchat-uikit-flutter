@@ -35,21 +35,38 @@ class CallLogsRepositoryImpl implements CallLogsRepository {
 
   @override
   Future<Result<List<CallLog>>> getCallLogs({int limit = 30}) async {
+    // A request that has fetched a page is paging. A failure there keeps
+    // the request, so the next call asks for the same page again with the
+    // same filters, and is reported: the cache holds a first page, never a
+    // stand-in for a later one. (It used to drop the request, answer from
+    // the cache, and so end the paging without a word; a request rebuilt
+    // after that also lost the host's filters.)
+    final paging = (_currentRequest?.currentPage ?? 0) > 0;
     try {
-      // Build a new request if none is set
+      // Build a new request if none is set: 1:1 calls only, as the call
+      // logs list by default (callCategory "call").
       if (_currentRequest == null) {
-        final builder = CallLogRequestBuilder()..limit = limit;
+        final builder = CallLogRequestBuilder()
+          ..limit = limit
+          ..callCategory = CometChatCallsConstants.callCategoryCall;
         _currentRequest = builder.build();
       }
 
       // Fetch from remote data source
       final callLogs = await remoteDataSource.getCallLogs(_currentRequest!);
 
-      // Cache the results locally
-      await localDataSource.cacheCallLogs(callLogs);
+      // Cache a first page locally, to stand in for one that fails later.
+      if (!paging) await localDataSource.cacheCallLogs(callLogs);
 
       return Success(callLogs);
     } on CallLogsRemoteDataSourceException catch (e) {
+      if (paging) {
+        return Failure(
+          message: 'Failed to load call logs: ${e.message}',
+          code: e.code,
+          exception: e.originalException,
+        );
+      }
       // Reset request so retry builds a fresh one (auth token may now be available)
       _currentRequest = null;
       // Remote failed (datasource already tried SDK + REST fallback).
@@ -68,8 +85,9 @@ class CallLogsRepositoryImpl implements CallLogsRepository {
         exception: e.originalException,
       );
     } catch (e) {
-      // Reset request so retry builds a fresh one (auth token may now be available)
-      _currentRequest = null;
+      // Reset request so retry builds a fresh one (auth token may now be
+      // available); a paging request is kept, as above.
+      if (!paging) _currentRequest = null;
       return Failure(
         message: 'Unexpected error while loading call logs: ${e.toString()}',
         exception: e is Exception ? e : null,

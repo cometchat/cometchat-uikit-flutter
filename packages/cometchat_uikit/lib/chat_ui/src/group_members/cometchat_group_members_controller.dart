@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
+import '../../../shared_ui/src/logging/cometchat_log.dart';
 
 ///[CometChatGroupMembersController] is the view model for [CometChatGroupMembers]
 ///it contains all the business logic involved in changing the state of the UI of [CometChatGroupMembers]
@@ -144,7 +145,7 @@ class CometChatGroupMembersController
       );
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Error in getGroupMemberFromUser: $e');
+        ccLog('Error in getGroupMemberFromUser: $e');
       }
       return null;
     }
@@ -472,7 +473,8 @@ class CometChatGroupMembersController
       case GroupMemberOptionConstants.changeScope:
         showModalBottomSheet(
           context: context,
-          barrierColor: const Color(0xff141414).withValues(alpha: 0.8),
+          barrierColor: (colorPalette.textPrimary ?? const Color(0xFF141414))
+              .withValues(alpha: 0.8),
           builder: (context) => SingleChildScrollView(
             child: CometChatChangeScope(
               group: group,

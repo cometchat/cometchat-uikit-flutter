@@ -68,6 +68,9 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
   /// Custom users request builder for filtering users
   final UsersRequestBuilder? usersRequestBuilder;
 
+  /// Users per page: the app builder's limit, as Android uses it, else 30.
+  int get _pageSize => usersRequestBuilder?.limit ?? 30;
+
   // ============================================================
   // OPTIMIZATION: Per-user status using ValueNotifier
   // Each user has its own notifier - only affected item rebuilds
@@ -309,7 +312,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     }
 
     final result = await getUsersUseCase(
-      limit: 30,
+      limit: _pageSize,
       searchKeyword: event.searchKeyword,
       usersRequestBuilder: usersRequestBuilder,
     );
@@ -327,6 +330,12 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
           );
         }
         replaceAll(users);
+        // A fresh first page reopens paging. A silent reload keeps the
+        // previous state's hasMore otherwise, which is false once a search's
+        // pages ran out, or once a refreshed list had been paged to its end.
+        if (state is UsersLoaded) {
+          emit((state as UsersLoaded).copyWith(hasMore: true));
+        }
       }
     } else if (result is Failure && !isSilentRefresh) {
       emit(UsersError(message: result.message));
@@ -349,7 +358,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     emit(currentState.copyWith(isLoadingMore: true));
 
     final result = await getUsersUseCase(
-      limit: 30,
+      limit: _pageSize,
       searchKeyword: _currentSearchKeyword,
       usersRequestBuilder: usersRequestBuilder,
     );
@@ -373,16 +382,14 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
       }
 
       final allUsers = [...currentState.users, ...newUsers];
-      final hasMorePages = newUsers.length >= 30;
       replaceAll(allUsers);
-      // Always emit the correct hasMore and isLoadingMore after replaceAll,
-      // since onListReplaced no longer sets hasMore.
+      // Only an empty page ends paging, as on Android and as CometChatGroups
+      // does. The request after the last page is answered by the SDK from its
+      // page count. Emitted after replaceAll, since onListReplaced does not
+      // set hasMore or isLoadingMore.
       if (state is UsersLoaded) {
         emit(
-          (state as UsersLoaded).copyWith(
-            hasMore: hasMorePages,
-            isLoadingMore: false,
-          ),
+          (state as UsersLoaded).copyWith(hasMore: true, isLoadingMore: false),
         );
       }
     } else if (result is Failure) {
@@ -460,7 +467,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     emit(const UsersLoading());
 
     final result = await getUsersUseCase(
-      limit: 30,
+      limit: _pageSize,
       searchKeyword: event.keyword,
       usersRequestBuilder: usersRequestBuilder,
     );
@@ -486,14 +493,23 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     }
   }
 
-  /// Restore original users after search is cleared
+  /// Restore original users after search is cleared, then reload the first
+  /// page.
+  ///
+  /// The search replaced the SDK request, so the cursor that paged the
+  /// original list is gone. A load-more from a reset cursor fetched page one
+  /// again and appended it, duplicating the rows already shown. A fresh first
+  /// page, built from [usersRequestBuilder] as Android rebuilds its request
+  /// on clear, gives later pages a cursor to follow. The restored list shows
+  /// in the meantime.
   void _onRestoreOriginalUsers(
     _RestoreOriginalUsers event,
     Emitter<UsersState> emit,
   ) {
-    // Reset the SDK request cursor so next pagination uses the non-search request
+    // Drop the search's request so nothing pages on from it before the reload
     getUsersUseCase.resetRequest();
     replaceAll(event.users);
+    add(const LoadUsers(silent: true));
   }
 
   void _onToggleUserSelection(

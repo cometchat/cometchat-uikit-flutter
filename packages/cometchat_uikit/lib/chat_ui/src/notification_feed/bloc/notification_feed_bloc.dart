@@ -13,6 +13,7 @@ import '../domain/usecases/get_unread_count_usecase.dart';
 import '../domain/usecases/get_feed_item_usecase.dart';
 import 'notification_feed_event.dart';
 import 'notification_feed_state.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// BLoC for managing the notification feed lifecycle.
 ///
@@ -42,6 +43,15 @@ class NotificationFeedBloc
   // Builder configuration (provided externally or defaults)
   final NotificationFeedRequestBuilder? _externalFeedRequestBuilder;
   final NotificationCategoriesRequestBuilder? _externalCategoriesRequestBuilder;
+
+  /// The request builder the feed was configured with, if any. Exposed so the
+  /// value can be observed where it lands rather than only where it was set.
+  NotificationFeedRequestBuilder? get feedRequestBuilder =>
+      _externalFeedRequestBuilder;
+
+  /// The categories request builder the feed was configured with, if any.
+  NotificationCategoriesRequestBuilder? get categoriesRequestBuilder =>
+      _externalCategoriesRequestBuilder;
 
   /// Whether to disable SDK listeners (for testing or web platform).
   final bool disableSDKListeners;
@@ -231,7 +241,7 @@ class NotificationFeedBloc
     categoriesResult.fold(
       (failure) {
         if (kDebugMode) {
-          debugPrint(
+          ccLog(
             '[NotificationFeedBloc] Categories fetch failed: ${failure.message}',
           );
         }
@@ -317,9 +327,7 @@ class NotificationFeedBloc
         // Pagination failure: show inline error, keep existing items
         emit(state.copyWith(isLoadingMore: false));
         if (kDebugMode) {
-          debugPrint(
-            '[NotificationFeedBloc] Pagination failed: ${failure.message}',
-          );
+          ccLog('[NotificationFeedBloc] Pagination failed: ${failure.message}');
         }
       },
       (newItems) {
@@ -610,7 +618,7 @@ class NotificationFeedBloc
       (failure) {
         // On failure, keep item as unread — retry on next visibility
         if (kDebugMode) {
-          debugPrint(
+          ccLog(
             '[NotificationFeedBloc] Mark as read failed: ${failure.message}',
           );
         }
@@ -661,7 +669,7 @@ class NotificationFeedBloc
     _deliveredItemIds.add(itemId);
 
     // Fire-and-forget
-    _markFeedDeliveredUseCase(event.feedItem);
+    unawaited(_markFeedDeliveredUseCase(event.feedItem));
   }
 
   /// Report viewed engagement (fire-and-forget, deduplicated).
@@ -674,7 +682,7 @@ class NotificationFeedBloc
     _viewedItemIds.add(itemId);
 
     // Fire-and-forget
-    _reportFeedEngagementUseCase(event.feedItem, 'viewed');
+    unawaited(_reportFeedEngagementUseCase(event.feedItem, 'viewed'));
   }
 
   /// Report clicked engagement (fire-and-forget).
@@ -683,7 +691,7 @@ class NotificationFeedBloc
     Emitter<NotificationFeedState> emit,
   ) async {
     // Clicked can be reported multiple times (not deduplicated)
-    _reportFeedEngagementUseCase(event.feedItem, 'clicked');
+    unawaited(_reportFeedEngagementUseCase(event.feedItem, 'clicked'));
   }
 
   /// Update unread counts from server.
@@ -697,7 +705,7 @@ class NotificationFeedBloc
       (failure) {
         // Silently fail — don't disrupt UI
         if (kDebugMode) {
-          debugPrint(
+          ccLog(
             '[NotificationFeedBloc] Unread count poll failed: ${failure.message}',
           );
         }

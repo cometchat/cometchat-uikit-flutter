@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 class FreezeableRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   /// Singleton instance
   static final FreezeableRouteObserver instance = FreezeableRouteObserver._();
-  
+
   FreezeableRouteObserver._();
-  
+
   /// Notifies when screens should be frozen (true = freeze, false = unfreeze)
   final ValueNotifier<bool> shouldFreeze = ValueNotifier<bool>(false);
-  
+
   /// Track the route names that should trigger freezing
   final Set<String> _freezeTriggerRoutes = {'messages'};
-  
+
   /// Current route stack depth for freeze triggers
   int _freezeRouteCount = 0;
 
@@ -38,8 +38,9 @@ class FreezeableRouteObserver extends RouteObserver<PageRoute<dynamic>> {
 
   void _checkFreeze(Route<dynamic> route, {required bool isPush}) {
     final routeName = route.settings.name;
-    final isFreezeRoute = routeName != null && _freezeTriggerRoutes.contains(routeName);
-    
+    final isFreezeRoute =
+        routeName != null && _freezeTriggerRoutes.contains(routeName);
+
     if (isFreezeRoute) {
       if (isPush) {
         _freezeRouteCount++;
@@ -49,7 +50,7 @@ class FreezeableRouteObserver extends RouteObserver<PageRoute<dynamic>> {
       shouldFreeze.value = _freezeRouteCount > 0;
     }
   }
-  
+
   /// Register a route name that should trigger freezing when pushed
   void addFreezeTriggerRoute(String routeName) {
     _freezeTriggerRoutes.add(routeName);

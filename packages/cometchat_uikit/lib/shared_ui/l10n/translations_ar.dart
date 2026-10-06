@@ -520,6 +520,14 @@ class TranslationsAr extends Translations {
   String get actionPermissionDenied => 'ليست لديك صلاحية لتنفيذ هذا الإجراء.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'اسمح بالوصول إلى الميكروفون للرد على المكالمات.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'اسمح بالوصول إلى الكاميرا والميكروفون للرد على مكالمات الفيديو.';
+
+  @override
   String get pinSaveFailed => 'تعذر التحديث. يُرجى المحاولة مرة أخرى.';
 
   @override
@@ -1513,4 +1521,86 @@ class TranslationsAr extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'رجوع';
+
+  @override
+  String get openInBrowser => 'فتح في المتصفح';
+
+  @override
+  String get failedToLoadSticker => 'فشل تحميل الملصق';
+
+  @override
+  String get enterDisplayText => 'أدخل النص المعروض';
+
+  @override
+  String get clearSearch => 'مسح البحث';
+
+  @override
+  String get done => 'تم';
+
+  @override
+  String get download => 'تنزيل';
+
+  @override
+  String get startRecording => 'بدء التسجيل';
+
+  @override
+  String get stopRecording => 'إيقاف التسجيل';
+
+  @override
+  String get pauseRecording => 'إيقاف التسجيل مؤقتًا';
+
+  @override
+  String get deleteRecording => 'حذف التسجيل';
+
+  @override
+  String get recordVoiceMessage => 'تسجيل رسالة صوتية';
+
+  @override
+  String get reorderOption => 'إعادة ترتيب الخيار';
+
+  @override
+  String get play => 'تشغيل';
+
+  @override
+  String get pause => 'إيقاف مؤقت';
+
+  @override
+  String get next => 'التالي';
+
+  @override
+  String get previous => 'السابق';
+
+  @override
+  String get scrollToBottom => 'التمرير إلى الأسفل';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'تم فتح قائمة خيارات المرفقات';
+
+  @override
+  String get richTextFormattingToolbar => 'شريط أدوات تنسيق النص';
+
+  @override
+  String get closeFormattingToolbar => 'إغلاق شريط أدوات التنسيق';
+
+  @override
+  String get sendAudioMessage => 'إرسال رسالة صوتية';
+
+  @override
+  String get messageComposerAuxiliaryActions => 'إجراءات إضافية لمحرر الرسائل';
+
+  @override
+  String get attachmentButton => 'زر المرفقات';
+
+  @override
+  String get addAttachment => 'إضافة مرفق';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'قائمة اقتراحات تضم $count عنصرًا';
+
+  @override
+  String messageFrom(String sender) => 'رسالة من $sender';
 }

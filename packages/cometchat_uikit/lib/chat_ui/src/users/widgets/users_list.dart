@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../cometchat_chat_uikit.dart';
+import '../../shared/list_options_menu.dart';
 
 /// Internal widget for rendering the users list
 class UsersList extends StatelessWidget {
@@ -25,6 +26,7 @@ class UsersList extends StatelessWidget {
     this.activateSelection,
     this.onItemTap,
     this.onItemLongPress,
+    this.options,
     this.stickyHeaderVisibility,
     this.avatarStyle,
     this.statusIndicatorStyle,
@@ -49,6 +51,13 @@ class UsersList extends StatelessWidget {
   final ActivateSelection? activateSelection;
   final Function(BuildContext, User)? onItemTap;
   final Function(BuildContext, User)? onItemLongPress;
+
+  /// Builds the menu a long press opens on a user. Nothing opens when it is
+  /// null or returns no options. Starting a long-press selection comes first,
+  /// then [onItemLongPress], when set, takes the long press instead.
+  final List<CometChatOption> Function(BuildContext context, User user)?
+  options;
+
   final bool? stickyHeaderVisibility;
   final CometChatAvatarStyle? avatarStyle;
   final CometChatStatusIndicatorStyle? statusIndicatorStyle;
@@ -186,6 +195,11 @@ class UsersList extends StatelessWidget {
       errorStateTextStyle: style.errorStateTextStyle,
       errorStateSubtitleColor: style.errorStateSubTitleTextColor,
       errorStateSubtitleStyle: style.errorStateSubTitleTextStyle,
+      buttonTextStyle: style.retryButtonTextStyle,
+      buttonTextColor: style.retryButtonTextColor,
+      buttonBackgroundColor: style.retryButtonBackgroundColor,
+      buttonBorderSide: style.retryButtonBorder,
+      buttonBorderRadius: style.retryButtonBorderRadius,
     );
   }
 
@@ -277,6 +291,8 @@ class UsersList extends StatelessWidget {
           ),
           child: GestureDetector(
             onTap: () => _handleItemTap(context, user, state),
+            // This builder's context is the row's own, so an options menu
+            // opens over the pressed row.
             onLongPress: () => _handleItemLongPress(context, user, state),
             child: Row(
               children: [
@@ -384,8 +400,10 @@ class UsersList extends StatelessWidget {
     }
   }
 
+  /// [rowContext] is the pressed row's own context, so the options menu
+  /// opens over that row.
   void _handleItemLongPress(
-    BuildContext context,
+    BuildContext rowContext,
     User user,
     UsersLoaded state,
   ) {
@@ -393,7 +411,14 @@ class UsersList extends StatelessWidget {
         state.selectedUsers.isEmpty) {
       usersBloc.add(ToggleUserSelection(user.uid));
     } else if (onItemLongPress != null) {
-      onItemLongPress!(context, user);
+      onItemLongPress!(rowContext, user);
+    } else if (options != null) {
+      showListOptionsMenu(
+        rowContext: rowContext,
+        options: options!(rowContext, user),
+        colorPalette: colorPalette,
+        spacing: spacing,
+      );
     }
   }
 }

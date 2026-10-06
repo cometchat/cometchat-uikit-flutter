@@ -514,6 +514,12 @@ class TranslationsZh extends Translations {
   String get actionPermissionDenied => '你没有执行此操作的权限。';
 
   @override
+  String get microphoneRequiredToAnswerCall => '请允许访问麦克风以接听通话。';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall => '请允许访问相机和麦克风以接听视频通话。';
+
+  @override
   String get pinSaveFailed => '无法更新，请重试。';
 
   @override
@@ -1465,6 +1471,87 @@ class TranslationsZh extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => '返回';
+
+  @override
+  String get openInBrowser => '在浏览器中打开';
+
+  @override
+  String get failedToLoadSticker => '贴纸加载失败';
+
+  @override
+  String get enterDisplayText => '输入显示文本';
+
+  @override
+  String get clearSearch => '清除搜索';
+
+  @override
+  String get done => '完成';
+
+  @override
+  String get download => '下载';
+
+  @override
+  String get startRecording => '开始录音';
+
+  @override
+  String get stopRecording => '停止录音';
+
+  @override
+  String get pauseRecording => '暂停录音';
+
+  @override
+  String get deleteRecording => '删除录音';
+
+  @override
+  String get recordVoiceMessage => '录制语音消息';
+
+  @override
+  String get reorderOption => '重新排序选项';
+
+  @override
+  String get play => '播放';
+
+  @override
+  String get pause => '暂停';
+
+  @override
+  String get next => '下一个';
+
+  @override
+  String get previous => '上一个';
+
+  @override
+  String get scrollToBottom => '滚动到底部';
+
+  @override
+  String get attachmentOptionsMenuOpened => '附件选项菜单已打开';
+
+  @override
+  String get richTextFormattingToolbar => '富文本格式工具栏';
+
+  @override
+  String get closeFormattingToolbar => '关闭格式工具栏';
+
+  @override
+  String get sendAudioMessage => '发送语音消息';
+
+  @override
+  String get messageComposerAuxiliaryActions => '消息输入辅助操作';
+
+  @override
+  String get attachmentButton => '附件按钮';
+
+  @override
+  String get addAttachment => '添加附件';
+
+  @override
+  String suggestionListWithItems(int count) => '建议列表，共 $count 项';
+
+  @override
+  String messageFrom(String sender) => '来自 $sender 的消息';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1976,6 +2063,12 @@ class TranslationsZhTw extends TranslationsZh {
 
   @override
   String get actionPermissionDenied => '你沒有執行此操作的權限。';
+
+  @override
+  String get microphoneRequiredToAnswerCall => '請允許存取麥克風以接聽通話。';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall => '請允許存取相機和麥克風以接聽視訊通話。';
 
   @override
   String get pinSaveFailed => '無法更新，請重試。';
@@ -2900,4 +2993,55 @@ class TranslationsZhTw extends TranslationsZh {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => '返回';
+
+  @override
+  String get openInBrowser => '在瀏覽器中開啟';
+
+  @override
+  String get failedToLoadSticker => '貼紙載入失敗';
+
+  @override
+  String get enterDisplayText => '輸入顯示文字';
+
+  @override
+  String get clearSearch => '清除搜尋';
+
+  @override
+  String get done => '完成';
+
+  @override
+  String get startRecording => '開始錄音';
+
+  @override
+  String get stopRecording => '停止錄音';
+
+  @override
+  String get pauseRecording => '暫停錄音';
+
+  @override
+  String get deleteRecording => '刪除錄音';
+
+  @override
+  String get recordVoiceMessage => '錄製語音訊息';
+
+  @override
+  String get reorderOption => '重新排序選項';
+
+  @override
+  String get play => '播放';
+
+  @override
+  String get pause => '暫停';
+
+  @override
+  String get next => '下一個';
+
+  @override
+  String get previous => '上一個';
+
+  @override
+  String get scrollToBottom => '捲動到底部';
 }

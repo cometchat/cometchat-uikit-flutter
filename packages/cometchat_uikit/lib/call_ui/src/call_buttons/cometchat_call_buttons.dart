@@ -32,9 +32,43 @@ class CometChatCallButtons extends StatefulWidget {
     this.callButtonsBloc,
   });
 
+  /// The user a voice or video call goes to. When it changes to another
+  /// user (another `uid`), the buttons' own bloc is replaced, so a header
+  /// reused for another conversation calls the new person.
   final User? user;
+
+  /// The group a meeting starts in, instead of [user]. A change of `guid`
+  /// replaces the buttons' own bloc, as for [user].
   final Group? group;
   final CometChatCallButtonsStyle? callButtonsStyle;
+
+  /// Errors from starting or joining calls: called when a call or meeting
+  /// cannot be placed or started:
+  ///
+  /// * `ACTIVE_CALL`: another call is in progress on this device, a group
+  ///   meeting is on the call screen, or a call is being placed from
+  ///   another call component (one at a time);
+  /// * `NO_NAVIGATOR`: `CallNavigationContext.navigatorKey` has no navigator
+  ///   to show the call on. Checked before anything is placed or sent; if
+  ///   the navigator goes while a call is being placed, the call is
+  ///   cancelled;
+  /// * `PERMISSION_DENIED` / `PERMISSION_PERMANENTLY_DENIED`: microphone (or
+  ///   camera) access was refused; `details` lists the missing permissions;
+  /// * `CALLS_NOT_READY`: a meeting was not started because the Calls SDK
+  ///   is not initialised or not logged in; its message was not sent;
+  /// * the SDK's own exception, code kept, when placing the call or sending
+  ///   a meeting's message fails (or cancelling a call that could not be
+  ///   shown);
+  /// * a platform error, its code kept, when asking for permissions fails
+  ///   (a request already running, say);
+  /// * for a meeting, whatever its call screen reports: see
+  ///   `CometChatOngoingCall.onError`.
+  ///
+  /// The buttons are off from the tap until the call's screen is up (or it
+  /// has failed); a tap in that time is dropped. A meeting's screen opens
+  /// only once its message is sent. A call placed, or a meeting announced,
+  /// while the chat closed still gets its screen (its bloc carries on), so
+  /// this can be called after the buttons are gone.
   final OnError? onError;
   final bool? hideVoiceCallButton;
   final bool? hideVideoCallButton;
@@ -47,6 +81,11 @@ class CometChatCallButtons extends StatefulWidget {
     bool? isAudioOnly,
   )?
   callSettingsBuilder;
+
+  /// A bloc of the app's own for the buttons, instead of the one they build.
+  /// It is used as it is: not rebuilt when [user] or [group] changes (its
+  /// receiver is fixed when it is created) and not closed when the buttons
+  /// go.
   final CallButtonsBloc? callButtonsBloc;
 
   @override
@@ -109,7 +148,14 @@ class _CometChatCallButtonsState extends State<CometChatCallButtons> {
         defaultTheme: CometChatCallButtonsStyle.of,
       ).merge(widget.callButtonsStyle);
     }
-    if (widget.callButtonsBloc != oldWidget.callButtonsBloc) {
+    // A header reused for someone else (a new user or group on the same
+    // widget) must not call the previous one: the bloc it built for them
+    // is replaced. One handed in (callButtonsBloc) is left alone.
+    final receiverChanged =
+        widget.user?.uid != oldWidget.user?.uid ||
+        widget.group?.guid != oldWidget.group?.guid;
+    if (widget.callButtonsBloc != oldWidget.callButtonsBloc ||
+        (receiverChanged && widget.callButtonsBloc == null)) {
       if (!_isExternalBloc) {
         _callButtonsBloc.close();
       }
@@ -139,9 +185,9 @@ class _CometChatCallButtonsState extends State<CometChatCallButtons> {
               spacing: 8,
               children: [
                 if (widget.hideVoiceCallButton != true)
-                  _buildVoiceCallButton(state),
+                  _buildVoiceCallButton(context, state),
                 if (widget.hideVideoCallButton != true)
-                  _buildVideoCallButton(state),
+                  _buildVideoCallButton(context, state),
               ],
             );
           },
@@ -150,12 +196,12 @@ class _CometChatCallButtonsState extends State<CometChatCallButtons> {
     );
   }
 
-  Widget _buildVoiceCallButton(CallButtonsState state) {
+  Widget _buildVoiceCallButton(BuildContext context, CallButtonsState state) {
     final hasBorder =
         _style.voiceCallButtonBorder != null &&
         _style.voiceCallButtonBorder != BorderSide.none;
     return IconButton(
-      tooltip: 'Voice call',
+      tooltip: Translations.of(context).voiceCall,
       padding: hasBorder
           ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8)
           : const EdgeInsets.all(8),
@@ -181,12 +227,12 @@ class _CometChatCallButtonsState extends State<CometChatCallButtons> {
     );
   }
 
-  Widget _buildVideoCallButton(CallButtonsState state) {
+  Widget _buildVideoCallButton(BuildContext context, CallButtonsState state) {
     final hasBorder =
         _style.videoCallButtonBorder != null &&
         _style.videoCallButtonBorder != BorderSide.none;
     return IconButton(
-      tooltip: 'Video call',
+      tooltip: Translations.of(context).videoCall,
       padding: hasBorder
           ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8)
           : const EdgeInsets.all(8),

@@ -236,7 +236,7 @@ class _AttachmentOptionsOverlayState extends State<AttachmentOptionsOverlay>
         alignment: Alignment
             .bottomLeft, // Scale from bottom since overlay appears above
         child: Semantics(
-          label: 'Attachment options menu opened',
+          label: Translations.of(context).attachmentOptionsMenuOpened,
           child: IntrinsicWidth(
             child: Material(
               elevation: 12.0,

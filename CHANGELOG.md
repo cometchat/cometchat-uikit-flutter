@@ -1,6 +1,189 @@
-## 6.0.1
+# v6.2.0
 
-### Added
+## New
+
+- Added Swift Package Manager support for iOS, alongside CocoaPods, with both using the same source files.
+- Added an Apple privacy manifest (`PrivacyInfo.xcprivacy`) for improved iOS privacy compliance.
+- Added `MessageSendStatus` and `CometChatInteractiveCardMessage` aliases to make existing SDK types accessible through the public API.
+- Added text-scaling utilities, including `scaledMaxLines`, `scaledDimension` and `currentTextScale`, for building accessible custom views.
+- Exported previously inaccessible public API types, including formatters, audio states, user use cases and repositories.
+- Added a published API baseline and deprecation policy for the v6 release line.
+- Added message translation support with a Translate option, customizable translation styles and `hideTranslateMessageOption`.
+- Added `setOptions` and `addOptions` to `CometChatUsers` for customizing long-press menus.
+- Added sticker icon and keyboard customization through `CometChatMessageComposer` and `CometChatStickerKeyboardStyle`.
+- Added `itemStyle` to `CometChatConversationsStyle` for customizing conversation rows.
+- Added `AdditionalConfigurations.copyWith` for per-message bubble styles.
+
+## Enhancements
+
+- Improved accessibility and large-text support across conversations, groups, calls, attachments and composer components, including text wrapping at increased system text sizes.
+- Added optional BLoC parameters to eight components, allowing applications to provide and manage their own BLoC instances.
+- Improved screen reader support with localized labels for icon-only controls and clearer semantics for list items, message bubbles and decorative elements.
+- Improved logging with a release-safe internal logger to prevent UI Kit logs from appearing in production device logs.
+- Removed the unnecessary `flutter: generate: true` setting from the package configuration.
+
+## Fixes
+
+- Fixed interactive element parsing issues involving `DateTimeElement`, `CheckBoxElement`, `CustomAction` and `URLNavigationAction`, including missing defaults and incorrect type handling.
+- Fixed layout and overflow issues across message bubbles, conversation lists, group members, incoming calls and other components, particularly at larger text sizes.
+- Fixed numerous styling and customization properties that were not being applied across messages, conversations, groups, search, reactions, calls and attachments.
+- Fixed message and conversation list alignment, selection, status indicators, timestamps, empty states and error handling.
+- Fixed list callbacks, including `onLoad`, `onEmpty`, `onError`, `onMessagesLoad` and `onConversationsLoad`, to report state changes correctly.
+- Fixed `setOptions` and `addOptions` on `CometChatConversations` and `CometChatGroups`, restoring custom long-press menus.
+- Fixed BLoC integration issues by exporting previously inaccessible events, states, repositories and use cases.
+- Fixed message formatting and previews, including captions, mentions, text styles, voice notes and quoted messages.
+- Fixed incoming-message sounds and custom sound configurations in conversations and message lists.
+- Fixed sticker keyboard behavior, including unresponsive buttons, missing empty states and incorrect panel visibility.
+- Fixed thread-specific panels, subscriptions and headers to maintain the correct state when switching conversations or threads.
+- Fixed attachment handling, including MIME type detection, preview consistency and download caching.
+- Fixed AI conversation starters and suggested messages not appearing or being applied correctly.
+- Fixed collaborative web views reloading unnecessarily and collaborative bubbles clipping their content.
+- Fixed message bubble customization options not reaching polls, stickers, collaborative content and link previews.
+- Fixed request builder handling and pagination in users, groups and conversations, including search clearing and custom limits.
+- Fixed pinned and saved message handling, including incorrect conversation matching and icon customization.
+- Fixed scheduling time-zone handling and removed approximately 970 KB of unused time-zone data.
+- Fixed call-related issues involving navigation, logging, notifications and call state.
+- Fixed package compatibility with Dart 3.13 and corrected the iOS podspec version.
+- Fixed various iOS configuration, rendering and styling issues, including incorrect shadows and missing formatter styles.
+
+## Deprecations
+
+- Deprecated unused extension configuration classes and interactive element styles, including `StickerConfiguration`, `PollsConfiguration`, `MessageTranslationConfiguration`, and `CheckBoxElementStyle`.
+- Deprecated `CometChatExceptionStyle` and `exceptionStyle` on `CometChatOutgoingMessageBubbleStyle`.
+- Deprecated `aiIcon`, `aiIconURL`, and `aiIconPackageName` on `CometChatMessageComposer`.
+- Deprecated `groupsProtocol` and `controllerTag` on `CometChatGroups`.
+- Deprecated `controllerTag` on `CometChatConversations`.
+- Deprecated `options` on `CometChatListItem`.
+- Deprecated five `AdditionalConfigurations` properties: `callButtonsStyle`, `hideVoiceCallButton`, `hideVideoCallButton`, `hideStickersButton`, and `hideReactionOption`.
+- Deprecated unused layout and data properties on `CometChatAudioPlayer`, `CometchatMessageOptionSheet`, `CometChatStreamBubble`, `CometChatDeletedBubble`, `CometChatVideoBubble`, and `VideoBubbleFactory`.
+- Deprecated `messageBubbleAvatarStyle` and `messageBubbleBackgroundImage` on `CometChatAIAssistantBubbleStyle`. 
+- Deprecated `height` and `width` on `CometChatMessageBubble`.
+- Deprecated `subtitle` and `fileMimeType` on `CometChatVoiceNoteBubble`, and `handleSafeArea` on `CometChatAnimatedMessageList`.
+- Deprecated `onAdd` and `onSend` on `CometChatAttachmentTray`. 
+- Deprecated `onEnterPressed` on `CometChatMessageInput`.
+
+## Breaking Changes
+
+- Updated the declared iOS deployment target from iOS 9 to iOS 13. This does not change practical iOS support, as the existing Flutter requirement already requires iOS 13 or later.
+
+# 6.1.1
+
+## New
+- Added pinned and saved messages, making it easier to highlight important messages and save messages for later.
+- Added thread subscriptions, allowing users to manage notifications for specific conversation threads.
+- Added conversation pinning to help keep important conversations easily accessible.
+
+## Enhancements
+- Improved the conversation action menu for a better and more consistent experience.
+
+## Fixes
+- Fixed an issue where the call screen remained open after the other participant ended the call.
+- Fixed an issue where one-to-one calls could remain active when the other participant unexpectedly left the app.
+- Fixed an issue where some components did not update correctly when switching between light and dark themes.
+
+# 6.1.0
+
+## New
+- Added support for sending multiple attachments in a single message. Files that are picked, pasted or dropped are staged in an attachment tray, where each tile reports its own upload progress and can be removed or retried, and the whole batch can be captioned before sending.
+- Added per-type gallery bubbles for multi-attachment messages — `CometChatImagesBubble`, `CometChatVideosBubble`, `CometChatAudiosBubble` and `CometChatFilesBubble` — together with `CometChatMediaViewer` for paging through a message's media full screen.
+- Added `enableMultipleAttachments` to `CometChatMessageComposer` and `CometChatMessageList`, defaulting to `true`. Set it to `false` to keep the previous single-attachment bubbles.
+- Added `CometChatAttachmentTrayStyle`, applied through `CometChatMessageComposerStyle.attachmentTrayStyle`, and `CometChatAttachmentErrorAlertStyle` for styling the tray and its error alerts.
+- Added drag-and-drop and clipboard paste of files into the composer on the platforms that support them.
+
+## Enhancements
+- Added caption editing for media messages, and media messages edited this way now show the "Edited" tag that text messages already displayed.
+- Changed the image attachment option on Android to open the system photo picker instead of the document browser.
+
+## Fixes
+- None
+
+## Deprecations
+- Renamed `CometChatAudioBubble` to `CometChatVoiceNoteBubble`, keeping the previous name as a deprecated alias. The new name matches what the class renders: voice notes always use it, on both values of `enableMultipleAttachments`, while audio files use `CometChatAudiosBubble` when the flag is `true`. The previous deprecation recommended `CometChatAudiosBubble`, which voice notes never route to.
+- Renamed `CometChatAudioBubbleStyle` to `CometChatVoiceNoteBubbleStyle`, keeping the previous name as a deprecated alias. Both names share one runtime type, so a `ThemeExtension` registered under either resolves the same instance and existing themes need no change.
+- Renamed `CometChatAudioBubbleV2` to `CometChatAudioPlayer`, keeping the previous name as a deprecated alias.
+- Deprecated the `audioBubbleStyle` property on `AdditionalConfigurations`, `CometChatIncomingMessageBubbleStyle` and `CometChatOutgoingMessageBubbleStyle` in favour of `voiceNoteBubbleStyle`. Both are honoured and `voiceNoteBubbleStyle` takes precedence, so existing styling continues to apply. `audioBubbleStyle` will be removed in the next major release.
+- Deprecated `CometChatImageBubble`, `CometChatVideoBubble` and `CometChatFileBubble` in favour of the gallery bubbles. They continue to render the `enableMultipleAttachments: false` path.
+
+## Breaking Changes
+- Updated `flutter_bloc` to 9.x, `permission_handler` to 12.x and `diffutil_dart` to 5.x, and constrained `intl` to `^0.20.2`. **Applications that depend on any of these packages directly must upgrade them alongside the UI Kit.**
+- Declared a minimum supported toolchain of Flutter 3.38.9 and Dart 3.10.8. Earlier releases declared `flutter: ">=2.5.0"` but could not resolve below 3.38.9 in practice, so upgrading from 6.0.5 requires no toolchain change.
+- Changed the value `runtimeType` reports for `CometChatAudioBubble` and `CometChatAudioBubbleStyle` to their new names. Type checks, casts, subclassing and constructor calls are unaffected; only code comparing `runtimeType.toString()` to a literal old name needs updating.
+
+# 6.0.5
+
+## New
+- Added support for AI agents in group conversations, `CometChatStreamBubble`, and native card message rendering with `CometChatCardBubble`.
+- Added card messages to search results, AI agents to the add-members picker, and a localized `aiAgentMessage` label.
+
+## Enhancements
+- Improved AI conversations with responsive card layouts, quoted replies, better card message search, refined chat history, and real-time conversation updates for card and agent replies.
+
+## Fixes
+- Fixed issues with @mention and AI suggestion lists not appearing or reappearing correctly.
+
+# 6.0.4
+
+## New
+- Added `CometChatCardBubble` for rendering developer card messages (category `card`).
+- Added support for rendering agent card messages within the AI Assistant bubble.
+- Added streaming support for cards that arrive during a streamed agent response.
+- Added the `ccCardActionClicked` event, which forwards raw card actions to the app layer for both developer and agent cards.
+- Added `MessageCategoryConstants.card` for card messages.
+
+## Enhancements
+- Enhanced the AI Assistant bubble to render ordered text and card blocks, falling back to `getText()` for older messages.
+- Enhanced conversation previews for developer card messages to show `getText()` when available, or `Card Message` otherwise.
+- Updated developer card options to exclude `edit` and `copy`.
+
+## Fixes
+- None
+
+# 6.0.3
+
+## New
+- None
+
+## Enhancements
+- Improved the sample app for web by adding responsive navigation optimized for desktop layouts.
+
+## Fixes
+- None
+
+# 6.0.2
+
+## New
+- Added the `CometChatNotificationFeed` component, providing a full-screen notification feed for displaying campaign and promotional notifications.
+- Added support for customizable feed behavior through props such as `notificationFeedRequestBuilder`, `notificationCategoriesRequestBuilder`, `onItemClick`, and `onActionClick`.
+- Added customizable UI support with `HeaderView`, `EmptyView`, `ErrorView`, `LoadingView`, `style`, `cardThemeMode`, and `cardThemeOverride` props for advanced theming and layout control.
+- Added category-based filtering with unread badge counts, allowing users to quickly navigate notifications by category.
+
+## Enhancements
+- None
+
+## Fixes
+- None
+
+# 5.2.16
+
+## New
+- None
+
+## Enhancements
+- Enhanced the Edit Message composer UI in the Hybrid iOS sample application to better align with the latest Figma design specifications.
+- Improved the Call Detail screen in the Hybrid iOS sample application by adding dedicated voice and video calling options for easier call initiation.
+- Updated the Create Group modal UI in the Hybrid Mobile sample application to better match the latest Figma-based design guidelines.
+- Enhanced the bottom navigation menu in the Hybrid iOS sample application for improved consistency with the latest UI specifications.
+- Improved the App Credentials screen in the Hybrid iOS sample application to better align with the latest Figma design patterns.
+- Updated the Social Login screen UI in the Hybrid Mobile sample application to match the latest design specifications and improve visual consistency.
+- Enhanced the Chat List profile context menu in the Hybrid Mobile sample application to align with the latest design system updates.
+- Improved the Login screen UI in the Hybrid Mobile sample application to better match the latest Figma specifications and onboarding experience.
+
+## Fixes
+- None
+
+# 6.0.1
+
+## New
 - AI Assistant Chat History component for viewing past AI conversations
 - AI-specific message configuration (smart replies, conversation starters)
 - New Chat and Chat History buttons in AI message header
@@ -9,7 +192,7 @@
 - Search with thread reply navigation support
 - AppCredentials screen with SharedPreferences persistence
 
-### Changed
+## Enhancements
 - Updated CometChat SDK to 5.0.1
 - Updated Calls SDK to 5.0.2
 - Migrated sample apps from GetX to plain setState architecture
@@ -17,14 +200,28 @@
 - Improved message list with markdown formatting support
 - Enhanced login screen with dotted background pattern and user grid
 
-### Fixed
+## Fixes
 - Messages screen now passes mutable `_user`/`_group` to UIKit components instead of stale `widget.user`/`widget.group`
 - Guard screen properly re-initializes Calls SDK on cached session restore
 - Protected group join flow from conversations and groups tabs
 
-## v6.0.0
+# 5.2.15
 
-### New
+## New
+- None
+
+## Enhancement
+- None
+
+## Fixes
+- Fixed an issue where favicons were missing in URL preview messages for shared links.
+- Fixed an issue where the "See More" button in the search component did not behave correctly while loading additional search results.
+- Fixed an issue where received `.m4a` audio files were not immediately playable and their duration was not displayed correctly after receipt.
+- Fixed an issue where `MessagesRequestBuilder` usage caused inconsistent message retrieval behavior under certain filtering and pagination scenarios.
+
+# v6.0.0
+
+## New
 - Added message flagging and reporting support, along with translations for 20 locales, allowing users to moderate conversations in their preferred language.
 - Added the `CometChatComposerLayout` component with both single-line and double-line layout options for greater flexibility when customizing the message composer experience.
 - Added a keyboard diagnostics utility to simplify troubleshooting and validation of keyboard-related behaviors across chat interfaces.
@@ -32,7 +229,7 @@
 - Added an in-chat image viewer, allowing users to open and preview shared images directly within conversations.
 - Added Firebase configuration support to the sample application to simplify setup for push notifications and related integrations.
 
-### Enhancements
+## Enhancements
 - Improved the composer layout rendering pipeline to provide more consistent behavior and easier customization across composer variants.
 - Enhanced the rich-text messaging flow to use a dedicated WYSIWYG-only rendering path for more predictable formatting behavior.
 - Improved image message bubbles to provide a more polished and consistent media viewing experience in conversations.
@@ -41,7 +238,7 @@
 - Updated sample application screens to better reflect the latest UI components, layouts, and interaction patterns.
 - Reorganized the Skills directory structure and added `.claude-plugin` manifest support to improve plugin discovery and project organization.
 
-### Fixes
+## Fixes
 - Fixed an issue where long-press actions on formatted mentions could produce incorrect formatter behavior in certain message interaction flows.
 - Fixed an issue where calling functionality could stop working after a user logged out and logged back in, ensuring calls continue to work reliably across session changes.
 - Fixed an issue where Android audio message recording could become stuck after the microphone permission prompt, restoring smooth voice message recording.

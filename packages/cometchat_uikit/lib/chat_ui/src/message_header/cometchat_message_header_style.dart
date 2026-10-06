@@ -94,7 +94,8 @@ class CometChatMessageHeaderStyle
   ///[chatHistoryIconColor] provides color to the chat history icon
   final Color? chatHistoryIconColor;
 
-  ///[menuIconColor] provides color to the menu icon
+  ///[menuIconColor] provides color to the overflow (⋯) menu icon. Falls back
+  ///to [backIconColor], then to the palette's primary icon colour.
   final Color? menuIconColor;
 
   static CometChatMessageHeaderStyle of(BuildContext context) =>
@@ -137,6 +138,7 @@ class CometChatMessageHeaderStyle
       titleTextColor: titleTextColor ?? this.titleTextColor,
       titleTextStyle: titleTextStyle ?? this.titleTextStyle,
       subtitleTextColor: subtitleTextColor ?? this.subtitleTextColor,
+      backIcon: backIcon ?? this.backIcon,
       backIconColor: backIconColor ?? this.backIconColor,
       privateGroupBadgeIcon:
           privateGroupBadgeIcon ?? this.privateGroupBadgeIcon,
@@ -171,6 +173,7 @@ class CometChatMessageHeaderStyle
       titleTextColor: style.titleTextColor,
       titleTextStyle: style.titleTextStyle,
       subtitleTextColor: style.subtitleTextColor,
+      backIcon: style.backIcon,
       backIconColor: style.backIconColor,
       privateGroupBadgeIcon: style.privateGroupBadgeIcon,
       passwordProtectedGroupBadgeIcon: style.passwordProtectedGroupBadgeIcon,

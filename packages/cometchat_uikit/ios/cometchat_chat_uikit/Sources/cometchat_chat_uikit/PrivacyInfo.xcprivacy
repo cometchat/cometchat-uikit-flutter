@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Privacy manifest for the CometChat Flutter Chat UI Kit (cometchat_chat_uikit).
+
+	  This manifest covers ONLY this package. Integrators still need their own
+	  app-level manifest, and the CometChat Chat/Calls SDKs ship their own.
+	  See ios/PRIVACY.md for what this Kit does and does not declare.
+	-->
+
+	<!-- The UI Kit does not track users and contacts no tracking domains. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!--
+	  The UI Kit collects no data on its own behalf. It renders data the host
+	  app has already handed to the CometChat SDK; that SDK declares its own
+	  collection, and the host app declares what it collects from its users.
+	-->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!--
+			  File metadata. The Kit stages attachments in the app's own
+			  container (temporary and documents directories) and reads
+			  their existence and size back before rendering or exporting:
+
+			    lib/shared_ui/src/clean_architecture/core/utils/platform_utils/
+			      platform_file_utils_native.dart  — File.existsSync() at 49,
+			      232, 245 and File.lengthSync() at 62
+			    ios/cometchat_chat_uikit/Sources/cometchat_chat_uikit/
+			      SwiftCometchatChatUikitPlugin.swift — FileManager container
+			      access at 320, 323, 325, 354, 370, 392, 394, 491, 505, 507,
+			      509, 537, 559
+			    ios/cometchat_chat_uikit/Sources/cometchat_chat_uikit/
+			      AudioRecorder.swift:126 — the documents directory that voice
+			      notes are recorded into
+
+			  Every path is inside the app container, which is what C617.1
+			  covers. No file metadata leaves the device.
+			-->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

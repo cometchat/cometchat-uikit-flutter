@@ -54,7 +54,8 @@ class CometChatCallBubble extends StatelessWidget {
   ///[title] title to be displayed , default is ''
   final String? title;
 
-  ///[buttonText] the text to be displayed on the button
+  ///[buttonText] the text to be displayed on the button; the translated
+  ///"Join" when null
   final String? buttonText;
 
   ///[onTap] to execute some task on tapping of the button
@@ -114,13 +115,21 @@ class CometChatCallBubble extends StatelessWidget {
                   CircleAvatar(
                     backgroundColor:
                         style.iconBackgroundColor ?? colorPalette.white,
-                    child: Image.asset(
-                      iconUrl ?? '',
-                      package: UIConstants.packageName,
-                      color: style.iconColor ?? colorPalette.primary,
-                      height: 20,
-                      width: 20,
-                    ),
+                    // [icon] wins when supplied, as this class's own doc for
+                    // [iconUrl] describes — "displayed if icon is not
+                    // provided". It used to be read only as a null check while
+                    // the avatar always drew Image.asset(iconUrl ?? ''), so a
+                    // supplied icon was ignored and an icon-only caller got an
+                    // empty asset path (ENG-38939).
+                    child:
+                        icon ??
+                        Image.asset(
+                          iconUrl ?? '',
+                          package: UIConstants.packageName,
+                          color: style.iconColor ?? colorPalette.primary,
+                          height: 20,
+                          width: 20,
+                        ),
                   ),
                 Container(
                   width: 180,
@@ -182,7 +191,7 @@ class CometChatCallBubble extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    Translations.of(context).join,
+                    buttonText ?? Translations.of(context).join,
                     style: TextStyle(
                       fontSize: typography.button?.medium?.fontSize,
                       fontWeight: typography.button?.medium?.fontWeight,

@@ -20,23 +20,52 @@ class _CallLogDetailsScreenState extends State<CallLogDetailsScreen> {
   late CometChatSpacing _spacing;
 
   User? _userObj;
+  Group? _groupObj;
+
+  /// The user or group could not be fetched (offline, or deleted): the
+  /// header shows the name and avatar the log carries, with no call
+  /// buttons, instead of shimmering for ever.
+  bool _peerFailed = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchUser();
+    _fetchPeer();
   }
 
-  void _fetchUser() async {
-    final receiverId = CallLogsUtils.returnReceiverId(
-        CometChatUIKit.loggedInUser, widget.callLog);
+  /// Fetches who the header is about: the group of a group call (a guid is
+  /// not a uid, and getUser on it failed silently), otherwise the other
+  /// participant of the 1:1 call.
+  Future<void> _fetchPeer() async {
+    final log = widget.callLog;
+    final receiver = log.receiver;
+    void failed() {
+      if (mounted) setState(() => _peerFailed = true);
+    }
+
+    if (receiver is CallGroup) {
+      final guid = receiver.guid ?? '';
+      if (guid.isEmpty) return failed();
+      await CometChat.getGroup(
+        guid,
+        onSuccess: (group) {
+          _groupObj = group;
+          if (mounted) setState(() {});
+        },
+        onError: (_) => failed(),
+      );
+      return;
+    }
+    final uid =
+        CallLogsUtils.getOtherParticipantId(CometChatUIKit.loggedInUser, log);
+    if (uid.isEmpty) return failed();
     await CometChat.getUser(
-      receiverId,
+      uid,
       onSuccess: (user) {
         _userObj = user;
         if (mounted) setState(() {});
       },
-      onError: (_) {},
+      onError: (_) => failed(),
     );
   }
 
@@ -56,19 +85,25 @@ class _CallLogDetailsScreenState extends State<CallLogDetailsScreen> {
     return DateFormat('d MMMM, h:mm a').format(dt);
   }
 
-  String _getCallType() {
-    final loggedInUser = CometChatUIKit.loggedInUser;
-    final isInitiator = CallUtils.callLogLoggedInUser(widget.callLog, loggedInUser);
-    switch (widget.callLog.status) {
+  String _getCallType() =>
+      _callTypeOf(widget.callLog, CometChatUIKit.loggedInUser);
+
+  /// Outgoing, Incoming or Missed, with the UI Kit's one missed rule
+  /// (CallUtils.isMissedCallLog): unanswered or cancelled, for whoever did
+  /// not start the call. A rejected or busy call is not missed.
+  static String _callTypeOf(CallLog log, User? loggedInUser) {
+    if (CallUtils.isMissedCallLog(log, loggedInUser)) return 'Missed';
+    switch (log.status) {
       case CallStatusConstants.initiated:
       case CallStatusConstants.ongoing:
       case CallStatusConstants.ended:
-        return isInitiator ? 'Outgoing' : 'Incoming';
       case CallStatusConstants.unanswered:
       case CallStatusConstants.cancelled:
       case CallStatusConstants.rejected:
       case CallStatusConstants.busy:
-        return isInitiator ? 'Outgoing' : 'Missed';
+        return CallUtils.callLogLoggedInUser(log, loggedInUser)
+            ? 'Outgoing'
+            : 'Incoming';
       default:
         return 'Unknown';
     }
@@ -113,37 +148,76 @@ class _CallLogDetailsScreenState extends State<CallLogDetailsScreen> {
               top: _spacing.padding5 ?? 20,
               bottom: _spacing.padding5 ?? 20,
             ),
-            child: _userObj == null
-                ? _buildShimmerHeader()
-                : CometChatMessageHeader(
-                    user: _userObj,
-                    showBackButton: false,
-                    avatarHeight: 48,
-                    avatarWidth: 48,
-                    padding: EdgeInsets.zero,
-                    messageHeaderStyle: CometChatMessageHeaderStyle(
-                      callButtonsStyle: CometChatCallButtonsStyle(
-                        voiceCallIconColor: _colorPalette.primary,
-                        videoCallIconColor: _colorPalette.primary,
-                        voiceCallButtonBorder: BorderSide(
-                          width: 1,
-                          color: _colorPalette.borderDefault ?? const Color(0xFFE8E8E8),
-                        ),
-                        videoCallButtonBorder: BorderSide(
-                          width: 1,
-                          color: _colorPalette.borderDefault ?? const Color(0xFFE8E8E8),
-                        ),
-                        voiceCallButtonBorderRadius: BorderRadius.circular(8),
-                        videoCallButtonBorderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
+            child: _buildHeader(),
           ),
           // Call info tile
           _buildCallInfoTile(),
           // Tabs
           Expanded(child: _buildTabs()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    if (_userObj != null || _groupObj != null) {
+      // Calling a user either side has blocked cannot work: no buttons, as
+      // in Android's CallDetailsActivity.
+      final blocked =
+          _userObj?.blockedByMe == true || _userObj?.hasBlockedMe == true;
+      return CometChatMessageHeader(
+        user: _userObj,
+        group: _userObj == null ? _groupObj : null,
+        showBackButton: false,
+        avatarHeight: 48,
+        avatarWidth: 48,
+        padding: EdgeInsets.zero,
+        hideVoiceCallButton: blocked,
+        hideVideoCallButton: blocked,
+        messageHeaderStyle: CometChatMessageHeaderStyle(
+          callButtonsStyle: CometChatCallButtonsStyle(
+            voiceCallIconColor: _colorPalette.primary,
+            videoCallIconColor: _colorPalette.primary,
+            voiceCallButtonBorder: BorderSide(
+              width: 1,
+              color: _colorPalette.borderDefault ?? const Color(0xFFE8E8E8),
+            ),
+            videoCallButtonBorder: BorderSide(
+              width: 1,
+              color: _colorPalette.borderDefault ?? const Color(0xFFE8E8E8),
+            ),
+            voiceCallButtonBorderRadius: BorderRadius.circular(8),
+            videoCallButtonBorderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
+    if (_peerFailed) return _buildStaticHeader();
+    return _buildShimmerHeader();
+  }
+
+  /// The header when the user or group could not be fetched: the name and
+  /// avatar the log carries, and no call buttons.
+  Widget _buildStaticHeader() {
+    final log = widget.callLog;
+    final loggedInUser = CometChatUIKit.loggedInUser;
+    final name = CallLogsUtils.getDisplayName(loggedInUser, log);
+    final avatar = CallLogsUtils.getAvatarUrl(loggedInUser, log);
+    return CometChatListItem(
+      hideSeparator: true,
+      avatarURL: avatar,
+      avatarName: name,
+      title: name,
+      avatarHeight: 48,
+      avatarWidth: 48,
+      style: ListItemStyle(
+        padding: EdgeInsets.symmetric(horizontal: _spacing.padding4 ?? 16),
+        titleStyle: TextStyle(
+          color: _colorPalette.textPrimary,
+          fontSize: _typography.heading4?.medium?.fontSize,
+          fontWeight: _typography.heading4?.medium?.fontWeight,
+          fontFamily: _typography.heading4?.medium?.fontFamily,
+        ),
       ),
     );
   }
@@ -160,8 +234,8 @@ class _CallLogDetailsScreenState extends State<CallLogDetailsScreen> {
           children: [
             Padding(
               padding: EdgeInsets.only(right: _spacing.padding3 ?? 0),
-              child: const CircleAvatar(
-                  radius: 24, backgroundColor: Colors.grey),
+              child:
+                  const CircleAvatar(radius: 24, backgroundColor: Colors.grey),
             ),
             Expanded(
               child: Column(
@@ -283,8 +357,8 @@ class _CallLogDetailsScreenState extends State<CallLogDetailsScreen> {
           bottom: TabBar(
             indicatorPadding: EdgeInsets.zero,
             indicatorSize: TabBarIndicatorSize.tab,
-            labelPadding: EdgeInsets.symmetric(
-                horizontal: _spacing.padding2 ?? 8),
+            labelPadding:
+                EdgeInsets.symmetric(horizontal: _spacing.padding2 ?? 8),
             labelStyle: TextStyle(
               color: _colorPalette.textHighlight,
               fontSize: _typography.heading4?.medium?.fontSize,
@@ -362,8 +436,8 @@ class _ParticipantsTab extends StatelessWidget {
           ),
           subtitleView: CometChatDate(
             pattern: DateTimePattern.dayDateFormat,
-            customDateString: _CallLogDetailsScreenState._formatDate(
-                callLog.initiatedAt),
+            customDateString:
+                _CallLogDetailsScreenState._formatDate(callLog.initiatedAt),
             padding: EdgeInsets.zero,
             style: CometChatDateStyle(
               backgroundColor: colorPalette.transparent,
@@ -441,8 +515,8 @@ class _RecordingsTab extends StatelessWidget {
           ),
           subtitle: CometChatDate(
             pattern: DateTimePattern.dayDateFormat,
-            customDateString: _CallLogDetailsScreenState._formatDate(
-                callLog.initiatedAt),
+            customDateString:
+                _CallLogDetailsScreenState._formatDate(callLog.initiatedAt),
             padding: EdgeInsets.zero,
             style: CometChatDateStyle(
               backgroundColor: colorPalette.transparent,
@@ -517,11 +591,10 @@ class _HistoryTabState extends State<_HistoryTab> {
       final log = widget.callLog;
       if (CallLogsUtils.isUser(log)) {
         callUser = CallUser(
-          name: CallLogsUtils.receiverName(CometChatUIKit.loggedInUser, log),
-          uid: CallLogsUtils.returnReceiverId(
+          name: CallLogsUtils.getDisplayName(CometChatUIKit.loggedInUser, log),
+          uid: CallLogsUtils.getOtherParticipantId(
               CometChatUIKit.loggedInUser, log),
-          avatar: CallLogsUtils.receiverAvatar(
-              CometChatUIKit.loggedInUser, log),
+          avatar: CallLogsUtils.getAvatarUrl(CometChatUIKit.loggedInUser, log),
         );
       } else if (log.receiver is CallGroup) {
         callGroup = log.receiver as CallGroup;
@@ -544,7 +617,11 @@ class _HistoryTabState extends State<_HistoryTab> {
         });
       }
     } catch (_) {
-      if (mounted) setState(() { _hasError = true; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _hasError = true;
+          _isLoading = false;
+        });
     }
   }
 
@@ -563,8 +640,7 @@ class _HistoryTabState extends State<_HistoryTab> {
         typography: typography,
         spacing: spacing,
         title: 'No Call History Yet',
-        subtitle:
-            'Make or receive calls to see your call history listed here.',
+        subtitle: 'Make or receive calls to see your call history listed here.',
       );
     }
 
@@ -572,24 +648,8 @@ class _HistoryTabState extends State<_HistoryTab> {
       itemCount: _history.length,
       itemBuilder: (context, index) {
         final log = _history[index];
-        final isInitiator = CallUtils.callLogLoggedInUser(
+        final callType = _CallLogDetailsScreenState._callTypeOf(
             log, CometChatUIKit.loggedInUser);
-        String callType;
-        switch (log.status) {
-          case CallStatusConstants.initiated:
-          case CallStatusConstants.ongoing:
-          case CallStatusConstants.ended:
-            callType = isInitiator ? 'Outgoing' : 'Incoming';
-            break;
-          case CallStatusConstants.unanswered:
-          case CallStatusConstants.cancelled:
-          case CallStatusConstants.rejected:
-          case CallStatusConstants.busy:
-            callType = isInitiator ? 'Outgoing' : 'Missed';
-            break;
-          default:
-            callType = 'Unknown';
-        }
 
         return ListTile(
           onTap: () {

@@ -77,6 +77,8 @@ class CometChatGroupListItem extends StatelessWidget {
     this.typography,
     this.privateGroupIcon,
     this.protectedGroupIcon,
+    this.privateGroupIconBackground,
+    this.protectedGroupIconBackground,
   });
 
   /// [group] is the group object to display
@@ -156,6 +158,12 @@ class CometChatGroupListItem extends StatelessWidget {
 
   /// [protectedGroupIcon] custom icon for protected (password) group indicator
   final Widget? protectedGroupIcon;
+
+  /// [privateGroupIconBackground] background colour for the private-group badge
+  final Color? privateGroupIconBackground;
+
+  /// [protectedGroupIconBackground] background colour for the protected-group badge
+  final Color? protectedGroupIconBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +285,7 @@ class CometChatGroupListItem extends StatelessWidget {
         child: Checkbox(
           value: isSelected,
           onChanged: (value) => onSelectionToggle?.call(),
+          checkColor: effectiveStyle.checkBoxCheckColor,
           fillColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return effectiveStyle.checkBoxCheckedBackgroundColor ??
@@ -353,6 +362,13 @@ class CometChatGroupListItem extends StatelessWidget {
                 width: statusIndicatorWidth ?? 14,
                 backgroundImage: _getStatusIndicatorIcon(effectiveColorPalette),
                 style: CometChatStatusIndicatorStyle(
+                  // borderRadius was absent here, so neither the widget's
+                  // statusIndicatorBorderRadius nor the style's borderRadius
+                  // could reach the badge. ENG-39124.
+                  borderRadius:
+                      statusIndicatorBorderRadius ??
+                      statusIndicatorStyle?.borderRadius ??
+                      effectiveStyle.statusIndicatorStyle?.borderRadius,
                   border:
                       statusIndicatorStyle?.border ??
                       effectiveStyle.statusIndicatorStyle?.border ??
@@ -363,6 +379,7 @@ class CometChatGroupListItem extends StatelessWidget {
                             Colors.transparent,
                       ),
                   backgroundColor: _getStatusIndicatorBackgroundColor(
+                    effectiveStyle,
                     effectiveColorPalette,
                   ),
                 ),
@@ -396,7 +413,7 @@ class CometChatGroupListItem extends StatelessWidget {
                     effectiveStyle.titleTextColor ??
                     effectiveColorPalette.textPrimary,
               ),
-      maxLines: 1,
+      maxLines: scaledMaxLines(context),
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -429,7 +446,7 @@ class CometChatGroupListItem extends StatelessWidget {
                     effectiveStyle.subtitleTextColor ??
                     effectiveColorPalette.textSecondary,
               ),
-      maxLines: 1,
+      maxLines: scaledMaxLines(context),
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -463,17 +480,32 @@ class CometChatGroupListItem extends StatelessWidget {
         group.type == CometChatGroupType.password;
   }
 
+  /// The status dot's colour: the style's colour for this group type first,
+  /// then any status indicator style, then the palette.
   Color? _getStatusIndicatorBackgroundColor(
+    CometChatGroupListItemStyle effectiveStyle,
     CometChatColorPalette effectiveColorPalette,
   ) {
+    final fromStatusStyle =
+        statusIndicatorStyle?.backgroundColor ??
+        effectiveStyle.statusIndicatorStyle?.backgroundColor;
     if (group.type == CometChatGroupType.password) {
-      // Protected groups use success color (green)
-      return effectiveColorPalette.success ?? Colors.green;
+      // Caller-supplied colour first, then the style, then the status-indicator
+      // style; protected groups default to the success colour (green).
+      return protectedGroupIconBackground ??
+          effectiveStyle.protectedGroupIconBackground ??
+          fromStatusStyle ??
+          effectiveColorPalette.success ??
+          Colors.green;
     } else if (group.type == CometChatGroupType.private) {
-      // Private groups use warning color (yellow)
-      return effectiveColorPalette.warning ?? Colors.yellow;
+      // Private groups default to the warning colour (yellow).
+      return privateGroupIconBackground ??
+          effectiveStyle.privateGroupIconBackground ??
+          fromStatusStyle ??
+          effectiveColorPalette.warning ??
+          Colors.yellow;
     }
-    return null;
+    return fromStatusStyle;
   }
 
   Widget? _getStatusIndicatorIcon(CometChatColorPalette effectiveColorPalette) {
@@ -520,6 +552,9 @@ class CometChatGroupListItemStyle {
     this.checkBoxBorderRadius,
     this.checkBoxStrokeColor,
     this.checkBoxStrokeWidth,
+    this.checkBoxCheckColor,
+    this.privateGroupIconBackground,
+    this.protectedGroupIconBackground,
   });
 
   /// Background color of the list item
@@ -561,6 +596,17 @@ class CometChatGroupListItemStyle {
   /// Stroke width for checkbox border
   final double? checkBoxStrokeWidth;
 
+  /// Colour of the check mark inside a checked checkbox
+  final Color? checkBoxCheckColor;
+
+  /// Background of the status dot on a private group. Defaults to the
+  /// palette's warning colour.
+  final Color? privateGroupIconBackground;
+
+  /// Background of the status dot on a password-protected group. Defaults to
+  /// the palette's success colour.
+  final Color? protectedGroupIconBackground;
+
   /// Creates a style from the current theme context
   factory CometChatGroupListItemStyle.fromTheme(BuildContext context) {
     final colorPalette = CometChatThemeHelper.getColorPalette(context);
@@ -593,6 +639,9 @@ class CometChatGroupListItemStyle {
     BorderRadius? checkBoxBorderRadius,
     Color? checkBoxStrokeColor,
     double? checkBoxStrokeWidth,
+    Color? checkBoxCheckColor,
+    Color? privateGroupIconBackground,
+    Color? protectedGroupIconBackground,
   }) {
     return CometChatGroupListItemStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -611,6 +660,11 @@ class CometChatGroupListItemStyle {
       checkBoxBorderRadius: checkBoxBorderRadius ?? this.checkBoxBorderRadius,
       checkBoxStrokeColor: checkBoxStrokeColor ?? this.checkBoxStrokeColor,
       checkBoxStrokeWidth: checkBoxStrokeWidth ?? this.checkBoxStrokeWidth,
+      checkBoxCheckColor: checkBoxCheckColor ?? this.checkBoxCheckColor,
+      privateGroupIconBackground:
+          privateGroupIconBackground ?? this.privateGroupIconBackground,
+      protectedGroupIconBackground:
+          protectedGroupIconBackground ?? this.protectedGroupIconBackground,
     );
   }
 
@@ -631,6 +685,9 @@ class CometChatGroupListItemStyle {
       checkBoxBorderRadius: other.checkBoxBorderRadius,
       checkBoxStrokeColor: other.checkBoxStrokeColor,
       checkBoxStrokeWidth: other.checkBoxStrokeWidth,
+      checkBoxCheckColor: other.checkBoxCheckColor,
+      privateGroupIconBackground: other.privateGroupIconBackground,
+      protectedGroupIconBackground: other.protectedGroupIconBackground,
     );
   }
 

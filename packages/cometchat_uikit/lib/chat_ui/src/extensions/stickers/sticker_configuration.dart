@@ -3,6 +3,17 @@ import 'package:flutter/material.dart';
 ///[StickerConfiguration] is a data class that has configuration properties
 ///to customize the functionality and appearance of `StickersExtension`
 ///
+///Has no effect in v6. Set the sticker button on the composer instead:
+///`CometChatMessageComposer.stickerIcon` and
+///`CometChatMessageComposer.stickerActiveIcon` replace [stickerButtonIcon]
+///and [keyboardButtonIcon];
+///`CometChatMessageComposerStyle.stickerIconColor` and
+///`CometChatMessageComposerStyle.stickerActiveIconColor` replace
+///[stickerIconTint] and [keyboardIconTint]. Style the sticker keyboard with
+///`CometChatMessageComposerStyle.stickerKeyboardStyle` or a
+///`CometChatStickerKeyboardStyle` theme extension.
+///[errorIcon], [errorStateText] and [emptyStateText] have no replacement.
+///
 /// ```dart
 ///
 /// final stickerConfig = StickerConfiguration(
@@ -14,13 +25,28 @@ import 'package:flutter/material.dart';
 ///   emptyStateText: 'No stickers available',
 ///   stickerButtonIcon: Icon(Icons.sticky_note_2),
 ///   keyboardButtonIcon: Icon(Icons.keyboard),
-///   stickerKeyboardStyle: StickerKeyboardStyle(),
 ///   stickerBubbleHeight: 100,
 ///   stickerBubbleWidth: 100,
 /// );
 ///
 /// ```
+@Deprecated(
+  'Has no effect: no API in v6 accepts an extension configuration object. '
+  'Use CometChatMessageComposer.stickerIcon / stickerActiveIcon for the '
+  'sticker button icons, CometChatMessageComposerStyle.stickerIconColor / '
+  'stickerActiveIconColor for their tints, and '
+  'CometChatMessageComposerStyle.stickerKeyboardStyle or the '
+  'CometChatStickerKeyboardStyle theme extension for the sticker keyboard, '
+  'and stickerBubbleStyle on CometChatIncomingMessageBubbleStyle / '
+  'CometChatOutgoingMessageBubbleStyle for the sticker bubble. Custom '
+  'loading, empty and error views exist only on a standalone '
+  'CometChatStickerKeyboard. errorIcon, errorStateText, emptyStateText, '
+  'stickerBubbleHeight, stickerBubbleWidth and stickerUrl have no '
+  'replacement. '
+  'Will be removed in 7.0.0.',
+)
 class StickerConfiguration {
+  /// Creates a [StickerConfiguration].
   StickerConfiguration({
     this.errorIcon,
     this.emptyStateView,

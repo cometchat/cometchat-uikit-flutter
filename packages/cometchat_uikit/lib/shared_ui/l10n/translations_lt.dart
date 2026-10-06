@@ -524,6 +524,14 @@ class TranslationsLt extends Translations {
   String get actionPermissionDenied => 'Neturite leidimo atlikti šį veiksmą.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Leiskite naudoti mikrofoną, kad galėtumėte atsiliepti į skambučius.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Leiskite naudoti kamerą ir mikrofoną, kad galėtumėte atsiliepti į vaizdo skambučius.';
+
+  @override
   String get pinSaveFailed => 'Nepavyko atnaujinti. Bandykite dar kartą.';
 
   @override
@@ -1504,4 +1512,87 @@ class TranslationsLt extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Atgal';
+
+  @override
+  String get openInBrowser => 'Atidaryti naršyklėje';
+
+  @override
+  String get failedToLoadSticker => 'Nepavyko įkelti lipduko';
+
+  @override
+  String get enterDisplayText => 'Įveskite rodomą tekstą';
+
+  @override
+  String get clearSearch => 'Išvalyti paiešką';
+
+  @override
+  String get done => 'Atlikta';
+
+  @override
+  String get download => 'Atsisiųsti';
+
+  @override
+  String get startRecording => 'Pradėti įrašymą';
+
+  @override
+  String get stopRecording => 'Sustabdyti įrašymą';
+
+  @override
+  String get pauseRecording => 'Pristabdyti įrašymą';
+
+  @override
+  String get deleteRecording => 'Ištrinti įrašą';
+
+  @override
+  String get recordVoiceMessage => 'Įrašyti balso žinutę';
+
+  @override
+  String get reorderOption => 'Pertvarkyti parinktį';
+
+  @override
+  String get play => 'Leisti';
+
+  @override
+  String get pause => 'Pristabdyti';
+
+  @override
+  String get next => 'Kitas';
+
+  @override
+  String get previous => 'Ankstesnis';
+
+  @override
+  String get scrollToBottom => 'Slinkti į apačią';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Priedų parinkčių meniu atidarytas';
+
+  @override
+  String get richTextFormattingToolbar => 'Teksto formatavimo įrankių juosta';
+
+  @override
+  String get closeFormattingToolbar => 'Uždaryti formatavimo juostą';
+
+  @override
+  String get sendAudioMessage => 'Siųsti garso žinutę';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Papildomi žinutės rašymo veiksmai';
+
+  @override
+  String get attachmentButton => 'Priedų mygtukas';
+
+  @override
+  String get addAttachment => 'Pridėti priedą';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Pasiūlymų sąrašas, elementų: $count';
+
+  @override
+  String messageFrom(String sender) => 'Žinutė nuo $sender';
 }

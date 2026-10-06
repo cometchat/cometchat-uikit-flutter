@@ -7,6 +7,7 @@ import '../di/ai_assistant_chat_history_service_locator.dart';
 import '../domain/usecases/usecases.dart';
 import 'ai_assistant_chat_history_event.dart';
 import 'ai_assistant_chat_history_state.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// BLoC for managing AI Assistant Chat History.
 ///
@@ -248,9 +249,7 @@ class AIAssistantChatHistoryBloc
       (failure) {
         // Deletion failed — no state change needed, caller can show error
         if (kDebugMode) {
-          debugPrint(
-            'AIAssistantChatHistory: delete failed: ${failure.message}',
-          );
+          ccLog('AIAssistantChatHistory: delete failed: ${failure.message}');
         }
       },
       (updatedMessage) {

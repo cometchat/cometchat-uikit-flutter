@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import 'responsive_home_screen.dart';
@@ -35,8 +34,9 @@ class _GuardScreenState extends State<GuardScreen> {
       // Re-login to refresh the connection
       await CometChatUIKit.login(
         cachedUser.uid,
-        onSuccess: (_) async {
-          await _initCallsSdk();
+        // The UI Kit starts call handling itself and calls onSuccess once
+        // it is ready (bounded), so there is nothing to start here.
+        onSuccess: (_) {
           _shouldGoHome.value = true;
         },
         onError: (e) {
@@ -49,12 +49,6 @@ class _GuardScreenState extends State<GuardScreen> {
     } else {
       _shouldGoHome.value = false;
     }
-  }
-
-  Future<void> _initCallsSdk() async {
-    await CallEventService.instance.init(
-      configuration: CallingConfiguration(),
-    );
   }
 
   @override
@@ -76,9 +70,7 @@ class _GuardScreenState extends State<GuardScreen> {
                     width: 200,
                   ),
                   const SizedBox(height: 32),
-                  CircularProgressIndicator(
-                    color: _colorPalette.primary,
-                  ),
+                  CircularProgressIndicator(color: _colorPalette.primary),
                 ],
               ),
             ),
@@ -87,8 +79,9 @@ class _GuardScreenState extends State<GuardScreen> {
 
         // Navigate after frame to avoid build-during-build
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          final Widget home =
-              kIsWeb ? const ResponsiveHomeScreen() : const HomeScreen();
+          final Widget home = kIsWeb
+              ? const ResponsiveHomeScreen()
+              : const HomeScreen();
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(

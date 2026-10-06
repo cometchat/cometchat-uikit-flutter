@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# E2E run artifacts — logs and screenshots produced by integration_test/run_*.sh
+integration_test/e2e_results/
+integration_test/screenshots/

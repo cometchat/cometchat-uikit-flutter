@@ -90,6 +90,21 @@ SUITES=(
   "integration_test/suites/group_members_test.dart"
   "integration_test/suites/groups_realtime_test.dart"
   "integration_test/suites/composer_voice_test.dart"
+  # iOS-parity suites (strict assertions; see README §5)
+  "integration_test/suites/rich_text_composer_test.dart"
+  "integration_test/suites/composer_draft_test.dart"
+  "integration_test/suites/mentions_one_to_one_test.dart"
+  "integration_test/suites/swipe_to_reply_test.dart"
+  "integration_test/suites/search_in_conversation_test.dart"
+  "integration_test/suites/polls_test.dart"
+  "integration_test/suites/media_viewer_and_tools_test.dart"
+  "integration_test/suites/pinned_messages_test.dart"
+  "integration_test/suites/saved_messages_test.dart"
+  "integration_test/suites/message_information_test.dart"
+  "integration_test/suites/notification_feed_test.dart"
+  "integration_test/suites/ai_assistant_test.dart"
+  "integration_test/suites/conversation_gap_test.dart"
+  "integration_test/suites/accessibility_audit_test.dart"
 )
 
 TOTAL=0

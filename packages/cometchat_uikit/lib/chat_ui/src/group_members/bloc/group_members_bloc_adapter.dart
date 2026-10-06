@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'group_members_bloc.dart';
-import 'group_members_event.dart';
-import 'group_members_state.dart';
 
 /// Adapter that wraps [GroupMembersBloc] to implement [CometChatGroupMembersControllerProtocol].
 ///

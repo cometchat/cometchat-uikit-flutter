@@ -5,6 +5,9 @@ import '../repositories/call_operations_repository.dart';
 
 /// Use case for starting a call session with a session ID and settings.
 /// The SDK generates the call token internally.
+///
+/// Since 6.2.0 this does not start the Android ongoing-call service: see
+/// `CallOperationsDataSource.startSession`.
 class StartSessionUseCase {
   final CallOperationsRepository repository;
   const StartSessionUseCase(this.repository);

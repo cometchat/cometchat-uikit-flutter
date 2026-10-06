@@ -2,6 +2,9 @@ import '../../../cometchat_calls_uikit.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../src/active_call_tracker.dart';
+import '../../../src/calls_join.dart';
 
 ///[CometChatUIKitCalls] is a class that initializes the CometChat Calls SDK. And contains methods to initiate a call, accept a call, reject a call, end a call
 class CometChatUIKitCalls {
@@ -28,10 +31,10 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onSuccess callback $e');
+            ccLog('unable to execute custom onSuccess callback $e');
           }
         }
-        debugPrint(
+        ccLog(
           "CometChatCalls initialization completed successfully  $successMessage",
         );
       },
@@ -43,10 +46,10 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onError callback $e');
+            ccLog('unable to execute custom onError callback $e');
           }
         }
-        debugPrint(
+        ccLog(
           "CometChatCalls initialization failed with exception: ${e.message}",
         );
       },
@@ -69,12 +72,12 @@ class CometChatUIKitCalls {
           }
         } catch (e, stackTrace) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onSuccess callback: $e');
-            debugPrint('Stack trace: $stackTrace');
+            ccLog('unable to execute custom onSuccess callback: $e');
+            ccLog('Stack trace: $stackTrace');
           }
         }
         if (kDebugMode) {
-          debugPrint('call initiated successfully');
+          ccLog('call initiated successfully');
         }
       },
       onError: (CometChatException e) {
@@ -85,11 +88,11 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onError callback');
+            ccLog('unable to execute custom onError callback');
           }
         }
         if (kDebugMode) {
-          debugPrint(
+          ccLog(
             'call could not be initiated ${e.message} ${e.details} ${e.code}',
           );
         }
@@ -113,14 +116,20 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onSuccess callback');
+            ccLog('unable to execute custom onSuccess callback');
           }
         }
         if (kDebugMode) {
-          debugPrint('call initiated successfully');
+          ccLog('call initiated successfully');
         }
       },
       onError: (CometChatException e) {
+        // The call was not answered, so drop the UI Kit's record of it, or
+        // every later incoming call is answered with busy. "Already started"
+        // means it was answered through another path and is live.
+        if (e.message?.contains('already started') != true) {
+          ActiveCallTracker.release(sessionId);
+        }
         //execute custom onError callback
         try {
           if (onError != null) {
@@ -128,11 +137,11 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onError callback');
+            ccLog('unable to execute custom onError callback');
           }
         }
         if (kDebugMode) {
-          debugPrint('call could not be initiated ${e.message}');
+          ccLog('call could not be initiated ${e.message}');
         }
       },
     );
@@ -156,14 +165,18 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onSuccess callback');
+            ccLog('unable to execute custom onSuccess callback');
           }
         }
         if (kDebugMode) {
-          debugPrint('call rejected successfully');
+          ccLog('call rejected successfully');
         }
       },
       onError: (CometChatException e) {
+        // No ccCallRejected goes out when a reject fails, so drop the UI Kit's
+        // record of the call here, or every later incoming call is answered
+        // with busy.
+        ActiveCallTracker.release(sessionId);
         //execute custom onError callback
         try {
           if (onError != null) {
@@ -171,11 +184,11 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onError callback: $e}');
+            ccLog('unable to execute custom onError callback: $e}');
           }
         }
         if (kDebugMode) {
-          debugPrint('call could not be rejected ${e.message}');
+          ccLog('call could not be rejected ${e.message}');
         }
       },
     );
@@ -198,10 +211,12 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint("unable to execute custom onSuccess callback");
+            ccLog("unable to execute custom onSuccess callback");
           }
         }
-        debugPrint("token was generated successfully: ${callToken.callToken}");
+        if (kDebugMode) {
+          ccLog("token was generated successfully: ${callToken.callToken}");
+        }
       },
       onError: (CometChatCallsException e) {
         try {
@@ -210,11 +225,11 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onError callback');
+            ccLog('unable to execute custom onError callback');
           }
         }
         if (kDebugMode) {
-          debugPrint('token could not be generated: ${e.message}');
+          ccLog('token could not be generated: ${e.message}');
         }
       },
     );
@@ -222,29 +237,47 @@ class CometChatUIKitCalls {
 
   ///[startSession] starts a call session using the V5 sessionId-based API.
   /// The SDK generates the call token internally.
+  ///
+  /// On success it starts the Android ongoing-call service ("Call in
+  /// progress"), unless [launchOngoingCallService] is false, with the
+  /// session's type: an audio session (`SessionType.audio`) asks only for
+  /// the microphone foreground-service type. [endSession] stops it.
+  ///
+  /// The UI Kit's own call screen passes false: it starts the service
+  /// itself once the call view is back and its screen is still up, and
+  /// stops it when it leaves. A join that lands after its screen closed
+  /// then starts no service that nothing stops, and the service of a newer
+  /// call is not stopped to undo it.
   static void startSession(
     String sessionId,
     SessionSettings sessionSettings, {
     dynamic Function(Widget?)? onSuccess,
     dynamic Function(CometChatCallsException)? onError,
+    bool launchOngoingCallService = true,
   }) {
-    CometChatCalls.joinSession(
+    // So a logout or dispose leaves this session even if its screen is gone.
+    ActiveCallTracker.mayHaveMediaSession = true;
+    CallsJoin.joinSession(
       sessionId: sessionId,
       sessionSettings: sessionSettings,
       onSuccess: (Widget? callingWidget) {
         // Launch the ongoing call foreground service (Android notification)
-        CometChatOngoingCallService.launch();
+        if (launchOngoingCallService) {
+          CometChatOngoingCallService.launch(
+            isVideo: sessionSettings.type != SessionType.audio,
+          );
+        }
         try {
           if (onSuccess != null) {
             onSuccess(callingWidget);
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint("unable to execute custom onSuccess callback");
+            ccLog("unable to execute custom onSuccess callback");
           }
         }
         if (kDebugMode) {
-          debugPrint("startCallSession was successful");
+          ccLog("startCallSession was successful");
         }
       },
       onError: (CometChatCallsException e) {
@@ -254,17 +287,24 @@ class CometChatUIKitCalls {
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('unable to execute custom onError callback');
+            ccLog('unable to execute custom onError callback');
           }
         }
+        // The Calls SDK refused the join: there is no session to leave. The
+        // mark used to stay until a logout, and every incoming call meanwhile
+        // rang as if over a call (quieter, the audio left alone).
+        ActiveCallTracker.mayHaveMediaSession = false;
         if (kDebugMode) {
-          debugPrint('startCallSession failed: ${e.message}');
+          ccLog('startCallSession failed: ${e.message}');
         }
       },
     );
   }
 
-  ///[endSession] is the method to end a call session. It takes an optional [onSuccess] and [onError] callback.
+  ///[endSession] leaves the call session. It first stops the Android
+  /// ongoing-call service ("Call in progress"), whoever started it: this
+  /// method, the UI Kit's call screen or your app. It takes an optional
+  /// [onSuccess] and [onError] callback.
   static Future<void> endSession({
     dynamic Function(String)? onSuccess,
     dynamic Function(CometChatCallsException)? onError,
@@ -272,7 +312,14 @@ class CometChatUIKitCalls {
     try {
       // Abort the ongoing call foreground service (Android notification)
       await CometChatOngoingCallService.abort();
-      await CallSession.getInstance()?.leaveSession();
+      // Left, or not there to leave: either way nothing is left to leave
+      // later. The mark used to stay set when the leave failed, and every
+      // incoming call after it rang as if over a call.
+      try {
+        await CallSession.getInstance()?.leaveSession();
+      } finally {
+        ActiveCallTracker.mayHaveMediaSession = false;
+      }
       // NOTE: do NOT clear the active call here.
       //
       // The documented teardown order is leaveSession() first, then
@@ -291,10 +338,10 @@ class CometChatUIKitCalls {
         }
       } catch (e) {
         if (kDebugMode) {
-          debugPrint("unable to execute custom onSuccess callback");
+          ccLog("unable to execute custom onSuccess callback");
         }
       }
-      debugPrint("session ended successfully");
+      ccLog("session ended successfully");
     } catch (e) {
       final error = e is CometChatCallsException
           ? e
@@ -309,10 +356,10 @@ class CometChatUIKitCalls {
         }
       } catch (e) {
         if (kDebugMode) {
-          debugPrint("unable to execute custom onError callback");
+          ccLog("unable to execute custom onError callback");
         }
       }
-      debugPrint("session could not be ended: ${error.message}");
+      ccLog("session could not be ended: ${error.message}");
     }
   }
 

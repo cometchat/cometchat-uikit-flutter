@@ -1,3 +1,71 @@
+# v6.2.0
+
+## New
+
+- Added Swift Package Manager support for iOS, alongside CocoaPods, with both using the same source files.
+- Added an Apple privacy manifest (`PrivacyInfo.xcprivacy`) for improved iOS privacy compliance.
+- Added `MessageSendStatus` and `CometChatInteractiveCardMessage` aliases to make existing SDK types accessible through the public API.
+- Added text-scaling utilities, including `scaledMaxLines`, `scaledDimension` and `currentTextScale`, for building accessible custom views.
+- Exported previously inaccessible public API types, including formatters, audio states, user use cases and repositories.
+- Added a published API baseline and deprecation policy for the v6 release line.
+- Added message translation support with a Translate option, customizable translation styles and `hideTranslateMessageOption`.
+- Added `setOptions` and `addOptions` to `CometChatUsers` for customizing long-press menus.
+- Added sticker icon and keyboard customization through `CometChatMessageComposer` and `CometChatStickerKeyboardStyle`.
+- Added `itemStyle` to `CometChatConversationsStyle` for customizing conversation rows.
+- Added `AdditionalConfigurations.copyWith` for per-message bubble styles.
+
+## Enhancements
+
+- Improved accessibility and large-text support across conversations, groups, calls, attachments and composer components, including text wrapping at increased system text sizes.
+- Added optional BLoC parameters to eight components, allowing applications to provide and manage their own BLoC instances.
+- Improved screen reader support with localized labels for icon-only controls and clearer semantics for list items, message bubbles and decorative elements.
+- Improved logging with a release-safe internal logger to prevent UI Kit logs from appearing in production device logs.
+- Removed the unnecessary `flutter: generate: true` setting from the package configuration.
+
+## Fixes
+
+- Fixed interactive element parsing issues involving `DateTimeElement`, `CheckBoxElement`, `CustomAction` and `URLNavigationAction`, including missing defaults and incorrect type handling.
+- Fixed layout and overflow issues across message bubbles, conversation lists, group members, incoming calls and other components, particularly at larger text sizes.
+- Fixed numerous styling and customization properties that were not being applied across messages, conversations, groups, search, reactions, calls and attachments.
+- Fixed message and conversation list alignment, selection, status indicators, timestamps, empty states and error handling.
+- Fixed list callbacks, including `onLoad`, `onEmpty`, `onError`, `onMessagesLoad` and `onConversationsLoad`, to report state changes correctly.
+- Fixed `setOptions` and `addOptions` on `CometChatConversations` and `CometChatGroups`, restoring custom long-press menus.
+- Fixed BLoC integration issues by exporting previously inaccessible events, states, repositories and use cases.
+- Fixed message formatting and previews, including captions, mentions, text styles, voice notes and quoted messages.
+- Fixed incoming-message sounds and custom sound configurations in conversations and message lists.
+- Fixed sticker keyboard behavior, including unresponsive buttons, missing empty states and incorrect panel visibility.
+- Fixed thread-specific panels, subscriptions and headers to maintain the correct state when switching conversations or threads.
+- Fixed attachment handling, including MIME type detection, preview consistency and download caching.
+- Fixed AI conversation starters and suggested messages not appearing or being applied correctly.
+- Fixed collaborative web views reloading unnecessarily and collaborative bubbles clipping their content.
+- Fixed message bubble customization options not reaching polls, stickers, collaborative content and link previews.
+- Fixed request builder handling and pagination in users, groups and conversations, including search clearing and custom limits.
+- Fixed pinned and saved message handling, including incorrect conversation matching and icon customization.
+- Fixed scheduling time-zone handling and removed approximately 970 KB of unused time-zone data.
+- Fixed call-related issues involving navigation, logging, notifications and call state.
+- Fixed package compatibility with Dart 3.13 and corrected the iOS podspec version.
+- Fixed various iOS configuration, rendering and styling issues, including incorrect shadows and missing formatter styles.
+
+## Deprecations
+
+- Deprecated unused extension configuration classes and interactive element styles, including `StickerConfiguration`, `PollsConfiguration`, `MessageTranslationConfiguration`, and `CheckBoxElementStyle`.
+- Deprecated `CometChatExceptionStyle` and `exceptionStyle` on `CometChatOutgoingMessageBubbleStyle`.
+- Deprecated `aiIcon`, `aiIconURL`, and `aiIconPackageName` on `CometChatMessageComposer`.
+- Deprecated `groupsProtocol` and `controllerTag` on `CometChatGroups`.
+- Deprecated `controllerTag` on `CometChatConversations`.
+- Deprecated `options` on `CometChatListItem`.
+- Deprecated five `AdditionalConfigurations` properties: `callButtonsStyle`, `hideVoiceCallButton`, `hideVideoCallButton`, `hideStickersButton`, and `hideReactionOption`.
+- Deprecated unused layout and data properties on `CometChatAudioPlayer`, `CometchatMessageOptionSheet`, `CometChatStreamBubble`, `CometChatDeletedBubble`, `CometChatVideoBubble`, and `VideoBubbleFactory`.
+- Deprecated `messageBubbleAvatarStyle` and `messageBubbleBackgroundImage` on `CometChatAIAssistantBubbleStyle`. 
+- Deprecated `height` and `width` on `CometChatMessageBubble`.
+- Deprecated `subtitle` and `fileMimeType` on `CometChatVoiceNoteBubble`, and `handleSafeArea` on `CometChatAnimatedMessageList`.
+- Deprecated `onAdd` and `onSend` on `CometChatAttachmentTray`. 
+- Deprecated `onEnterPressed` on `CometChatMessageInput`.
+
+## Breaking Changes
+
+- Updated the declared iOS deployment target from iOS 9 to iOS 13. This does not change practical iOS support, as the existing Flutter requirement already requires iOS 13 or later.
+
 # 6.1.1
 
 ## New

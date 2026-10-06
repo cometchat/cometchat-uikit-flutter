@@ -7,16 +7,22 @@ import '../../../../call_ui/src/calling_configuration.dart';
 import '../../../../call_ui/src/utils/call_utils.dart';
 import '../../../../call_ui/src/utils/call_extension_constants.dart';
 import '../../../../call_ui/src/ongoing_call/call_screen_overlay.dart';
+import '../../../../src/active_call_tracker.dart';
+import '../../../../src/call_errors.dart';
+import '../../../../src/calling_configuration_resolver.dart';
+import '../../../../src/meeting_session_settings.dart';
 import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart'
-    show SessionSettingsBuilder, LayoutType;
+    show SessionSettingsBuilder;
 import '../../extensions/extension_constants.dart';
 import '../../extensions/polls/cometchat_polls_bubble.dart';
 import '../../extensions/stickers/cometchat_sticker_bubble.dart';
 import '../../extensions/collaborative/cometchat_collaborative_bubble.dart';
 import '../../extensions/link_preview/cometchat_link_preview_bubble.dart';
+import '../../extensions/message_translation/message_translation_bubble.dart';
 import '../widgets/cometchat_card_bubble.dart';
 import '../../extensions/extension_moderator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 ///[MessageTemplateUtils] provides default templates to construct
 ///message bubbles and the default set of options for each bubble type.
@@ -320,6 +326,42 @@ class MessageTemplateUtils {
     );
   }
 
+  /// The Translate option for a text message: the 文A icon and the
+  /// "Translate" title, styled like the other options by
+  /// [messageOptionSheetStyle]. The message list runs it, and shows it only
+  /// while the `message-translation` extension is enabled.
+  static CometChatMessageOption getTranslateOption(
+    BuildContext context,
+    CometChatColorPalette colorPalette,
+    CometChatTypography typography,
+    CometChatMessageOptionSheetStyle? messageOptionSheetStyle,
+  ) {
+    return CometChatMessageOption(
+      id: MessageOptionConstants.translateMessage,
+      title: Translations.of(context).translate,
+      icon: Image.asset(
+        AssetConstants.translate,
+        package: UIConstants.packageName,
+        height: 24,
+        width: 24,
+        color: messageOptionSheetStyle?.iconColor ?? colorPalette.iconSecondary,
+      ),
+      messageOptionSheetStyle: CometChatMessageOptionSheetStyle(
+        titleTextStyle: TextStyle(
+          color: messageOptionSheetStyle?.titleColor,
+          fontFamily: typography.body?.regular?.fontFamily,
+          fontWeight: typography.body?.regular?.fontWeight,
+          fontSize: typography.body?.regular?.fontSize,
+        ).merge(messageOptionSheetStyle?.titleTextStyle),
+        borderRadius: messageOptionSheetStyle?.borderRadius,
+        border: messageOptionSheetStyle?.border,
+        backgroundColor: messageOptionSheetStyle?.backgroundColor,
+        iconColor: messageOptionSheetStyle?.iconColor,
+        titleColor: messageOptionSheetStyle?.titleColor,
+      ),
+    );
+  }
+
   static CometChatMessageOption getCopyOption(
     BuildContext context,
     CometChatColorPalette colorPalette,
@@ -506,6 +548,19 @@ class MessageTemplateUtils {
         );
       }
 
+      if (additionalConfigurations?.hideTranslateMessageOption != true &&
+          _validateOption(
+            loggedInUser,
+            messageObject,
+            context,
+            group,
+            MessageOptionConstants.translateMessage,
+          )) {
+        messageOptionList.add(
+          getTranslateOption(context, colorPalette, typography, style),
+        );
+      }
+
       if (additionalConfigurations?.hideDeleteMessageOption != true &&
           _validateOption(
             loggedInUser,
@@ -613,6 +668,22 @@ class MessageTemplateUtils {
         )) {
       messageOptionList.add(
         getShareOption(context, colorPalette, typography, style),
+      );
+    }
+
+    // Translate — offered on every text message, own or not, and still
+    // after a translation (Android parity). The message list also hides it
+    // until the message-translation extension reports enabled.
+    if (additionalConfigurations?.hideTranslateMessageOption != true &&
+        _validateOption(
+          loggedInUser,
+          messageObject,
+          context,
+          group,
+          MessageOptionConstants.translateMessage,
+        )) {
+      messageOptionList.add(
+        getTranslateOption(context, colorPalette, typography, style),
       );
     }
 
@@ -877,7 +948,7 @@ class MessageTemplateUtils {
       if (linkPreviewData != null && linkPreviewData['links'] != null) {
         final List<dynamic> links = linkPreviewData['links'];
         if (links.isNotEmpty) {
-          return CometChatLinkPreviewBubble(
+          final linkPreview = CometChatLinkPreviewBubble(
             links: links,
             style: additionalConfigurations?.linkPreviewBubbleStyle,
             alignment: alignment,
@@ -889,11 +960,46 @@ class MessageTemplateUtils {
             },
             child: textBubble,
           );
+          return _withTranslation(
+            message,
+            alignment,
+            additionalConfigurations,
+            linkPreview,
+          );
         }
       }
     }
 
-    return textBubble;
+    return _withTranslation(
+      message,
+      alignment,
+      additionalConfigurations,
+      textBubble,
+    );
+  }
+
+  /// [content] under nothing, or — once the Translate option has stored a
+  /// translation in `metadata['translated_message']` — above a separator
+  /// and the translation, with mentions shown as `@name`.
+  static Widget _withTranslation(
+    TextMessage message,
+    BubbleAlignment alignment,
+    AdditionalConfigurations? additionalConfigurations,
+    Widget content,
+  ) {
+    final translated = message.metadata?['translated_message'];
+    if (translated is! String || translated.isEmpty) return content;
+    return MessageTranslationBubble(
+      translatedText: message.mentionedUsers.isEmpty
+          ? translated
+          : CometChatMentionsFormatter.getTextWithMentions(
+              translated,
+              message.mentionedUsers,
+            ),
+      alignment: alignment,
+      style: additionalConfigurations?.messageTranslationBubbleStyle,
+      child: content,
+    );
   }
 
   static CometChatMessageTemplate getAudioMessageTemplate() {
@@ -1319,6 +1425,12 @@ class MessageTemplateUtils {
     if (MessageOptionConstants.copyMessage == optionId &&
         messageObject is TextMessage) {
       return true;
+    }
+
+    // Translate needs the text and a sent message: the extension is keyed by
+    // the message id.
+    if (MessageOptionConstants.translateMessage == optionId) {
+      return messageObject is TextMessage && messageObject.id != 0;
     }
 
     // Pin & Save eligibility: any real, non-deleted message — including
@@ -2232,6 +2344,7 @@ class MessageTemplateUtils {
               senderUid: customMessage.sender?.uid,
               metadata: pollResults,
               alignment: alignment,
+              style: additionalConfigurations?.pollsBubbleStyle,
               choosePoll: (String vote, String id) async {
                 try {
                   await CometChat.callExtension(
@@ -2240,14 +2353,14 @@ class MessageTemplateUtils {
                     ExtensionUrls.votePoll,
                     {'vote': vote, 'id': id},
                     onSuccess: (Map<String, dynamic> map) {
-                      debugPrint('[Polls] Vote success: $map');
+                      ccLog('[Polls] Vote success: $map');
                     },
                     onError: (CometChatException e) {
-                      debugPrint('[Polls] Vote error: ${e.code} ${e.message}');
+                      ccLog('[Polls] Vote error: ${e.code} ${e.message}');
                     },
                   );
                 } catch (e) {
-                  debugPrint('[Polls] Vote exception: $e');
+                  ccLog('[Polls] Vote exception: $e');
                 }
               },
             );
@@ -2277,7 +2390,10 @@ class MessageTemplateUtils {
             if (message is! CustomMessage) {
               return getMessageNotSupportedWidget(message, context);
             }
-            return CometChatStickerBubble(message: message);
+            return CometChatStickerBubble(
+              message: message,
+              style: additionalConfigurations?.stickerBubbleStyle,
+            );
           },
       options:
           (
@@ -2340,6 +2456,7 @@ class MessageTemplateUtils {
               subtitle: Translations.of(context).openDocumentSubtitle,
               buttonText: Translations.of(context).openDocument,
               alignment: alignment,
+              style: additionalConfigurations?.collaborativeDocumentBubbleStyle,
               icon: Image.asset(
                 AssetConstants.collaborativeDocumentFilled,
                 package: UIConstants.packageName,
@@ -2397,6 +2514,8 @@ class MessageTemplateUtils {
               subtitle: Translations.of(context).openWhiteboardSubtitle,
               buttonText: Translations.of(context).openWhiteboard,
               alignment: alignment,
+              style:
+                  additionalConfigurations?.collaborativeWhiteboardBubbleStyle,
               icon: Image.asset(
                 AssetConstants.collaborativeWhiteBoardFilled,
                 package: UIConstants.packageName,
@@ -2466,10 +2585,7 @@ class MessageTemplateUtils {
             AdditionalConfigurations? additionalConfigurations,
           }) {
             if (message is StreamMessage) {
-              return CometChatStreamBubble(
-                message: message,
-                alignment: alignment,
-              );
+              return CometChatStreamBubble(message: message);
             }
             return const SizedBox.shrink();
           },
@@ -2549,8 +2665,7 @@ class MessageTemplateUtils {
       subtitle = DateFormat('d MMM, hh:mm a').format(message.sentAt!);
     }
 
-    final callingConfig =
-        CometChatUIKit.authenticationSettings?.callingConfiguration;
+    final callingConfig = CallingConfigurationResolver.resolved;
 
     return CometChatCallBubble(
       title: title,
@@ -2580,15 +2695,21 @@ class MessageTemplateUtils {
     Call? call,
     CallingConfiguration? callingConfig,
   }) async {
-    SessionSettingsBuilder defaultSessionSettingsBuilder;
-    if (callingConfig?.groupSessionSettingsBuilder != null) {
-      defaultSessionSettingsBuilder =
-          callingConfig!.groupSessionSettingsBuilder!;
-    } else {
-      defaultSessionSettingsBuilder = SessionSettingsBuilder().setLayout(
-        LayoutType.tile,
+    // A meeting message still on its way, or one that failed to send: Join
+    // does nothing (round 5, D03 A). The host's own bubble shows while the
+    // message is sending, before the call buttons open the meeting; a Join
+    // there opened it first, and the buttons' screen then replaced it with
+    // a second join. A failed message announced no meeting.
+    if (message.id <= 0 || message.metadata?['error'] != null) {
+      ccLog(
+        'MessageTemplateUtils: the meeting message is not sent; Join '
+        'ignored',
       );
+      return;
     }
+    // Joining a meeting from its bubble is the call buttons' job done from
+    // the chat, so their onError hears when the join fails.
+    final OnError? onError = callingConfig?.callButtonsConfiguration?.onError;
     String? callType;
     String? sessionId;
     if (message.customData != null &&
@@ -2599,18 +2720,57 @@ class MessageTemplateUtils {
         message.customData?.containsKey('sessionID') == true) {
       sessionId = message.customData?['sessionID'];
     }
-    if (callType == CallTypeConstants.audioCall) {
-      // Workaround: SessionType.audio is not recognized by the native
-      // Android SDK (beta bug). Use startVideoPaused + hide video buttons.
-      defaultSessionSettingsBuilder
-          .startVideoPaused(true)
-          .hideSwitchCameraButton(true)
-          .hideToggleVideoButton(true);
+    final String meetingSessionId = sessionId ?? sessionID;
+    // This meeting is on screen already (a second tap on Join): nothing to
+    // do (round 5, D03 A).
+    if (CallScreenOverlay.isShowing &&
+        ActiveCallTracker.callScreenWorkFlow == CallWorkFlow.directCalling &&
+        ActiveCallTracker.callScreenSessionId == meetingSessionId) {
+      ccLog('MessageTemplateUtils: meeting $meetingSessionId is on screen');
+      return;
+    }
+    // A call in progress, or another meeting on the call screen: one at a
+    // time (round 5, P5-C07; the owner's D06 A). Joining used to replace
+    // that call's screen without ending the call. No navigator to show the
+    // meeting on is refused by show() itself (NO_NAVIGATOR).
+    if (ActiveCallTracker.isInCallOrMeeting) {
+      ccLog('MessageTemplateUtils: a call is on; meeting not joined');
+      reportCallError(
+        onError,
+        activeCallException(),
+        where: 'MessageTemplateUtils',
+      );
+      return;
+    }
+    // The settings the meeting's host joins with too (round 5, P5-C05):
+    // the call buttons' callSettingsBuilder, then groupSessionSettingsBuilder,
+    // then the tile layout. An audio meeting's flags used to be written into
+    // the app's groupSessionSettingsBuilder itself, so every later Join,
+    // video ones included, started with the camera paused.
+    final SessionSettingsBuilder sessionSettingsBuilder;
+    try {
+      sessionSettingsBuilder = MeetingSessionSettings.resolve(
+        isAudioOnly: callType == CallTypeConstants.audioCall,
+        settingsFactory:
+            callingConfig?.callButtonsConfiguration?.callSettingsBuilder,
+        group: message.receiver is Group ? message.receiver as Group : null,
+        configuration: callingConfig,
+      );
+    } catch (e) {
+      // The app's callSettingsBuilder threw: the meeting is not joined.
+      ccLog('MessageTemplateUtils: the meeting settings failed: $e');
+      reportCallError(
+        onError,
+        callExceptionFrom(e),
+        where: 'MessageTemplateUtils',
+      );
+      return;
     }
     CallScreenOverlay.show(
-      sessionId: sessionId ?? sessionID,
-      sessionSettingsBuilder: defaultSessionSettingsBuilder,
+      sessionId: meetingSessionId,
+      sessionSettingsBuilder: sessionSettingsBuilder,
       callWorkFlow: CallWorkFlow.directCalling,
+      onError: onError,
     );
   }
 
@@ -2699,7 +2859,9 @@ class MessageTemplateUtils {
                     false,
                   ),
                   package: UIConstants.packageName,
-                  color: CallUtils.getCallIconColor(
+                  // The icon wears the text's colour, as in the voice
+                  // template: red only for a missed call.
+                  color: CallUtils.getCallTextColor(
                     context,
                     message,
                     loggedInUser,

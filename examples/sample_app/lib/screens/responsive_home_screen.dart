@@ -10,7 +10,9 @@ import 'package:sample_app/screens/call_log_details_screen.dart';
 import 'package:sample_app/screens/join_protected_group_screen.dart';
 import 'package:sample_app/screens/login_screen.dart';
 import 'package:sample_app/screens/thread_screen.dart';
+import 'package:sample_app/screens/threads_screen.dart';
 import 'package:sample_app/widgets/responsive_layout.dart';
+import 'package:sample_app/utils/call_error_snackbar.dart';
 
 /// A responsive home screen that shows:
 /// - Desktop/Web (>=700px): 3-panel layout with nested navigators
@@ -29,6 +31,7 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
   int _currentIndex = 0;
   final _toggles = ComponentToggles.instance;
   late CometChatColorPalette _colorPalette;
+  late CometChatTypography _typography;
 
   // Currently selected conversation for the middle panel (desktop only)
   User? _selectedUser;
@@ -41,9 +44,34 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
   // Navigator keys for nested navigation
   final GlobalKey<NavigatorState> _leftNavKey = GlobalKey<NavigatorState>();
 
-  // Right panel state
+  // How many routes the left column has pushed above its tab content.
+  // The panel's own header belongs to the tab, not to the column, so it is
+  // hidden while a pushed screen (Saved, Contacts, Search, Call log details,
+  // Join protected group) is showing its own — otherwise the two stack.
+  int _leftPanelRouteDepth = 0;
+  late final _LeftPanelRouteObserver _leftNavObserver =
+      _LeftPanelRouteObserver(onDepthChanged: (depth) {
+    // Deferred a frame: navigator callbacks can land mid-build, and setState
+    // during build throws.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && depth != _leftPanelRouteDepth) {
+        setState(() => _leftPanelRouteDepth = depth);
+      }
+    });
+  });
+
+  // Panel widths, dragged by the handles between the columns. The middle
+  // column has no width of its own — it takes whatever these two leave.
+  double _leftPanelWidth = ResponsiveBreakpoints.kLeftPanelWidth;
+  double _rightPanelWidth = ResponsiveBreakpoints.kRightPanelWidth;
+
+  // Right panel state — the third column: threads / pinned / search / info.
+  // _rightPanelKey re-keys the panel's Navigator so swapping content builds
+  // the new route instead of keeping the first one it generated.
+  int _rightPanelKey = 0;
   bool _showRightPanel = false;
   Widget? _rightPanelContent;
+  String _rightPanelTitle = '';
 
   // UI event listener
   final String _uiListenerId =
@@ -73,6 +101,7 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
   @override
   Widget build(BuildContext context) {
     _colorPalette = CometChatThemeHelper.getColorPalette(context);
+    _typography = CometChatThemeHelper.getTypography(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -91,36 +120,46 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
   Widget _buildDesktopLayout() {
     return Scaffold(
       backgroundColor: _colorPalette.background1,
-      body: Row(
-        children: [
-          // LEFT PANEL — conversation list with its own navigator
-          SizedBox(
-            width: ResponsiveBreakpoints.kLeftPanelWidth,
-            child: _buildLeftPanel(),
-          ),
-          // Divider
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: _colorPalette.borderLight ?? Colors.grey.shade800,
-          ),
-          // MIDDLE PANEL — messages with its own navigator
-          Expanded(
-            child: _buildMiddlePanel(),
-          ),
-          // RIGHT PANEL — contextual (search, etc.) shown on demand
-          if (_showRightPanel && _rightPanelContent != null) ...[
-            VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: _colorPalette.borderLight ?? Colors.grey.shade800,
-            ),
-            SizedBox(
-              width: ResponsiveBreakpoints.kRightPanelWidth,
-              child: _buildRightPanel(),
-            ),
-          ],
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final showRight = _showRightPanel && _rightPanelContent != null;
+          return Row(
+            children: [
+              // LEFT PANEL — conversation list with its own navigator
+              SizedBox(
+                width: _leftPanelWidth,
+                child: _buildLeftPanel(),
+              ),
+              // Draggable divider: right drag widens the left panel.
+              PanelResizeHandle(
+                color: _colorPalette.borderLight ?? Colors.grey.shade800,
+                onDelta: (delta) => _resizeLeftPanel(
+                  delta,
+                  constraints.maxWidth,
+                  showRight,
+                ),
+              ),
+              // MIDDLE PANEL — messages with its own navigator
+              Expanded(
+                child: _buildMiddlePanel(),
+              ),
+              // RIGHT PANEL — contextual (threads / pinned) shown on demand
+              if (showRight) ...[
+                // Right drag NARROWS the right panel — the handle is on its
+                // leading edge, so the sign is inverted.
+                PanelResizeHandle(
+                  color: _colorPalette.borderLight ?? Colors.grey.shade800,
+                  onDelta: (delta) =>
+                      _resizeRightPanel(delta, constraints.maxWidth),
+                ),
+                SizedBox(
+                  width: _rightPanelWidth,
+                  child: _buildRightPanel(),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -130,12 +169,13 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
   Widget _buildLeftPanel() {
     return Column(
       children: [
-        // AppBar
-        _buildLeftPanelAppBar(),
+        // AppBar — only over the tab content; a pushed screen supplies its own.
+        if (_leftPanelRouteDepth == 0) _buildLeftPanelAppBar(),
         // Tab content with nested navigator
         Expanded(
           child: Navigator(
             key: _leftNavKey,
+            observers: [_leftNavObserver],
             onGenerateRoute: (_) => MaterialPageRoute(
               builder: (_) => _buildLeftContent(),
             ),
@@ -177,6 +217,52 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
     );
   }
 
+  /// Pin & Save: a saved-messages row tap opens the message's conversation
+  /// in the middle panel and jumps to it (thread replies open their thread
+  /// screen).
+  Future<void> _openSavedMessage(BaseMessage message) async {
+    User? user;
+    Group? group;
+    if (message.receiverType == ReceiverTypeConstants.group) {
+      final receiver = message.receiver;
+      if (receiver is Group) group = receiver;
+    } else {
+      final loggedInUid = CometChatUIKit.loggedInUser?.uid;
+      final sender = message.sender;
+      final receiver = message.receiver;
+      if (sender != null && sender.uid != loggedInUid) {
+        user = sender;
+      } else if (receiver is User) {
+        user = receiver;
+      }
+    }
+    if (user == null && group == null) return;
+
+    if (message.parentMessageId != 0) {
+      final parent = await CometChat.getMessageDetails(message.parentMessageId);
+      if (parent == null || !mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ThreadScreen(
+            user: user,
+            group: group,
+            message: parent,
+            goToMessageId: message.id,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    _openConversation(
+      user: user,
+      group: group,
+      scrollToMessageId: message.id,
+    );
+  }
+
   /// The tab content (conversations, calls, users, groups)
   Widget _buildLeftContent() {
     if (_currentIndex == 1) {
@@ -191,6 +277,12 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
           );
         },
         onError: (Exception error) {
+          // A call placed from a log row that failed; the list's own load
+          // errors show in its error view.
+          if (isCallLogsPlacementError(error)) {
+            showCallPlacementError(error);
+            return;
+          }
           final errorMessage =
               error is CometChatException ? error.message : error.toString();
           debugPrint('CallLogs error: $errorMessage');
@@ -232,6 +324,11 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
             group: _selectedGroup,
             goToMessageId: _selectedMessageId,
             hideBackButton: true,
+            // Without this the screen has no opener and falls back to
+            // pushing threads/pinned onto its own navigator — which is the
+            // middle column, not the third panel.
+            onOpenSidePanel: showRightPanel,
+            onCloseSidePanel: hideRightPanel,
           ),
         ),
       ),
@@ -257,11 +354,16 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
           child: Row(
             children: [
               Text(
-                'Search Messages',
+                _rightPanelTitle,
+                // Kit heading2/bold, not a hardcoded 16/w600 — the panel
+                // header sits beside kit screens that use this token, and a
+                // hand-rolled size and missing font family read as a
+                // different header.
                 style: TextStyle(
                   color: _colorPalette.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontSize: _typography.heading2?.bold?.fontSize,
+                  fontFamily: _typography.heading2?.bold?.fontFamily,
+                  fontWeight: _typography.heading2?.bold?.fontWeight,
                 ),
               ),
               const Spacer(),
@@ -277,9 +379,21 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
             ],
           ),
         ),
-        // Right panel content
+        // Right panel content, under its own Navigator like the other two
+        // columns. Panel content calls Navigator.pop for its own flows (an
+        // info screen's back, leave-group, delete-chat); without a navigator
+        // of its own those resolve to the ROOT one and would tear down the
+        // whole home screen. Popping the panel's only route is a harmless
+        // no-op instead.
         Expanded(
-          child: _rightPanelContent ?? const SizedBox.shrink(),
+          child: _rightPanelContent == null
+              ? const SizedBox.shrink()
+              : Navigator(
+                  key: ValueKey('right_nav_$_rightPanelKey'),
+                  onGenerateRoute: (_) => MaterialPageRoute(
+                    builder: (_) => _rightPanelContent!,
+                  ),
+                ),
         ),
       ],
     );
@@ -357,6 +471,12 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
           );
         },
         onError: (Exception error) {
+          // A call placed from a log row that failed; the list's own load
+          // errors show in its error view.
+          if (isCallLogsPlacementError(error)) {
+            showCallPlacementError(error);
+            return;
+          }
           final errorMessage =
               error is CometChatException ? error.message : error.toString();
           debugPrint('CallLogs error: $errorMessage');
@@ -385,6 +505,17 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildConversationsTab() {
+    return Column(
+      children: [
+        // Search above the conversation list; the list's own built-in
+        // search bar is hidden in favour of this one.
+        InboxSearchBar(onTap: _openSearch),
+        Expanded(child: _buildConversationsList()),
+      ],
+    );
+  }
+
+  Widget _buildConversationsList() {
     return CometChatConversations(
       hideAppbar: true,
       textFormatters: [
@@ -394,9 +525,7 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
         CometChatPhoneNumberFormatter(),
         CometChatEmailFormatter(),
       ],
-      hideSearch: false,
-      searchReadOnly: true,
-      onSearchTap: () => _openSearch(),
+      hideSearch: true,
       onItemTap: (conversation) {
         final user = conversation.conversationWith is User
             ? conversation.conversationWith as User
@@ -476,11 +605,11 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
           activeIcon: Icon(Icons.chat_rounded),
           label: 'Chats',
         ),
-        // BottomNavigationBarItem(
-        //   icon: Icon(Icons.call_outlined),
-        //   activeIcon: Icon(Icons.call_rounded),
-        //   label: 'Calls',
-        // ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.call_outlined),
+          activeIcon: Icon(Icons.call_rounded),
+          label: 'Calls',
+        ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline_rounded),
           activeIcon: Icon(Icons.person_rounded),
@@ -531,12 +660,14 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
             }
             break;
           case '/saved':
-            // On desktop the listing stays in the left panel while the tapped
-            // message opens in the centre; on mobile it is a pushed route
-            // that pops on jump.
+            // Saved lives in the LEFT panel on desktop, beside conversations.
+            // Desktop keeps the list in the left panel while the tapped
+            // message opens in the centre; mobile pops it like any other
+            // pushed route.
             final saved = CometChatSavedMessages(
               onItemTap: _openSavedMessage,
               popOnItemTap: !isDesktopLayout(context),
+              // Desktop: panel chrome — ✕ on the right, title left.
               useCloseButton: isDesktopLayout(context),
             );
             if (isDesktopLayout(context)) {
@@ -544,10 +675,7 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
                 MaterialPageRoute(builder: (_) => saved),
               );
             } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => saved),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => saved));
             }
             break;
           case '/logout':
@@ -597,7 +725,7 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
                 child: Icon(Icons.bookmark_border,
                     color: _colorPalette.iconSecondary, size: 22),
               ),
-              Text('Saved messages',
+              Text('Saved Messages',
                   style: TextStyle(
                       fontSize: 14, color: _colorPalette.textPrimary)),
             ],
@@ -680,11 +808,60 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
     }
   }
 
-  /// Shows the right panel with given content (e.g., search messages)
-  void showRightPanel(Widget content) {
+  /// Applies a drag on the left handle.
+  ///
+  /// Clamped twice: against the panel's own min/max, and again so the middle
+  /// column keeps [kMiddlePanelMinWidth] — otherwise dragging out on a narrow
+  /// window would collapse the message list to nothing.
+  void _resizeLeftPanel(double delta, double available, bool rightVisible) {
+    final rightTaken = rightVisible ? _rightPanelWidth : 0.0;
+    final maxForMiddle = available -
+        rightTaken -
+        ResponsiveBreakpoints.kMiddlePanelMinWidth -
+        _kHandleAllowance;
+    final upper = maxForMiddle < ResponsiveBreakpoints.kLeftPanelMinWidth
+        ? ResponsiveBreakpoints.kLeftPanelMinWidth
+        : (maxForMiddle < ResponsiveBreakpoints.kLeftPanelMaxWidth
+            ? maxForMiddle
+            : ResponsiveBreakpoints.kLeftPanelMaxWidth);
+    final next = (_leftPanelWidth + delta)
+        .clamp(ResponsiveBreakpoints.kLeftPanelMinWidth, upper);
+    if (next == _leftPanelWidth) return;
+    setState(() => _leftPanelWidth = next);
+  }
+
+  /// Applies a drag on the right handle. The handle sits on the panel's
+  /// LEADING edge, so a rightward drag shrinks it.
+  void _resizeRightPanel(double delta, double available) {
+    final maxForMiddle = available -
+        _leftPanelWidth -
+        ResponsiveBreakpoints.kMiddlePanelMinWidth -
+        _kHandleAllowance;
+    final upper = maxForMiddle < ResponsiveBreakpoints.kRightPanelMinWidth
+        ? ResponsiveBreakpoints.kRightPanelMinWidth
+        : (maxForMiddle < ResponsiveBreakpoints.kRightPanelMaxWidth
+            ? maxForMiddle
+            : ResponsiveBreakpoints.kRightPanelMaxWidth);
+    final next = (_rightPanelWidth - delta)
+        .clamp(ResponsiveBreakpoints.kRightPanelMinWidth, upper);
+    if (next == _rightPanelWidth) return;
+    setState(() => _rightPanelWidth = next);
+  }
+
+  /// Width the two drag handles occupy, excluded from the space the panels
+  /// may claim.
+  static const double _kHandleAllowance = 16;
+
+  /// Shows the right panel with given content (e.g. a thread, pinned list).
+  ///
+  /// [title] fills the panel's own header bar — without it the bar renders
+  /// blank, since the panel content itself hides its back/title chrome.
+  void showRightPanel(Widget content, {String title = ''}) {
     setState(() {
       _showRightPanel = true;
       _rightPanelContent = content;
+      _rightPanelTitle = title;
+      _rightPanelKey++;
     });
   }
 
@@ -693,6 +870,7 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
     setState(() {
       _showRightPanel = false;
       _rightPanelContent = null;
+      _rightPanelTitle = '';
     });
   }
 
@@ -927,56 +1105,6 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
       );
     }
   }
-
-  /// Opens a saved message. Saves span every conversation, so the receiver has
-  /// to be resolved off the message before the conversation can be opened; a
-  /// saved *reply* opens its thread instead.
-  Future<void> _openSavedMessage(BaseMessage message) async {
-    User? user;
-    Group? group;
-    if (message.receiverType == ReceiverTypeConstants.group) {
-      final receiver = message.receiver;
-      if (receiver is Group) group = receiver;
-    } else {
-      final loggedInUid = CometChatUIKit.loggedInUser?.uid;
-      final sender = message.sender;
-      final receiver = message.receiver;
-      if (sender != null && sender.uid != loggedInUid) {
-        user = sender;
-      } else if (receiver is User) {
-        user = receiver;
-      }
-    }
-    if (user == null && group == null) return;
-
-    if (message.parentMessageId != 0) {
-      final parent = await CometChat.getMessageDetails(message.parentMessageId);
-      if (parent == null || !mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ThreadScreen(
-            user: user,
-            group: group,
-            message: parent,
-            goToMessageId: message.id,
-          ),
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MessagesScreen(
-          user: user,
-          group: group,
-          goToMessageId: message.id,
-        ),
-      ),
-    );
-  }
 }
 
 /// Listener for CometChat UI events in ResponsiveHomeScreen
@@ -989,5 +1117,48 @@ class _ResponsiveHomeUIEventListener with CometChatUIEventListener {
   void openChat(User? user, Group? group) {
     onOpenChat(user, group);
   }
+}
 
+/// Reports how many routes the left column has pushed above its base tab
+/// content, so the panel can hide its own header while a pushed screen is
+/// showing one.
+///
+/// Counts by depth rather than a bool because these screens can stack —
+/// Search pushes Join-protected-group on the same navigator.
+class _LeftPanelRouteObserver extends NavigatorObserver {
+  _LeftPanelRouteObserver({required this.onDepthChanged});
+
+  final void Function(int depth) onDepthChanged;
+
+  int _depth = 0;
+
+  void _emit(int next) {
+    if (next == _depth) return;
+    _depth = next;
+    onDepthChanged(next);
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    // The base route is the tab content itself and must not count.
+    if (previousRoute == null) return;
+    _emit(_depth + 1);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute == null) return;
+    _emit(_depth - 1 < 0 ? 0 : _depth - 1);
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute == null) return;
+    _emit(_depth - 1 < 0 ? 0 : _depth - 1);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    // Depth is unchanged by a replacement.
+  }
 }

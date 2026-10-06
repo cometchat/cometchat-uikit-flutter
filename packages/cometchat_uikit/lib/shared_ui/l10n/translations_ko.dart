@@ -511,6 +511,13 @@ class TranslationsKo extends Translations {
   String get actionPermissionDenied => '이 작업을 수행할 권한이 없습니다.';
 
   @override
+  String get microphoneRequiredToAnswerCall => '전화를 받으려면 마이크 접근을 허용하세요.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      '영상 통화를 받으려면 카메라와 마이크 접근을 허용하세요.';
+
+  @override
   String get pinSaveFailed => '업데이트하지 못했습니다. 다시 시도해 주세요.';
 
   @override
@@ -1453,4 +1460,85 @@ class TranslationsKo extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => '뒤로';
+
+  @override
+  String get openInBrowser => '브라우저에서 열기';
+
+  @override
+  String get failedToLoadSticker => '스티커를 불러오지 못했습니다';
+
+  @override
+  String get enterDisplayText => '표시할 텍스트 입력';
+
+  @override
+  String get clearSearch => '검색 지우기';
+
+  @override
+  String get done => '완료';
+
+  @override
+  String get download => '다운로드';
+
+  @override
+  String get startRecording => '녹음 시작';
+
+  @override
+  String get stopRecording => '녹음 중지';
+
+  @override
+  String get pauseRecording => '녹음 일시정지';
+
+  @override
+  String get deleteRecording => '녹음 삭제';
+
+  @override
+  String get recordVoiceMessage => '음성 메시지 녹음';
+
+  @override
+  String get reorderOption => '항목 순서 변경';
+
+  @override
+  String get play => '재생';
+
+  @override
+  String get pause => '일시정지';
+
+  @override
+  String get next => '다음';
+
+  @override
+  String get previous => '이전';
+
+  @override
+  String get scrollToBottom => '맨 아래로 스크롤';
+
+  @override
+  String get attachmentOptionsMenuOpened => '첨부 파일 옵션 메뉴가 열렸습니다';
+
+  @override
+  String get richTextFormattingToolbar => '서식 있는 텍스트 도구 모음';
+
+  @override
+  String get closeFormattingToolbar => '서식 도구 모음 닫기';
+
+  @override
+  String get sendAudioMessage => '음성 메시지 보내기';
+
+  @override
+  String get messageComposerAuxiliaryActions => '메시지 작성 보조 작업';
+
+  @override
+  String get attachmentButton => '첨부 파일 버튼';
+
+  @override
+  String get addAttachment => '첨부 파일 추가';
+
+  @override
+  String suggestionListWithItems(int count) => '제안 목록, 항목 $count개';
+
+  @override
+  String messageFrom(String sender) => '$sender님의 메시지';
 }

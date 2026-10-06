@@ -95,55 +95,80 @@ class ConversationsRepositoryImpl implements ConversationsRepository {
   }
 
   @override
-  Future<Result<void>> deleteConversation(String conversationId) async {
+  Future<Result<void>> deleteConversation(
+    String conversationId, {
+    String? conversationWith,
+    String? conversationType,
+  }) async {
     try {
-      // Parse conversation ID to extract conversationWith and conversationType.
-      //
-      // The CometChat SDK formats conversationId as:
-      //   "{number}_{type}_{id}"
-      // Examples:
-      //   "1_user_cometchat-uid-1"  → type=user, id=cometchat-uid-1
-      //   "2_group_my-group-guid"   → type=group, id=my-group-guid
-      //
-      // Legacy/test formats without numeric prefix are also supported:
-      //   "user_uid123"             → type=user, id=uid123
-      //   "group_my-group"          → type=group, id=my-group
-      final parts = conversationId.split('_');
-      if (parts.length < 2) {
-        return const Failure(
-          message: 'Invalid conversation ID format',
-          code: 'INVALID_CONVERSATION_ID',
-        );
-      }
+      String withId;
+      String type;
 
-      String conversationType;
-      String conversationWith;
-
-      // Find the type token ('user' or 'group') in the parts
-      final typeIndex = parts.indexWhere((p) => p == 'user' || p == 'group');
-      if (typeIndex != -1 && typeIndex < parts.length - 1) {
-        // Found type token — everything after it is the UID/GUID
-        conversationType = parts[typeIndex];
-        conversationWith = parts.sublist(typeIndex + 1).join('_');
+      if (conversationWith != null &&
+          conversationWith.isNotEmpty &&
+          conversationType != null &&
+          conversationType.isNotEmpty) {
+        // Preferred path: the delete target comes from the Conversation
+        // OBJECT (peer User.uid / Group.guid + conversationType). The id
+        // string is NOT a safe source for 1:1 conversations — see below.
+        withId = conversationWith;
+        type = conversationType;
       } else {
-        // Fallback: assume first part is type, rest is ID (legacy format)
-        conversationType = parts[0];
-        conversationWith = parts.sublist(1).join('_');
-      }
+        // Fallback: derive the target from the conversation id string.
+        //
+        // Real formats:
+        //   1:1   → "{uidA}_user_{uidB}"   (BOTH participants, sorted — the
+        //           peer can be on either side of the "user" token)
+        //   group → "group_{guid}"
+        //
+        // The previous implementation always took everything AFTER the type
+        // token, which for 1:1 ids returns the LOGGED-IN user's own uid
+        // whenever it sorts second → the SDK then deletes "conversation with
+        // myself" → ERR_CONVERSATION_NOT_ACCESSIBLE. For the two-uid form we
+        // now pick the side that is NOT the logged-in user.
+        final parts = conversationId.split('_');
+        if (parts.length < 2) {
+          return const Failure(
+            message: 'Invalid conversation ID format',
+            code: 'INVALID_CONVERSATION_ID',
+          );
+        }
 
-      if (conversationWith.isEmpty) {
-        return const Failure(
-          message:
-              'Invalid conversation ID: could not extract conversationWith',
-          code: 'INVALID_CONVERSATION_ID',
-        );
+        // Find the type token ('user' or 'group') in the parts
+        final typeIndex = parts.indexWhere((p) => p == 'user' || p == 'group');
+        if (typeIndex != -1 && typeIndex < parts.length - 1) {
+          type = parts[typeIndex];
+          final after = parts.sublist(typeIndex + 1).join('_');
+          final before = typeIndex > 0
+              ? parts.sublist(0, typeIndex).join('_')
+              : '';
+          final beforeIsNumericPrefix =
+              before.isNotEmpty && int.tryParse(before) != null;
+          if (type == 'user' && before.isNotEmpty && !beforeIsNumericPrefix) {
+            // "{uidA}_user_{uidB}" — choose the participant that is not us.
+            final ownUid = (await CometChat.getLoggedInUser())?.uid;
+            withId = (after == ownUid && before != ownUid) ? before : after;
+          } else {
+            // "{number}_user_{uid}" / "user_{uid}" / "group_{guid}" forms.
+            withId = after;
+          }
+        } else {
+          // Legacy format: first part is type, rest is ID
+          type = parts[0];
+          withId = parts.sublist(1).join('_');
+        }
+
+        if (withId.isEmpty) {
+          return const Failure(
+            message:
+                'Invalid conversation ID: could not extract conversationWith',
+            code: 'INVALID_CONVERSATION_ID',
+          );
+        }
       }
 
       // Delete from remote
-      await remoteDataSource.deleteConversation(
-        conversationWith,
-        conversationType,
-      );
+      await remoteDataSource.deleteConversation(withId, type);
 
       // Remove from cache
       await localDataSource.removeCachedConversation(conversationId);

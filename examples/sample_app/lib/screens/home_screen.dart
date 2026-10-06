@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
 import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
+import 'package:http/http.dart' show Client, Request;
 import 'package:sample_app/utils/feature_flags.dart';
 import 'package:sample_app/utils/component_toggles.dart';
 import 'package:sample_app/screens/messages_screen.dart';
@@ -12,6 +16,11 @@ import 'package:sample_app/screens/call_log_details_screen.dart';
 import 'package:sample_app/screens/join_protected_group_screen.dart';
 import 'package:sample_app/screens/login_screen.dart';
 import 'package:sample_app/screens/thread_screen.dart';
+import 'package:sample_app/screens/threads_screen.dart';
+
+// Mobile-only imports — guarded by kIsWeb at call sites
+import 'package:sample_app/utils/call_error_snackbar.dart';
+import 'package:sample_app/utils/call_placement.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,29 +31,50 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
+  /// A new key gives the Calls tab a new CometChatCallLogs, which loads its
+  /// logs again: the custom error view's Retry. A plain setState kept the
+  /// same CometChatCallLogs, and so its error, so Retry did nothing.
+  Key _callLogsKey = UniqueKey();
+
   final _toggles = ComponentToggles.instance;
   late CometChatColorPalette _colorPalette;
 
   // Notification services — platform-specific (mobile only)
   // UI event listener for mention tap → open chat navigation
-  final String _uiListenerId = 'home_screen_ui_${DateTime.now().millisecondsSinceEpoch}';
+  final String _uiListenerId =
+      'home_screen_ui_${DateTime.now().millisecondsSinceEpoch}';
 
-  static const _tabTitlesMobile = ['Chats', 'Calls', 'Users', 'Groups', 'Notifications'];
+  static const _tabTitlesMobile = [
+    'Chats',
+    'Calls',
+    'Users',
+    'Groups',
+    'Notifications'
+  ];
   static const _tabTitlesWeb = ['Chats', 'Users', 'Groups', 'Notifications'];
-  static List<String> get _tabTitles => kIsWeb ? _tabTitlesWeb : _tabTitlesMobile;
+  static List<String> get _tabTitles =>
+      kIsWeb ? _tabTitlesWeb : _tabTitlesMobile;
 
   @override
   void initState() {
     super.initState();
 
     // Listen for openChat UI events (e.g., mention tap → navigate to user's chat)
-    CometChatUIEvents.addUiListener(_uiListenerId, _HomeScreenUIEventListener(
-      onOpenChat: (user, group) {
-        if (mounted) {
-          _pushMessages(context, user: user, group: group);
-        }
-      },
-    ));
+    CometChatUIEvents.addUiListener(
+        _uiListenerId,
+        _HomeScreenUIEventListener(
+          onOpenChat: (user, group) {
+            if (mounted) {
+              _pushMessages(context, user: user, group: group);
+            }
+          },
+          onCardActionClicked: (message, action) {
+            if (mounted) {
+              _handleCardAction(context, message, action);
+            }
+          },
+        ));
 
   }
 
@@ -64,9 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
-          // Profile popup menu
-          if (FeatureFlags.showProfileMenu)
-            _buildProfileMenu(),
+          if (FeatureFlags.showProfileMenu) _buildProfileMenu(),
         ],
       ),
       body: _buildBody(),
@@ -109,9 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Opens a saved message. Saves span every conversation, so the receiver
-  /// has to be resolved off the message before the conversation can be
-  /// opened; a saved *reply* opens its thread instead.
+  /// Pin & Save: a saved-messages row tap resolves the message's
+  /// conversation and jumps to it (thread replies open their thread screen).
   Future<void> _openSavedMessage(BaseMessage message) async {
     User? user;
     Group? group;
@@ -251,7 +278,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-
         PopupMenuItem(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -268,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Text(
-                'Saved messages',
+                'Saved Messages',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
@@ -278,7 +304,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-
         PopupMenuItem(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -337,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           enabled: false,
           child: Text(
-            'v6.0.2',
+            'v6.0.0-beta3',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w400,
@@ -354,12 +379,18 @@ class _HomeScreenState extends State<HomeScreen> {
     // On mobile: 0=Chats, 1=Calls, 2=Users, 3=Groups, 4=Notifications
     if (!kIsWeb && _currentIndex == 1) {
       return CometChatCallLogs(
+        key: _callLogsKey,
         hideAppbar: true,
         onItemClick: (callLog) => _openCallLogDetails(context, callLog),
         onError: (Exception error) {
-          final errorMessage = error is CometChatException 
-              ? error.message 
-              : error.toString();
+          // A call placed from a log row that failed; see
+          // call_error_snackbar.dart.
+          if (isCallLogsPlacementError(error)) {
+            showCallPlacementError(error);
+            return;
+          }
+          final errorMessage =
+              error is CometChatException ? error.message : error.toString();
           debugPrint('CallLogs error: $errorMessage');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -399,8 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
-                  // Force rebuild to retry
-                  setState(() {});
+                  setState(() => _callLogsKey = UniqueKey());
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
@@ -471,6 +501,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildConversationsTab() {
+    return Column(
+      children: [
+        // Search above the conversation list; the list's own built-in
+        // search bar is hidden in favour of this one.
+        InboxSearchBar(onTap: () => _openSearch(context)),
+        Expanded(child: _buildConversationsList()),
+      ],
+    );
+  }
+
+  Widget _buildConversationsList() {
     return CometChatConversations(
       hideAppbar: true,
       textFormatters: [
@@ -480,9 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
         CometChatPhoneNumberFormatter(),
         CometChatEmailFormatter(),
       ],
-      hideSearch: false,
-      searchReadOnly: true,
-      onSearchTap: () => _openSearch(context),
+      hideSearch: true,
       onItemTap: (conversation) {
         final user = conversation.conversationWith is User
             ? conversation.conversationWith as User
@@ -494,7 +533,8 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       receiptsVisibility: _toggles.receiptsVisibility.value,
       usersStatusVisibility: _toggles.usersStatusVisibility.value,
-      deleteConversationOptionVisibility: _toggles.deleteConversationOption.value,
+      deleteConversationOptionVisibility:
+          _toggles.deleteConversationOption.value,
       groupTypeVisibility: _toggles.groupTypeVisibility.value,
       disableSoundForMessages: _toggles.disableSoundForMessages.value,
     );
@@ -525,9 +565,9 @@ class _HomeScreenState extends State<HomeScreen> {
             heroTag: 'create_group',
             backgroundColor: _colorPalette.primary,
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreateGroupScreen()),
+              showCreateGroup(
+                context: context,
+                colorPalette: _colorPalette,
               );
             },
             child: Icon(Icons.group_add, color: _colorPalette.white),
@@ -544,7 +584,8 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint('Notification tapped: ${feedItem.id}');
       },
       onActionClick: (feedItem, action) {
-        debugPrint('Notification action: ${feedItem.id} → ${action.action.type}');
+        debugPrint(
+            'Notification action: ${feedItem.id} → ${action.action.type}');
       },
       onError: (error) {
         debugPrint('NotificationFeed error: $error');
@@ -608,15 +649,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   (sender?.uid == loggedInUid) ? receiverUid : sender?.uid;
               if (otherUid != null) {
                 CometChat.getUser(otherUid,
-                    onSuccess: (user) =>
-                        _pushMessages(context, user: user, scrollToMessageId: messageId),
+                    onSuccess: (user) => _pushMessages(context,
+                        user: user, scrollToMessageId: messageId),
                     onError: (_) {});
               }
             } else if (receiverType == ReceiverTypeConstants.group) {
               final guid = receiverUid;
               CometChat.getGroup(guid,
-                  onSuccess: (group) =>
-                      _pushMessages(context, group: group, scrollToMessageId: messageId),
+                  onSuccess: (group) => _pushMessages(context,
+                      group: group, scrollToMessageId: messageId),
                   onError: (_) {});
             }
           },
@@ -750,14 +791,237 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _pushMessages(BuildContext context, {User? user, Group? group, int? scrollToMessageId}) {
+  void _openAiAssistantScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CometChatUsers(
+          title: cc.Translations.of(context).agents,
+          usersRequestBuilder: UsersRequestBuilder()
+            ..roles = [AIConstants.aiRole],
+          onItemTap: (ctx, user) => _pushMessages(ctx, user: user),
+        ),
+      ),
+    );
+  }
+
+  void _openNotificationsScreen() {
+    // Switch to the Notifications tab
+    // Mobile: index 4, Web: index 3
+    final notificationsIndex = kIsWeb ? 3 : 4;
+    if (mounted) {
+      setState(() => _currentIndex = notificationsIndex);
+    }
+  }
+
+  void _pushMessages(BuildContext context,
+      {User? user, Group? group, int? scrollToMessageId}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         settings: const RouteSettings(name: 'messages'),
-        builder: (_) => MessagesScreen(user: user, group: group, goToMessageId: scrollToMessageId),
+        builder: (_) => MessagesScreen(
+            user: user, group: group, goToMessageId: scrollToMessageId),
       ),
     );
+  }
+
+  /// Handles card action events from developer cards and agent card blocks.
+  /// Dispatches the 9 action types per §2.6 of the design doc.
+  void _handleCardAction(
+      BuildContext context, BaseMessage message, dynamic action) {
+    if (action is! CometChatCardActionEvent) return;
+
+    final cardAction = action.action;
+
+    // Show snackbar for every card action tap
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Card action: ${cardAction.type} (${action.elementId})'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    switch (cardAction) {
+      case CometChatCardOpenUrlAction(:final url):
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Open URL: $url'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+
+      case CometChatCardCopyToClipboardAction(:final value):
+        Clipboard.setData(ClipboardData(text: value));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Copied to clipboard'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+
+      case CometChatCardDownloadFileAction(:final url):
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Download: $url'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+
+      case CometChatCardSendMessageAction(
+          :final text,
+          :final receiverUid,
+          :final receiverGuid
+        ):
+        _sendCardMessage(text, receiverUid, receiverGuid);
+
+      case CometChatCardApiCallAction(:final url, :final method):
+        _makeApiCall(url, method);
+
+      case CometChatCardChatWithUserAction(:final uid):
+        _navigateToChatWithUser(uid);
+
+      case CometChatCardChatWithGroupAction(:final guid):
+        _navigateToChatWithGroup(guid);
+
+      case CometChatCardInitiateCallAction(
+          :final callType,
+          :final uid,
+          :final guid
+        ):
+        _initiateCall(callType, uid, guid);
+
+      case CometChatCardCustomCallbackAction(:final callbackId, :final payload):
+        debugPrint('[HomeScreen] customCallback: callbackId=$callbackId, '
+            'payload=$payload, messageId=${message.id}');
+
+      case CometChatCardUnknownAction():
+        debugPrint('[HomeScreen] Unknown card action: ${cardAction.type}');
+    }
+  }
+
+  void _sendCardMessage(
+      String text, String? receiverUid, String? receiverGuid) {
+    if (receiverUid != null && receiverUid.isNotEmpty) {
+      final textMessage = TextMessage(
+        text: text,
+        receiverUid: receiverUid,
+        receiverType: ReceiverTypeConstants.user,
+        type: MessageTypeConstants.text,
+      );
+      CometChat.sendMessage(textMessage, onSuccess: (_) {
+        debugPrint(
+            '[HomeScreen] Card sendMessage success to user: $receiverUid');
+      }, onError: (e) {
+        debugPrint('[HomeScreen] Card sendMessage error: ${e.message}');
+      });
+    } else if (receiverGuid != null && receiverGuid.isNotEmpty) {
+      final textMessage = TextMessage(
+        text: text,
+        receiverUid: receiverGuid,
+        receiverType: ReceiverTypeConstants.group,
+        type: MessageTypeConstants.text,
+      );
+      CometChat.sendMessage(textMessage, onSuccess: (_) {
+        debugPrint(
+            '[HomeScreen] Card sendMessage success to group: $receiverGuid');
+      }, onError: (e) {
+        debugPrint('[HomeScreen] Card sendMessage error: ${e.message}');
+      });
+    }
+  }
+
+  Future<void> _makeApiCall(String url, String? method) async {
+    try {
+      final uri = Uri.parse(url);
+      final httpMethod = (method ?? 'GET').toUpperCase();
+      debugPrint('[HomeScreen] Card apiCall: $httpMethod $url');
+      // Basic implementation — apps can extend with headers/body as needed
+      final request = Request(httpMethod, uri);
+      final client = Client();
+      await client.send(request);
+      client.close();
+    } catch (e) {
+      debugPrint('[HomeScreen] Card apiCall error: $e');
+    }
+  }
+
+  void _navigateToChatWithUser(String uid) {
+    CometChat.getUser(uid, onSuccess: (user) {
+      if (mounted) {
+        _pushMessages(context, user: user);
+      }
+    }, onError: (e) {
+      debugPrint('[HomeScreen] Card chatWithUser error: ${e.message}');
+    });
+  }
+
+  void _navigateToChatWithGroup(String guid) {
+    CometChat.getGroup(guid, onSuccess: (group) {
+      if (mounted) {
+        _pushMessages(context, group: group);
+      }
+    }, onError: (e) {
+      debugPrint('[HomeScreen] Card chatWithGroup error: ${e.message}');
+    });
+  }
+
+  /// A card's "initiate call" action. A call to a user goes through the UI
+  /// Kit, as the chat header's call buttons do: the same checks, outgoing
+  /// screen and configuration, and errors as SnackBars. It used to call
+  /// CometChat.initiateCall directly, so the callee rang while the caller
+  /// had nothing on screen to end the call with.
+  void _initiateCall(String callType, String? uid, String? guid) {
+    if (uid == null || uid.isEmpty) {
+      // A group call is a meeting, which a card does not start here.
+      if (guid != null && guid.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Group calls from cards aren't supported here."),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    CometChat.getUser(
+      uid,
+      onSuccess: (user) {
+        if (!mounted) return;
+        _placeCardCall(user, isVideo: callType == 'video');
+      },
+      onError: showCallPlacementError,
+    );
+  }
+
+  /// Places a call to [user] with a CallButtonsBloc of its own, kept until
+  /// the placement is done (the outgoing screen is up, or the call was
+  /// refused) and closed then: closed at once, it would stop before the
+  /// call was placed. See [closeWhenPlaced].
+  void _placeCardCall(User user, {required bool isVideo}) {
+    final calling = CometChatUIKit.authenticationSettings?.callingConfiguration;
+    final bloc = CallButtonsBloc(
+      user: user,
+      outgoingCallConfiguration:
+          calling?.callButtonsConfiguration?.outgoingCallConfiguration ??
+              calling?.outgoingCallConfiguration,
+      errorCallback: showCallButtonsError,
+    );
+    unawaited(closeWhenPlaced(bloc.stream, bloc.close));
+    bloc.add(isVideo ? const InitiateVideoCall() : const InitiateVoiceCall());
   }
 
   @override
@@ -770,11 +1034,20 @@ class _HomeScreenState extends State<HomeScreen> {
 /// Listener for CometChat UI events in HomeScreen
 class _HomeScreenUIEventListener with CometChatUIEventListener {
   final void Function(User? user, Group? group) onOpenChat;
+  final void Function(BaseMessage message, dynamic action)? onCardActionClicked;
 
-  _HomeScreenUIEventListener({required this.onOpenChat});
+  _HomeScreenUIEventListener({
+    required this.onOpenChat,
+    this.onCardActionClicked,
+  });
 
   @override
   void openChat(User? user, Group? group) {
     onOpenChat(user, group);
+  }
+
+  @override
+  void ccCardActionClicked(BaseMessage message, dynamic action) {
+    onCardActionClicked?.call(message, action);
   }
 }

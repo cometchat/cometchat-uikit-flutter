@@ -530,6 +530,14 @@ class TranslationsDe extends Translations {
       'Du hast keine Berechtigung, diese Aktion auszuführen.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Erlaube den Zugriff auf das Mikrofon, um Anrufe anzunehmen.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Erlaube den Zugriff auf Kamera und Mikrofon, um Videoanrufe anzunehmen.';
+
+  @override
   String get pinSaveFailed =>
       'Konnte nicht aktualisiert werden. Bitte versuche es erneut.';
 
@@ -1535,4 +1543,87 @@ class TranslationsDe extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Zurück';
+
+  @override
+  String get openInBrowser => 'Im Browser öffnen';
+
+  @override
+  String get failedToLoadSticker => 'Aufkleber konnte nicht geladen werden';
+
+  @override
+  String get enterDisplayText => 'Anzeigetext eingeben';
+
+  @override
+  String get clearSearch => 'Suche löschen';
+
+  @override
+  String get done => 'Fertig';
+
+  @override
+  String get download => 'Herunterladen';
+
+  @override
+  String get startRecording => 'Aufnahme starten';
+
+  @override
+  String get stopRecording => 'Aufnahme stoppen';
+
+  @override
+  String get pauseRecording => 'Aufnahme pausieren';
+
+  @override
+  String get deleteRecording => 'Aufnahme löschen';
+
+  @override
+  String get recordVoiceMessage => 'Sprachnachricht aufnehmen';
+
+  @override
+  String get reorderOption => 'Option neu anordnen';
+
+  @override
+  String get play => 'Wiedergeben';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get next => 'Weiter';
+
+  @override
+  String get previous => 'Zurück';
+
+  @override
+  String get scrollToBottom => 'Nach unten scrollen';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Menü mit Anhangoptionen geöffnet';
+
+  @override
+  String get richTextFormattingToolbar => 'Symbolleiste für Textformatierung';
+
+  @override
+  String get closeFormattingToolbar => 'Formatierungsleiste schließen';
+
+  @override
+  String get sendAudioMessage => 'Sprachnachricht senden';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Zusätzliche Aktionen im Nachrichtenfeld';
+
+  @override
+  String get attachmentButton => 'Schaltfläche für Anhänge';
+
+  @override
+  String get addAttachment => 'Anhang hinzufügen';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Vorschlagsliste mit $count Einträgen';
+
+  @override
+  String messageFrom(String sender) => 'Nachricht von $sender';
 }

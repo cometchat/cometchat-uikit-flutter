@@ -17,13 +17,19 @@ calling to your Flutter app with minimal development effort.
   translations for many locales.
 - **Cross-platform** — Android, iOS, and Web.
 
+## Requirements
+
+- Flutter SDK >= 3.38.9
+- Dart SDK >= 3.10.8
+- iOS 16.0+ / Android 5.0+
+
 ## Installation
 
 Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  cometchat_chat_uikit: ^6.0.3
+  cometchat_chat_uikit: ^6.1.0
 ```
 
 Then run:

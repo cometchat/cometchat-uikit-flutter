@@ -9,7 +9,7 @@
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>com.cometchat.internal.flutter.ios</key>
-		<string>Flutter UIkit Release Automation</string>
+		<string>Flutter v6 UIkit Ios Distribution</string>
 	</dict>
 	<key>signingStyle</key>
 	<string>manual</string>

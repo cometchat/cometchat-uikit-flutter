@@ -129,44 +129,55 @@ class CometChatCollaborativeBubble extends StatelessWidget {
                                 : colorPalette.white),
                       ),
                 ),
-                // const SizedBox(width: 4),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title ?? "",
-                      style:
-                          style.titleStyle ??
-                          TextStyle(
-                            color: alignment == BubbleAlignment.left
-                                ? colorPalette.neutral900
-                                : colorPalette.white,
-                            fontSize: typography.body?.medium?.fontSize,
-                            fontWeight: typography.body?.medium?.fontWeight,
-                            fontFamily: typography.body?.medium?.fontFamily,
-                            letterSpacing: 0,
-                          ),
-                    ),
-                    Text(
-                      subtitle ?? "",
-                      style:
-                          style.subtitleStyle ??
-                          TextStyle(
-                            color: alignment == BubbleAlignment.left
-                                ? colorPalette.neutral600
-                                : colorPalette.white,
-                            fontSize:
-                                typography.caption2?.regular?.fontSize ?? 10,
-                            fontWeight:
-                                typography.caption2?.regular?.fontWeight,
-                            fontFamily:
-                                typography.caption2?.regular?.fontFamily,
-                            letterSpacing: 0,
-                          ),
-                    ),
-                  ],
+                // The bubble constrains its own width, so without a flex
+                // factor this Column laid itself out at its natural size and
+                // overflowed the Row by 130–174px — clipping the title
+                // silently in release builds (ENG-38925). Expanded plus
+                // ellipsis keeps long titles and localized strings inside the
+                // bubble.
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title ?? "",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            style.titleStyle ??
+                            TextStyle(
+                              color: alignment == BubbleAlignment.left
+                                  ? colorPalette.neutral900
+                                  : colorPalette.white,
+                              fontSize: typography.body?.medium?.fontSize,
+                              fontWeight: typography.body?.medium?.fontWeight,
+                              fontFamily: typography.body?.medium?.fontFamily,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                      Text(
+                        subtitle ?? "",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            style.subtitleStyle ??
+                            TextStyle(
+                              color: alignment == BubbleAlignment.left
+                                  ? colorPalette.neutral600
+                                  : colorPalette.white,
+                              fontSize:
+                                  typography.caption2?.regular?.fontSize ?? 10,
+                              fontWeight:
+                                  typography.caption2?.regular?.fontWeight,
+                              fontFamily:
+                                  typography.caption2?.regular?.fontFamily,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

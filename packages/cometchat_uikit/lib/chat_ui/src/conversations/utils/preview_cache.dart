@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// Cached preview content
 class CachedPreview {
@@ -39,7 +40,7 @@ class PreviewCache {
         _cache.remove(messageId);
       }
     } catch (e) {
-      debugPrint('Cache retrieval failed: $e');
+      ccLog('Cache retrieval failed: $e');
     }
     return null;
   }
@@ -54,7 +55,7 @@ class PreviewCache {
       }
       _cache[messageId] = preview;
     } catch (e) {
-      debugPrint('Cache put failed: $e');
+      ccLog('Cache put failed: $e');
     }
   }
 

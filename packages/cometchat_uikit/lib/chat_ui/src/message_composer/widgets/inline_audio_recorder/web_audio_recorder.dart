@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
+import '../../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// Web-based audio recorder using the browser's MediaRecorder API directly.
 ///
@@ -60,9 +61,7 @@ class WebAudioRecorder {
         final source = audioContext.createMediaStreamSource(stream);
         source.connect(analyserNode);
       } catch (e) {
-        debugPrint(
-          '[WebAudioRecorder] Could not set up amplitude metering: $e',
-        );
+        ccLog('[WebAudioRecorder] Could not set up amplitude metering: $e');
         // Continue without amplitude — recording still works
         _audioContext = null;
         _analyserNode = null;
@@ -105,10 +104,10 @@ class WebAudioRecorder {
       // Start amplitude polling
       _startAmplitudePolling();
 
-      debugPrint('[WebAudioRecorder] Recording started (mimeType: $mimeType)');
+      ccLog('[WebAudioRecorder] Recording started (mimeType: $mimeType)');
       return true;
     } catch (e) {
-      debugPrint('[WebAudioRecorder] Error starting recording: $e');
+      ccLog('[WebAudioRecorder] Error starting recording: $e');
       return false;
     }
   }
@@ -142,7 +141,7 @@ class WebAudioRecorder {
       );
 
       if (_chunks.isEmpty) {
-        debugPrint('[WebAudioRecorder] No audio chunks recorded');
+        ccLog('[WebAudioRecorder] No audio chunks recorded');
         return null;
       }
 
@@ -154,7 +153,7 @@ class WebAudioRecorder {
 
       // Create blob URL
       _recordedBlobUrl = web.URL.createObjectURL(blob);
-      debugPrint(
+      ccLog(
         '[WebAudioRecorder] Recording stopped, blob size: ${blob.size}, url: $_recordedBlobUrl',
       );
 
@@ -164,10 +163,10 @@ class WebAudioRecorder {
         final arrayBuffer = await blob.arrayBuffer().toDart;
         bytes = arrayBuffer.toDart.asUint8List();
         if (bytes.isNotEmpty) {
-          debugPrint('[WebAudioRecorder] Read ${bytes.length} bytes from blob');
+          ccLog('[WebAudioRecorder] Read ${bytes.length} bytes from blob');
         }
       } catch (e) {
-        debugPrint('[WebAudioRecorder] Could not read blob bytes: $e');
+        ccLog('[WebAudioRecorder] Could not read blob bytes: $e');
       }
 
       _recordedBytes = bytes;
@@ -177,7 +176,7 @@ class WebAudioRecorder {
 
       return RecordingResult(path: _recordedBlobUrl!, bytes: bytes);
     } catch (e) {
-      debugPrint('[WebAudioRecorder] Error stopping recording: $e');
+      ccLog('[WebAudioRecorder] Error stopping recording: $e');
       return null;
     }
   }
@@ -190,9 +189,9 @@ class WebAudioRecorder {
       recorder.pause();
       _isPaused = true;
       _stopAmplitudePolling();
-      debugPrint('[WebAudioRecorder] Recording paused');
+      ccLog('[WebAudioRecorder] Recording paused');
     } catch (e) {
-      debugPrint('[WebAudioRecorder] Error pausing: $e');
+      ccLog('[WebAudioRecorder] Error pausing: $e');
     }
   }
 
@@ -204,9 +203,9 @@ class WebAudioRecorder {
       recorder.resume();
       _isPaused = false;
       _startAmplitudePolling();
-      debugPrint('[WebAudioRecorder] Recording resumed');
+      ccLog('[WebAudioRecorder] Recording resumed');
     } catch (e) {
-      debugPrint('[WebAudioRecorder] Error resuming: $e');
+      ccLog('[WebAudioRecorder] Error resuming: $e');
     }
   }
 
@@ -232,7 +231,7 @@ class WebAudioRecorder {
     _chunks.clear();
 
     // Close the amplitude stream controller to prevent memory leaks
-    _amplitudeController.close();
+    unawaited(_amplitudeController.close());
 
     // Revoke blob URL to free memory
     if (_recordedBlobUrl != null) {

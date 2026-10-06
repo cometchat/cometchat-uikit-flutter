@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 ///[CometChatCreatePoll] is a widget used to create a poll bubble
 ///```dart
@@ -170,6 +172,8 @@ class _CometChatCreatePollState extends State<CometChatCreatePoll> {
                               ReorderableListView(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
+                                // `onReorderItem` needs Flutter 3.41; the package floor stays at 3.38.9 (DEPR1).
+                                // ignore: deprecated_member_use
                                 onReorder: _onReorder,
                                 children: List.generate(
                                   _answers.length,
@@ -607,8 +611,10 @@ class _CometChatCreatePollState extends State<CometChatCreatePoll> {
             ReorderableDragStartListener(
               index: index,
               child: IconButton(
+                tooltip: Translations.of(context).reorderOption,
                 onPressed: () {},
                 icon: Image.asset(
+                  excludeFromSemantics: true,
                   AssetConstants.drag,
                   height: 24,
                   width: 24,
@@ -722,25 +728,27 @@ class _CometChatCreatePollState extends State<CometChatCreatePoll> {
       _isError = false;
     });
 
-    CometChat.callExtension(
-      ExtensionConstants.polls,
-      "POST",
-      ExtensionUrls.createPoll,
-      body,
-      onSuccess: (Map<String, dynamic> map) {
-        debugPrint("Success map $map");
-        setState(() {
-          _isLoading = false;
-        });
-        Navigator.pop(context);
-      },
-      onError: (CometChatException e) {
-        setState(() {
-          _isLoading = false;
-          _isError = true;
-        });
-        debugPrint("On Create Exception ${e.code} ${e.message}");
-      },
+    unawaited(
+      CometChat.callExtension(
+        ExtensionConstants.polls,
+        "POST",
+        ExtensionUrls.createPoll,
+        body,
+        onSuccess: (Map<String, dynamic> map) {
+          ccLog("Success map $map");
+          setState(() {
+            _isLoading = false;
+          });
+          Navigator.pop(context);
+        },
+        onError: (CometChatException e) {
+          setState(() {
+            _isLoading = false;
+            _isError = true;
+          });
+          ccLog("On Create Exception ${e.code} ${e.message}");
+        },
+      ),
     );
   }
 }

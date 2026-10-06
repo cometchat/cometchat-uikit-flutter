@@ -5,6 +5,7 @@ export 'extension_constants.dart';
 
 //Sticker
 export 'stickers/sticker_keyboard.dart';
+export 'stickers/cometchat_sticker_keyboard_style.dart';
 export 'stickers/cometchat_sticker_bubble.dart';
 export 'stickers/sticker_configuration.dart';
 export 'stickers/sticker_auxiliary_button.dart';

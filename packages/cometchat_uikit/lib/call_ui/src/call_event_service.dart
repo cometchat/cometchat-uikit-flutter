@@ -1,13 +1,17 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-// ignore: implementation_imports
-import 'package:cometchat_calls_sdk/src/plugin/platform/cometchatcalls_plugin_platform_interface.dart';
 import '../../cometchat_calls_uikit.dart';
 import '../../cometchat_chat_uikit.dart';
+import '../../shared_ui/src/logging/cometchat_log.dart';
+import '../../src/active_call_tracker.dart';
+import '../../src/busy_reject.dart';
+import '../../src/call_errors.dart';
+import '../../src/calling_configuration_resolver.dart';
+import '../../src/calls_lifecycle.dart';
+import '../../src/calls_sdk_session.dart';
 
 /// Singleton service that manages global call SDK event listeners
 /// with proper lifecycle (init/dispose).
@@ -18,455 +22,172 @@ import '../../cometchat_chat_uikit.dart';
 /// - Call ended → clears active call state
 /// - Updates [CallStateService] for global call state tracking
 ///
-/// Usage:
-/// ```dart
-/// // Initialize after login
-/// CallEventService.instance.init(configuration: callingConfig);
+/// With `UIKitSettings.enableCalls`, the UI Kit starts this itself at login
+/// (including a session restored by `CometChatUIKit.init`) and stops it at
+/// logout, and it follows a direct `CometChat.login`/`logout` too. It also
+/// initialises the Calls SDK and logs the user into it, within a time limit.
+/// Configure the call UI through `UIKitSettings.callingConfiguration`.
 ///
-/// // Dispose on logout
-/// CallEventService.instance.dispose();
+/// [init] and [dispose] remain for apps that manage calls themselves. Both
+/// are safe to call more than once:
+/// ```dart
+/// // After login, when UIKitSettings.enableCalls is off.
+/// await CallEventService.instance.init();
+///
+/// // To wait for the Calls SDK before a call, e.g. from a push handler.
+/// await CallEventService.instance.waitForCallsSdk();
 /// ```
 class CallEventService with CallListener, CometChatCallEventListener {
   CallEventService._();
 
+  /// The service.
   static final CallEventService instance = CallEventService._();
 
-  static const String _listenerId = 'CallEventService';
-
-  CallingConfiguration? _configuration;
-  User? _loggedInUser;
-  bool _initialized = false;
-
-  /// The currently active call, tracked for state management.
+  /// The call this device placed or answered, until it is over.
+  ///
+  /// Android keeps this in the chat SDK (`CometChat.getActiveCall()`): set
+  /// when initiateCall or acceptCall succeeds, refreshed by an "ongoing"
+  /// event for the same session, cleared when that session is rejected,
+  /// cancelled, unanswered or ended. The Dart SDK's `getActiveCall` /
+  /// `clearActiveCall` are HTTP calls to an endpoint the server does not
+  /// have, so the UI Kit keeps the record itself.
   BaseMessage? activeCall;
 
-  /// Whether the Calls SDK has been successfully initialized.
-  bool _callsSdkReady = false;
+  /// Whether a new incoming call should be answered with busy. The ringing
+  /// call, the busy check and the release live in [ActiveCallTracker], which
+  /// the other call components read too.
+  bool get _isBusy => ActiveCallTracker.isBusy;
 
-  /// Whether the Calls SDK user login has completed successfully.
-  bool _callsSdkLoginReady = false;
-
-  /// Cached user auth token for call log requests.
-  /// Fetched once during init and reused by CallLogsBloc.
-  String? _cachedAuthToken;
-
-  /// Completer that resolves when the Calls SDK init finishes.
-  /// Other components (e.g. CallLogsBloc) can await this instead of
-  /// calling CometChatCalls.init() themselves.
-  Completer<void>? _callsSdkCompleter;
-
-  /// Completer that resolves when the Calls SDK login finishes.
-  /// waitForCallsSdk() awaits both init AND login before returning.
-  Completer<void>? _callsSdkLoginCompleter;
-
-  /// Initialize the service: cache logged-in user, register SDK listeners,
-  /// and initialize the Calls SDK.
-  /// Safe to call multiple times — will no-op if already initialized.
-  Future<void> init({CallingConfiguration? configuration}) async {
-    if (_initialized) return;
-    _configuration = configuration;
-    _loggedInUser = await CometChatUIKit.getLoggedInUser();
-
-    assert(
-      _loggedInUser != null,
-      'CallEventService.init(): No logged-in user. '
-      'Call CometChatUIKit.login() before initializing CallEventService.',
-    );
-
-    // Initialize the Calls SDK and await completion
-    final settings = CometChatUIKit.authenticationSettings;
-    assert(
-      settings?.appId != null && settings?.region != null,
-      'CallEventService.init(): CometChat must be initialized first. '
-      'authenticationSettings is null.',
-    );
-    if (settings != null && settings.appId != null && settings.region != null) {
-      await _initCallsSdk(settings.appId!, settings.region!);
-    }
-
-    // Log the user into the Calls SDK. CometChatCalls.init() only
-    // initializes the SDK — it does NOT authenticate the user. Without
-    // this login step, CometChatCalls.generateToken() fails with
-    // "User auth token is null" because the Calls SDK's internal
-    // CurrentUserRepository has no user record.
-    _callsSdkLoginCompleter = Completer<void>();
-    await _loginCallsSdk();
-    // Only complete the login completer if login succeeded.
-    // If it failed after all retries, leave it uncompleted so
-    // waitForCallsSdk() will time out rather than proceeding with a broken SDK.
-    if (_callsSdkLoginReady && !_callsSdkLoginCompleter!.isCompleted) {
-      _callsSdkLoginCompleter!.complete();
-    } else if (!_callsSdkLoginReady && !_callsSdkLoginCompleter!.isCompleted) {
-      // Login failed — complete anyway so we don't hang forever,
-      // but log a warning.
-      developer.log(
-        'CallEventService: WARNING — Calls SDK login failed, generateToken will fail',
-      );
-      _callsSdkLoginCompleter!.complete();
-    }
-
-    // Pre-cache the auth token so CallLogsBloc doesn't need to fetch it
-    try {
-      _cachedAuthToken = await CometChat.getUserAuthToken();
-    } catch (e) {
-      developer.log('CallEventService: getUserAuthToken failed: $e');
-    }
-
-    CometChat.addCallListener(_listenerId, this);
-    CometChatCallEvents.addCallEventsListener(_listenerId, this);
-
-    _initialized = true;
-    developer.log('CallEventService initialized');
-  }
-
-  /// Initializes the CometChat Calls SDK and awaits completion.
-  /// Sets [_callsSdkReady] on success so other components know the SDK is ready.
+  /// Starts call handling for the logged-in user: registers the call
+  /// listeners (at once), then initialises the Calls SDK and logs the user
+  /// into it (bounded; a failure is logged, never thrown, and retried once
+  /// at the next [waitForCallsSdk]).
   ///
-  /// When the UIKit was initialized via CometChatUIKit.initFromSettings (the
-  /// AI-agent / skills path), the Calls SDK is routed through its own
-  /// telemetry-aware `CometChatCalls.initFromSettings` — it reads the same
-  /// `cometchat-settings.json` asset (guaranteed present on that path) and
-  /// persists integrationSource = "ai-agent" (ENG-37368). The plain init path
-  /// keeps the plain `CometChatCalls.init` ("manual"), unchanged.
-  Future<void> _initCallsSdk(String appId, String region) async {
-    if (_callsSdkReady) return;
-
-    _callsSdkCompleter = Completer<void>();
-
-    void onCallsInitSuccess(String msg) {
-      _callsSdkReady = true;
-      developer.log('CallEventService: Calls SDK initialized: $msg');
-      if (_callsSdkCompleter != null && !_callsSdkCompleter!.isCompleted) {
-        _callsSdkCompleter!.complete();
-      }
-    }
-
-    void onCallsInitError(CometChatCallsException e) {
-      developer.log(
-        'CallEventService: Calls SDK init FAILED: ${e.code} ${e.message}',
-      );
-      // Complete anyway so waiters don't hang forever
-      if (_callsSdkCompleter != null && !_callsSdkCompleter!.isCompleted) {
-        _callsSdkCompleter!.complete();
-      }
-    }
-
-    if (CometChatUIKit.initializedFromSettings) {
-      CometChatCalls.initFromSettings(
-        onSuccess: onCallsInitSuccess,
-        onError: onCallsInitError,
-      );
-    } else {
-      final callAppSettings =
-          (CallAppSettingBuilder()
-                ..appId = appId
-                ..region = region)
-              .build();
-
-      CometChatCalls.init(
-        callAppSettings,
-        onSuccess: onCallsInitSuccess,
-        onError: onCallsInitError,
-      );
-    }
-
-    // Wait up to 10s for the SDK to initialize
-    await _callsSdkCompleter!.future.timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        developer.log('CallEventService: Calls SDK init timed out');
-      },
-    );
-  }
-
-  /// Logs the current user into the Calls SDK using their auth token.
+  /// Safe to call repeatedly and concurrently: calls for the same user share
+  /// one start. A call for a different user than the one started stops the
+  /// previous one first. Returns without doing anything when no user is
+  /// logged in.
   ///
-  /// The Calls SDK maintains its own user session (in SQLite). After
-  /// `CometChatCalls.init()`, the SDK is initialized but has no
-  /// authenticated user. `CometChatCalls.loginWithAuthToken()` stores
-  /// the user + auth token so that `generateToken()` can work.
-  Future<void> _loginCallsSdk() async {
-    if (!_callsSdkReady) {
-      developer.log(
-        'CallEventService: skipping Calls SDK login — SDK not ready',
+  /// [configuration] is used only when `UIKitSettings.callingConfiguration`
+  /// is not set, and only the first non-null one passed after login counts:
+  /// a later call no longer replaces it. It then applies to the incoming
+  /// call banner, the message header's call buttons and the meeting bubble.
+  Future<void> init({
+    @Deprecated(
+      'Set UIKitSettings.callingConfiguration instead. It wins over this '
+      'parameter, which is only read when UIKitSettings has none. '
+      'Will be removed in 7.0.0.',
+    )
+    CallingConfiguration? configuration,
+  }) async {
+    final user = await _loggedInUser();
+    if (user == null) {
+      CallingConfigurationResolver.offerHostConfiguration(configuration);
+      ccLog(
+        'CallEventService.init(): no logged-in user; call it after login. '
+        'Nothing was started.',
       );
       return;
     }
+    // start() stops the previous user synchronously on a user switch, and
+    // that clears the host configuration: offer this one after it.
+    final started = CallsLifecycle.start(user);
+    CallingConfigurationResolver.offerHostConfiguration(configuration);
+    await started;
+  }
 
-    // The auth token may not be available immediately after CometChatUIKit.init()
-    // with a cached session (cold start) or after a fresh login. Retry with
-    // longer delays to ensure the token is fully propagated.
-    String? authToken;
-    for (int attempt = 0; attempt < 15; attempt++) {
-      try {
-        authToken = await CometChat.getUserAuthToken();
-      } catch (e) {
-        developer.log(
-          'CallEventService: getUserAuthToken attempt ${attempt + 1} failed: $e',
-        );
-      }
-      if (authToken != null && authToken.isNotEmpty) break;
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-
-    if (authToken == null || authToken.isEmpty) {
-      developer.log(
-        'CallEventService: no auth token after retries, skipping Calls SDK login',
-      );
-      return;
-    }
-
-    // Retry login up to 3 times — the first attempt may fail if the Calls SDK
-    // internally logs out (token rotation) and the re-login response fails.
-    for (int loginAttempt = 1; loginAttempt <= 3; loginAttempt++) {
-      developer.log(
-        'CallEventService: logging into Calls SDK (attempt $loginAttempt)...',
-      );
-      final completer = Completer<bool>(); // true = success, false = error
-      CometChatCalls.loginWithAuthToken(
-        authToken: authToken!,
-        onSuccess: (user) {
-          developer.log('CallEventService: Calls SDK login successful');
-          _callsSdkLoginReady = true;
-          if (_callsSdkLoginCompleter != null &&
-              !_callsSdkLoginCompleter!.isCompleted) {
-            _callsSdkLoginCompleter!.complete();
-          }
-          if (!completer.isCompleted) completer.complete(true);
-        },
-        onError: (e) {
-          developer.log(
-            'CallEventService: Calls SDK login error (attempt $loginAttempt): ${e.code} ${e.message}',
-          );
-          if (!completer.isCompleted) completer.complete(false);
-        },
-      );
-
-      final success = await completer.future.timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          developer.log(
-            'CallEventService: Calls SDK login timed out (attempt $loginAttempt)',
-          );
-          return false;
-        },
-      );
-
-      if (success) return;
-
-      if (loginAttempt < 3) {
-        // Wait before retrying — give the SDK time to settle after internal logout
-        await Future.delayed(const Duration(milliseconds: 1000));
-        // Re-fetch auth token in case it changed
-        try {
-          final refreshed = await CometChat.getUserAuthToken();
-          if (refreshed != null && refreshed.isNotEmpty) authToken = refreshed;
-        } catch (_) {}
-      }
-    }
-
-    developer.log('CallEventService: Calls SDK login failed after all retries');
-
-    // Web fallback: The Dart SDK's HTTP login may fail due to CORS or API
-    // differences on web, but the JS SDK can still be logged in directly
-    // via the native plugin's setNativeAuthToken which calls the bridge's
-    // login(). This ensures joinSession works on web even if the Dart
-    // SDK's own login API fails.
-    if (kIsWeb && authToken != null && authToken.isNotEmpty) {
-      developer.log(
-        'CallEventService: Web fallback — setting native auth token directly',
-      );
-      try {
-        CometChatCallsPluginPlatform.instance.setNativeAuthToken(authToken);
-        _callsSdkLoginReady = true;
-        if (_callsSdkLoginCompleter != null &&
-            !_callsSdkLoginCompleter!.isCompleted) {
-          _callsSdkLoginCompleter!.complete();
-        }
-      } catch (e) {
-        developer.log(
-          'CallEventService: Web fallback setNativeAuthToken failed: $e',
-        );
-      }
-    }
+  /// The logged-in user as the chat SDK reports it. A host that logged in
+  /// with `CometChat.login` directly never set `CometChatUIKit.loggedInUser`,
+  /// and one that logged out that way may have left it stale, so that field
+  /// is used only when the chat SDK cannot answer (it is not initialised).
+  static Future<User?> _loggedInUser() async {
+    var sdkFailed = false;
+    final user = await CometChatUIKit.getLoggedInUser(
+      onError: (_) => sdkFailed = true,
+    );
+    if (user != null) return user;
+    return sdkFailed ? CometChatUIKit.loggedInUser : null;
   }
 
   /// Returns true if the Calls SDK has been initialized successfully.
-  bool get isCallsSdkReady => _callsSdkReady;
+  ///
+  /// It does not mean the user is logged into the Calls SDK, which a call
+  /// also needs: await [waitForCallsSdk] before starting or joining one.
+  bool get isCallsSdkReady => CallsSdkSession.instance.isInitialized;
 
   /// Returns the cached user auth token, or null if not yet fetched.
-  String? get cachedAuthToken => _cachedAuthToken;
+  ///
+  /// Set once call handling has started for the logged-in user, refreshed on
+  /// a user switch, cleared on logout.
+  String? get cachedAuthToken => CallsLifecycle.cachedAuthToken;
 
-  /// Waits for the Calls SDK to be ready AND the user to be logged in.
-  /// If already ready, returns immediately.
+  /// Waits for the Calls SDK to be initialised and the logged-in user to be
+  /// logged into it. Returns at once when it already is.
+  ///
   /// Other components (e.g. CallLogsBloc, VoipCallHandler) should call this
   /// instead of initializing the SDK themselves.
   ///
-  /// If [init] hasn't been called yet (e.g. because `_initiateAfterLogin`
-  /// fired it without `await`), this method polls briefly, then falls back
-  /// to calling [init] directly so the caller never proceeds with an
-  /// uninitialized Calls SDK.
+  /// Bounded: it returns within 22 seconds whatever the Calls SDK does. When
+  /// an earlier init or login failed, this runs it once more. Concurrent
+  /// callers share one attempt. It never throws; the call screen checks
+  /// readiness itself afterwards.
+  ///
+  /// When call handling has not been started (`UIKitSettings.enableCalls`
+  /// is off and [init] was never called) but a user is logged in, this
+  /// starts it first, as [init] would.
   Future<void> waitForCallsSdk() async {
-    if (_callsSdkReady && _callsSdkLoginReady) return;
-
-    // If init() hasn't been called yet, poll briefly until it starts.
-    if (!_initialized && _callsSdkCompleter == null) {
-      for (int i = 0; i < 30; i++) {
-        await Future.delayed(const Duration(milliseconds: 200));
-        if (_callsSdkCompleter != null || _callsSdkReady) break;
+    if (!CallsLifecycle.isStarted) {
+      final user = await _loggedInUser();
+      // Re-checked: a login may have started it while the user was read.
+      if (user != null && !CallsLifecycle.isStarted) {
+        ccLog('CallEventService: waitForCallsSdk starts call handling');
+        await CallsLifecycle.start(user);
       }
     }
-
-    // Fallback: if init() still hasn't started after polling, trigger it
-    // directly. This covers the race where _initiateAfterLogin() fired
-    // init() without await and the future hasn't been scheduled yet, or
-    // where init() was never called at all.
-    if (!_initialized && _callsSdkCompleter == null) {
-      developer.log(
-        'CallEventService: waitForCallsSdk — init() never started, '
-        'triggering it now',
-      );
-      final settings = CometChatUIKit.authenticationSettings;
-      if (settings != null &&
-          settings.appId != null &&
-          settings.region != null) {
-        await init(configuration: settings.callingConfiguration);
-      }
-      // After init completes, check again
-      if (_callsSdkReady && _callsSdkLoginReady) return;
-    }
-
-    // Wait for SDK init
-    if (!_callsSdkReady && _callsSdkCompleter != null) {
-      await _callsSdkCompleter!.future.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          developer.log('CallEventService: waitForCallsSdk (init) timed out');
-        },
-      );
-    }
-
-    // Wait for SDK login — the completer may not exist yet if init() is
-    // still running (it creates _callsSdkLoginCompleter after _initCallsSdk
-    // finishes). Poll briefly for it.
-    if (!_callsSdkLoginReady && _callsSdkLoginCompleter == null) {
-      for (int i = 0; i < 25; i++) {
-        await Future.delayed(const Duration(milliseconds: 200));
-        if (_callsSdkLoginCompleter != null || _callsSdkLoginReady) break;
-      }
-    }
-
-    if (!_callsSdkLoginReady && _callsSdkLoginCompleter != null) {
-      await _callsSdkLoginCompleter!.future.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          developer.log('CallEventService: waitForCallsSdk (login) timed out');
-        },
-      );
-    }
-
-    if (!_callsSdkReady || !_callsSdkLoginReady) {
-      developer.log(
-        'CallEventService: waitForCallsSdk finished but SDK not fully ready '
-        '(init=$_callsSdkReady, login=$_callsSdkLoginReady)',
+    final session = CallsSdkSession.instance;
+    final ready = await session.ensureReady();
+    if (!ready) {
+      ccLog(
+        'CallEventService: waitForCallsSdk finished but the Calls SDK is not '
+        'ready (init=${session.initPhase}, login=${session.loginPhase})',
       );
     }
   }
 
-  /// Remove all SDK listeners and reset state.
-  /// Resets the Calls SDK initialization and login state so that the next
-  /// [init()] call will re-initialize and re-login the Calls SDK.
-  /// This is necessary for the logout → re-login flow: the Chat SDK logout
-  /// clears the native Calls SDK state, so we must re-init on next login.
+  /// Remove all SDK listeners and reset state, then log the Calls SDK out.
+  ///
+  /// Takes this device's calls down locally first: the outgoing call
+  /// screens, the incoming call banner and the call screen are closed, the
+  /// media session is left and the call records are cleared. Nothing is sent
+  /// to the server; `CometChatUIKit.logout` does that, while the user is
+  /// still logged in, before it logs out.
+  ///
+  /// Also clears the calling configuration passed to [init], the service
+  /// locators and [CallStateService]. Anything [init] still has in flight
+  /// lands without effect, so a slow start can no longer register listeners
+  /// for a user who has logged out. Safe to call more than once.
   void dispose() {
-    if (!_initialized) return;
-    CometChat.removeCallListener(_listenerId);
-    CometChatCallEvents.removeCallEventsListener(_listenerId);
-
-    // End any active call session before clearing state.
-    // Without this, the native Calls SDK session stays alive after logout,
-    // causing "call is in progress" to persist on re-login.
-    _endActiveSessionOnLogout();
-
-    activeCall = null;
-    _loggedInUser = null;
-    _configuration = null;
-    _cachedAuthToken = null;
-    _callsSdkReady = false;
-    _callsSdkLoginReady = false;
-    _callsSdkCompleter = null;
-    _callsSdkLoginCompleter = null;
-    _initialized = false;
-
-    // Reset service locators so they re-initialize with fresh
-    // datasources on next login. Without this, the locators hold
-    // references to stale instances from the previous session.
-    CallOperationsServiceLocator.instance.reset();
-    CallLogsServiceLocator.instance.reset();
-
-    // Reset call state tracking in case a call was active during logout.
-    CallStateService.instance.setActiveCallValue(false);
-    CallStateService.instance.setActiveIncomingValue(false);
-    CallStateService.instance.setActiveOutgoingValue(false);
-
-    // Dismiss any visible incoming call overlay.
-    IncomingCallOverlay.dismiss();
-
-    // Logout from the Calls SDK so its internal state is fully cleared.
-    // On next init(), we'll re-init and re-login fresh.
-    CometChatCalls.logout(
-      onSuccess: (_) {
-        developer.log('CallEventService: Calls SDK logout successful');
-      },
-      onError: (e) {
-        developer.log('CallEventService: Calls SDK logout error: ${e.message}');
-      },
-    );
-
-    developer.log('CallEventService disposed');
+    unawaited(CallsLifecycle.shutdown());
+    ccLog('CallEventService disposed');
   }
 
-  /// Ends any active call session during logout.
-  /// Leaves the V5 SDK session, clears the Chat SDK's active call,
-  /// and aborts the Android foreground service notification.
-  void _endActiveSessionOnLogout() {
-    try {
-      CometChatOngoingCallService.abort();
-      CallSession.getInstance()?.leaveSession();
-      CometChat.clearActiveCall();
-      developer.log('CallEventService: active session ended on logout');
-    } catch (e) {
-      developer.log('CallEventService: _endActiveSessionOnLogout error: $e');
-    }
-  }
-
-  /// Re-initializes the Calls SDK after a session ends.
-  /// Per the V5 SDK sample app: "The SDK's internal state can get cleared
-  /// after a session, so this ensures subsequent calls work properly."
+  /// Makes sure the Calls SDK is still initialised and logged in after a
+  /// call session.
+  ///
+  /// It used to reset the Calls SDK state and initialise and log in again
+  /// after every call, even after logout. Now it only repairs what is
+  /// missing: it initialises again when the plugin reports it is not
+  /// initialised, and logs in again when the Calls SDK holds no login (or
+  /// another user's). A failed init or login is retried once. It does
+  /// nothing once call handling has stopped (logged out).
+  @Deprecated(
+    'Not needed: the UI Kit keeps the Calls SDK initialised and logged in, '
+    'and waitForCallsSdk() retries a failed init or login once. Use '
+    'waitForCallsSdk() to wait for it. Will be removed in 7.0.0.',
+  )
   Future<void> reinitializeAfterSession() async {
-    final settings = CometChatUIKit.authenticationSettings;
-    if (settings?.appId != null && settings?.region != null) {
-      _callsSdkReady = false;
-      _callsSdkLoginReady = false;
-      _callsSdkCompleter = null;
-      _callsSdkLoginCompleter = null;
-      await _initCallsSdk(settings!.appId!, settings.region!);
-
-      // Re-login the user — the V5 SDK clears its internal user session
-      // after a call ends, so generateToken/joinSession will fail with
-      // "auth token is null" unless we re-authenticate.
-      _callsSdkLoginCompleter = Completer<void>();
-      await _loginCallsSdk();
-      if (_callsSdkLoginReady && !_callsSdkLoginCompleter!.isCompleted) {
-        _callsSdkLoginCompleter!.complete();
-      } else if (!_callsSdkLoginCompleter!.isCompleted) {
-        _callsSdkLoginCompleter!.complete();
-      }
-
-      developer.log(
-        'CallEventService: SDK re-initialized and re-logged in after session',
-      );
-    }
+    if (!CallsLifecycle.isStarted) return;
+    await CallsSdkSession.instance.ensureReady();
   }
 
   // ================================================================
@@ -480,8 +201,12 @@ class CallEventService with CallListener, CometChatCallEventListener {
       user = call.callInitiator as User;
     }
 
-    // Ignore calls initiated by the logged-in user (echo)
-    if (user != null && user.uid == _loggedInUser?.uid) {
+    // Ignore calls initiated by the logged-in user (echo). Read now, not at
+    // start: the user may have switched since. The started user comes first
+    // because a host's direct CometChat.login leaves
+    // CometChatUIKit.loggedInUser unset or stale.
+    final myUid = CallsLifecycle.uid ?? CometChatUIKit.loggedInUser?.uid;
+    if (user != null && myUid != null && user.uid == myUid) {
       return;
     }
 
@@ -491,33 +216,79 @@ class CallEventService with CallListener, CometChatCallEventListener {
     // if the app crashes or the call state isn't properly cleared.
     if (defaultTargetPlatform == TargetPlatform.iOS &&
         WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
-      developer.log(
+      ccLog(
         'CallEventService: skipping onIncomingCallReceived in background on iOS '
         '(VoIP push handles it) sessionId=${call.sessionId}',
       );
       return;
     }
 
-    // Deduplicate: ignore if we already have an active incoming call with
-    // the same session ID. Duplicate FCM pushes can trigger this listener
-    // twice for the same call, which creates a second overlay/bloc and
-    // causes the reject API to fail with "call is ended".
-    if (activeCall != null &&
-        activeCall is Call &&
-        (activeCall as Call).sessionId == call.sessionId) {
-      developer.log(
+    // Deduplicate: ignore a call this device is already handling. Duplicate
+    // FCM pushes can trigger this listener twice for the same call, which
+    // creates a second overlay/bloc and causes the reject API to fail with
+    // "call is ended".
+    //
+    // "Already handling" is not just activeCall. A call accepted from the
+    // native call UI (CallKit, or the Android call notification) is opened by
+    // the host app straight onto the call screen and never sets activeCall; if
+    // the SDK then delivers this callback for it as the app comes to the
+    // foreground, the busy check below saw a call screen up and rejected the
+    // very call the user had just accepted.
+    if (_isHandlingSession(call.sessionId)) {
+      ccLog(
         'CallEventService: ignoring duplicate onIncomingCallReceived '
         'for sessionId=${call.sessionId}',
       );
       return;
     }
 
-    developer.log(
+    // A call this device has already finished with (declined, cancelled,
+    // ended, given up on) in the last two minutes: a late copy of its
+    // "initiated", after a socket reconnect or from a duplicate push. It
+    // rang again, or was answered busy. Ignored as a duplicate is.
+    if (ActiveCallTracker.finishedLately(call.sessionId)) {
+      ccLog(
+        'CallEventService: ignoring onIncomingCallReceived for '
+        '${call.sessionId}, a call this device already finished',
+      );
+      return;
+    }
+
+    // Already in a call, or another one is ringing: answer this one with busy
+    // instead of stacking a second incoming screen over the first. Kotlin's
+    // app does exactly this (SampleApplication / master-app-kotlin
+    // `rejectCallWithBusyStatus`). The records of the call in progress are
+    // left untouched — the bounced call never becomes the ringing one.
+    if (_isBusy) {
+      ccLog(
+        'CallEventService: busy — rejecting incoming ${call.sessionId}, '
+        'already in a call',
+      );
+      unawaited(_rejectAsBusy(call));
+      return;
+    }
+
+    ccLog(
       'CallEventService: onIncomingCallReceived sessionId=${call.sessionId}',
     );
-    activeCall = call;
+    ActiveCallTracker.ringingCall = call;
     _showIncomingCallOverlay(call, user);
   }
+
+  /// Whether [sessionId] is a call this device is already on: the active
+  /// call, the call screen, or the incoming call ringing on screen.
+  bool _isHandlingSession(String? sessionId) {
+    if (sessionId == null || sessionId.isEmpty) return false;
+    final active = activeCall;
+    return (active is Call && active.sessionId == sessionId) ||
+        ActiveCallTracker.ringingCall?.sessionId == sessionId ||
+        ActiveCallTracker.callScreenSessionId == sessionId ||
+        ActiveCallTracker.incomingCallSessionId == sessionId;
+  }
+
+  /// Rejects [call] with the busy status. Best-effort: if it fails the call
+  /// simply rings out on the caller's side.
+  Future<void> _rejectAsBusy(Call call) => rejectAsBusy(call);
 
   /// Attempts to show the incoming call overlay, retrying briefly if the
   /// navigator context isn't available yet.
@@ -530,77 +301,164 @@ class CallEventService with CallListener, CometChatCallEventListener {
       await Future.delayed(const Duration(milliseconds: 100));
     }
 
-    developer.log(
+    // The call stopped ringing during the wait (cancelled, answered or
+    // declined on another device, released): a banner now would ring for
+    // a call that is over, until the timeout.
+    if (ActiveCallTracker.ringingCall?.sessionId != call.sessionId) {
+      ccLog(
+        'CallEventService: ${call.sessionId} stopped ringing before its '
+        'banner could be shown',
+      );
+      return;
+    }
+
+    ccLog(
       'CallEventService: showing overlay, context=${context != null}, overlay=${CallNavigationContext.navigatorKey.currentState?.overlay != null}',
     );
 
     if (context != null && context.mounted) {
+      // Read at show time: UIKitSettings.callingConfiguration, or the host's
+      // init(configuration:) when the settings have none.
+      final config =
+          CallingConfigurationResolver.resolved?.incomingCallConfiguration;
       IncomingCallOverlay.show(
         context: context,
         call: call,
         user: user,
-        onError: _configuration?.incomingCallConfiguration?.onError,
-        disableSoundForCalls:
-            _configuration?.incomingCallConfiguration?.disableSoundForCalls,
-        customSoundForCalls:
-            _configuration?.incomingCallConfiguration?.customSoundForCalls,
-        customSoundForCallsPackage: _configuration
-            ?.incomingCallConfiguration
-            ?.customSoundForCallsPackage,
-        onAccept: _configuration?.incomingCallConfiguration?.onAccept,
-        onDecline: _configuration?.incomingCallConfiguration?.onDecline,
-        style: _configuration?.incomingCallConfiguration?.incomingCallStyle,
-        callSettingsBuilder:
-            _configuration?.incomingCallConfiguration?.callSettingsBuilder,
-        height: _configuration?.incomingCallConfiguration?.height,
-        width: _configuration?.incomingCallConfiguration?.width,
-        declineButtonText:
-            _configuration?.incomingCallConfiguration?.declineButtonText,
-        acceptButtonText:
-            _configuration?.incomingCallConfiguration?.acceptButtonText,
-        titleView: _configuration?.incomingCallConfiguration?.titleView,
-        leadingView: _configuration?.incomingCallConfiguration?.leadingView,
-        trailingView: _configuration?.incomingCallConfiguration?.trailingView,
-        subtitleView: _configuration?.incomingCallConfiguration?.subTitleView,
-        itemView: _configuration?.incomingCallConfiguration?.itemView,
+        onError: config?.onError,
+        disableSoundForCalls: config?.disableSoundForCalls,
+        customSoundForCalls: config?.customSoundForCalls,
+        customSoundForCallsPackage: config?.customSoundForCallsPackage,
+        onAccept: config?.onAccept,
+        onDecline: config?.onDecline,
+        style: config?.incomingCallStyle,
+        callSettingsBuilder: config?.callSettingsBuilder,
+        height: config?.height,
+        width: config?.width,
+        declineButtonText: config?.declineButtonText,
+        acceptButtonText: config?.acceptButtonText,
+        titleView: config?.titleView,
+        leadingView: config?.leadingView,
+        trailingView: config?.trailingView,
+        subtitleView: config?.subTitleView,
+        itemView: config?.itemView,
       );
     } else {
-      developer.log(
+      ccLog(
         'WARNING: CallNavigationContext.navigatorKey has no context. '
         'Did you set CallNavigationContext.navigatorKey = yourNavigatorKey '
         'in main()? Incoming call overlay cannot be shown.',
       );
+      // Nothing can show this call, so it must not keep the device "busy":
+      // every later incoming call was answered busy until this one's cancel
+      // arrived. Only the ringing record; the call is not declined, so push
+      // or CallKit can still ring for it.
+      ActiveCallTracker.releaseRinging(call.sessionId);
+      reportCallError(
+        CallingConfigurationResolver
+            .resolved
+            ?.incomingCallConfiguration
+            ?.onError,
+        noNavigatorException('incoming call'),
+        where: 'CallEventService',
+      );
     }
   }
 
+  /// "Ongoing" for a call — delivered to every listener, whichever side
+  /// this device is on and whichever call it is about.
+  ///
+  /// Only refreshes the record of the same call, as the Android SDK does. It
+  /// used to set the record from any "ongoing", so one arriving after the
+  /// call screen had closed brought a finished call back as active — every
+  /// later call refused, every incoming one answered with busy, until logout.
+  /// The record is set where the call was placed or answered (ccOutgoingCall,
+  /// ccCallAccepted).
+  ///
+  /// "Ongoing" for the call ringing here, while this device is not
+  /// answering it, means the same user answered it on another device: it
+  /// stops ringing here. The banner's bloc does this too; this covers a
+  /// ringing record that has no bloc (no banner shown, or one a host shows
+  /// elsewhere), which kept every later call answered busy.
   @override
   void onOutgoingCallAccepted(Call call) {
-    activeCall = call;
+    final active = activeCall;
+    final sid = call.sessionId;
+    if (active is Call && sid != null && active.sessionId == sid) {
+      activeCall = call;
+    }
+    _stopRingingHandledElsewhere(call);
   }
 
+  /// "Rejected" or "busy". For the call ringing here, while this device is
+  /// not declining it, the same user declined it on another device (or it
+  /// was bounced busy there): the banner goes with the record, so the two
+  /// cannot disagree.
   @override
   void onOutgoingCallRejected(Call call) {
     _clearActiveCall(call);
+    _stopRingingHandledElsewhere(call);
+  }
+
+  /// The call ringing here was answered or declined on another device of
+  /// this user ([call] is its "ongoing", "rejected" or "busy"): its banner
+  /// closes and it stops counting as ringing. Not while this device is
+  /// answering or declining it itself: that is its own echo.
+  ///
+  /// Only when the logged-in user is who acted: another member answering a
+  /// group call sends "ongoing" to every member, and the call must ring on
+  /// for the others.
+  ///
+  /// The call is remembered as finished (through the scoped dismiss), with
+  /// or without a banner, so a late "initiated" for it does not ring here.
+  /// The active call is not touched.
+  void _stopRingingHandledElsewhere(Call call) {
+    final sid = call.sessionId;
+    if (sid == null || sid.isEmpty) return;
+    if (!ActiveCallTracker.actedByLoggedInUser(call)) return;
+    final ringingHere =
+        ActiveCallTracker.ringingCall?.sessionId == sid ||
+        ActiveCallTracker.incomingCallSessionId == sid;
+    if (!ringingHere || ActiveCallTracker.isRespondingTo(sid)) return;
+    ccLog('CallEventService: $sid was answered or declined on another device');
+    IncomingCallOverlay.dismiss(sessionId: sid);
   }
 
   @override
   void onIncomingCallCancelled(Call call) {
-    developer.log(
+    ccLog(
       'CallEventService: onIncomingCallCancelled sessionId=${call.sessionId}',
     );
-    // Small delay to avoid race where cancel arrives before overlay is visible
+    // Small delay to avoid race where cancel arrives before overlay is visible.
+    // Scoped to this call's session: the SDK broadcasts cancels, and within
+    // that 300ms a different call can already be ringing — an unscoped
+    // dismiss took that one down instead.
     Future.delayed(const Duration(milliseconds: 300), () {
-      IncomingCallOverlay.dismiss();
+      IncomingCallOverlay.dismiss(sessionId: call.sessionId);
     });
     _clearActiveCall(call);
   }
 
   @override
   void onCallEndedMessageReceived(Call call) {
-    developer.log(
+    ccLog(
       'CallEventService: onCallEndedMessageReceived sessionId=${call.sessionId}',
     );
-    IncomingCallOverlay.dismiss();
+    IncomingCallOverlay.dismiss(sessionId: call.sessionId);
+
+    // Only the call this is about. The SDK broadcasts "call ended", and now
+    // that a second incoming call is answered with busy, the end of that
+    // bounced call arrives here while the user is still in their own call —
+    // an unscoped teardown hung that one up.
+    final onScreen = ActiveCallTracker.callScreenSessionId;
+    if (onScreen != null &&
+        call.sessionId != null &&
+        call.sessionId!.isNotEmpty &&
+        onScreen != call.sessionId) {
+      _clearActiveCall(call);
+      return;
+    }
+
     // The remote party ended the call — tear down this device's call screen.
     //
     // Nothing else does it: OngoingCallBloc subscribes to no call events and
@@ -608,19 +466,23 @@ class CallEventService with CallListener, CometChatCallEventListener {
     // guard (onUserLeft -> endSession once <=1 participant remained) was
     // dropped during the Clean Architecture + BLoC migration. Without this the
     // surviving device sits on a dead call screen after the peer hangs up.
-    unawaited(_tearDownOngoingCall());
+    unawaited(_tearDownOngoingCall(call.sessionId));
     _clearActiveCall(call);
   }
 
-  /// Leaves the media session and closes the ongoing call screen, if one is up.
+  /// Leaves the media session and closes the ongoing call screen of
+  /// [sessionId], if one is up.
   ///
   /// Safe on the device that ended the call itself: the overlay is already
   /// gone, so this returns immediately.
   ///
+  /// Only that call's screen is closed: a screen another call put up while
+  /// the session was being left stays (round 4, P4-C07).
+  ///
   /// Deliberately does NOT call `CometChat.endCall()` — the call is already
   /// ended server-side, and re-ending it just fails with
   /// "The call with sessionid ... is ended."
-  Future<void> _tearDownOngoingCall() async {
+  Future<void> _tearDownOngoingCall(String? sessionId) async {
     if (!CallScreenOverlay.isShowing) return;
     try {
       // Aborts the Android ongoing-call foreground service and leaves the
@@ -628,11 +490,10 @@ class CallEventService with CallListener, CometChatCallEventListener {
       // away.
       await CometChatUIKitCalls.endSession();
     } catch (e) {
-      developer.log(
-        'CallEventService: endSession during remote teardown failed: $e',
-      );
+      ccLog('CallEventService: endSession during remote teardown failed: $e');
     }
-    CallScreenOverlay.dismiss();
+    final hasSession = sessionId != null && sessionId.isNotEmpty;
+    CallScreenOverlay.dismiss(sessionId: hasSession ? sessionId : null);
   }
 
   // ================================================================
@@ -644,8 +505,12 @@ class CallEventService with CallListener, CometChatCallEventListener {
     activeCall = call;
   }
 
+  /// Answered here: the call stops ringing and becomes the active one.
   @override
   void ccCallAccepted(Call call) {
+    if (ActiveCallTracker.ringingCall?.sessionId == call.sessionId) {
+      ActiveCallTracker.ringingCall = null;
+    }
     activeCall = call;
   }
 
@@ -663,24 +528,25 @@ class CallEventService with CallListener, CometChatCallEventListener {
   // Internal helpers
   // ================================================================
 
-  /// Clears [activeCall] and the server-side active call state.
+  /// Clears [activeCall] and [ActiveCallTracker.ringingCall] when [call] is
+  /// the one they hold.
   ///
-  /// Always clears the server-side state via [CometChat.clearActiveCall()]
-  /// regardless of whether the local [activeCall] ID matches. Previous
-  /// behavior only cleared when IDs matched, which left stale server state
-  /// when the call ended through a path with a mismatched ID — causing
-  /// subsequent calls between the same users to fail with "call is ended".
+  /// Local only. This used to also call `CometChat.clearActiveCall()` on every
+  /// reject/end, whichever call it was about; on the Dart SDK that is an HTTP
+  /// DELETE to an endpoint the server does not have, so it did nothing but
+  /// fail. Matching is by session id, as Kotlin does — a call's `id` can
+  /// differ between the object an event carries and the one that was stored,
+  /// which is what made the old id match miss and leave stale state behind.
   void _clearActiveCall(Call call) {
-    if (activeCall != null && activeCall?.id == call.id) {
-      activeCall = null;
+    final sid = call.sessionId;
+    if (sid != null && sid.isNotEmpty) {
+      ActiveCallTracker.release(sid);
+      return;
     }
-    // Always clear server-side state to prevent stale "busy" rejections.
-    CometChat.clearActiveCall()
-        .then((_) {
-          developer.log('CallEventService: clearActiveCall succeeded');
-        })
-        .catchError((e) {
-          developer.log('CallEventService: clearActiveCall failed: $e');
-        });
+    if (call.id <= 0) return;
+    if (activeCall?.id == call.id) activeCall = null;
+    if (ActiveCallTracker.ringingCall?.id == call.id) {
+      ActiveCallTracker.ringingCall = null;
+    }
   }
 }

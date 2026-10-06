@@ -526,6 +526,14 @@ class TranslationsHi extends Translations {
       'आपको यह कार्रवाई करने की अनुमति नहीं है।';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'कॉल का जवाब देने के लिए माइक्रोफ़ोन की अनुमति दें।';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'वीडियो कॉल का जवाब देने के लिए कैमरा और माइक्रोफ़ोन की अनुमति दें।';
+
+  @override
   String get pinSaveFailed => 'अपडेट नहीं हो सका। कृपया फिर से प्रयास करें।';
 
   @override
@@ -1517,4 +1525,85 @@ class TranslationsHi extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'वापस';
+
+  @override
+  String get openInBrowser => 'ब्राउज़र में खोलें';
+
+  @override
+  String get failedToLoadSticker => 'स्टिकर लोड नहीं हो सका';
+
+  @override
+  String get enterDisplayText => 'प्रदर्शित पाठ दर्ज करें';
+
+  @override
+  String get clearSearch => 'खोज साफ़ करें';
+
+  @override
+  String get done => 'हो गया';
+
+  @override
+  String get download => 'डाउनलोड';
+
+  @override
+  String get startRecording => 'रिकॉर्डिंग शुरू करें';
+
+  @override
+  String get stopRecording => 'रिकॉर्डिंग रोकें';
+
+  @override
+  String get pauseRecording => 'रिकॉर्डिंग पॉज़ करें';
+
+  @override
+  String get deleteRecording => 'रिकॉर्डिंग हटाएँ';
+
+  @override
+  String get recordVoiceMessage => 'वॉइस संदेश रिकॉर्ड करें';
+
+  @override
+  String get reorderOption => 'विकल्प पुनः क्रमित करें';
+
+  @override
+  String get play => 'चलाएँ';
+
+  @override
+  String get pause => 'रोकें';
+
+  @override
+  String get next => 'अगला';
+
+  @override
+  String get previous => 'पिछला';
+
+  @override
+  String get scrollToBottom => 'नीचे स्क्रॉल करें';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'अटैचमेंट विकल्प मेन्यू खुला';
+
+  @override
+  String get richTextFormattingToolbar => 'टेक्स्ट फ़ॉर्मेटिंग टूलबार';
+
+  @override
+  String get closeFormattingToolbar => 'फ़ॉर्मेटिंग टूलबार बंद करें';
+
+  @override
+  String get sendAudioMessage => 'ऑडियो संदेश भेजें';
+
+  @override
+  String get messageComposerAuxiliaryActions => 'संदेश लिखने के सहायक विकल्प';
+
+  @override
+  String get attachmentButton => 'अटैचमेंट बटन';
+
+  @override
+  String get addAttachment => 'अटैचमेंट जोड़ें';
+
+  @override
+  String suggestionListWithItems(int count) => '$count आइटम वाली सुझाव सूची';
+
+  @override
+  String messageFrom(String sender) => '$sender का संदेश';
 }

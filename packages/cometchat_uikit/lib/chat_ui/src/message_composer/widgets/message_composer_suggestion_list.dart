@@ -83,7 +83,9 @@ class MessageComposerSuggestionList extends StatelessWidget {
         ).merge(style);
 
     return Semantics(
-      label: 'Suggestion list with ${suggestions.length} items',
+      label: Translations.of(
+        context,
+      ).suggestionListWithItems(suggestions.length),
       child: Container(
         margin: EdgeInsets.fromLTRB(
           effectiveSpacing.margin2 ?? 8,
@@ -108,13 +110,13 @@ class MessageComposerSuggestionList extends StatelessWidget {
               BorderRadius.circular(effectiveSpacing.radius4 ?? 12),
           boxShadow: [
             BoxShadow(
-              color: const Color(0x10182808).withValues(alpha: .03),
+              color: const Color(0xFF101828).withValues(alpha: .03),
               spreadRadius: -2,
               blurRadius: 6,
               offset: const Offset(0, 4),
             ),
             BoxShadow(
-              color: const Color(0x10182808).withValues(alpha: .08),
+              color: const Color(0xFF101828).withValues(alpha: .08),
               spreadRadius: -4,
               blurRadius: 16,
               offset: const Offset(0, 12),

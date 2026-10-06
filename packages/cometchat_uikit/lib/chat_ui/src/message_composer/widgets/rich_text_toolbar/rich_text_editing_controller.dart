@@ -4,6 +4,7 @@ import '../../../../../../shared_ui/src/rich_text_formatting/domain/entities/for
 import '../../../../../../shared_ui/src/clean_architecture/presentation/views/components/message_input/custom_text_editing_controller.dart';
 import '../../../../../../shared_ui/src/clean_architecture/clean_architecture.dart';
 import 'rich_text_span.dart';
+import '../../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// Data passed to the [RichTextEditingController.onLinkTap] callback when a link span is tapped.
 class LinkTapDetails {
@@ -85,7 +86,7 @@ class RichTextEditingController extends CustomTextEditingController {
 
   void _log(String message) {
     if (kDebugMode) {
-      debugPrint('[RichTextController] $message');
+      ccLog('[RichTextController] $message');
     }
   }
 
@@ -1733,19 +1734,34 @@ class RichTextEditingController extends CustomTextEditingController {
     _pendingFormats.clear();
     _disabledFormats.clear();
 
-    // Find link matches in the raw markdown text. Work through them right-to-
-    // left so earlier offsets remain valid as we splice out `](url)` chunks.
+    // Find link matches in the raw markdown text and rebuild the stripped
+    // text left-to-right, carrying a running count of how many characters the
+    // markers removed so far.
+    //
+    // The span offsets have to be in *stripped* coordinates, not markdown
+    // ones. Walking right-to-left keeps the splicing correct — earlier
+    // offsets are undisturbed by later edits — but it cannot give a link its
+    // final position, because that depends on every marker removed *before*
+    // it, which a right-to-left pass has not seen yet. The first link
+    // happened to survive that (nothing precedes it) while every subsequent
+    // one was recorded at its markdown offset and blew up in toMarkdown.
+    // ENG-39023.
     final matches =
         _parseInlineMarkdown(
             markdown,
           ).where((m) => m.format == FormatType.link).toList()
-          ..sort((a, b) => b.start.compareTo(a.start));
+          ..sort((a, b) => a.start.compareTo(b.start));
 
-    String workingText = markdown;
     // Spans to add after text is finalized — each entry is (start, end, url).
     final pendingLinks = <List<Object>>[];
+    final buffer = StringBuffer();
+    int cursor = 0; // read position in the original markdown
+    int removed = 0; // characters dropped by markers so far
 
     for (final match in matches) {
+      // Anything between the previous link and this one carries over as-is.
+      buffer.write(markdown.substring(cursor, match.start));
+
       final displayText = markdown.substring(
         match.contentStart,
         match.contentEnd,
@@ -1756,17 +1772,19 @@ class RichTextEditingController extends CustomTextEditingController {
         url = closingMarker.substring(2, closingMarker.length - 1);
       }
 
-      // Replace the full `[display](url)` region with just the display text.
-      workingText =
-          workingText.substring(0, match.start) +
-          displayText +
-          workingText.substring(match.end);
+      final strippedStart = match.start - removed;
+      buffer.write(displayText);
+      pendingLinks.add([
+        strippedStart,
+        strippedStart + displayText.length,
+        url,
+      ]);
 
-      // Remember where the link now sits in the stripped text so we can add
-      // its span once all replacements are done. Since we process right-to-
-      // left, later (earlier-position) entries aren't shifted by later edits.
-      pendingLinks.add([match.start, match.start + displayText.length, url]);
+      removed += (match.end - match.start) - displayText.length;
+      cursor = match.end;
     }
+    buffer.write(markdown.substring(cursor));
+    final String workingText = buffer.toString();
 
     // Apply the final text value atomically so the listener doesn't try to
     // process it as a user edit.
@@ -1777,8 +1795,8 @@ class RichTextEditingController extends CustomTextEditingController {
     );
     _previousText = workingText;
 
-    // Now add link spans. Positions were captured in stripped-text coordinates
-    // during the right-to-left pass, so they're already correct.
+    // Now add link spans. Positions were converted to stripped-text
+    // coordinates as the buffer was built, so they're already correct.
     for (final entry in pendingLinks) {
       final start = entry[0] as int;
       final end = entry[1] as int;

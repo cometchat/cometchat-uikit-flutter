@@ -46,6 +46,7 @@ class CometChatAIAssistantChatHistory extends StatefulWidget {
     this.width,
     this.hideStickyDate,
     this.hideDateSeparator,
+    this.aiAssistantChatHistoryBloc,
   }) : assert(
          user != null || group != null,
          'One of user or group should be passed',
@@ -54,6 +55,13 @@ class CometChatAIAssistantChatHistory extends StatefulWidget {
          user == null || group == null,
          'Only one of user or group should be passed',
        );
+
+  ///[aiAssistantChatHistoryBloc] Optional external
+  ///AIAssistantChatHistoryBloc instance. If provided, it is used instead of
+  ///creating one internally and the widget does not close it on dispose.
+  ///Mirrors [CometChatConversations.conversationsBloc] — the seam that lets a
+  ///test supply history without a live SDK.
+  final AIAssistantChatHistoryBloc? aiAssistantChatHistoryBloc;
 
   final User? user;
   final Group? group;
@@ -85,6 +93,7 @@ class CometChatAIAssistantChatHistory extends StatefulWidget {
 class _CometChatAIAssistantChatHistoryState
     extends State<CometChatAIAssistantChatHistory> {
   late AIAssistantChatHistoryBloc _bloc;
+  bool _isExternalBloc = false;
   late ScrollController _scrollController;
 
   // Theme — cached in didChangeDependencies
@@ -100,12 +109,17 @@ class _CometChatAIAssistantChatHistoryState
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
 
-    _bloc = AIAssistantChatHistoryBloc(
-      user: widget.user,
-      group: widget.group,
-      messagesRequestBuilder: widget.messagesRequestBuilder,
-    );
-    _bloc.add(const LoadChatHistory());
+    if (widget.aiAssistantChatHistoryBloc != null) {
+      _bloc = widget.aiAssistantChatHistoryBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = AIAssistantChatHistoryBloc(
+        user: widget.user,
+        group: widget.group,
+        messagesRequestBuilder: widget.messagesRequestBuilder,
+      );
+      _bloc.add(const LoadChatHistory());
+    }
   }
 
   @override
@@ -131,7 +145,10 @@ class _CometChatAIAssistantChatHistoryState
   @override
   void dispose() {
     _scrollController.dispose();
-    _bloc.close();
+    // an injected bloc belongs to its owner, so only close what we created
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 
@@ -176,12 +193,16 @@ class _CometChatAIAssistantChatHistoryState
         titleSpacing: _spacing.padding1,
         backIcon:
             widget.backButton ??
-            GestureDetector(
-              onTap: widget.onClose,
-              child: Icon(
-                Icons.close,
-                size: 24,
-                color: _style.closeIconColor ?? _colorPalette.iconSecondary,
+            Semantics(
+              button: true,
+              label: cc.Translations.of(context).close,
+              child: GestureDetector(
+                onTap: widget.onClose,
+                child: Icon(
+                  Icons.close,
+                  size: 24,
+                  color: _style.closeIconColor ?? _colorPalette.iconSecondary,
+                ),
               ),
             ),
         leadingIconPadding: EdgeInsets.only(left: _spacing.padding ?? 0),
@@ -534,33 +555,37 @@ class _CometChatAIAssistantChatHistoryState
   Widget _buildNewChatButton() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: _spacing.padding2 ?? 0),
-      child: GestureDetector(
-        onTap: widget.onNewChatButtonClicked,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: _spacing.padding4 ?? 0),
-          child: Row(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(right: _spacing.padding2 ?? 0),
-                child: Icon(
-                  Icons.add,
-                  color: _style.newChatIconColor ?? _colorPalette.iconSecondary,
-                  size: 24,
+      child: Semantics(
+        button: true,
+        child: GestureDetector(
+          onTap: widget.onNewChatButtonClicked,
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: _spacing.padding4 ?? 0),
+            child: Row(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(right: _spacing.padding2 ?? 0),
+                  child: Icon(
+                    Icons.add,
+                    color:
+                        _style.newChatIconColor ?? _colorPalette.iconSecondary,
+                    size: 24,
+                  ),
                 ),
-              ),
-              Text(
-                cc.Translations.of(context).newChat,
-                style:
-                    TextStyle(
-                          color: _colorPalette.textPrimary,
-                          fontSize: _typography.button?.regular?.fontSize,
-                          fontWeight: _typography.button?.regular?.fontWeight,
-                          fontFamily: _typography.button?.regular?.fontFamily,
-                        )
-                        .merge(_style.newChatTitleStyle)
-                        .copyWith(color: _style.newChatTextColor),
-              ),
-            ],
+                Text(
+                  cc.Translations.of(context).newChat,
+                  style:
+                      TextStyle(
+                            color: _colorPalette.textPrimary,
+                            fontSize: _typography.button?.regular?.fontSize,
+                            fontWeight: _typography.button?.regular?.fontWeight,
+                            fontFamily: _typography.button?.regular?.fontFamily,
+                          )
+                          .merge(_style.newChatTitleStyle)
+                          .copyWith(color: _style.newChatTextColor),
+                ),
+              ],
+            ),
           ),
         ),
       ),

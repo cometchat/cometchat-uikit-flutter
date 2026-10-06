@@ -29,6 +29,10 @@ class RefreshCallLogs extends CallLogsEvent {
 /// Initiate a call from a call log entry
 class InitiateCallFromLog extends CallLogsEvent {
   final CallLog callLog;
+
+  /// The call-log screen that asked. The outgoing call screen is shown on
+  /// `CallNavigationContext.navigatorKey`, never on this context's
+  /// navigator: the call screen after an accept needs that key too.
   final BuildContext context;
 
   const InitiateCallFromLog({required this.callLog, required this.context});

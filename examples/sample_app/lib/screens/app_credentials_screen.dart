@@ -6,8 +6,19 @@ import 'package:sample_app/screens/guard_screen.dart';
 
 /// Screen shown when App ID / Auth Key / Region are not configured.
 /// Saves credentials to SharedPreferences and re-initialises CometChat.
+///
+/// This file imports nothing from the app beyond app_credentials.dart and
+/// guard_screen.dart: the release pipeline copies it on its own into the
+/// generated public sample apps.
 class AppCredentialsScreen extends StatefulWidget {
-  const AppCredentialsScreen({super.key});
+  const AppCredentialsScreen({super.key, this.buildSettings});
+
+  /// Builds the settings the UI Kit is re-initialised with once the new
+  /// credentials are saved. Pass the app's own builder (main.dart's), so the
+  /// re-init keeps calls, the calling configuration and the hosts: this init
+  /// replaces the launch one. Without it, a plain chat-only set-up from the
+  /// saved credentials is used.
+  final UIKitSettings Function()? buildSettings;
 
   @override
   State<AppCredentialsScreen> createState() => _AppCredentialsScreenState();
@@ -53,7 +64,8 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
     if (_selectedRegion == null ||
         _appIdController.text.trim().isEmpty ||
         _authKeyController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Please fill in all fields and select a region.');
+      setState(() =>
+          _errorMessage = 'Please fill in all fields and select a region.');
       return;
     }
 
@@ -73,15 +85,18 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
 
     if (!mounted) return;
 
-    // Initialize CometChat with the new credentials before navigating
-    final settingsBuilder = UIKitSettingsBuilder()
-      ..subscriptionType = CometChatSubscriptionType.allUsers
-      ..region = AppCredentials.region
-      ..autoEstablishSocketConnection = true
-      ..appId = AppCredentials.appId
-      ..authKey = AppCredentials.authKey;
-
-    final uiKitSettings = settingsBuilder.build();
+    // Initialize CometChat with the new credentials before navigating, with
+    // the same settings as main.dart when it passed its builder. This init
+    // replaces the launch one, so leaving enableCalls out here turned call
+    // handling off until the next launch.
+    final uiKitSettings = widget.buildSettings?.call() ??
+        (UIKitSettingsBuilder()
+              ..subscriptionType = CometChatSubscriptionType.allUsers
+              ..region = AppCredentials.region
+              ..autoEstablishSocketConnection = true
+              ..appId = AppCredentials.appId
+              ..authKey = AppCredentials.authKey)
+            .build();
 
     CometChatUIKit.init(
       uiKitSettings: uiKitSettings,
@@ -97,7 +112,8 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
         if (!mounted) return;
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Init failed: ${error.message}. Check your credentials.';
+          _errorMessage =
+              'Init failed: ${error.message}. Check your credentials.';
         });
       },
     );
@@ -113,219 +129,274 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
           _appIdFocus.unfocus();
           _authKeyFocus.unfocus();
         },
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: _spacing.padding4 ?? 16,
-              vertical: _spacing.padding4 ?? 16,
+        child: Stack(
+          children: [
+            // Dotted pattern background
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _DottedPatternPainter(
+                  dotColor: _colorPalette.borderLight ??
+                      Colors.grey.withValues(alpha: 0.3),
+                ),
+              ),
             ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: _spacing.padding10 ?? 40),
-                        Center(
-                          child: Image.asset(
-                            'assets/cometchat_logo_with_text.png',
-                            color: _colorPalette.textPrimary,
-                            height: 40,
-                          ),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _spacing.padding5 ?? 20,
+                    vertical: _spacing.padding5 ?? 20,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // CometChat logo
+                      Padding(
+                        padding:
+                            EdgeInsets.only(bottom: _spacing.padding8 ?? 32),
+                        child: Image.asset(
+                          'assets/cometchat_logo_with_text.png',
+                          color: _colorPalette.textPrimary,
+                          height: 40,
                         ),
-                        SizedBox(height: _spacing.padding10 ?? 40),
-                        Center(
-                          child: Text(
-                            'App Credentials',
-                            style: TextStyle(
-                              color: _colorPalette.textPrimary,
-                              fontSize: _typography.heading2?.bold?.fontSize,
-                              fontFamily: _typography.heading2?.bold?.fontFamily,
-                              fontWeight: _typography.heading2?.bold?.fontWeight,
+                      ),
+                      // Card container
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: Container(
+                          width: double.infinity,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: ShapeDecoration(
+                            color: _colorPalette.background1,
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(
+                                width: 1,
+                                color: _colorPalette.borderDefault ??
+                                    const Color(0xFFE8E8E8),
+                              ),
+                              borderRadius: BorderRadius.circular(20),
                             ),
+                            shadows: const [
+                              BoxShadow(
+                                color: Color(0x07101828),
+                                blurRadius: 6,
+                                offset: Offset(0, 4),
+                                spreadRadius: -2,
+                              ),
+                              BoxShadow(
+                                color: Color(0x14101828),
+                                blurRadius: 16,
+                                offset: Offset(0, 12),
+                                spreadRadius: -4,
+                              ),
+                            ],
                           ),
-                        ),
-                        SizedBox(height: _spacing.padding2 ?? 8),
-                        Center(
-                          child: Text(
-                            'Enter your CometChat app credentials to get started.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _colorPalette.textSecondary,
-                              fontSize: _typography.body?.regular?.fontSize,
-                              fontFamily: _typography.body?.regular?.fontFamily,
-                              fontWeight: _typography.body?.regular?.fontWeight,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: _spacing.padding5 ?? 20),
-
-                        // Region selector
-                        Text(
-                          'Region',
-                          style: TextStyle(
-                            color: _colorPalette.textPrimary,
-                            fontSize: _typography.body?.medium?.fontSize,
-                            fontFamily: _typography.body?.medium?.fontFamily,
-                            fontWeight: _typography.body?.medium?.fontWeight,
-                          ),
-                        ),
-                        SizedBox(height: _spacing.padding2 ?? 8),
-                        Row(
-                          children: _regions.map((r) {
-                            final selected = _selectedRegion == r;
-                            return Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  right: r != _regions.last
-                                      ? (_spacing.padding2 ?? 8)
-                                      : 0,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _selectedRegion = r),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: _spacing.padding2 ?? 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: selected
-                                          ? _colorPalette.extendedPrimary50
-                                          : _colorPalette.background1,
-                                      borderRadius: BorderRadius.circular(
-                                          _spacing.radius2 ?? 8),
-                                      border: Border.all(
-                                        color: selected
-                                            ? (_colorPalette.borderHighlight ??
-                                                Colors.transparent)
-                                            : (_colorPalette.borderLight ??
-                                                Colors.transparent),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        r,
-                                        style: TextStyle(
-                                          color: selected
-                                              ? _colorPalette.primary
-                                              : _colorPalette.textSecondary,
-                                          fontSize: _typography
-                                              .button?.medium?.fontSize,
-                                          fontFamily: _typography
-                                              .button?.medium?.fontFamily,
-                                          fontWeight: _typography
-                                              .button?.medium?.fontWeight,
-                                        ),
-                                      ),
-                                    ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Center(
+                                child: Text(
+                                  'App Credentials',
+                                  style: TextStyle(
+                                    color: _colorPalette.textPrimary,
+                                    fontSize:
+                                        _typography.heading2?.bold?.fontSize,
+                                    fontFamily:
+                                        _typography.heading2?.bold?.fontFamily,
+                                    fontWeight:
+                                        _typography.heading2?.bold?.fontWeight,
                                   ),
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
+                              SizedBox(height: _spacing.padding5 ?? 20),
 
-                        SizedBox(height: _spacing.padding5 ?? 20),
+                              // Region selector
+                              Text(
+                                'Region',
+                                style: TextStyle(
+                                  color: _colorPalette.textPrimary,
+                                  fontSize: _typography.body?.medium?.fontSize,
+                                  fontFamily:
+                                      _typography.body?.medium?.fontFamily,
+                                  fontWeight:
+                                      _typography.body?.medium?.fontWeight,
+                                ),
+                              ),
+                              SizedBox(height: _spacing.padding2 ?? 8),
+                              Row(
+                                children: _regions.map((r) {
+                                  final selected = _selectedRegion == r;
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        right: r != _regions.last
+                                            ? (_spacing.padding2 ?? 8)
+                                            : 0,
+                                      ),
+                                      child: GestureDetector(
+                                        onTap: () =>
+                                            setState(() => _selectedRegion = r),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: _spacing.padding2 ?? 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: selected
+                                                ? _colorPalette
+                                                    .extendedPrimary50
+                                                : _colorPalette.background1,
+                                            borderRadius: BorderRadius.circular(
+                                                _spacing.radius2 ?? 8),
+                                            border: Border.all(
+                                              color: selected
+                                                  ? (_colorPalette
+                                                          .borderHighlight ??
+                                                      Colors.transparent)
+                                                  : (_colorPalette
+                                                          .borderLight ??
+                                                      Colors.transparent),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              r,
+                                              style: TextStyle(
+                                                color: selected
+                                                    ? _colorPalette.primary
+                                                    : _colorPalette
+                                                        .textSecondary,
+                                                fontSize: _typography
+                                                    .button?.medium?.fontSize,
+                                                fontFamily: _typography
+                                                    .button?.medium?.fontFamily,
+                                                fontWeight: _typography
+                                                    .button?.medium?.fontWeight,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
 
-                        // App ID field
-                        Text(
-                          'App ID',
-                          style: TextStyle(
-                            color: _colorPalette.textPrimary,
-                            fontSize: _typography.caption1?.medium?.fontSize,
-                            fontFamily: _typography.caption1?.medium?.fontFamily,
-                            fontWeight: _typography.caption1?.medium?.fontWeight,
+                              SizedBox(height: _spacing.padding5 ?? 20),
+
+                              // App ID field
+                              Text(
+                                'APP ID',
+                                style: TextStyle(
+                                  color: _colorPalette.textPrimary,
+                                  fontSize:
+                                      _typography.caption1?.medium?.fontSize,
+                                  fontFamily:
+                                      _typography.caption1?.medium?.fontFamily,
+                                  fontWeight:
+                                      _typography.caption1?.medium?.fontWeight,
+                                ),
+                              ),
+                              SizedBox(height: _spacing.padding1 ?? 4),
+                              _buildTextField(
+                                controller: _appIdController,
+                                focusNode: _appIdFocus,
+                                hint: 'Enter the app ID',
+                              ),
+
+                              SizedBox(height: _spacing.padding5 ?? 20),
+
+                              // Auth Key field
+                              Text(
+                                'Auth Keys',
+                                style: TextStyle(
+                                  color: _colorPalette.textPrimary,
+                                  fontSize:
+                                      _typography.caption1?.medium?.fontSize,
+                                  fontFamily:
+                                      _typography.caption1?.medium?.fontFamily,
+                                  fontWeight:
+                                      _typography.caption1?.medium?.fontWeight,
+                                ),
+                              ),
+                              SizedBox(height: _spacing.padding1 ?? 4),
+                              _buildTextField(
+                                controller: _authKeyController,
+                                focusNode: _authKeyFocus,
+                                hint: 'Enter the auth key',
+                              ),
+
+                              if (_errorMessage != null) ...[
+                                SizedBox(height: _spacing.padding2 ?? 8),
+                                Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: _colorPalette.error,
+                                    fontSize:
+                                        _typography.caption1?.regular?.fontSize,
+                                  ),
+                                ),
+                              ],
+
+                              SizedBox(height: _spacing.padding5 ?? 20),
+
+                              // Continue button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 44,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _save,
+                                  style: ButtonStyle(
+                                    backgroundColor: WidgetStateProperty.all(
+                                        _colorPalette.primary),
+                                    shape: WidgetStateProperty.all(
+                                      RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            _spacing.radius2 ?? 8),
+                                      ),
+                                    ),
+                                    elevation: WidgetStateProperty.all(0),
+                                  ),
+                                  child: _isLoading
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    _colorPalette.white ??
+                                                        Colors.white),
+                                          ),
+                                        )
+                                      : Text(
+                                          'Continue',
+                                          style: TextStyle(
+                                            color:
+                                                _colorPalette.buttonIconColor,
+                                            fontSize: _typography
+                                                .button?.medium?.fontSize,
+                                            fontFamily: _typography
+                                                .button?.medium?.fontFamily,
+                                            fontWeight: _typography
+                                                .button?.medium?.fontWeight,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        SizedBox(height: _spacing.padding1 ?? 4),
-                        _buildTextField(
-                          controller: _appIdController,
-                          focusNode: _appIdFocus,
-                          hint: 'Enter your App ID',
-                        ),
-
-                        SizedBox(height: _spacing.padding5 ?? 20),
-
-                        // Auth Key field
-                        Text(
-                          'Auth Key',
-                          style: TextStyle(
-                            color: _colorPalette.textPrimary,
-                            fontSize: _typography.caption1?.medium?.fontSize,
-                            fontFamily: _typography.caption1?.medium?.fontFamily,
-                            fontWeight: _typography.caption1?.medium?.fontWeight,
-                          ),
-                        ),
-                        SizedBox(height: _spacing.padding1 ?? 4),
-                        _buildTextField(
-                          controller: _authKeyController,
-                          focusNode: _authKeyFocus,
-                          hint: 'Enter your Auth Key',
-                          obscureText: true,
-                        ),
-
-                        if (_errorMessage != null) ...[
-                          SizedBox(height: _spacing.padding2 ?? 8),
-                          Text(
-                            _errorMessage!,
-                            style: TextStyle(
-                              color: _colorPalette.error,
-                              fontSize: _typography.caption1?.regular?.fontSize,
-                            ),
-                          ),
-                        ],
-
-                        SizedBox(height: _spacing.padding5 ?? 20),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Continue button
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _save,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(
-                          _colorPalette.primary),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              _spacing.radius2 ?? 8),
                         ),
                       ),
-                      elevation: WidgetStateProperty.all(0),
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  _colorPalette.white ?? Colors.white),
-                            ),
-                          )
-                        : Text(
-                            'Continue',
-                            style: TextStyle(
-                              color: _colorPalette.buttonIconColor,
-                              fontSize: _typography.button?.medium?.fontSize,
-                              fontFamily:
-                                  _typography.button?.medium?.fontFamily,
-                              fontWeight:
-                                  _typography.button?.medium?.fontWeight,
-                            ),
-                          ),
+                    ],
                   ),
                 ),
-                SizedBox(height: _spacing.padding2 ?? 8),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -383,5 +454,33 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Custom painter for dotted background pattern
+class _DottedPatternPainter extends CustomPainter {
+  final Color dotColor;
+
+  _DottedPatternPainter({required this.dotColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = dotColor
+      ..style = PaintingStyle.fill;
+
+    const double spacing = 24.0;
+    const double radius = 1.2;
+
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DottedPatternPainter oldDelegate) {
+    return oldDelegate.dotColor != dotColor;
   }
 }

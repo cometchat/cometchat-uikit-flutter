@@ -60,23 +60,25 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<List<NotificationFeedItem>>();
 
-      request.fetchNext(
-        onSuccess: (List<NotificationFeedItem> feedItems) {
-          if (!completer.isCompleted) {
-            completer.complete(feedItems);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message: exception.message ?? 'Failed to fetch feed items',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        request.fetchNext(
+          onSuccess: (List<NotificationFeedItem> feedItems) {
+            if (!completer.isCompleted) {
+              completer.complete(feedItems);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message: exception.message ?? 'Failed to fetch feed items',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -97,23 +99,25 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<List<NotificationCategory>>();
 
-      request.fetchNext(
-        onSuccess: (List<NotificationCategory> categories) {
-          if (!completer.isCompleted) {
-            completer.complete(categories);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message: exception.message ?? 'Failed to fetch categories',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        request.fetchNext(
+          onSuccess: (List<NotificationCategory> categories) {
+            if (!completer.isCompleted) {
+              completer.complete(categories);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message: exception.message ?? 'Failed to fetch categories',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -132,26 +136,28 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<void>();
 
-      CometChat.markFeedItemAsDelivered(
-        feedItem,
-        onSuccess: (dynamic result) {
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message:
-                    exception.message ??
-                    'Failed to mark feed item as delivered',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        CometChat.markFeedItemAsDelivered(
+          feedItem,
+          onSuccess: (dynamic result) {
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message:
+                      exception.message ??
+                      'Failed to mark feed item as delivered',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -170,25 +176,27 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<void>();
 
-      CometChat.markFeedItemAsRead(
-        feedItem,
-        onSuccess: (dynamic result) {
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message:
-                    exception.message ?? 'Failed to mark feed item as read',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        CometChat.markFeedItemAsRead(
+          feedItem,
+          onSuccess: (dynamic result) {
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message:
+                      exception.message ?? 'Failed to mark feed item as read',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -210,26 +218,28 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<void>();
 
-      CometChat.reportFeedEngagement(
-        feedItem,
-        interactionString,
-        onSuccess: (dynamic result) {
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message:
-                    exception.message ?? 'Failed to report feed engagement',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        CometChat.reportFeedEngagement(
+          feedItem,
+          interactionString,
+          onSuccess: (dynamic result) {
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message:
+                      exception.message ?? 'Failed to report feed engagement',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -248,23 +258,25 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<int>();
 
-      CometChat.getNotificationFeedUnreadCount(
-        onSuccess: (int count) {
-          if (!completer.isCompleted) {
-            completer.complete(count);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message: exception.message ?? 'Failed to get unread count',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        CometChat.getNotificationFeedUnreadCount(
+          onSuccess: (int count) {
+            if (!completer.isCompleted) {
+              completer.complete(count);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message: exception.message ?? 'Failed to get unread count',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -283,24 +295,26 @@ class NotificationFeedRemoteDataSourceImpl
     try {
       final completer = Completer<NotificationFeedItem>();
 
-      CometChat.getNotificationFeedItem(
-        id,
-        onSuccess: (NotificationFeedItem feedItem) {
-          if (!completer.isCompleted) {
-            completer.complete(feedItem);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              NotificationFeedRemoteException(
-                message: exception.message ?? 'Failed to get feed item',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        CometChat.getNotificationFeedItem(
+          id,
+          onSuccess: (NotificationFeedItem feedItem) {
+            if (!completer.isCompleted) {
+              completer.complete(feedItem);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                NotificationFeedRemoteException(
+                  message: exception.message ?? 'Failed to get feed item',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;

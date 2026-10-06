@@ -95,7 +95,9 @@ class CometChatStickerBubble extends StatelessWidget {
                 return SizedBox(
                   height: height ?? 180,
                   width: width ?? 180,
-                  child: const Center(child: Text("Failed To Load Sticker")),
+                  child: Center(
+                    child: Text(Translations.of(context).failedToLoadSticker),
+                  ),
                 );
               },
             ),
@@ -103,7 +105,9 @@ class CometChatStickerBubble extends StatelessWidget {
         : SizedBox(
             height: height ?? 100,
             width: width ?? 100,
-            child: const Center(child: Text("Failed To Load Sticker")),
+            child: Center(
+              child: Text(Translations.of(context).failedToLoadSticker),
+            ),
           );
   }
 }

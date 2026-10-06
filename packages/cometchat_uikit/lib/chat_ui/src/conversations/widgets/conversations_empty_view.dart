@@ -44,55 +44,65 @@ class ConversationsEmptyView extends StatelessWidget {
       return Center(child: customView!(context));
     }
 
-    // Default empty state view
+    // Default empty state view.
+    //
+    // Scrollable so that the illustration and copy stay reachable when the user
+    // scales their text up: at 200% on a small phone this Column is taller than
+    // the viewport, and without the scroll view the "start a new chat" call to
+    // action is the part that falls off the bottom.
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Empty state image
-          Padding(
-            padding: EdgeInsets.only(bottom: spacing.padding5 ?? 0),
-            child: Image.asset(
-              AssetConstants(
-                CometChatThemeHelper.getBrightness(context),
-              ).conversationEmpty,
-              package: UIConstants.packageName,
-              width: 162,
-              height: 121,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Empty state image
+            Padding(
+              padding: EdgeInsets.only(bottom: spacing.padding5 ?? 0),
+              child: Image.asset(
+                AssetConstants(
+                  CometChatThemeHelper.getBrightness(context),
+                ).conversationEmpty,
+                package: UIConstants.packageName,
+                excludeFromSemantics: true,
+                width: 162,
+                height: 121,
+              ),
             ),
-          ),
-          // Title text - "No conversations yet"
-          Text(
-            cc.Translations.of(context).noConversationsYet,
-            textAlign: TextAlign.center,
-            style:
-                TextStyle(
-                      color:
-                          style.emptyStateTextColor ?? colorPalette.textPrimary,
-                      fontSize: typography.heading3?.bold?.fontSize,
-                      fontWeight: typography.heading3?.bold?.fontWeight,
-                      fontFamily: typography.heading3?.bold?.fontFamily,
-                    )
-                    .merge(style.emptyStateTextStyle)
-                    .copyWith(color: style.emptyStateTextColor),
-          ),
-          // Subtitle text - "Start a new chat or invite..."
-          Text(
-            cc.Translations.of(context).startNewChatOrInvite,
-            textAlign: TextAlign.center,
-            style:
-                TextStyle(
-                      color:
-                          style.emptyStateSubTitleTextColor ??
-                          colorPalette.textSecondary,
-                      fontSize: typography.heading3?.regular?.fontSize,
-                      fontWeight: typography.heading3?.regular?.fontWeight,
-                      fontFamily: typography.heading3?.regular?.fontFamily,
-                    )
-                    .merge(style.emptyStateSubTitleTextStyle)
-                    .copyWith(color: style.emptyStateSubTitleTextColor),
-          ),
-        ],
+            // Title text - "No conversations yet"
+            Text(
+              cc.Translations.of(context).noConversationsYet,
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(
+                        color:
+                            style.emptyStateTextColor ??
+                            colorPalette.textPrimary,
+                        fontSize: typography.heading3?.bold?.fontSize,
+                        fontWeight: typography.heading3?.bold?.fontWeight,
+                        fontFamily: typography.heading3?.bold?.fontFamily,
+                      )
+                      .merge(style.emptyStateTextStyle)
+                      .copyWith(color: style.emptyStateTextColor),
+            ),
+            // Subtitle text - "Start a new chat or invite..."
+            Text(
+              cc.Translations.of(context).startNewChatOrInvite,
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(
+                        color:
+                            style.emptyStateSubTitleTextColor ??
+                            colorPalette.textSecondary,
+                        fontSize: typography.heading3?.regular?.fontSize,
+                        fontWeight: typography.heading3?.regular?.fontWeight,
+                        fontFamily: typography.heading3?.regular?.fontFamily,
+                      )
+                      .merge(style.emptyStateSubTitleTextStyle)
+                      .copyWith(color: style.emptyStateSubTitleTextColor),
+            ),
+          ],
+        ),
       ),
     );
   }

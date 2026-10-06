@@ -36,6 +36,7 @@ class CometChatThreadedHeader extends StatefulWidget {
     this.colorPalette,
     this.typography,
     this.spacing,
+    this.threadedHeaderBloc,
   });
 
   /// [parentMessage] parent message for thread
@@ -87,6 +88,13 @@ class CometChatThreadedHeader extends StatefulWidget {
   /// [spacing] optional pre-cached spacing for optimization
   final CometChatSpacing? spacing;
 
+  ///[threadedHeaderBloc] Optional external ThreadedHeaderBloc instance.
+  ///If provided, it is used instead of creating one internally and the widget
+  ///does not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc] — the seam that lets a test
+  ///supply a reply count without a live SDK.
+  final ThreadedHeaderBloc? threadedHeaderBloc;
+
   @override
   State<CometChatThreadedHeader> createState() =>
       _CometChatThreadedHeaderState();
@@ -95,6 +103,7 @@ class CometChatThreadedHeader extends StatefulWidget {
 class _CometChatThreadedHeaderState extends State<CometChatThreadedHeader> {
   /// BLoC for managing threaded header state
   late ThreadedHeaderBloc _bloc;
+  bool _isExternalBloc = false;
 
   /// Theme caching - initialized once in didChangeDependencies
   late CometChatColorPalette _colorPalette;
@@ -127,13 +136,18 @@ class _CometChatThreadedHeaderState extends State<CometChatThreadedHeader> {
     _resolveMessageTemplate();
 
     // Create BLoC and dispatch initialization event
-    _bloc = ThreadedHeaderBloc();
-    _bloc.add(
-      InitializeThreadedHeader(
-        parentMessage: widget.parentMessage,
-        loggedInUser: widget.loggedInUser,
-      ),
-    );
+    if (widget.threadedHeaderBloc != null) {
+      _bloc = widget.threadedHeaderBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = ThreadedHeaderBloc();
+      _bloc.add(
+        InitializeThreadedHeader(
+          parentMessage: widget.parentMessage,
+          loggedInUser: widget.loggedInUser,
+        ),
+      );
+    }
   }
 
   /// Resolve the message template from data source or use custom template
@@ -223,11 +237,29 @@ class _CometChatThreadedHeaderState extends State<CometChatThreadedHeader> {
         widget.template != oldWidget.template) {
       _resolveMessageTemplate();
     }
+
+    // A new root is a different thread. The header's own bloc is
+    // re-initialized so the bubble, reply count and follow control describe
+    // it; an injected bloc belongs to its owner, who re-initializes it.
+    if (widget.parentMessage.id != oldWidget.parentMessage.id) {
+      _lastSubscriptionToggleAt = null;
+      if (!_isExternalBloc) {
+        _bloc.add(
+          InitializeThreadedHeader(
+            parentMessage: widget.parentMessage,
+            loggedInUser: widget.loggedInUser,
+          ),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
-    _bloc.close();
+    // an injected bloc belongs to its owner, so only close what we created
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 
@@ -264,7 +296,11 @@ class _CometChatThreadedHeaderState extends State<CometChatThreadedHeader> {
     _lastSubscriptionToggleAt = now;
     _subscriptionToggleInFlight = true;
 
-    final parentMessageId = widget.parentMessage.id;
+    // Act on the thread the header shows: the bloc's root. An injected bloc
+    // can lag widget.parentMessage until its owner re-initializes it, and the
+    // display, the SDK call and the report must all name the same thread.
+    final parentMessageId =
+        (_bloc.state.parentMessage ?? widget.parentMessage).id;
     final target = !wasSubscribed;
 
     // Optimistic flip — the bloc stamps the parent message object; the
@@ -291,7 +327,10 @@ class _CometChatThreadedHeaderState extends State<CometChatThreadedHeader> {
           );
         }
       } else {
-        if (!_bloc.isClosed) {
+        // Revert only while the header still shows that thread.
+        if (!_bloc.isClosed &&
+            (_bloc.state.parentMessage ?? widget.parentMessage).id ==
+                parentMessageId) {
           _bloc.add(UpdateThreadSubscription(wasSubscribed));
         }
         if (mounted) {

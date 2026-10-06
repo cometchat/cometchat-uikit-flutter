@@ -19,8 +19,19 @@ abstract class ConversationsRepository {
   /// Get a specific conversation by ID
   Future<Result<Conversation>> getConversationById(String conversationId);
 
-  /// Delete a conversation
-  Future<Result<void>> deleteConversation(String conversationId);
+  /// Delete a conversation.
+  ///
+  /// [conversationWith] / [conversationType] identify the SDK delete target
+  /// (peer `User.uid` or `Group.guid` + `'user'`/`'group'`) taken from the
+  /// Conversation OBJECT. Always pass them when the object is available: the
+  /// [conversationId] string alone is ambiguous for 1:1 conversations
+  /// ("{uidA}_user_{uidB}" — sorted participants, not "type_id"), so the
+  /// string fallback cannot reliably tell which side is the peer.
+  Future<Result<void>> deleteConversation(
+    String conversationId, {
+    String? conversationWith,
+    String? conversationType,
+  });
 
   /// Update a conversation
   Future<Result<Conversation>> updateConversation(Conversation conversation);

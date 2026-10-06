@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.*
@@ -59,6 +60,27 @@ class CometchatChatUikitPlugin :
     private lateinit var activity: Activity
 
     private var filePickerDelegate: CometChatFilePickerDelegate? = null
+
+    // One message-sound player for the plugin's lifetime. A new AudioPlayer
+    // per call meant stopPlayer ran on an instance that never asked for audio
+    // focus, so the focus playCustomSound took was never given back and music
+    // paused by a message or ringtone did not resume.
+    private val audioPlayer = AudioPlayer()
+
+    // The outgoing call's ringback, apart from the message sounds.
+    private var callTonePlayer: CallTonePlayer? = null
+
+    // The activity's requested orientation from before a call screen held
+    // it in portrait ("holdCallOrientation"), put back exactly when the
+    // call screen gives it up ("releaseCallOrientation"): a manifest
+    // android:screenOrientation, or one the app set from code. Null while
+    // no call screen holds it. Flutter's own empty preferred-orientation
+    // list maps to UNSPECIFIED, which unlocked a manifest lock after every
+    // call and lost an orientation set from code.
+    private var orientationBeforeCall: Int? = null
+
+    // The incoming call's ringtone and vibration, apart from both.
+    private var ringtonePlayer: RingtonePlayer? = null
     private var cameraPermissionResult: MethodChannel.Result? = null
     private var audioRecordPermissionResult: MethodChannel.Result? = null
 
@@ -79,6 +101,12 @@ class CometchatChatUikitPlugin :
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
+        callTonePlayer = CallTonePlayer(binding.applicationContext, binding.flutterAssets) {
+            ringtonePlayer?.callToneReleased()
+        }
+        ringtonePlayer = RingtonePlayer(binding.applicationContext, binding.flutterAssets) {
+            callTonePlayer?.holdsCallAudio == true
+        }
         channel = MethodChannel(binding.binaryMessenger, CHANNEL)
         channel.setMethodCallHandler(this)
 
@@ -104,6 +132,10 @@ class CometchatChatUikitPlugin :
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        callTonePlayer?.stop(handover = false)
+        callTonePlayer = null
+        ringtonePlayer?.stop(handover = false)
+        ringtonePlayer = null
         keyboardHeightEventChannel?.setStreamHandler(null)
         removeKeyboardHeightListener()
     }
@@ -139,10 +171,108 @@ class CometchatChatUikitPlugin :
 
             // 🔊 AUDIO
             "playCustomSound" ->
-                AudioPlayer().playCustomSound(call, result, context)
+                audioPlayer.playCustomSound(call, result, context)
 
             "stopPlayer" ->
-                AudioPlayer().stopPlayer(result)
+                audioPlayer.stopPlayer(result)
+
+            // 📞 CALL TONE (the outgoing call's ringback)
+            "playCallTone" -> {
+                val assetPath = call.argument<String>("assetPath")
+                val player = callTonePlayer
+                if (assetPath.isNullOrEmpty() || player == null) {
+                    result.success(false)
+                } else {
+                    result.success(
+                        player.play(
+                            assetPath,
+                            call.argument<String>("package"),
+                            call.argument<Boolean>("isVideo") ?: false,
+                            call.argument<String>("fallbackAssetPath"),
+                            call.argument<String>("fallbackPackage")
+                        )
+                    )
+                }
+            }
+
+            "stopCallTone" -> {
+                callTonePlayer?.stop(
+                    handover = call.argument<Boolean>("handover") ?: false,
+                    keepAudio = call.argument<Boolean>("keepAudio") ?: false
+                )
+                result.success(null)
+            }
+
+            // The call screen's portrait hold. A second hold (a newer call
+            // screen) keeps what the first one saved.
+            "holdCallOrientation" -> {
+                if (!::activity.isInitialized) {
+                    result.success(false)
+                } else {
+                    if (orientationBeforeCall == null) {
+                        orientationBeforeCall = activity.requestedOrientation
+                    }
+                    // What Flutter sets for [portraitUp, portraitDown].
+                    activity.requestedOrientation =
+                        ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                    result.success(true)
+                }
+            }
+
+            // True once the activity has its own orientation back, also
+            // when there was nothing to give back (a second release);
+            // false only without an activity.
+            "releaseCallOrientation" -> {
+                if (!::activity.isInitialized) {
+                    result.success(false)
+                } else {
+                    val saved = orientationBeforeCall
+                    if (saved != null) {
+                        orientationBeforeCall = null
+                        activity.requestedOrientation = saved
+                    }
+                    result.success(true)
+                }
+            }
+
+            // The audio the ringback or the ringtone handed to a call screen:
+            // given back when the call never joined, forgotten once it did.
+            "releaseHandedOverCallAudio" -> {
+                val restore = call.argument<Boolean>("restore") ?: false
+                callTonePlayer?.releaseHandedOver(restore)
+                ringtonePlayer?.releaseHandedOver(restore)
+                result.success(null)
+            }
+
+            // 📳 RINGTONE (the incoming call's, with its vibration)
+            "playRingtone" -> {
+                val assetPath = call.argument<String>("assetPath")
+                val player = ringtonePlayer
+                if (assetPath.isNullOrEmpty() || player == null) {
+                    result.success(false)
+                } else {
+                    result.success(
+                        player.play(
+                            assetPath,
+                            call.argument<String>("package"),
+                            call.argument<String>("fallbackAssetPath"),
+                            call.argument<String>("fallbackPackage"),
+                            looping = call.argument<Boolean>("looping") ?: true,
+                            vibrate = call.argument<Boolean>("vibrate") ?: false,
+                            callActive = call.argument<Boolean>("callActive") ?: false,
+                            deadlineMs = call.argument<Number>("deadlineMs")?.toLong()
+                        )
+                    )
+                }
+            }
+
+            "stopRingtone" -> {
+                ringtonePlayer?.stop(
+                    handover = call.argument<Boolean>("handover") ?: false,
+                    keepAudio = call.argument<Boolean>("keepAudio") ?: false
+                )
+                result.success(null)
+            }
 
             // 🎙 AUDIO RECORDING
             "startRecordingAudio" -> {

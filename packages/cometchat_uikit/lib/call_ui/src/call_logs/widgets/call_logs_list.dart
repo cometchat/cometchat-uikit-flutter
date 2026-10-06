@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../../cometchat_calls_uikit.dart';
 import '../../../../cometchat_chat_uikit.dart';
+import '../../../../src/call_logs_load_more_retry.dart';
 
 /// A widget that displays the list of call logs.
 ///
 /// This widget renders a scrollable list of call log items with support for:
-/// - Pagination (loads more items when scrolling to bottom)
+/// - Pagination (loads more items when scrolling to bottom; when the next
+///   page fails, `state.loadMoreError`, the list ends with a retry row)
 /// - Custom item views
 /// - Long press options menu
 /// - Pre-cached theme values for performance optimization
@@ -41,6 +43,10 @@ class CallLogsList extends StatelessWidget {
     this.spacing,
     this.typography,
   });
+
+  /// Stands in for the logged-in user when [state] has none: it takes part
+  /// in no call, so a 1:1 row shows nobody rather than the wrong person.
+  static final User _unknownUser = User(uid: '', name: '');
 
   /// The current state of the call logs BLoC.
   final CallLogsState state;
@@ -172,6 +178,17 @@ class CallLogsList extends StatelessWidget {
       itemBuilder: (context, index) {
         // Show loading indicator for pagination
         if (index >= callLogs.length) {
+          // The next page failed: the rows stay, and a retry row asks for it
+          // again. The loading row asked on every build, so it looped.
+          if (state.loadMoreError != null) {
+            return CallLogsLoadMoreRetryRow(
+              onRetry: () => bloc.add(const LoadMoreCallLogs()),
+              style: effectiveStyle,
+              colorPalette: effectiveColorPalette,
+              typography: effectiveTypography,
+              spacing: effectiveSpacing,
+            );
+          }
           bloc.add(const LoadMoreCallLogs());
           return CallLogsLoadingView(
             customView: loadingStateView,
@@ -186,7 +203,9 @@ class CallLogsList extends StatelessWidget {
         return CallLogsListItem(
           key: tileKeys[index],
           callLog: log,
-          loggedInUser: state.loggedInUser!,
+          // No logged-in user in the state (fetching it failed): the rows
+          // still render, a 1:1 one with an empty title. It used to throw.
+          loggedInUser: state.loggedInUser ?? _unknownUser,
           onTap: onItemTap != null ? () => onItemTap!(log) : null,
           onLongPress: () => _handleLongPress(context, log, tileKeys[index]),
           onCallIconPressed: onCallIconPressed != null

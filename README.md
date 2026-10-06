@@ -21,8 +21,8 @@ CometChat UIKit for Flutter provides pre-built UI components to quickly add chat
 
 ## Prerequisites
 
-- Flutter SDK >= 3.27.0
-- Dart SDK >= 3.6.0
+- Flutter SDK >= 3.38.9
+- Dart SDK >= 3.10.8
 - iOS 16.0+ / Android 5.0+
 - A [CometChat](https://app.cometchat.com/) account with App ID and Auth Key
 
@@ -62,7 +62,13 @@ Refer to our [official documentation](https://www.cometchat.com/docs/ui-kit/flut
 
 ## Help and Support
 
-For issues running the project or integrating with our UI Kit, consult our [documentation](https://www.cometchat.com/docs/ui-kit/flutter/v6/overview) or create a [support ticket](https://help.cometchat.com/hc/en-us) or seek real-time support via the [CometChat Dashboard](https://app.cometchat.com/).
+For bugs and feature requests in the UIKit itself, open an issue on this repository.
+
+For account, billing, or integration questions, consult our [documentation](https://www.cometchat.com/docs/ui-kit/flutter/v6/overview), create a [support ticket](https://help.cometchat.com/hc/en-us), or seek real-time support via the [CometChat Dashboard](https://app.cometchat.com/).
+
+## Security
+
+To report a security vulnerability, email security@cometchat.com. Please do not open a public issue for security reports.
 
 ## License
 

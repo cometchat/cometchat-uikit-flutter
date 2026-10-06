@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
@@ -65,6 +66,14 @@ class CometChatNotificationFeed extends StatefulWidget {
   /// Theme override forwarded to CometChatCardView.
   final CometChatCardThemeOverride? cardThemeOverride;
 
+  ///[notificationFeedBloc] Optional external NotificationFeedBloc instance.
+  ///If provided, it is used instead of creating one internally and the widget
+  ///does not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc] and
+  ///[CometChatGroupMembers.groupMembersBloc] — the seam that lets a test
+  ///supply feed data without a live SDK.
+  final NotificationFeedBloc? notificationFeedBloc;
+
   const CometChatNotificationFeed({
     super.key,
     this.title = 'Notifications',
@@ -85,6 +94,7 @@ class CometChatNotificationFeed extends StatefulWidget {
     this.style,
     this.cardThemeMode,
     this.cardThemeOverride,
+    this.notificationFeedBloc,
   });
 
   @override
@@ -94,6 +104,7 @@ class CometChatNotificationFeed extends StatefulWidget {
 
 class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
   late NotificationFeedBloc _bloc;
+  bool _isExternalBloc = false;
   late FeedVisibilityTracker _visibilityTracker;
   late ScrollController _scrollController;
   CometChatNotificationFeedStyle _style =
@@ -105,11 +116,18 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
   @override
   void initState() {
     super.initState();
-    _bloc = NotificationFeedBloc(
-      notificationFeedRequestBuilder: widget.notificationFeedRequestBuilder,
-      notificationCategoriesRequestBuilder:
-          widget.notificationCategoriesRequestBuilder,
-    );
+    if (widget.notificationFeedBloc != null) {
+      // An externally supplied bloc owns its own dependencies and lifecycle.
+      _bloc = widget.notificationFeedBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = NotificationFeedBloc(
+        notificationFeedRequestBuilder: widget.notificationFeedRequestBuilder,
+        notificationCategoriesRequestBuilder:
+            widget.notificationCategoriesRequestBuilder,
+      );
+      _isExternalBloc = false;
+    }
     _visibilityTracker = FeedVisibilityTracker(bloc: _bloc);
     _scrollController = ScrollController()..addListener(_onScroll);
 
@@ -156,7 +174,9 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
   void dispose() {
     _visibilityTracker.dispose();
     _scrollController.dispose();
-    _bloc.close();
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 
@@ -178,10 +198,12 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
     if (index >= 0) {
       // Item found in list, scroll to it
       // Approximate position based on index
-      _scrollController.animateTo(
-        index * 120.0, // Approximate card height
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+      unawaited(
+        _scrollController.animateTo(
+          index * 120.0, // Approximate card height
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        ),
       );
     } else {
       // Item not found, fetch it and prepend
@@ -235,7 +257,7 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
               icon: Icon(
                 Icons.arrow_back,
                 color: _style.backIconColor,
-                semanticLabel: 'Back',
+                semanticLabel: Translations.of(context).back,
               ),
               onPressed:
                   widget.onBackPress ?? () => Navigator.of(context).pop(),

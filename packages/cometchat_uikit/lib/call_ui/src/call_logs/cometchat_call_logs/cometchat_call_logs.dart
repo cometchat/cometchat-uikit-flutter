@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../cometchat_calls_uikit.dart';
 import '../../../../cometchat_chat_uikit.dart' as cc;
 import '../../../../cometchat_chat_uikit.dart';
+import '../../../../src/call_errors.dart';
+import '../../../../src/call_logs_load_more_retry.dart';
 
 ///[CometChatCallLogs] is a component that displays a list of callLogs with the help of [CometChatListBase] and [CometChatListItem]
 ///fetched callLogs are listed down in order of recent activity
@@ -79,7 +82,31 @@ class CometChatCallLogs extends StatefulWidget {
   ///[onItemClick] callback triggered on clicking of the callLog item
   final Function(CallLog callLog)? onItemClick;
 
-  ///[onError] callback triggered in case any error happens when fetching callLogs
+  ///[onError] callback triggered in case any error happens when fetching
+  ///callLogs (code `CALL_LOGS_ERROR`): the first page (the error view
+  ///replaces the list) or a later one (the list stays and ends with a retry
+  ///row; reported once per failure). Also when calling back from a log
+  ///row's call icon is refused or fails; the list stays as it is:
+  ///
+  /// * `ACTIVE_CALL`: another call is in progress on this device, or is
+  ///   being placed from another call component (one at a time);
+  /// * `NO_NAVIGATOR`: `CallNavigationContext.navigatorKey` has no
+  ///   navigator to show the call on (as for the call buttons; the call-log
+  ///   screen's own navigator does not do: the call screen that follows an
+  ///   accept needs the key's);
+  /// * `PERMISSION_DENIED` / `PERMISSION_PERMANENTLY_DENIED`: microphone
+  ///   (or, for video, camera) access was refused; `details` lists the
+  ///   missing permissions;
+  /// * `BLOCKED_BY_ME` / `HAS_BLOCKED_ME`: the logged-in user has blocked
+  ///   the callee, or the callee has blocked them;
+  /// * the SDK's own exception, code kept, when fetching the callee or
+  ///   placing the call fails, or cancelling one that could not be shown;
+  /// * a platform error, its code kept, when asking for permissions fails
+  ///   (a request already running, say).
+  ///
+  ///With a [callLogsBloc] of your own, the call-back errors come here too
+  ///unless that bloc has an `errorCallback`. With [onCallLogIconClicked]
+  ///set, the call icon is yours and none of these arise.
   final OnError? onError;
 
   ///[onBack] callback triggered on closing this screen
@@ -91,7 +118,10 @@ class CometChatCallLogs extends StatefulWidget {
   ///[callLogsBuilderProtocol] set custom call Log request builder protocol
   final CallLogsBuilderProtocol? callLogsBuilderProtocol;
 
-  ///[callLogsRequestBuilder] set custom conversations request builder
+  ///[callLogsRequestBuilder] set custom call logs request builder, used
+  ///exactly as given. Without one (or a [callLogsBuilderProtocol]) the list
+  ///shows 1:1 calls only (callCategory "call"), 30 per page; a builder with
+  ///no callCategory lists meetings too.
   final CallLogRequestBuilder? callLogsRequestBuilder;
 
   ///[datePattern] custom date pattern visible in callLogs
@@ -118,7 +148,9 @@ class CometChatCallLogs extends StatefulWidget {
   ///[videoCallIcon] custom video call icon
   final Widget? videoCallIcon;
 
-  ///[outgoingCallConfiguration] is a object of [CometChatOutgoingCallConfiguration] which sets the configuration for outgoing call
+  ///[outgoingCallConfiguration] is a object of [CometChatOutgoingCallConfiguration] which sets the configuration for outgoing call.
+  ///When null, the app's `CallingConfiguration` supplies it, as for the
+  ///message header's call buttons.
   final CometChatOutgoingCallConfiguration? outgoingCallConfiguration;
 
   ///[hideAppbar] toggle visibility for app bar
@@ -128,6 +160,14 @@ class CometChatCallLogs extends StatefulWidget {
   final List<Widget>? appBarOptions;
 
   ///[onCallLogIconClicked] callback triggered on clicking of the callLog icon audio/video icon
+  ///
+  /// Without it, the icon calls the other party back, with the call
+  /// buttons' checks (see [onError]). That default asks for the microphone
+  /// (and, for video, the camera) permission first, and then fetches a user
+  /// callee straight from the chat SDK (`CometChat.getUser`), not through
+  /// [callLogsBloc]'s repository: an app with a repository of its own, or a
+  /// widget test, reaches the SDK and the permission plugin there. Set this
+  /// to take the icon over.
   final Function(CallLog callLog)? onCallLogIconClicked;
 
   ///[onItemLongPress] callback triggered on long pressing of the callLog item
@@ -204,6 +244,11 @@ class _CometChatCallLogsState extends State<CometChatCallLogs> {
     if (widget.callLogsBloc != null) {
       _callLogsBloc = widget.callLogsBloc!;
       _isExternalBloc = true;
+      // A bloc with no errorCallback of its own reports to this onError.
+      final onError = widget.onError;
+      if (_callLogsBloc.errorCallback == null && onError != null) {
+        callLogsWidgetOnError[_callLogsBloc] = onError;
+      }
     } else {
       // Initialize service locator if not already initialized
       if (!CallLogsServiceLocator.instance.isInitialized) {
@@ -218,7 +263,11 @@ class _CometChatCallLogsState extends State<CometChatCallLogs> {
       }
 
       // Create BLoC with dependencies from service locator
-      _callLogsBloc = CallLogsBloc(callLogsRequestBuilder: requestBuilder);
+      _callLogsBloc = CallLogsBloc(
+        callLogsRequestBuilder: requestBuilder,
+        outgoingCallConfiguration: widget.outgoingCallConfiguration,
+        errorCallback: widget.onError,
+      );
       _isExternalBloc = false;
     }
 
@@ -264,6 +313,12 @@ class _CometChatCallLogsState extends State<CometChatCallLogs> {
     // Only close the bloc if we created it internally
     if (!_isExternalBloc) {
       _callLogsBloc.close();
+    } else if (identical(
+      callLogsWidgetOnError[_callLogsBloc],
+      widget.onError,
+    )) {
+      // The bloc outlives this widget: it no longer reports here.
+      callLogsWidgetOnError[_callLogsBloc] = null;
     }
     super.dispose();
   }
@@ -302,55 +357,108 @@ class _CometChatCallLogsState extends State<CometChatCallLogs> {
               height: style.separatorHeight ?? 1,
             ),
             Expanded(
-              child: BlocConsumer<CallLogsBloc, CallLogsState>(
-                // Only rebuild on status changes to optimize performance
-                buildWhen: (previous, current) =>
-                    previous.status != current.status ||
-                    previous.callLogs != current.callLogs ||
-                    previous.hasMore != current.hasMore ||
-                    previous.isLoadingMore != current.isLoadingMore,
+              child: BlocListener<CallLogsBloc, CallLogsState>(
+                // A later page that failed: once per failure, not on every
+                // state that still carries it.
+                listenWhen: (previous, current) =>
+                    current.loadMoreError != null &&
+                    previous.loadMoreError != current.loadMoreError,
                 listener: (context, state) {
-                  // Handle error callback
-                  if (state.status == CallLogsStatus.error &&
-                      widget.onError != null) {
-                    widget.onError!(
-                      CometChatException(
-                        'CALL_LOGS_ERROR',
-                        state.errorMessage ?? 'Unknown error',
-                        state.errorMessage ?? 'Unknown error',
-                      ),
-                    );
-                  }
-
-                  // Handle empty callback
-                  if (state.status == CallLogsStatus.empty &&
-                      widget.onEmpty != null) {
-                    widget.onEmpty!();
-                  }
-
-                  // Handle load callback
-                  if (state.status == CallLogsStatus.loaded &&
-                      widget.onLoad != null) {
-                    widget.onLoad!(state.callLogs);
-                  }
+                  final message = state.loadMoreError!;
+                  widget.onError?.call(
+                    CometChatException('CALL_LOGS_ERROR', message, message),
+                  );
                 },
-                builder: (context, state) {
-                  if (state.status == CallLogsStatus.error) {
-                    if (widget.errorStateView != null) {
-                      return widget.errorStateView!(context);
+                child: BlocConsumer<CallLogsBloc, CallLogsState>(
+                  // Only rebuild on status changes to optimize performance
+                  buildWhen: (previous, current) =>
+                      previous.status != current.status ||
+                      previous.callLogs != current.callLogs ||
+                      previous.hasMore != current.hasMore ||
+                      previous.isLoadingMore != current.isLoadingMore ||
+                      previous.loadMoreError != current.loadMoreError,
+                  listener: (context, state) {
+                    // Handle error callback
+                    if (state.status == CallLogsStatus.error &&
+                        widget.onError != null) {
+                      widget.onError!(
+                        CometChatException(
+                          'CALL_LOGS_ERROR',
+                          state.errorMessage ?? 'Unknown error',
+                          state.errorMessage ?? 'Unknown error',
+                        ),
+                      );
                     }
-                    return _showErrorView(context);
-                  } else if (state.status == CallLogsStatus.loading) {
-                    return _getLoadingIndicator(context);
-                  } else if (state.status == CallLogsStatus.empty) {
-                    return _emptyView(context);
-                  } else {
-                    return _buildCallLogsList(context, state);
-                  }
-                },
+
+                    // Handle empty callback
+                    if (state.status == CallLogsStatus.empty &&
+                        widget.onEmpty != null) {
+                      widget.onEmpty!();
+                    }
+
+                    // Handle load callback
+                    if (state.status == CallLogsStatus.loaded &&
+                        widget.onLoad != null) {
+                      widget.onLoad!(state.callLogs);
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state.status == CallLogsStatus.error) {
+                      if (widget.errorStateView != null) {
+                        return widget.errorStateView!(context);
+                      }
+                      return _showErrorView(context);
+                    } else if (state.status == CallLogsStatus.loading) {
+                      return _getLoadingIndicator(context);
+                    } else if (state.status == CallLogsStatus.empty) {
+                      return _emptyView(context);
+                    } else {
+                      return _buildCallLogsList(context, state);
+                    }
+                  },
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// The date bucket a log belongs to, matching CallLogsBloc._getDateKey so
+  /// the separators line up with CallLogsState.groupedEntries.
+  String? _dateKeyFor(CallLog log) {
+    final initiatedAt = log.initiatedAt;
+    if (initiatedAt == null) return null;
+    final date = DateTime.fromMillisecondsSinceEpoch(initiatedAt * 1000);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final callDate = DateTime(date.year, date.month, date.day);
+
+    if (callDate == today) return cc.Translations.of(context).today;
+    if (callDate == yesterday) return cc.Translations.of(context).yesterday;
+    return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  /// Section header shown above the first log of each date bucket.
+  ///
+  /// [dateSeparatorPattern], when supplied, replaces the rendered text — the
+  /// same `customDateString` semantics `datePattern` already uses on this
+  /// component.
+  Widget _buildDateSeparator(String label, CometChatCallLogsStyle style) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.padding4 ?? 16,
+        vertical: spacing.padding2 ?? 8,
+      ),
+      child: Text(
+        widget.dateSeparatorPattern ?? label,
+        style: TextStyle(
+          color: colorPalette.textSecondary,
+          fontSize: typography.caption1?.medium?.fontSize,
+          fontWeight: typography.caption1?.medium?.fontWeight,
+          fontFamily: typography.caption1?.medium?.fontFamily,
         ),
       ),
     );
@@ -368,74 +476,108 @@ class _CometChatCallLogsState extends State<CometChatCallLogs> {
       itemCount: state.hasMore ? callLogs.length + 1 : callLogs.length,
       itemBuilder: (context, index) {
         if (index >= callLogs.length) {
+          // The next page failed: the rows stay, and a retry row asks for it
+          // again. The loading row asked on every build.
+          if (state.loadMoreError != null) {
+            return CallLogsLoadMoreRetryRow(
+              onRetry: () => _callLogsBloc.add(const LoadMoreCallLogs()),
+              style: style,
+              colorPalette: colorPalette,
+              typography: typography,
+              spacing: spacing,
+            );
+          }
           _callLogsBloc.add(const LoadMoreCallLogs());
           return _getLoadingIndicator(context);
         }
 
         final log = callLogs[index];
 
+        // Section header when this log opens a new date bucket.
+        final dateKey = _dateKeyFor(log);
+        final previousKey = index == 0
+            ? null
+            : _dateKeyFor(callLogs[index - 1]);
+        final separator = (dateKey != null && dateKey != previousKey)
+            ? _buildDateSeparator(dateKey, style)
+            : null;
+
+        Widget withSeparator(Widget row) => separator == null
+            ? row
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [separator, row],
+              );
+
         if (widget.listItemView != null) {
-          return widget.listItemView!(log, context);
+          return withSeparator(
+            widget.listItemView!(log, context) ?? const SizedBox.shrink(),
+          );
         }
 
-        return GestureDetector(
-          key: tileKeys[index],
-          onTap: () {
-            if (widget.onItemClick != null) {
-              widget.onItemClick!(log);
-            }
-          },
-          onLongPress: () {
-            if (widget.onItemLongPress != null) {
-              widget.onItemLongPress!(log);
-            } else {
-              List<CometChatOption>? options;
-
-              if (widget.setOptions != null) {
-                options = widget.setOptions!(log, _callLogsBloc, context);
-              } else {
-                if (widget.addOptions != null) {
-                  options = widget.addOptions!(log, _callLogsBloc, context);
-                }
+        return withSeparator(
+          GestureDetector(
+            key: tileKeys[index],
+            onTap: () {
+              if (widget.onItemClick != null) {
+                widget.onItemClick!(log);
               }
-              _showPopupMenu(context, options ?? [], tileKeys[index]);
-            }
-          },
-          child: CometChatListItem(
-            hideSeparator: true,
-            avatarURL: CallLogsUtils.receiverAvatar(state.loggedInUser!, log),
-            avatarName: CallLogsUtils.receiverName(state.loggedInUser!, log),
-            title: CallLogsUtils.receiverName(state.loggedInUser!, log),
-            style: ListItemStyle(
-              background: colorPalette.transparent,
-              titleStyle:
-                  TextStyle(
-                        overflow: TextOverflow.ellipsis,
-                        fontSize: typography.heading4?.medium?.fontSize,
-                        fontWeight: typography.heading4?.medium?.fontWeight,
-                        fontFamily: typography.heading4?.medium?.fontFamily,
-                        color:
-                            style.itemTitleTextColor ??
-                            CallUtils.getCallStatusColor(
-                              log,
-                              state.loggedInUser,
-                              colorPalette,
-                            ),
-                      )
-                      .merge(style.itemTitleTextStyle)
-                      .copyWith(color: style.itemTitleTextColor),
-              padding: EdgeInsets.only(
-                left: spacing.padding4 ?? 0,
-                right: spacing.padding4 ?? 0,
-                top: spacing.padding3 ?? 0,
-                bottom: spacing.padding3 ?? 0,
+            },
+            onLongPress: () {
+              if (widget.onItemLongPress != null) {
+                widget.onItemLongPress!(log);
+              } else {
+                List<CometChatOption>? options;
+
+                if (widget.setOptions != null) {
+                  options = widget.setOptions!(log, _callLogsBloc, context);
+                } else {
+                  if (widget.addOptions != null) {
+                    options = widget.addOptions!(log, _callLogsBloc, context);
+                  }
+                }
+                _showPopupMenu(context, options ?? [], tileKeys[index]);
+              }
+            },
+            child: CometChatListItem(
+              hideSeparator: true,
+              // A group call shows the group, whoever started it. With no
+              // logged-in user a 1:1 row has an empty title (it threw).
+              avatarURL: CallLogsUtils.getAvatarUrl(state.loggedInUser, log),
+              avatarName: CallLogsUtils.getDisplayName(state.loggedInUser, log),
+              title: CallLogsUtils.getDisplayName(state.loggedInUser, log),
+              style: ListItemStyle(
+                background: colorPalette.transparent,
+                titleStyle:
+                    TextStyle(
+                          overflow: TextOverflow.ellipsis,
+                          fontSize: typography.heading4?.medium?.fontSize,
+                          fontWeight: typography.heading4?.medium?.fontWeight,
+                          fontFamily: typography.heading4?.medium?.fontFamily,
+                          color:
+                              style.itemTitleTextColor ??
+                              CallUtils.getCallStatusColor(
+                                log,
+                                state.loggedInUser,
+                                colorPalette,
+                              ),
+                        )
+                        .merge(style.itemTitleTextStyle)
+                        .copyWith(color: style.itemTitleTextColor),
+                padding: EdgeInsets.only(
+                  left: spacing.padding4 ?? 0,
+                  right: spacing.padding4 ?? 0,
+                  top: spacing.padding3 ?? 0,
+                  bottom: spacing.padding3 ?? 0,
+                ),
               ),
+              subtitleView: _getSubTitleView(state, log, context),
+              tailView: _getTailView(context, state, log),
+              avatarStyle: avatarStyle,
+              leadingStateView: _getLeadingView(state, log, context),
+              titleView: _getTitleView(state, log, context),
             ),
-            subtitleView: _getSubTitleView(state, log, context),
-            tailView: _getTailView(context, state, log),
-            avatarStyle: avatarStyle,
-            leadingStateView: _getLeadingView(state, log, context),
-            titleView: _getTitleView(state, log, context),
           ),
         );
       },
@@ -515,6 +657,9 @@ class _CometChatCallLogsState extends State<CometChatCallLogs> {
         width: 24,
         height: 24,
         child: IconButton(
+          tooltip: (callLog.type == CallTypeConstants.audioCall)
+              ? Translations.of(context).audioCall
+              : Translations.of(context).videoCall,
           padding: EdgeInsets.zero,
           onPressed: () {
             if (widget.onCallLogIconClicked != null) {

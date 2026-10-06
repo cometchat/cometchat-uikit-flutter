@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'widgets/inline_audio_recorder/inline_audio_recorder_style.dart';
 
 ///[CometChatMessageComposerStyle] is a data class that has styling-related properties
 ///to customize the appearance of [CometChatMessageComposer]
@@ -24,6 +23,8 @@ class CometChatMessageComposerStyle
     this.auxiliaryButtonIconColor,
     this.auxiliaryButtonIconBackgroundColor,
     this.auxiliaryButtonBorderRadius,
+    this.stickerIconColor,
+    this.stickerActiveIconColor,
     this.textStyle,
     this.textColor,
     this.placeHolderTextStyle,
@@ -36,6 +37,7 @@ class CometChatMessageComposerStyle
     this.richTextToolbarStyle,
     this.inlineAudioRecorderStyle,
     this.attachmentTrayStyle,
+    this.stickerKeyboardStyle,
   });
 
   ///[closeIconTint] provides color to the close Icon/widget
@@ -80,6 +82,17 @@ class CometChatMessageComposerStyle
   ///[auxiliaryButtonBorderRadius] sets the border radius of the auxiliary button
   final BorderRadiusGeometry? auxiliaryButtonBorderRadius;
 
+  ///[stickerIconColor] tints the default sticker button icon while the
+  ///sticker keyboard is closed. Falls back to [auxiliaryButtonIconColor],
+  ///then to the palette's `iconSecondary`. A custom
+  ///[CometChatMessageComposer.stickerIcon] is shown untinted.
+  final Color? stickerIconColor;
+
+  ///[stickerActiveIconColor] tints the default sticker button icon while the
+  ///sticker keyboard is open. Falls back to the palette's `primary`. A custom
+  ///[CometChatMessageComposer.stickerActiveIcon] is shown untinted.
+  final Color? stickerActiveIconColor;
+
   ///[textStyle] sets the style of the text
   final TextStyle? textStyle;
 
@@ -119,6 +132,11 @@ class CometChatMessageComposerStyle
   ///[attachmentTrayStyle] styles the multi-attachment staging tray tiles
   final CometChatAttachmentTrayStyle? attachmentTrayStyle;
 
+  ///[stickerKeyboardStyle] styles the sticker keyboard the composer opens.
+  ///Its non-null fields win over a [CometChatStickerKeyboardStyle] registered
+  ///on the theme.
+  final CometChatStickerKeyboardStyle? stickerKeyboardStyle;
+
   @override
   CometChatMessageComposerStyle copyWith({
     Color? closeIconTint,
@@ -136,6 +154,8 @@ class CometChatMessageComposerStyle
     Color? auxiliaryButtonIconColor,
     Color? auxiliaryButtonIconBackgroundColor,
     BorderRadiusGeometry? auxiliaryButtonBorderRadius,
+    Color? stickerIconColor,
+    Color? stickerActiveIconColor,
     TextStyle? textStyle,
     Color? textColor,
     TextStyle? placeHolderTextStyle,
@@ -148,6 +168,7 @@ class CometChatMessageComposerStyle
     CometChatRichTextToolbarStyle? richTextToolbarStyle,
     CometChatInlineAudioRecorderStyle? inlineAudioRecorderStyle,
     CometChatAttachmentTrayStyle? attachmentTrayStyle,
+    CometChatStickerKeyboardStyle? stickerKeyboardStyle,
   }) {
     return CometChatMessageComposerStyle(
       closeIconTint: closeIconTint ?? this.closeIconTint,
@@ -175,6 +196,9 @@ class CometChatMessageComposerStyle
           this.auxiliaryButtonIconBackgroundColor,
       auxiliaryButtonBorderRadius:
           auxiliaryButtonBorderRadius ?? this.auxiliaryButtonBorderRadius,
+      stickerIconColor: stickerIconColor ?? this.stickerIconColor,
+      stickerActiveIconColor:
+          stickerActiveIconColor ?? this.stickerActiveIconColor,
       textStyle: textStyle ?? this.textStyle,
       textColor: textColor ?? this.textColor,
       placeHolderTextStyle: placeHolderTextStyle ?? this.placeHolderTextStyle,
@@ -189,6 +213,7 @@ class CometChatMessageComposerStyle
       inlineAudioRecorderStyle:
           inlineAudioRecorderStyle ?? this.inlineAudioRecorderStyle,
       attachmentTrayStyle: attachmentTrayStyle ?? this.attachmentTrayStyle,
+      stickerKeyboardStyle: stickerKeyboardStyle ?? this.stickerKeyboardStyle,
     );
   }
 
@@ -215,6 +240,8 @@ class CometChatMessageComposerStyle
       auxiliaryButtonIconBackgroundColor:
           style.auxiliaryButtonIconBackgroundColor,
       auxiliaryButtonBorderRadius: style.auxiliaryButtonBorderRadius,
+      stickerIconColor: style.stickerIconColor,
+      stickerActiveIconColor: style.stickerActiveIconColor,
       textStyle: style.textStyle,
       textColor: style.textColor,
       placeHolderTextStyle: style.placeHolderTextStyle,
@@ -227,6 +254,7 @@ class CometChatMessageComposerStyle
       richTextToolbarStyle: style.richTextToolbarStyle,
       inlineAudioRecorderStyle: style.inlineAudioRecorderStyle,
       attachmentTrayStyle: style.attachmentTrayStyle,
+      stickerKeyboardStyle: style.stickerKeyboardStyle,
     );
   }
 
@@ -291,6 +319,16 @@ class CometChatMessageComposerStyle
         other?.auxiliaryButtonBorderRadius,
         t,
       ),
+      stickerIconColor: Color.lerp(
+        stickerIconColor,
+        other?.stickerIconColor,
+        t,
+      ),
+      stickerActiveIconColor: Color.lerp(
+        stickerActiveIconColor,
+        other?.stickerActiveIconColor,
+        t,
+      ),
       textStyle: TextStyle.lerp(textStyle, other?.textStyle, t),
       textColor: Color.lerp(textColor, other?.textColor, t),
       placeHolderTextStyle: TextStyle.lerp(
@@ -324,6 +362,10 @@ class CometChatMessageComposerStyle
       inlineAudioRecorderStyle: inlineAudioRecorderStyle,
       attachmentTrayStyle: attachmentTrayStyle?.lerp(
         other?.attachmentTrayStyle,
+        t,
+      ),
+      stickerKeyboardStyle: stickerKeyboardStyle?.lerp(
+        other?.stickerKeyboardStyle,
         t,
       ),
     );

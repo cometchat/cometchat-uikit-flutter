@@ -18,6 +18,16 @@ class MessagesScreen extends StatefulWidget {
   /// Used in desktop split-pane layout where the screen is embedded.
   final bool hideBackButton;
 
+  /// When set (desktop 3-panel layout), threads, pinned messages and search
+  /// open as the third column via this opener instead of being pushed over
+  /// the chat.
+  final void Function(Widget content, {String title})? onOpenSidePanel;
+
+  /// Closes the third column. Needed by panel content whose own dismiss
+  /// affordance isn't the panel's ✕ — search puts a back arrow inside its
+  /// field, and popping the navigator there would take the chat with it.
+  final VoidCallback? onCloseSidePanel;
+
   const MessagesScreen({
     super.key,
     this.user,
@@ -27,6 +37,8 @@ class MessagesScreen extends StatefulWidget {
     this.isHistory = false,
     this.isNewChat = false,
     this.hideBackButton = false,
+    this.onOpenSidePanel,
+    this.onCloseSidePanel,
   }) : assert(user != null || group != null);
 
   @override
@@ -47,13 +59,12 @@ class _MessagesScreenState extends State<MessagesScreen>
 
   late final String _listenerId;
 
-  final _toggles = ComponentToggles.instance;
-
-  /// Imperative handle on the message list. `goToMessageId` is read once when
-  /// the list mounts, so it cannot re-aim a list that is already on screen —
-  /// which is exactly what tapping a pinned or saved row needs.
+  // Pin & Save: imperative handle for the mounted list, used to jump to a
+  // tapped pinned/saved message without tearing the list down.
   final CometChatMessageListController _messageListController =
       CometChatMessageListController();
+
+  final _toggles = ComponentToggles.instance;
 
   @override
   void initState() {
@@ -74,7 +85,6 @@ class _MessagesScreenState extends State<MessagesScreen>
       CometChatGroupEvents.addGroupsListener(
           '${_listenerId}_msg_group_ui', this);
     }
-
   }
 
   @override
@@ -89,6 +99,9 @@ class _MessagesScreenState extends State<MessagesScreen>
     }
     super.dispose();
   }
+
+  // Multi-attachment staging + batch send are owned by the UIKit composer
+  // (enableMultipleAttachments, on by default) — no app wiring needed.
 
   // --- User Listeners (blocked state) ---
 
@@ -114,7 +127,8 @@ class _MessagesScreenState extends State<MessagesScreen>
   @override
   void onUserOnline(User user) {
     if (_user != null && user.uid == _user!.uid) {
-      _user = user; // Keep reference fresh; header BLoC handles its own UI update
+      _user =
+          user; // Keep reference fresh; header BLoC handles its own UI update
     }
   }
 
@@ -211,8 +225,12 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   @override
-  void onGroupMemberScopeChanged(cc.Action action, User updatedBy,
-      User updatedUser, String scopeChangedTo, String scopeChangedFrom,
+  void onGroupMemberScopeChanged(
+      cc.Action action,
+      User updatedBy,
+      User updatedUser,
+      String scopeChangedTo,
+      String scopeChangedFrom,
       Group group) {
     if (_group != null && group.guid == _group!.guid) {
       final loggedInUid = CometChatUIKit.loggedInUser?.uid;
@@ -241,9 +259,9 @@ class _MessagesScreenState extends State<MessagesScreen>
     }
 
     return CometChatMessageList(
+      controller: _messageListController,
       user: _user,
       group: _group,
-      controller: _messageListController,
       goToMessageId: widget.goToMessageId,
       parentMessageId: parentMessageId,
       messagesRequestBuilder: requestBuilder,
@@ -259,7 +277,8 @@ class _MessagesScreenState extends State<MessagesScreen>
       enableSwipeToReply: isAIUser ? false : t.enableSwipeToReply.value,
       hideGroupActionMessages: t.hideGroupActionMessages.value,
       enableSmartReplies: isAIUser || t.enableSmartReplies.value,
-      enableConversationStarters: isAIUser || t.enableConversationStarters.value,
+      enableConversationStarters:
+          isAIUser || t.enableConversationStarters.value,
       hideCopyMessageOption: t.hideCopyMessageOption.value,
       hideDeleteMessageOption: t.hideDeleteMessageOption.value,
       hideEditMessageOption: t.hideEditMessageOption.value,
@@ -277,6 +296,20 @@ class _MessagesScreenState extends State<MessagesScreen>
       ],
       onThreadRepliesClick: (message, ctx, {template}) {
         if (!mounted) return;
+        final openPanel = widget.onOpenSidePanel;
+        if (openPanel != null) {
+          openPanel(
+            ThreadScreen(
+              user: _user,
+              group: _group,
+              message: message,
+              template: template,
+              hideAppBar: true,
+            ),
+            title: cc.Translations.of(context).thread,
+          );
+          return;
+        }
         Navigator.of(context).push(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 280),
@@ -289,8 +322,8 @@ class _MessagesScreenState extends State<MessagesScreen>
             ),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(
-                opacity: CurvedAnimation(
-                    parent: animation, curve: Curves.easeOut),
+                opacity:
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
                 child: SlideTransition(
                   position: Tween<Offset>(
                     begin: const Offset(0, 0.06),
@@ -307,9 +340,10 @@ class _MessagesScreenState extends State<MessagesScreen>
     );
   }
 
-  /// Opens a pinned message. A pinned *reply* lives in a thread, so it opens
-  /// the thread screen aimed at that reply; a top-level message just jumps
-  /// the list that is already on screen.
+  /// Pin & Save: jump target for a tapped pinned row. Top-level messages
+  /// scroll THIS list to the message — the pinned screen has already popped,
+  /// so pushing another MessagesScreen would just stack a duplicate chat.
+  /// Thread replies still open their thread screen (parent fetched on demand).
   Future<void> _openPinnedMessage(BaseMessage message) async {
     if (message.parentMessageId != 0) {
       final parent = await CometChat.getMessageDetails(message.parentMessageId);
@@ -327,22 +361,201 @@ class _MessagesScreenState extends State<MessagesScreen>
       );
       return;
     }
+
     if (!mounted) return;
-    _messageListController.jumpToMessage(message.id);
+    _jumpTo(message.id);
   }
 
-  /// Opens the conversation's info screen. Also used by the header's
-  /// tap-on-name area.
+  /// Re-targets the message list at [messageId].
+  ///
+  /// Goes through the list's controller, so the mounted list scrolls (loading
+  /// the page around the target when it isn't in memory) and keeps its state
+  /// — no remount, no extra route.
+  void _jumpTo(int messageId) {
+    _messageListController.jumpToMessage(messageId);
+  }
+
+  /// Header ⋯ menu → delete this conversation, then leave the screen.
+  ///
+  /// Confirmed first: unlike pin/save this is destructive and not undoable
+  /// from the same menu.
+
+  /// Header ⋯ menu / name-tap → info screen.
+  ///
+  /// Desktop opens it as the third column beside the chat; mobile pushes it
+  /// full-screen as before.
   void _openInfoScreen() {
+    final openPanel = widget.onOpenSidePanel;
+    final translations = cc.Translations.of(context);
+
     if (_group != null) {
+      if (openPanel != null) {
+        openPanel(
+          GroupInfoScreen(group: _group!, hideAppBar: true),
+          title: translations.groupInfo,
+        );
+        return;
+      }
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => GroupInfoScreen(group: _group!)),
       );
     } else if (_user != null) {
+      if (openPanel != null) {
+        openPanel(
+          UserInfoScreen(user: _user!, hideAppBar: true),
+          title: translations.userInfo,
+        );
+        return;
+      }
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => UserInfoScreen(user: _user!)),
+      );
+    }
+  }
+
+  /// Header ⋯ menu → message search scoped to this conversation; a result
+  /// tap reuses the pinned-row jump flow.
+  void _openSearchScreen() {
+    final openPanel = widget.onOpenSidePanel;
+    if (openPanel != null) {
+      // Desktop: search is the third column, so results jump the chat that
+      // stays visible beside it.
+      openPanel(
+        CometChatSearch(
+          user: _user,
+          group: _group,
+          searchIn: const [SearchScope.messages],
+          onBack: () => widget.onCloseSidePanel?.call(),
+          onMessageClicked: (message) {
+            widget.onCloseSidePanel?.call();
+            _openPinnedMessage(message);
+          },
+        ),
+        title: cc.Translations.of(context).search,
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (searchCtx) => CometChatSearch(
+          user: _user,
+          group: _group,
+          searchIn: const [SearchScope.messages],
+          onBack: () => Navigator.of(searchCtx).pop(),
+          onMessageClicked: (message) {
+            Navigator.of(searchCtx).pop();
+            _openPinnedMessage(message);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Colour-picker trailing action (Trailing Toolbar Buttons DD §8.2).
+  ///
+  /// Exercises all four acceptance scenarios from consumer code alone:
+  /// S1 apply to the live selection, S2 remove, S3 compose with bold (the
+  /// kit merges formats → inline style), S4 skip mentions via
+  /// getMentionRanges.
+  Future<void> _onTextColorTap(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    if (controller is! RichTextEditingController) return;
+    // On web the tap that opened us may have blurred the field and collapsed
+    // the live selection — fall back to the controller's remembered one.
+    var selection = controller.selection;
+    if (!selection.isValid || selection.isCollapsed) {
+      final last = controller.lastNonCollapsedSelection;
+      if (last != null &&
+          last.start >= 0 &&
+          last.end <= controller.text.length) {
+        selection = last;
+      }
+    }
+    if (!selection.isValid || selection.isCollapsed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select some text first'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    final start = selection.start;
+    final end = selection.end;
+
+    const swatches = <Color>[
+      Color(0xFFE53935),
+      Color(0xFFFB8C00),
+      Color(0xFF43A047),
+      Color(0xFF1E88E5),
+      Color(0xFF8E24AA),
+    ];
+
+    final picked = await showDialog<Object>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Text colour'),
+        contentPadding: const EdgeInsets.all(16),
+        children: [
+          Wrap(
+            spacing: 12,
+            children: [
+              for (final color in swatches)
+                InkWell(
+                  onTap: () => Navigator.of(dialogContext).pop(color),
+                  customBorder: const CircleBorder(),
+                  child: CircleAvatar(backgroundColor: color, radius: 16),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop('remove'),
+            icon: const Icon(Icons.format_color_reset_outlined),
+            label: const Text('Remove colour'),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+
+    const styleId = 'demo-text-color';
+    if (picked == 'remove') {
+      controller.removeInlineStyle(start, end, id: styleId);
+      return;
+    }
+
+    // S4: colour only the non-mention stretches of the selection — a
+    // mention keeps its own styling.
+    final color = picked as Color;
+    var cursor = start;
+    final mentions = controller.getMentionRanges()
+      ..sort((a, b) => a.start.compareTo(b.start));
+    for (final mention in mentions) {
+      if (mention.end <= cursor || mention.start >= end) continue;
+      if (mention.start > cursor) {
+        controller.applyInlineStyle(
+          cursor,
+          mention.start,
+          TextStyle(color: color),
+          id: styleId,
+        );
+      }
+      cursor = mention.end;
+    }
+    if (cursor < end) {
+      controller.applyInlineStyle(
+        cursor,
+        end,
+        TextStyle(color: color),
+        id: styleId,
       );
     }
   }
@@ -353,8 +566,7 @@ class _MessagesScreenState extends State<MessagesScreen>
     return CometChatMessageComposer(
       user: _user,
       group: _group,
-     
-     parentMessageId: widget.parentMessage?.id ?? 0,
+      parentMessageId: widget.parentMessage?.id ?? 0,
       placeholderText: isAI ? 'Ask anything...' : null,
       disableTypingEvents: isAI || t.disableTypingEvents.value,
       hideVoiceRecordingButton: isAI || t.hideVoiceRecordingButton.value,
@@ -364,6 +576,19 @@ class _MessagesScreenState extends State<MessagesScreen>
       disableMentions: isAI || t.disableMentions.value,
       hideBottomSafeArea: t.hideBottomSafeArea.value,
       layout: cc.CometChatComposerLayout.singleLine,
+      // Trailing Toolbar Buttons DD — the canonical colour-picker exemplar.
+      // All colour logic is consumer code (§1.1.1): the kit only exposes the
+      // slot, the controller, and getMentionRanges.
+      richTextToolbarActions: isAI
+          ? null
+          : (context, user, group, id) => [
+                CometChatMessageComposerAction(
+                  id: 'text_color',
+                  title: 'Text colour',
+                  icon: const Icon(Icons.palette_outlined),
+                  onToolbarTap: _onTextColorTap,
+                ),
+              ],
       textFormatters: isAI
           ? [] // No formatters for AI chat
           : [
@@ -390,17 +615,34 @@ class _MessagesScreenState extends State<MessagesScreen>
         group: _group,
         showBackButton: !widget.hideBackButton,
         onBack: widget.hideBackButton ? null : () => Navigator.pop(context),
-        hideVideoCallButton: _isAI || _toggles.hideVideoCallButton.value,
-        hideVoiceCallButton: _isAI || _toggles.hideVoiceCallButton.value,
+        // A user either side has blocked cannot be called: no buttons, as
+        // in Android's MessagesActivity.
+        hideVideoCallButton:
+            _isAI || _isUserBlocked || _toggles.hideVideoCallButton.value,
+        hideVoiceCallButton:
+            _isAI || _isUserBlocked || _toggles.hideVoiceCallButton.value,
         usersStatusVisibility: _toggles.headerUsersStatusVisibility.value,
-        // Pin & Save: the header's ⋯ menu opens this conversation's pinned
-        // list. Leaving onPinnedMessagesTap unset lets the Kit push the
-        // screen itself, which is the right behaviour on mobile; a host with
-        // its own layout would set it to place the list where it wants.
+        // Pin & Save: the header ⋯ menu opens the conversation's pinned
+        // list; tapping a row jumps to that message (replies open their
+        // thread screen).
         onPinnedMessageItemTap: _openPinnedMessage,
-        // Info moved into the ⋯ menu (it used to be a standalone icon), so
-        // the header no longer carries two ways to reach the same screen.
+        onPinnedMessagesTap: widget.onOpenSidePanel == null
+            ? null
+            : () => widget.onOpenSidePanel!(
+                  CometChatPinnedMessages(
+                    user: _user,
+                    group: _group,
+                    onItemTap: _openPinnedMessage,
+                    showBackButton: false,
+                    // The panel renders its own title bar and close button,
+                    // so the screen's own header would be a second one.
+                    hideAppBar: true,
+                  ),
+                  title: cc.Translations.of(context).pinnedMessagesTitle,
+                ),
+        // ⋯ overflow menu entries + tap-on-name → info screen.
         onInfoTap: _isAI ? null : _openInfoScreen,
+        onSearchTap: _isAI ? null : _openSearchScreen,
         onHeaderTap: _isAI ? null : _openInfoScreen,
         chatHistoryButtonClick: () {
           Navigator.push(
@@ -419,6 +661,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                       builder: (_) => MessagesScreen(
                         user: _user,
                         group: _group,
+                        isNewChat: true,
                       ),
                     ),
                   );
@@ -467,6 +710,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                     builder: (_) => MessagesScreen(
                       user: _user,
                       group: _group,
+                      isNewChat: true,
                     ),
                   ),
                 );
@@ -493,6 +737,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                             builder: (_) => MessagesScreen(
                               user: _user,
                               group: _group,
+                              isNewChat: true,
                             ),
                           ),
                         );
@@ -522,8 +767,6 @@ class _MessagesScreenState extends State<MessagesScreen>
               },
             ),
           ], // end AI buttons spread
-            // Group/User Info now lives in the header’s ⋯ overflow menu
-            // (see onInfoTap above), so there is no standalone icon here.
         ],
       ),
       body: SafeArea(
@@ -536,8 +779,8 @@ class _MessagesScreenState extends State<MessagesScreen>
               if (_isUserBlocked && _user != null)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   color: _colorPalette.warning?.withValues(alpha: 0.15),
                   child: Row(
                     children: [
@@ -561,8 +804,8 @@ class _MessagesScreenState extends State<MessagesScreen>
               if (_kickedOrBanned && _group != null)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   color: _colorPalette.error?.withValues(alpha: 0.15),
                   child: Row(
                     children: [
@@ -584,8 +827,7 @@ class _MessagesScreenState extends State<MessagesScreen>
               Expanded(
                 child: _buildMessageList(),
               ),
-              if (!_kickedOrBanned)
-                _buildComposer(),
+              if (!_kickedOrBanned) _buildComposer(),
             ],
           ),
         ),

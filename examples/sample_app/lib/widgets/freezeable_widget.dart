@@ -52,7 +52,8 @@ mixin FreezeableMixin<T extends StatefulWidget> on State<T> {
 
   @override
   void dispose() {
-    FreezeableRouteObserver.instance.shouldFreeze.removeListener(_onFreezeChanged);
+    FreezeableRouteObserver.instance.shouldFreeze
+        .removeListener(_onFreezeChanged);
     super.dispose();
   }
 

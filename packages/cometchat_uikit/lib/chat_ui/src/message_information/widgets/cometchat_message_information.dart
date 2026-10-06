@@ -35,6 +35,7 @@ class CometChatMessageInformation extends StatefulWidget {
     this.colorPalette,
     this.typography,
     this.spacing,
+    this.messageInformationBloc,
   });
 
   /// [message] parent message for message information
@@ -61,6 +62,13 @@ class CometChatMessageInformation extends StatefulWidget {
   /// [spacing] optional pre-cached spacing for optimization
   final CometChatSpacing? spacing;
 
+  ///[messageInformationBloc] Optional external MessageInformationBloc
+  ///instance. If provided, it is used instead of creating one internally and
+  ///the widget does not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc] — the seam that lets a test
+  ///supply receipts without a live SDK.
+  final MessageInformationBloc? messageInformationBloc;
+
   @override
   State<CometChatMessageInformation> createState() =>
       _CometChatMessageInformationState();
@@ -70,6 +78,7 @@ class _CometChatMessageInformationState
     extends State<CometChatMessageInformation> {
   /// BLoC for managing message information state
   late MessageInformationBloc _bloc;
+  bool _isExternalBloc = false;
 
   /// Theme caching - initialized once in didChangeDependencies
   late CometChatColorPalette _colorPalette;
@@ -97,8 +106,13 @@ class _CometChatMessageInformationState
     _resolveMessageTemplate();
 
     // Create BLoC and dispatch initialization event
-    _bloc = MessageInformationBloc();
-    _bloc.add(InitializeMessageInformation(parentMessage: widget.message));
+    if (widget.messageInformationBloc != null) {
+      _bloc = widget.messageInformationBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = MessageInformationBloc();
+      _bloc.add(InitializeMessageInformation(parentMessage: widget.message));
+    }
   }
 
   /// Resolve the message template from use case or use custom template
@@ -197,7 +211,10 @@ class _CometChatMessageInformationState
 
   @override
   void dispose() {
-    _bloc.close();
+    // an injected bloc belongs to its owner, so only close what we created
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     super.dispose();
   }
 

@@ -468,13 +468,15 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
     try {
       final completer = Completer<List<Conversation>>();
-      _conversationsRequest!.fetchNext(
-        onSuccess: (List<Conversation> conversations) {
-          if (!completer.isCompleted) completer.complete(conversations);
-        },
-        onError: (CometChatException e) {
-          if (!completer.isCompleted) completer.completeError(e);
-        },
+      unawaited(
+        _conversationsRequest!.fetchNext(
+          onSuccess: (List<Conversation> conversations) {
+            if (!completer.isCompleted) completer.complete(conversations);
+          },
+          onError: (CometChatException e) {
+            if (!completer.isCompleted) completer.completeError(e);
+          },
+        ),
       );
 
       final results = await completer.future;
@@ -608,13 +610,15 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
         final request = builder.build();
         final completer = Completer<List<BaseMessage>>();
-        request.fetchPrevious(
-          onSuccess: (List<BaseMessage> messages) {
-            if (!completer.isCompleted) completer.complete(messages);
-          },
-          onError: (CometChatException e) {
-            if (!completer.isCompleted) completer.completeError(e);
-          },
+        unawaited(
+          request.fetchPrevious(
+            onSuccess: (List<BaseMessage> messages) {
+              if (!completer.isCompleted) completer.complete(messages);
+            },
+            onError: (CometChatException e) {
+              if (!completer.isCompleted) completer.completeError(e);
+            },
+          ),
         );
 
         final results = await completer.future;
@@ -687,13 +691,15 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
     try {
       final completer = Completer<List<BaseMessage>>();
-      _messagesRequest!.fetchPrevious(
-        onSuccess: (List<BaseMessage> messages) {
-          if (!completer.isCompleted) completer.complete(messages);
-        },
-        onError: (CometChatException e) {
-          if (!completer.isCompleted) completer.completeError(e);
-        },
+      unawaited(
+        _messagesRequest!.fetchPrevious(
+          onSuccess: (List<BaseMessage> messages) {
+            if (!completer.isCompleted) completer.complete(messages);
+          },
+          onError: (CometChatException e) {
+            if (!completer.isCompleted) completer.completeError(e);
+          },
+        ),
       );
 
       final results = await completer.future;

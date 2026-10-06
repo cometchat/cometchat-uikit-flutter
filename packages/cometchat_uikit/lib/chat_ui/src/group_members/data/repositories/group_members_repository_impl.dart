@@ -10,18 +10,32 @@ class GroupMembersRepositoryImpl implements GroupMembersRepository {
 
   const GroupMembersRepositoryImpl({required this.remoteDataSource});
 
+  /// [groupMembersRequestBuilder] is the app's own builder, passed on to the
+  /// kit's data source, which builds the request from it.
   @override
   Future<Result<List<GroupMember>>> getGroupMembers({
     required String guid,
     int limit = 30,
     String? searchKeyword,
+    GroupMembersRequestBuilder? groupMembersRequestBuilder,
   }) async {
     try {
-      final members = await remoteDataSource.getGroupMembers(
-        guid: guid,
-        limit: limit,
-        searchKeyword: searchKeyword,
-      );
+      // The builder goes only to the kit's own data source: the interface
+      // keeps its 6.1.1 signature, so an app's implementation does not
+      // take one.
+      final source = remoteDataSource;
+      final members = source is GroupMembersRemoteDataSourceImpl
+          ? await source.getGroupMembers(
+              guid: guid,
+              limit: limit,
+              searchKeyword: searchKeyword,
+              groupMembersRequestBuilder: groupMembersRequestBuilder,
+            )
+          : await source.getGroupMembers(
+              guid: guid,
+              limit: limit,
+              searchKeyword: searchKeyword,
+            );
       return Success(members);
     } on GroupMembersRemoteDataSourceException catch (e) {
       return Failure(

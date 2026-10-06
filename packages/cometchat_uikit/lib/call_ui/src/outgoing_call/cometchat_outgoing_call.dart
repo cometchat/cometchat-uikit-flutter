@@ -3,9 +3,32 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../cometchat_calls_uikit.dart';
 import '../../../cometchat_chat_uikit.dart';
+import '../../../src/active_call_tracker.dart';
 
 /// [CometChatOutgoingCall] is a widget which is used to show outgoing call screen
 /// when the logged-in user calls another user.
+///
+/// Removing this screen while the call still rings — disposing the widget,
+/// say by a `pushAndRemoveUntil` over it, or closing an external [bloc] —
+/// cancels the call on the server (`rejectCall` with status `cancelled`) so
+/// the callee stops ringing, and frees the device for the next call. A call
+/// already answered, declined or cancelled is not touched again, and neither
+/// is one whose cancel [onCancelled] took over.
+///
+/// A call nobody answers is given up after 45 seconds: the screen sends
+/// `rejectCall` with status `unanswered` and closes. For a call the UI Kit
+/// placed (the call buttons, the call logs), the 45 seconds count from the
+/// placement. Once End was tapped or that happened, an accept that arrives
+/// is not joined, and a best-effort `endCall` tries to let the callee go.
+/// After End the screen closes when the server answers the cancel, or after
+/// 10 seconds at most.
+///
+/// This screen hears the callee's answer from its first build on. An app
+/// put in the background right after placing a call draws no frames, so
+/// the screen is built only when the app comes back, and an answer or a
+/// decline that arrives before then is missed: the screen rings on until
+/// the timeout gives the call up. After a missed answer that `unanswered`
+/// fails, and a best-effort `endCall` tries to free the callee.
 ///
 /// ```dart
 /// CometChatOutgoingCall(
@@ -60,22 +83,67 @@ class CometChatOutgoingCall extends StatefulWidget {
   /// Cancelled view builder (bottom action button)
   final Widget? Function(BuildContext context, Call call)? cancelledView;
 
-  /// Error callback
+  /// Called when something about this call fails:
+  ///
+  /// * the SDK's own exception, code kept, when cancelling fails (End, or a
+  ///   screen removed while the call rang), or giving up after 45 seconds
+  ///   unanswered does. The call is usually already over by then: declined,
+  ///   answered at that moment, or ended by the server. It still comes when
+  ///   that answer arrives after the screen has closed, but not once a
+  ///   logout has begun;
+  /// * `PERMISSION_DENIED` / `PERMISSION_PERMANENTLY_DENIED` when the callee
+  ///   answered but microphone or camera access was refused here; `details`
+  ///   lists the missing permissions;
+  /// * a platform error, its code kept, when asking for those permissions
+  ///   fails (a request already running, say);
+  /// * `NO_NAVIGATOR` when the callee answered but
+  ///   `CallNavigationContext.navigatorKey` has no navigator to show the
+  ///   call screen on;
+  /// * whatever the call screen then reports: see
+  ///   `CometChatOngoingCall.onError`.
   final OnError? onError;
 
-  /// Callback when call is cancelled
+  /// Called when End is tapped, instead of the UI Kit's own cancel: the
+  /// app then cancels the call itself, and End stays live.
+  ///
+  /// The ringback plays on until the call ends, the screen closes, or the
+  /// app calls `CometChatUIKit.soundManager.stop()`, which stops it as in
+  /// 6.1.x. A call left ringing is still given up after 45 seconds. End
+  /// wins does not apply: an accept that arrives after this tap is still
+  /// joined, since the UI Kit does not know whether the app ended the call.
   final Function(BuildContext context, Call call)? onCancelled;
 
-  /// Whether to disable sound for calls
+  /// Whether to play no ringback while the call rings.
   final bool? disableSoundForCalls;
 
-  /// Custom sound asset for calls
+  /// The ringback to play instead of the UI Kit's own: a Flutter asset path,
+  /// from the app's assets or [customSoundForCallsPackage]'s.
+  ///
+  /// It plays as a phone call rings, on a call-tone player apart from the
+  /// message sounds: looping, from the earpiece for a voice call and the
+  /// loudspeaker for a video call (a wired headset takes either, and so does
+  /// a hands-free Bluetooth headset on iOS and on Android 12 and later), in
+  /// iOS Silent Mode too, and no longer at the Android media volume. It stops
+  /// when ringing ends (answered, declined, cancelled, given up after 45 s,
+  /// or the screen closes), and `CometChatUIKit.soundManager.stop()` stops
+  /// it too. A sound that cannot be found or played gives way to the UI
+  /// Kit's own.
   final String? customSoundForCalls;
 
-  /// Package name for custom sound asset
+  /// The Flutter package that ships [customSoundForCalls], for a sound from
+  /// another package. Leave it null for an asset of the app's own.
+  ///
+  /// Honoured on Android and iOS since 6.2.0; before, it was ignored for the
+  /// ringback. A value that names no package with that asset (the app's own
+  /// name, say, or `'assets'`) makes the UI Kit look in the app's assets
+  /// next, then play its own ringback.
   final String? customSoundForCallsPackage;
 
-  /// Optional external BLoC for testing/injection
+  /// Optional external BLoC for testing/injection. This widget does not
+  /// close it; closing it while the call still rings cancels the call, as
+  /// disposing the widget does with its own bloc (see the class docs).
+  /// Disposing the widget only stops that bloc's ringback and its 45 s
+  /// no-answer timeout: nothing is on screen any more.
   final OutgoingCallBloc? bloc;
 
   const CometChatOutgoingCall({
@@ -136,6 +204,10 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // The bloc closes this screen from outside the widget tree (SDK
+    // callbacks), so give it this screen's own route. Otherwise it can only
+    // pop whatever is on top, and a second close pops the chat underneath.
+    ActiveCallTracker.attachOutgoingCallRoute(_bloc, ModalRoute.of(context));
     final currentBrightness = CometChatThemeHelper.getBrightness(context);
     final brightnessChanged =
         _cachedBrightness != null && _cachedBrightness != currentBrightness;
@@ -154,7 +226,10 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
 
   @override
   void dispose() {
-    if (!_isExternalBloc) {
+    if (_isExternalBloc) {
+      // The host's bloc outlives the screen: it only stops ringing.
+      ActiveCallTracker.outgoingScreenGone(_bloc);
+    } else {
       _bloc.close();
     }
     super.dispose();
@@ -305,6 +380,7 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
             BorderRadius.circular(_spacing.radiusMax ?? 0),
       ),
       child: IconButton(
+        tooltip: Translations.of(context).decline,
         onPressed: state.isCallRejected
             ? null
             : () => _bloc.add(const CancelCall()),

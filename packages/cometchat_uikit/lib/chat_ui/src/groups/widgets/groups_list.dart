@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../cometchat_chat_uikit.dart';
+import '../../shared/list_options_menu.dart';
 
 /// A widget that displays the list of groups with state handling and pagination.
 ///
@@ -40,6 +41,7 @@ class GroupsList extends StatelessWidget {
     this.loadingStateView,
     this.emptyStateView,
     this.errorStateView,
+    this.hideError,
     this.listItemView,
     this.subtitleView,
     this.trailingView,
@@ -50,6 +52,7 @@ class GroupsList extends StatelessWidget {
     this.activateSelection,
     this.onItemTap,
     this.onItemLongPress,
+    this.options,
     this.avatarStyle,
     this.statusIndicatorStyle,
     this.privateGroupIcon,
@@ -83,6 +86,10 @@ class GroupsList extends StatelessWidget {
   /// Custom error state view builder.
   final WidgetBuilder? errorStateView;
 
+  /// Hides the error view, including a custom [errorStateView], when true.
+  /// Matches CometChatGroupMembers.
+  final bool? hideError;
+
   /// Custom list item view builder for full customization.
   /// When provided, this completely replaces the default [CometChatGroupListItem].
   final Widget Function(Group)? listItemView;
@@ -113,6 +120,12 @@ class GroupsList extends StatelessWidget {
 
   /// Callback when an item is long-pressed.
   final Function(BuildContext, Group)? onItemLongPress;
+
+  /// Builds the menu a long press opens on a group. Nothing opens when it is
+  /// null or returns no options. [onItemLongPress], when set, takes the long
+  /// press instead, and starting a long-press selection comes first.
+  final List<CometChatOption> Function(BuildContext context, Group group)?
+  options;
 
   /// Style for the avatar.
   final CometChatAvatarStyle? avatarStyle;
@@ -147,6 +160,7 @@ class GroupsList extends StatelessWidget {
       builder: (context, state) {
         // Handle error state
         if (state is GroupsError) {
+          if (hideError == true) return const SizedBox.shrink();
           return _buildErrorState(context, state);
         }
 
@@ -286,6 +300,9 @@ class GroupsList extends StatelessWidget {
 
   /// Builds the error state view with retry button.
   Widget _buildErrorState(BuildContext context, GroupsError state) {
+    if (hideError == true) {
+      return const SizedBox();
+    }
     if (errorStateView != null) {
       return Center(child: errorStateView!(context));
     }
@@ -299,6 +316,11 @@ class GroupsList extends StatelessWidget {
       errorStateTextStyle: style.errorStateTextStyle,
       errorStateSubtitleColor: style.errorStateSubTitleTextColor,
       errorStateSubtitleStyle: style.errorStateSubTitleTextStyle,
+      buttonTextStyle: style.retryButtonTextStyle,
+      buttonTextColor: style.retryButtonTextColor,
+      buttonBackgroundColor: style.retryButtonBackgroundColor,
+      buttonBorderSide: style.retryButtonBorder,
+      buttonBorderRadius: style.retryButtonBorderRadius,
     );
   }
 
@@ -347,11 +369,33 @@ class GroupsList extends StatelessWidget {
 
     final isSelected = selectedGroups.contains(group.guid);
 
+    // The row's own context anchors the options menu on the row.
+    return Builder(
+      builder: (rowContext) => _buildGroupListItem(
+        context,
+        rowContext,
+        group,
+        selectedGroups,
+        isSelected,
+      ),
+    );
+  }
+
+  Widget _buildGroupListItem(
+    BuildContext context,
+    BuildContext rowContext,
+    Group group,
+    Set<String> selectedGroups,
+    bool isSelected,
+  ) {
     return CometChatGroupListItem(
       group: group,
       onItemClick: (g) => _handleItemTap(context, g, selectedGroups),
-      onItemLongClick: onItemLongPress != null
-          ? (g) => _handleItemLongPress(context, g, selectedGroups)
+      onItemLongClick:
+          onItemLongPress != null ||
+              options != null ||
+              activateSelection == ActivateSelection.onLongClick
+          ? (g) => _handleItemLongPress(context, g, selectedGroups, rowContext)
           : null,
       onSelectionToggle: () => _handleSelectionToggle(group),
       isSelected: isSelected,
@@ -361,6 +405,8 @@ class GroupsList extends StatelessWidget {
       statusIndicatorStyle: statusIndicatorStyle ?? style.statusIndicatorStyle,
       privateGroupIcon: privateGroupIcon,
       protectedGroupIcon: protectedGroupIcon,
+      privateGroupIconBackground: style.privateGroupIconBackground,
+      protectedGroupIconBackground: style.protectedGroupIconBackground,
       colorPalette: colorPalette,
       spacing: spacing,
       typography: typography,
@@ -382,7 +428,16 @@ class GroupsList extends StatelessWidget {
         selectedBackgroundColor: style.listItemSelectedBackgroundColor,
         checkBoxBackgroundColor: style.checkBoxBackgroundColor,
         checkBoxCheckedBackgroundColor: style.checkBoxCheckedBackgroundColor,
-        checkBoxBorderRadius: style.checkBoxBorderRadius as BorderRadius?,
+        // Resolved rather than cast: the style takes any geometry, and a
+        // BorderRadiusDirectional used to throw here.
+        checkBoxBorderRadius: style.checkBoxBorderRadius?.resolve(
+          Directionality.of(context),
+        ),
+        checkBoxStrokeColor: style.checkBoxBorder?.color,
+        checkBoxStrokeWidth: style.checkBoxBorder?.width,
+        checkBoxCheckColor: style.checkboxSelectedIconColor,
+        privateGroupIconBackground: style.privateGroupIconBackground,
+        protectedGroupIconBackground: style.protectedGroupIconBackground,
       ),
     );
   }
@@ -394,10 +449,10 @@ class GroupsList extends StatelessWidget {
     Set<String> selectedGroups,
   ) {
     // If selection mode is active, toggle selection
-    if (activateSelection == ActivateSelection.onClick ||
-        (activateSelection == ActivateSelection.onLongClick &&
-                selectedGroups.isNotEmpty) &&
-            !(selectionMode == null || selectionMode == SelectionMode.none)) {
+    if ((activateSelection == ActivateSelection.onClick ||
+            (activateSelection == ActivateSelection.onLongClick &&
+                selectedGroups.isNotEmpty)) &&
+        !(selectionMode == null || selectionMode == SelectionMode.none)) {
       groupsBloc.add(ToggleGroupSelection(group.guid));
     } else if (onItemTap != null) {
       onItemTap!(context, group);
@@ -409,6 +464,7 @@ class GroupsList extends StatelessWidget {
     BuildContext context,
     Group group,
     Set<String> selectedGroups,
+    BuildContext rowContext,
   ) {
     // If selection mode is active and no items selected, start selection
     if (activateSelection == ActivateSelection.onLongClick &&
@@ -417,6 +473,13 @@ class GroupsList extends StatelessWidget {
       groupsBloc.add(ToggleGroupSelection(group.guid));
     } else if (onItemLongPress != null) {
       onItemLongPress!(context, group);
+    } else if (options != null) {
+      showListOptionsMenu(
+        rowContext: rowContext,
+        options: options!(rowContext, group),
+        colorPalette: colorPalette,
+        spacing: spacing,
+      );
     }
   }
 

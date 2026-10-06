@@ -58,7 +58,11 @@ class ConversationSubtitleUtils {
         lastMessage.deletedBy!.trim() != '') {
       return Row(
         children: [
-          Icon(Icons.block, color: colorPalette.iconSecondary, size: 16),
+          Icon(
+            Icons.block,
+            color: iconColor ?? colorPalette.iconSecondary,
+            size: 16,
+          ),
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(left: spacing.padding ?? 0),

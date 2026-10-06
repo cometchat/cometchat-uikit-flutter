@@ -524,6 +524,14 @@ class TranslationsNl extends Translations {
       'Je hebt geen toestemming om deze actie uit te voeren.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Sta toegang tot de microfoon toe om oproepen te beantwoorden.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Sta toegang tot de camera en de microfoon toe om video-oproepen te beantwoorden.';
+
+  @override
   String get pinSaveFailed => 'Bijwerken mislukt. Probeer het opnieuw.';
 
   @override
@@ -1509,4 +1517,87 @@ class TranslationsNl extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Terug';
+
+  @override
+  String get openInBrowser => 'Openen in browser';
+
+  @override
+  String get failedToLoadSticker => 'Sticker kan niet worden geladen';
+
+  @override
+  String get enterDisplayText => 'Weergavetekst invoeren';
+
+  @override
+  String get clearSearch => 'Zoekopdracht wissen';
+
+  @override
+  String get done => 'Klaar';
+
+  @override
+  String get download => 'Downloaden';
+
+  @override
+  String get startRecording => 'Opname starten';
+
+  @override
+  String get stopRecording => 'Opname stoppen';
+
+  @override
+  String get pauseRecording => 'Opname pauzeren';
+
+  @override
+  String get deleteRecording => 'Opname verwijderen';
+
+  @override
+  String get recordVoiceMessage => 'Spraakbericht opnemen';
+
+  @override
+  String get reorderOption => 'Optie herschikken';
+
+  @override
+  String get play => 'Afspelen';
+
+  @override
+  String get pause => 'Pauzeren';
+
+  @override
+  String get next => 'Volgende';
+
+  @override
+  String get previous => 'Vorige';
+
+  @override
+  String get scrollToBottom => 'Naar beneden scrollen';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Menu met bijlageopties geopend';
+
+  @override
+  String get richTextFormattingToolbar => 'Werkbalk voor tekstopmaak';
+
+  @override
+  String get closeFormattingToolbar => 'Opmaakwerkbalk sluiten';
+
+  @override
+  String get sendAudioMessage => 'Audiobericht verzenden';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Aanvullende acties voor het opstellen van berichten';
+
+  @override
+  String get attachmentButton => 'Knop voor bijlagen';
+
+  @override
+  String get addAttachment => 'Bijlage toevoegen';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Suggestielijst met $count items';
+
+  @override
+  String messageFrom(String sender) => 'Bericht van $sender';
 }

@@ -1,11 +1,12 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
-import 'package:sample_app/screens/responsive_home_screen.dart';
+import 'package:cometchat_chat_uikit/shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
 import 'add_members_screen.dart';
 import 'banned_members_screen.dart';
 import 'messages_screen.dart';
+import 'responsive_home_screen.dart';
 import 'thread_screen.dart';
 import 'transfer_ownership_screen.dart';
 
@@ -13,7 +14,15 @@ import 'transfer_ownership_screen.dart';
 class GroupInfoScreen extends StatefulWidget {
   final Group group;
 
-  const GroupInfoScreen({super.key, required this.group});
+  const GroupInfoScreen({
+    super.key,
+    required this.group,
+    this.hideAppBar = false,
+  });
+
+  /// Drops this screen's own header. Set it when the host already
+  /// renders a title bar — the desktop side panel does.
+  final bool hideAppBar;
 
   @override
   State<GroupInfoScreen> createState() => _GroupInfoScreenState();
@@ -88,8 +97,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
           });
         }
       },
-      onError: (e) =>
-          debugPrint('Group Info: fetch failed: ${e.message}'),
+      onError: (e) => debugPrint('Group Info: fetch failed: ${e.message}'),
     );
   }
 
@@ -118,11 +126,14 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
   }
 
   @override
-  void onGroupMemberScopeChanged(cc.Action action, User updatedBy,
-      User updatedUser, String scopeChangedTo, String scopeChangedFrom,
+  void onGroupMemberScopeChanged(
+      cc.Action action,
+      User updatedBy,
+      User updatedUser,
+      String scopeChangedTo,
+      String scopeChangedFrom,
       Group group) {
-    if (group.guid == _group.guid &&
-        updatedUser.uid == _loggedInUser?.uid) {
+    if (group.guid == _group.guid && updatedUser.uid == _loggedInUser?.uid) {
       _group.scope = scopeChangedTo;
       setState(() {});
     }
@@ -263,7 +274,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
           cc.Action(
             conversationId: _conversationId ?? '',
             message:
-            '${_loggedInUser?.name} ${cc.Translations.of(context).left}',
+                '${_loggedInUser?.name} ${cc.Translations.of(context).left}',
             oldScope: _group.scope ?? GroupMemberScope.participant,
             newScope: '',
             muid: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -283,7 +294,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
             MaterialPageRoute(
               builder: (_) => const ResponsiveHomeScreen(),
             ),
-                (route) => false,
+            (route) => false,
           );
         } else {
           // Pop GroupInfo → Messages → back to Home
@@ -303,6 +314,30 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
         );
       },
     );
+  }
+
+  /// Leave group without a dialog to dismiss (called after transfer ownership)
+  void _leaveGroupAfterTransfer() {
+    if (!mounted) return;
+    _group.membersCount--;
+    CometChatGroupEvents.ccGroupLeft(
+      cc.Action(
+        conversationId: _conversationId ?? '',
+        message: '${_loggedInUser?.name} ${cc.Translations.of(context).left}',
+        oldScope: _group.scope ?? GroupMemberScope.participant,
+        newScope: '',
+        muid: DateTime.now().microsecondsSinceEpoch.toString(),
+        sender: _loggedInUser!,
+        receiverUid: _group.guid,
+        type: MessageTypeConstants.groupActions,
+        receiverType: ReceiverTypeConstants.group,
+        parentMessageId: 0,
+      ),
+      _loggedInUser!,
+      _group,
+    );
+    // Pop group info screen (transfer screen already popped itself)
+    Navigator.of(context).pop();
   }
 
   void _showTransferOwnershipConfirm() {
@@ -350,33 +385,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
     ).show();
   }
 
-  /// Leave group without a dialog to dismiss (called after transfer ownership)
-  void _leaveGroupAfterTransfer() {
-    if (!mounted) return;
-    _group.membersCount--;
-    CometChatGroupEvents.ccGroupLeft(
-      cc.Action(
-        conversationId: _conversationId ?? '',
-        message: '${_loggedInUser?.name} ${cc.Translations.of(context).left}',
-        oldScope: _group.scope ?? GroupMemberScope.participant,
-        newScope: '',
-        muid: DateTime.now().microsecondsSinceEpoch.toString(),
-        sender: _loggedInUser!,
-        receiverUid: _group.guid,
-        type: MessageTypeConstants.groupActions,
-        receiverType: ReceiverTypeConstants.group,
-        parentMessageId: 0,
-      ),
-      _loggedInUser!,
-      _group,
-    );
-    // Pop group info screen (transfer screen already popped itself)
-    Navigator.of(context).pop();
-  }
-
   void _onDeleteAndExit() {
     CometChatConfirmDialog(
       context: context,
+      useRootNavigator: true,
       icon: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Image.asset(
@@ -458,24 +470,26 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _colorPalette.background1,
-      appBar: AppBar(
-        backgroundColor: _colorPalette.background1,
-        titleSpacing: 0,
-        centerTitle: false,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: _colorPalette.iconPrimary),
-        ),
-        title: Text(
-          cc.Translations.of(context).groupInfo,
-          style: TextStyle(
-            fontSize: _typography.heading2?.bold?.fontSize,
-            fontFamily: _typography.heading2?.bold?.fontFamily,
-            fontWeight: _typography.heading2?.bold?.fontWeight,
-            color: _colorPalette.textPrimary,
-          ),
-        ),
-      ),
+      appBar: widget.hideAppBar
+          ? null
+          : AppBar(
+              backgroundColor: _colorPalette.background1,
+              titleSpacing: 0,
+              centerTitle: false,
+              leading: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back, color: _colorPalette.iconPrimary),
+              ),
+              title: Text(
+                cc.Translations.of(context).groupInfo,
+                style: TextStyle(
+                  fontSize: _typography.heading2?.bold?.fontSize,
+                  fontFamily: _typography.heading2?.bold?.fontFamily,
+                  fontWeight: _typography.heading2?.bold?.fontWeight,
+                  color: _colorPalette.textPrimary,
+                ),
+              ),
+            ),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -509,8 +523,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
               ),
             Divider(color: _colorPalette.borderLight, height: 1),
             Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: _spacing.padding5 ?? 0),
+              padding: EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
               child: Column(
                 children: [
                   _buildProfile(),
@@ -540,8 +553,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
             // Search
             _buildSearchTile(),
             Divider(color: _colorPalette.borderLight, height: 1),
-            // Pin & Save entry
-            _buildPinnedMessagesTile(),
+            // Pin & Save entries
+            _buildPinTiles(),
             Divider(color: _colorPalette.borderLight, height: 1),
             _buildSecondaryActions(),
           ],
@@ -716,8 +729,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
         );
       },
       leading: Icon(Icons.search, color: _colorPalette.iconPrimary),
-      contentPadding:
-          EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
+      contentPadding: EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
       title: Text(
         cc.Translations.of(context).search,
         style: TextStyle(
@@ -730,6 +742,76 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
     );
   }
 
+  /// Pin & Save: pinned messages only — pinning the conversation itself
+  /// lives on the chat list row's long-press menu.
+  Widget _buildPinTiles() {
+    return _neutralTile(
+      cc.Translations.of(context).pinnedMessagesTitle,
+      Icon(Icons.push_pin_outlined, color: _colorPalette.iconPrimary),
+      _viewPinnedMessages,
+    );
+  }
+
+  Widget _neutralTile(String title, Widget icon, VoidCallback onTap) {
+    return ListTile(
+      onTap: onTap,
+      leading: icon,
+      contentPadding: EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: _typography.heading4?.regular?.fontSize,
+          fontFamily: _typography.heading4?.regular?.fontFamily,
+          fontWeight: _typography.heading4?.regular?.fontWeight,
+          color: _colorPalette.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  void _viewPinnedMessages() {
+    CometChatPinnedMessages.show(
+      context,
+      group: _group,
+      onItemTap: (message) {
+        // Pop GroupInfo, then open the conversation jumped to the message
+        // (thread replies open their thread screen).
+        final navigator = Navigator.of(context);
+        final group = _group;
+        if (message.parentMessageId > 0) {
+          CometChatHelper.getMessageDetails(
+            message.parentMessageId,
+            onSuccess: (parent) {
+              if (parent == null) return;
+              navigator.pop(); // pop GroupInfo
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (_) => ThreadScreen(
+                    group: group,
+                    message: parent,
+                    goToMessageId: message.id,
+                  ),
+                ),
+              );
+            },
+            onError: (_) {},
+          );
+          return;
+        }
+        navigator.pop(); // pop GroupInfo
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            settings: const RouteSettings(name: 'messages'),
+            builder: (_) => MessagesScreen(
+              group: group,
+              goToMessageId: message.id,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSecondaryActions() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -737,8 +819,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
         // Leave option
         if (_membersCount > 1 &&
             _canAccess(GroupOptionConstants.leave) &&
-            !(_membersCount <= 1 &&
-                _group.owner == _loggedInUser?.uid))
+            !(_membersCount <= 1 && _group.owner == _loggedInUser?.uid))
           _listTileOption(
             cc.Translations.of(context).leave,
             Icon(Icons.exit_to_app, color: _colorPalette.error),
@@ -759,8 +840,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
     return ListTile(
       onTap: onTap,
       leading: icon,
-      contentPadding:
-          EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
+      contentPadding: EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
       title: Text(
         title,
         style: TextStyle(
@@ -772,68 +852,4 @@ class _GroupInfoScreenState extends State<GroupInfoScreen>
       ),
     );
   }
-
-  /// Pin & Save: the conversation's pinned messages. Pinning the conversation
-  /// itself lives on the chat-list row's long-press menu instead.
-  Widget _buildPinnedMessagesTile() {
-    return ListTile(
-      onTap: _viewPinnedMessages,
-      leading:
-          Icon(Icons.push_pin_outlined, color: _colorPalette.iconPrimary),
-      contentPadding: EdgeInsets.symmetric(horizontal: _spacing.padding5 ?? 0),
-      title: Text(
-        cc.Translations.of(context).pinnedMessagesTitle,
-        style: TextStyle(
-          fontSize: _typography.heading4?.regular?.fontSize,
-          fontFamily: _typography.heading4?.regular?.fontFamily,
-          fontWeight: _typography.heading4?.regular?.fontWeight,
-          color: _colorPalette.textPrimary,
-        ),
-      ),
-    );
-  }
-
-  void _viewPinnedMessages() {
-    CometChatPinnedMessages.show(
-      context,
-      group: _group,
-      onItemTap: (message) {
-        // Capture the navigator before popping this screen, then open the
-        // conversation aimed at the message. A pinned reply opens its thread.
-        final navigator = Navigator.of(context);
-        final group = _group;
-        if (message.parentMessageId > 0) {
-          CometChatHelper.getMessageDetails(
-            message.parentMessageId,
-            onSuccess: (parent) {
-              if (parent == null) return;
-              navigator.pop();
-              navigator.push(
-                MaterialPageRoute(
-                  builder: (_) => ThreadScreen(
-                    group: group,
-                    message: parent,
-                    goToMessageId: message.id,
-                  ),
-                ),
-              );
-            },
-            onError: (_) {},
-          );
-          return;
-        }
-        navigator.pop();
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'messages'),
-            builder: (_) => MessagesScreen(
-              group: group,
-              goToMessageId: message.id,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
 }

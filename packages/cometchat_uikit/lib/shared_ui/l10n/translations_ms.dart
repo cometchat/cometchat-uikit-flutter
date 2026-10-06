@@ -529,6 +529,14 @@ class TranslationsMs extends Translations {
       'Anda tidak mempunyai kebenaran untuk melakukan tindakan ini.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Benarkan akses mikrofon untuk menjawab panggilan.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Benarkan akses kamera dan mikrofon untuk menjawab panggilan video.';
+
+  @override
   String get pinSaveFailed => 'Tidak dapat mengemas kini. Sila cuba lagi.';
 
   @override
@@ -1507,4 +1515,87 @@ class TranslationsMs extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Kembali';
+
+  @override
+  String get openInBrowser => 'Buka dalam pelayar';
+
+  @override
+  String get failedToLoadSticker => 'Gagal memuatkan pelekat';
+
+  @override
+  String get enterDisplayText => 'Masukkan teks paparan';
+
+  @override
+  String get clearSearch => 'Kosongkan carian';
+
+  @override
+  String get done => 'Selesai';
+
+  @override
+  String get download => 'Muat turun';
+
+  @override
+  String get startRecording => 'Mula merakam';
+
+  @override
+  String get stopRecording => 'Hentikan rakaman';
+
+  @override
+  String get pauseRecording => 'Jeda rakaman';
+
+  @override
+  String get deleteRecording => 'Padam rakaman';
+
+  @override
+  String get recordVoiceMessage => 'Rakam mesej suara';
+
+  @override
+  String get reorderOption => 'Susun semula pilihan';
+
+  @override
+  String get play => 'Main';
+
+  @override
+  String get pause => 'Jeda';
+
+  @override
+  String get next => 'Seterusnya';
+
+  @override
+  String get previous => 'Sebelumnya';
+
+  @override
+  String get scrollToBottom => 'Tatal ke bawah';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Menu pilihan lampiran dibuka';
+
+  @override
+  String get richTextFormattingToolbar => 'Bar alat pemformatan teks';
+
+  @override
+  String get closeFormattingToolbar => 'Tutup bar alat pemformatan';
+
+  @override
+  String get sendAudioMessage => 'Hantar mesej audio';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Tindakan tambahan penggubah mesej';
+
+  @override
+  String get attachmentButton => 'Butang lampiran';
+
+  @override
+  String get addAttachment => 'Tambah lampiran';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Senarai cadangan dengan $count item';
+
+  @override
+  String messageFrom(String sender) => 'Mesej daripada $sender';
 }

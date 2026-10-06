@@ -58,6 +58,7 @@ class CometChatConversationsStyle
     this.searchBorderRadius,
     this.searchPlaceHolderTextStyle,
     this.searchPlaceHolderTextColor,
+    this.itemStyle,
   });
 
   ///[submitIconColor] provides color for submit icon
@@ -138,10 +139,14 @@ class CometChatConversationsStyle
   ///[messageTypeIconColor] provides icon color for message type
   final Color? messageTypeIconColor;
 
-  ///[separatorHeight] provides height for the separator
+  ///[separatorHeight] provides height for the separator under the app bar.
+  ///For the line between conversation rows, use
+  ///[CometChatConversationListItemStyle.separatorHeight] on [itemStyle].
   final double? separatorHeight;
 
-  ///[separatorColor] provides color for the separator
+  ///[separatorColor] provides color for the separator under the app bar.
+  ///For the line between conversation rows, use
+  ///[CometChatConversationListItemStyle.separatorColor] on [itemStyle].
   final Color? separatorColor;
 
   ///[typingIndicatorStyle] provides style for typing indicator
@@ -192,6 +197,20 @@ class CometChatConversationsStyle
   ///[checkBoxBorder] provides border for selected item
   final BorderSide? checkBoxBorder;
 
+  /// Style for every conversation row, including the separator line between
+  /// rows ([CometChatConversationListItemStyle.separatorColor] and
+  /// [CometChatConversationListItemStyle.separatorHeight]), which is off by
+  /// default and never drawn after the last row.
+  ///
+  /// The row fields this style also carries win over it where both are set:
+  /// [itemTitleTextStyle], [itemTitleTextColor], [itemSubtitleTextStyle],
+  /// [itemSubtitleTextColor], [backgroundColor],
+  /// [listItemSelectedBackgroundColor], [messageTypeIconColor], the checkbox
+  /// fields, [privateGroupIconBackground] and [protectedGroupIconBackground].
+  /// So do [avatarStyle], [badgeStyle], [statusIndicatorStyle],
+  /// [receiptStyle], [dateStyle] and [typingIndicatorStyle].
+  final CometChatConversationListItemStyle? itemStyle;
+
   static CometChatConversationsStyle of(BuildContext context) =>
       const CometChatConversationsStyle();
 
@@ -241,6 +260,7 @@ class CometChatConversationsStyle
     BorderRadius? searchBorderRadius,
     TextStyle? searchPlaceHolderTextStyle,
     Color? searchPlaceHolderTextColor,
+    CometChatConversationListItemStyle? itemStyle,
   }) {
     return CometChatConversationsStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -304,6 +324,7 @@ class CometChatConversationsStyle
           searchPlaceHolderTextStyle ?? this.searchPlaceHolderTextStyle,
       searchPlaceHolderTextColor:
           searchPlaceHolderTextColor ?? this.searchPlaceHolderTextColor,
+      itemStyle: itemStyle ?? this.itemStyle,
     );
   }
 
@@ -354,6 +375,7 @@ class CometChatConversationsStyle
       searchBorderRadius: style.searchBorderRadius,
       searchPlaceHolderTextStyle: style.searchPlaceHolderTextStyle,
       searchPlaceHolderTextColor: style.searchPlaceHolderTextColor,
+      itemStyle: style.itemStyle,
     );
   }
 
@@ -527,6 +549,8 @@ class CometChatConversationsStyle
         other.searchPlaceHolderTextColor,
         t,
       ),
+      // The row style has no lerp of its own, so it switches halfway.
+      itemStyle: t < 0.5 ? itemStyle : other.itemStyle,
     );
   }
 }

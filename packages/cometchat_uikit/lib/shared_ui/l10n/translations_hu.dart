@@ -525,6 +525,14 @@ class TranslationsHu extends Translations {
       'Nincs jogosultságod a művelet végrehajtásához.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Engedélyezd a mikrofon használatát a hívások fogadásához.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Engedélyezd a kamera és a mikrofon használatát a videohívások fogadásához.';
+
+  @override
   String get pinSaveFailed => 'Nem sikerült frissíteni. Próbáld újra.';
 
   @override
@@ -1507,4 +1515,87 @@ class TranslationsHu extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Vissza';
+
+  @override
+  String get openInBrowser => 'Megnyitás böngészőben';
+
+  @override
+  String get failedToLoadSticker => 'A matrica betöltése sikertelen';
+
+  @override
+  String get enterDisplayText => 'Adja meg a megjelenítendő szöveget';
+
+  @override
+  String get clearSearch => 'Keresés törlése';
+
+  @override
+  String get done => 'Kész';
+
+  @override
+  String get download => 'Letöltés';
+
+  @override
+  String get startRecording => 'Felvétel indítása';
+
+  @override
+  String get stopRecording => 'Felvétel leállítása';
+
+  @override
+  String get pauseRecording => 'Felvétel szüneteltetése';
+
+  @override
+  String get deleteRecording => 'Felvétel törlése';
+
+  @override
+  String get recordVoiceMessage => 'Hangüzenet rögzítése';
+
+  @override
+  String get reorderOption => 'Beállítás átrendezése';
+
+  @override
+  String get play => 'Lejátszás';
+
+  @override
+  String get pause => 'Szünet';
+
+  @override
+  String get next => 'Következő';
+
+  @override
+  String get previous => 'Előző';
+
+  @override
+  String get scrollToBottom => 'Görgetés az aljára';
+
+  @override
+  String get attachmentOptionsMenuOpened =>
+      'A mellékletek beállításai menü megnyílt';
+
+  @override
+  String get richTextFormattingToolbar => 'Szövegformázó eszköztár';
+
+  @override
+  String get closeFormattingToolbar => 'Formázó eszköztár bezárása';
+
+  @override
+  String get sendAudioMessage => 'Hangüzenet küldése';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Az üzenetszerkesztő további műveletei';
+
+  @override
+  String get attachmentButton => 'Melléklet gomb';
+
+  @override
+  String get addAttachment => 'Melléklet hozzáadása';
+
+  @override
+  String suggestionListWithItems(int count) => 'Javaslatlista $count elemmel';
+
+  @override
+  String messageFrom(String sender) => 'Üzenet tőle: $sender';
 }

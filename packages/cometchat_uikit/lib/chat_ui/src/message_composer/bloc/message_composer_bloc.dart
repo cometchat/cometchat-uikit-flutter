@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 import '../../../../shared_ui/src/clean_architecture/core/utils/platform_utils/platform_file_utils.dart'
     as platform;
 import '../../../../shared_ui/src/clean_architecture/core/constants/enums.dart'
     as core_enums;
+import '../../../../shared_ui/src/clean_architecture/core/utils/ui_event_target.dart';
 
 /// BLoC for managing message composer state and business logic
 /// Handles message sending, editing, replying, and typing indicators
@@ -212,40 +214,79 @@ class MessageComposerBloc
     User? user,
     Group? group,
     int parentMessageId,
-  ) {
-    final Map<String, dynamic> composerId = {};
-    if (parentMessageId != 0) {
-      composerId['parentMessageId'] = parentMessageId;
-    }
-    if (group != null) {
-      composerId['guid'] = group.guid;
-    } else if (user != null) {
-      composerId['uid'] = user.uid;
-    }
-    return composerId;
+  ) => buildUiEventId(
+    uid: user?.uid,
+    guid: group?.guid,
+    parentMessageId: parentMessageId,
+  );
+
+  /// A null id stays a broadcast here: `CometChatUIKitHelper.showPanel` lets an
+  /// integrator raise a panel without naming a conversation, and single-composer
+  /// apps rely on that.
+  bool _isForThisWidget(Map<String, dynamic>? id) =>
+      uiEventTargets(id, state.composerId, nullTargetsAll: true);
+
+  /// True when [message] belongs to the conversation this composer is bound to.
+  ///
+  /// The `sender` arm is what lets an **incoming** 1:1 message match — there the
+  /// `receiverUid` is the logged-in user, not the peer. It is gated on
+  /// `receiverType` so a *group* message that merely happens to be sent by the
+  /// 1:1 peer cannot match a 1:1 composer.
+  ///
+  /// Conversation identity only — callers that also care about threads must
+  /// compare `parentMessageId` themselves.
+  bool _isForThisConversation(BaseMessage message) {
+    final user = state.user;
+    final group = state.group;
+    final isForUser =
+        user != null &&
+        (message.receiverUid == user.uid ||
+            (message.receiverType == ReceiverTypeConstants.user &&
+                message.sender?.uid == user.uid));
+    final isForGroup = group != null && message.receiverUid == group.guid;
+    return isForUser || isForGroup;
   }
 
-  bool _isForThisWidget(Map<String, dynamic>? id) {
-    if (id == null) return true;
+  /// Subscribes the sender to the thread of the message they just sent, so
+  /// replies to it notify them.
+  ///
+  /// The server does not stamp `threadSubscribed` on your own outgoing
+  /// message, and the UI Kit otherwise only ever subscribes from an explicit
+  /// Follow tap — so a message you sent read as un-followed and its replies
+  /// went unannounced (ENG-39487).
+  ///
+  /// [MessageTemplateUtils.resolveThreadId] gives the parent id for a reply
+  /// and the message's own id for a root, so replying subscribes you to the
+  /// thread you replied in rather than starting a new one.
+  ///
+  /// Fire-and-forget by design: subscribing is a courtesy, and a failure must
+  /// not fail or delay a message that has already been delivered. Gated on
+  /// [UIKitSettings.enableThreadSubscription] so an app that does not ship
+  /// follow/unfollow doesn't quietly start creating subscriptions.
+  void _subscribeSenderToOwnThread(BaseMessage sentMessage) {
+    if (CometChatUIKit.authenticationSettings?.enableThreadSubscription !=
+        true) {
+      return;
+    }
+    if (sentMessage.threadSubscribed) return;
 
-    final composerId = state.composerId;
-    if (id.containsKey('parentMessageId') &&
-        composerId.containsKey('parentMessageId')) {
-      if (id['parentMessageId'] != composerId['parentMessageId']) {
-        return false;
-      }
-    }
-    if (id.containsKey('guid') && composerId.containsKey('guid')) {
-      if (id['guid'] != composerId['guid']) {
-        return false;
-      }
-    }
-    if (id.containsKey('uid') && composerId.containsKey('uid')) {
-      if (id['uid'] != composerId['uid']) {
-        return false;
-      }
-    }
-    return true;
+    final threadId = MessageTemplateUtils.resolveThreadId(sentMessage);
+    if (threadId <= 0) return;
+
+    unawaited(
+      CometChat.subscribeToThread(threadId)
+          .then((result) {
+            if (result == null) return;
+            sentMessage.threadSubscribed = true;
+            // Restamp the bells, the threaded header and the list bloc's copy
+            // of the thread root, the same way the manual toggle does.
+            CometChatMessageEvents.ccThreadSubscriptionChanged(threadId, true);
+          })
+          .catchError((Object e) {
+            // The message is sent; the user can still follow it by hand.
+            ccLog('Auto-subscribe to thread $threadId failed: $e');
+          }),
+    );
   }
 
   void _playSound() {
@@ -292,7 +333,7 @@ class MessageComposerBloc
     result.fold(
       (failure) {
         if (kDebugMode) {
-          debugPrint('Failed to get logged in user: ${failure.message}');
+          ccLog('Failed to get logged in user: ${failure.message}');
         }
       },
       (user) {
@@ -395,7 +436,7 @@ class MessageComposerBloc
     }
 
     // Clear composer state
-    debugPrint(
+    ccLog(
       '[ComposerBloc] _onSendTextMessage: emitting sending state, clearReplyMessage=true, current isReplyMode=${state.isReplyMode}, replyMessage=${state.replyMessage}',
     );
     emit(
@@ -454,6 +495,7 @@ class MessageComposerBloc
         if (sentMessage.muid.isEmpty && textMessage.muid.isNotEmpty) {
           sentMessage.muid = textMessage.muid;
         }
+        _subscribeSenderToOwnThread(sentMessage);
         CometChatMessageEvents.ccMessageSent(
           sentMessage,
           core_enums.MessageStatus.sent,
@@ -476,11 +518,11 @@ class MessageComposerBloc
 
     // Use raw filesystem path — file:// prefix breaks MultipartFile.fromFile()
     final filePath = event.path;
-    debugPrint(
+    ccLog(
       '[MessageComposerBloc] sendMedia — path: $filePath, type: ${event.messageType}',
     );
     if (!kIsWeb) {
-      debugPrint(
+      ccLog(
         '[MessageComposerBloc] sendMedia — file exists: ${platform.fileExistsSync(filePath)}',
       );
     }
@@ -603,6 +645,7 @@ class MessageComposerBloc
         if (event.metadata != null) {
           sentMessage.metadata = {...event.metadata!, ...?sentMessage.metadata};
         }
+        _subscribeSenderToOwnThread(sentMessage);
         CometChatMessageEvents.ccMessageSent(
           sentMessage,
           core_enums.MessageStatus.sent,
@@ -731,6 +774,7 @@ class MessageComposerBloc
         if (sentMessage.muid.isEmpty && customMessage.muid.isNotEmpty) {
           sentMessage.muid = customMessage.muid;
         }
+        _subscribeSenderToOwnThread(sentMessage);
         CometChatMessageEvents.ccMessageSent(
           sentMessage,
           core_enums.MessageStatus.sent,
@@ -895,7 +939,7 @@ class MessageComposerBloc
       },
       (updatedMessage) {
         _playSound();
-        debugPrint(
+        ccLog(
           '[MessageComposerBloc] Edit success, firing ccMessageEdited with message.id=${updatedMessage.id}',
         );
         CometChatMessageEvents.ccMessageEdited(
@@ -916,7 +960,7 @@ class MessageComposerBloc
     SetReplyMessage event,
     Emitter<MessageComposerState> emit,
   ) {
-    debugPrint(
+    ccLog(
       '[ComposerBloc] _onSetReplyMessage: message=${event.message}, current status=${state.status}',
     );
     emit(
@@ -932,7 +976,7 @@ class MessageComposerBloc
     ClearReplyMessage event,
     Emitter<MessageComposerState> emit,
   ) {
-    debugPrint(
+    ccLog(
       '[ComposerBloc] _onClearReplyMessage: current status=${state.status}, replyMessage=${state.replyMessage}',
     );
     emit(
@@ -1157,27 +1201,24 @@ class MessageComposerBloc
 
   @override
   void ccMessageEdited(BaseMessage message, MessageEditStatus status) {
+    // Thread identity alone is not enough: every main-conversation composer
+    // shares parentMessageId 0, so an edit raised in one conversation used to
+    // load its text into every other mounted composer. Match the conversation
+    // too, exactly as ccReplyToMessage does.
     if (status == MessageEditStatus.inProgress &&
-        message.parentMessageId == state.parentMessageId) {
+        message.parentMessageId == state.parentMessageId &&
+        _isForThisConversation(message)) {
       add(MessageEditedExternally(message));
     }
   }
 
   @override
   void ccReplyToMessage(BaseMessage message) {
-    // Only handle if this composer is for the same conversation
-    final isForUser =
-        state.user != null &&
-        (message.receiverUid == state.user!.uid ||
-            message.sender?.uid == state.user!.uid);
-    final isForGroup =
-        state.group != null && message.receiverUid == state.group!.guid;
-
     // Also check parentMessageId so thread replies don't leak into the
     // main conversation composer (and vice versa).
     final isForSameThread = message.parentMessageId == state.parentMessageId;
 
-    if ((isForUser || isForGroup) && isForSameThread) {
+    if (_isForThisConversation(message) && isForSameThread) {
       add(SetReplyMessage(message));
     }
   }
@@ -1192,16 +1233,8 @@ class MessageComposerBloc
     core_enums.MessageStatus messageStatus,
   ) {
     // Only clear reply if message belongs to current conversation
-    final isForUser =
-        state.user != null &&
-        (message.receiverUid == state.user!.uid ||
-            (message.receiverType == ReceiverTypeConstants.user &&
-                message.sender?.uid == state.user!.uid));
-    final isForGroup =
-        state.group != null && message.receiverUid == state.group!.guid;
-
     if (state.isReplyMode &&
-        (isForUser || isForGroup) &&
+        _isForThisConversation(message) &&
         (messageStatus == core_enums.MessageStatus.inProgress ||
             messageStatus == core_enums.MessageStatus.sent ||
             messageStatus == core_enums.MessageStatus.error)) {

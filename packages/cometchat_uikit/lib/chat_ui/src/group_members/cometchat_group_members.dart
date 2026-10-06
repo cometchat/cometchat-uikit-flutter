@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
-import 'bloc/group_members_bloc.dart';
-import 'bloc/group_members_event.dart';
-import 'bloc/group_members_state.dart';
 
 /// [CometChatGroupMembers] displays all members of a [Group] as a list.
 ///
@@ -60,11 +57,27 @@ class CometChatGroupMembers extends StatefulWidget {
     this.hideKickMemberOption,
     this.hideScopeChangeOption,
     this.usersStatusVisibility = true,
+    this.groupMembersBloc,
   });
 
   // ── Props ──────────────────────────────────────────────────────────────────
 
+  ///[groupMembersBloc] Optional external GroupMembersBloc instance.
+  ///If provided, this bloc is used instead of creating one internally, and the
+  ///widget will not close it on dispose. Mirrors
+  ///[CometChatConversations.conversationsBloc]; it is the seam that lets a test
+  ///supply member data without a live SDK.
+  final GroupMembersBloc? groupMembersBloc;
+
   final GroupMembersBuilderProtocol? groupMembersProtocol;
+
+  /// [groupMembersRequestBuilder] sets the request the list fetches members
+  /// with: its limit is the page size, and its filters (scopes, status, search
+  /// keyword) apply to every page. [group] decides whose members load — the
+  /// builder's own guid is set aside when it differs. A keyword typed into the
+  /// search box replaces the builder's own while the search runs; clearing it
+  /// brings the builder's back. The builder itself is never changed. Ignored
+  /// when [groupMembersBloc] is given — pass it to that bloc.
   final GroupMembersRequestBuilder? groupMembersRequestBuilder;
   final Widget? Function(BuildContext context, GroupMember groupMember)?
   subtitleView;
@@ -147,6 +160,7 @@ class CometChatGroupMembers extends StatefulWidget {
 
 class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
   late GroupMembersBloc _bloc;
+  bool _isExternalBloc = false;
   final ValueNotifier<bool> _isSelectionOn = ValueNotifier<bool>(false);
 
   // Cached theme values (theme-caching pattern)
@@ -158,15 +172,26 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
   @override
   void initState() {
     super.initState();
-    _bloc = GroupMembersBloc(
-      group: widget.group,
-      usersStatusVisibility: widget.usersStatusVisibility ?? true,
-      hideKickMemberOption: widget.hideKickMemberOption ?? false,
-      hideBanMemberOption: widget.hideBanMemberOption ?? false,
-      hideScopeChangeOption: widget.hideScopeChangeOption ?? false,
-    );
+    if (widget.groupMembersBloc != null) {
+      // An externally supplied bloc owns its own dependencies and lifecycle.
+      _bloc = widget.groupMembersBloc!;
+      _isExternalBloc = true;
+    } else {
+      _bloc = GroupMembersBloc(
+        group: widget.group,
+        groupMembersRequestBuilder: widget.groupMembersRequestBuilder,
+        usersStatusVisibility: widget.usersStatusVisibility ?? true,
+        hideKickMemberOption: widget.hideKickMemberOption ?? false,
+        hideBanMemberOption: widget.hideBanMemberOption ?? false,
+        hideScopeChangeOption: widget.hideScopeChangeOption ?? false,
+      );
+      _isExternalBloc = false;
+    }
     // Trigger initial load — this is the fix: onInit was never called before
     _bloc.add(const LoadGroupMembers());
+    if (widget.stateCallBack != null) {
+      widget.stateCallBack!(_buildLegacyControllerStub());
+    }
   }
 
   @override
@@ -182,7 +207,9 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
 
   @override
   void dispose() {
-    _bloc.close();
+    if (!_isExternalBloc) {
+      _bloc.close();
+    }
     _isSelectionOn.dispose();
     super.dispose();
   }
@@ -287,17 +314,20 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
         ? widget.trailingView!(context, member)
         : _buildScopeBadge(member, groupMemberStyle);
 
+    final isSelected = state.selectedMembers.contains(member.uid);
+    final hasSelection = state.selectedMembers.isNotEmpty;
+
     final statusUtils = StatusIndicatorUtils.getStatusIndicatorFromParams(
       context: context,
       groupMember: member,
+      // Without isSelected the utility never takes its selected branch, so
+      // selectIcon was inert. Groups, Search and Conversations all pass it.
+      isSelected: isSelected,
       onlineStatusIndicatorColor:
           groupMemberStyle.onlineStatusColor ?? _colorPalette.success,
       usersStatusVisibility: widget.usersStatusVisibility,
       selectIcon: widget.selectIcon,
     );
-
-    final isSelected = state.selectedMembers.contains(member.uid);
-    final hasSelection = state.selectedMembers.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -449,7 +479,13 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
     final legacyController = _buildLegacyControllerStub();
     List<CometChatOption> opts = [];
 
-    if (widget.setOptions != null) {
+    if (widget.options != null) {
+      // Legacy full-replacement hook, kept ahead of setOptions for the v4
+      // call shape.
+      opts =
+          widget.options!(widget.group, member, legacyController, context) ??
+          [];
+    } else if (widget.setOptions != null) {
       opts =
           widget.setOptions!(widget.group, member, legacyController, context) ??
           [];
@@ -553,7 +589,8 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       case GroupMemberOptionConstants.changeScope:
         showModalBottomSheet(
           context: context,
-          barrierColor: const Color(0xff141414).withValues(alpha: 0.8),
+          barrierColor: (_colorPalette.textPrimary ?? const Color(0xFF141414))
+              .withValues(alpha: 0.8),
           builder: (_) => SingleChildScrollView(
             child: CometChatChangeScope(
               group: widget.group,
@@ -624,8 +661,15 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
 
   /// Minimal legacy controller stub — only used when [setOptions]/[addOptions] callbacks
   /// are provided by the consumer and need a controller reference.
+  /// The legacy controller handed to [CometChatGroupMembers.stateCallBack],
+  /// [CometChatGroupMembers.setOptions] and
+  /// [CometChatGroupMembers.addOptions]. Built once so callers keep a stable
+  /// reference, and its selectionMap is synced from bloc state — otherwise
+  /// `stateCallBack` hands back a controller whose selection is always empty.
+  CometChatGroupMembersController? _legacyController;
+
   CometChatGroupMembersController _buildLegacyControllerStub() {
-    return CometChatGroupMembersController(
+    return _legacyController ??= CometChatGroupMembersController(
       groupMembersBuilderProtocol:
           widget.groupMembersProtocol ??
           UIGroupMembersBuilder(
@@ -761,6 +805,10 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       _colorPalette,
       _typography,
       _spacing,
+      emptyStateTextColor: style.emptyStateTextColor,
+      emptyStateTextStyle: style.emptyStateTextStyle,
+      emptyStateSubtitleColor: style.emptyStateSubtitleTextColor,
+      emptyStateSubtitleStyle: style.emptyStateSubtitleTextStyle,
     );
   }
 
@@ -772,6 +820,13 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       _typography,
       _spacing,
       () => _bloc.add(const LoadGroupMembers()),
+      errorStateTextStyle: style.errorStateTextStyle,
+      errorStateSubtitleStyle: style.errorStateSubtitleStyle,
+      buttonTextStyle: style.retryButtonTextStyle,
+      buttonTextColor: style.retryButtonTextColor,
+      buttonBackgroundColor: style.retryButtonBackgroundColor,
+      buttonBorderSide: style.retryButtonBorder,
+      buttonBorderRadius: style.retryButtonBorderRadius,
     );
   }
 
@@ -794,6 +849,7 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       },
       child: ListView.builder(
         controller: widget.controller,
+        padding: style.listPadding,
         // Only add the loader slot when actively loading more
         itemCount: state.members.length + (state.isLoadingMore ? 1 : 0),
         itemBuilder: (ctx, index) {
@@ -829,6 +885,7 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
   Widget _buildSelectionWidget(CometChatGroupMembersStyle style) {
     if (!_isSelectionOn.value) return const SizedBox(height: 0, width: 0);
     return IconButton(
+      tooltip: Translations.of(context).done,
       onPressed: () {
         final selected = _bloc.getSelectedList();
         widget.onSelection?.call(selected);
@@ -851,7 +908,27 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
 
     return BlocProvider<GroupMembersBloc>.value(
       value: _bloc,
-      child: BlocBuilder<GroupMembersBloc, GroupMembersState>(
+      child: BlocConsumer<GroupMembersBloc, GroupMembersState>(
+        // Lifecycle callbacks, matching ConversationsList: onLoad, onEmpty and
+        // onError are part of the documented public API, so they have to fire
+        // on the state transitions they describe.
+        listener: (ctx, state) {
+          if (state is GroupMembersLoaded && widget.onLoad != null) {
+            widget.onLoad!(state.members);
+          }
+          if (state is GroupMembersEmpty && widget.onEmpty != null) {
+            widget.onEmpty!();
+          }
+          if (state is GroupMembersError && widget.onError != null) {
+            widget.onError!(
+              CometChatException(
+                'GROUP_MEMBERS_ERROR',
+                state.message,
+                state.message,
+              ),
+            );
+          }
+        },
         builder: (ctx, state) {
           // Title: show selection count or "Members"
           final titleText =
@@ -877,6 +954,7 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
             hideAppBar: widget.hideAppbar ?? false,
             backIcon: hasSelection
                 ? IconButton(
+                    tooltip: Translations.of(context).clearSearch,
                     onPressed: () {
                       _bloc.add(const ClearMemberSelection());
                       _isSelectionOn.value = false;
@@ -890,6 +968,7 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
                   )
                 : (widget.backButton ??
                       IconButton(
+                        tooltip: Translations.of(context).back,
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(
                           Icons.arrow_back,
@@ -974,6 +1053,21 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
     );
   }
 
+  /// Mirrors the bloc's selected uids onto the legacy controller's
+  /// selectionMap so integrators reading it through [stateCallBack] see the
+  /// same selection the list is showing.
+  void _syncLegacySelection(GroupMembersLoaded state) {
+    final controller = _legacyController;
+    if (controller == null) return;
+    controller.selectionMap
+      ..clear()
+      ..addEntries(
+        state.members
+            .where((m) => state.selectedMembers.contains(m.uid))
+            .map((m) => MapEntry(m.uid, m)),
+      );
+  }
+
   Widget _buildContainer(
     GroupMembersState state,
     CometChatGroupMembersStyle style,
@@ -983,8 +1077,11 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
     } else if (state is GroupMembersEmpty) {
       return _buildEmpty(style);
     } else if (state is GroupMembersError) {
+      // hideError suppresses the error view, as on CometChatConversations.
+      if (widget.hideError == true) return const SizedBox.shrink();
       return _buildError(style);
     } else if (state is GroupMembersLoaded) {
+      _syncLegacySelection(state);
       if (state.members.isEmpty) return _buildEmpty(style);
       return _buildList(state, style);
     }

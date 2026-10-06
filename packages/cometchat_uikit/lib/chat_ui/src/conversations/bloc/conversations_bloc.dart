@@ -9,6 +9,8 @@ import '../utils/conversation_tier_ordering.dart';
 import '../../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../shared/list_base.dart';
 import '../conversations_builder_protocol.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../src/chat_sdk_listeners.dart';
 
 /// BLoC for managing conversations list
 ///
@@ -95,6 +97,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       'conversations_bloc_cc_group_${DateTime.now().millisecondsSinceEpoch}';
   final String _ccConversationListenerKey =
       'conversations_bloc_cc_conversation_${DateTime.now().millisecondsSinceEpoch}';
+  final String _ccCallListenerKey =
+      'conversations_bloc_cc_call_${DateTime.now().millisecondsSinceEpoch}';
 
   // Configuration options
   final bool disableSoundForMessages;
@@ -232,6 +236,10 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     // Initialize logged in user and register SDK listeners
     _initializeAndRegisterListeners();
   }
+
+  /// Conversations per page: the effective builder's limit, else 30. The
+  /// first page, load-more and the first page's hasMore all use it.
+  int get _pageSize => _effectiveRequestBuilder?.limit ?? 30;
 
   /// Build a ConversationsRequestBuilder seeded from the effective
   /// caller-provided builder (if any), then stamp [limit]/[fromId].
@@ -404,8 +412,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     if (result is Success<User?>) {
       _loggedInUser = result.data;
     } else if (result is Failure) {
-      // ignore: avoid_print
-      print('Warning: Failed to get logged-in user: ${result.message}');
+      ccLog('Warning: Failed to get logged-in user: ${result.message}');
     }
 
     // Skip SDK listeners if disabled (e.g., for web platform)
@@ -455,7 +462,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       ),
     );
 
-    CometChat.addCallListener(
+    ChatSdkListeners.addCallListener(
       _callListenerKey,
       _ConversationCallListener(
         onIncomingCallReceivedCallback: _handleIncomingCallReceived,
@@ -531,6 +538,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
         onCCConversationUpdatedCallback: _handleCCConversationUpdated,
       ),
     );
+
+    // This device's own calls: the chat SDK does not tell the caller about
+    // the call it just placed ("initiated"), nor this device about a call
+    // it accepted, declined or ended itself.
+    CometChatCallEvents.addCallEventsListener(
+      _ccCallListenerKey,
+      _ConversationCallEventsListener(onCallCallback: _handleCCCall),
+    );
   }
 
   // ============================================================
@@ -561,9 +576,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     }
 
     if (getConversationsUseCase != null) {
-      final effectiveLimit = _effectiveRequestBuilder?.limit ?? 30;
       final result = await getConversationsUseCase!(
-        limit: effectiveLimit,
+        limit: _pageSize,
         requestBuilder: _effectiveRequestBuilder,
       );
 
@@ -576,18 +590,15 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
         }
       } else if (result is Failure && !isSilentRefresh) {
         if (kDebugMode) {
-          debugPrint(
-            '[ConversationsBloc] _onLoadConversations useCase Failure',
-          );
-          debugPrint('[ConversationsBloc]   message: ${result.message}');
-          debugPrint('[ConversationsBloc]   -> emitting ConversationsError');
+          ccLog('[ConversationsBloc] _onLoadConversations useCase Failure');
+          ccLog('[ConversationsBloc]   message: ${result.message}');
+          ccLog('[ConversationsBloc]   -> emitting ConversationsError');
         }
         emit(ConversationsError(message: result.message));
       }
     } else {
       try {
-        final effectiveLimit = _effectiveRequestBuilder?.limit ?? 30;
-        final requestBuilder = _buildRequestBuilder(limit: effectiveLimit);
+        final requestBuilder = _buildRequestBuilder(limit: _pageSize);
         _conversationsRequest = requestBuilder.build();
 
         final completer = Completer<List<Conversation>>();
@@ -611,13 +622,13 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       } on CometChatException catch (e) {
         if (!isSilentRefresh) {
           if (kDebugMode) {
-            debugPrint(
+            ccLog(
               '[ConversationsBloc] _onLoadConversations CometChatException',
             );
-            debugPrint('[ConversationsBloc]   code:    ${e.code}');
-            debugPrint('[ConversationsBloc]   message: ${e.message}');
-            debugPrint('[ConversationsBloc]   details: ${e.details}');
-            debugPrint('[ConversationsBloc]   -> emitting ConversationsError');
+            ccLog('[ConversationsBloc]   code:    ${e.code}');
+            ccLog('[ConversationsBloc]   message: ${e.message}');
+            ccLog('[ConversationsBloc]   details: ${e.details}');
+            ccLog('[ConversationsBloc]   -> emitting ConversationsError');
           }
           emit(
             ConversationsError(
@@ -628,10 +639,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       } catch (e) {
         if (!isSilentRefresh) {
           if (kDebugMode) {
-            debugPrint(
-              '[ConversationsBloc] _onLoadConversations generic catch: $e',
-            );
-            debugPrint('[ConversationsBloc]   -> emitting ConversationsError');
+            ccLog('[ConversationsBloc] _onLoadConversations generic catch: $e');
+            ccLog('[ConversationsBloc]   -> emitting ConversationsError');
           }
           emit(ConversationsError(message: 'Failed to load conversations: $e'));
         }
@@ -666,7 +675,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       }
 
       final result = await loadMoreConversationsUseCase!(
-        limit: 30,
+        limit: _pageSize,
         fromId: lastConversationId,
         currentConversations: currentState.conversations,
         requestBuilder: _effectiveRequestBuilder,
@@ -697,11 +706,9 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
         replaceAll(allConversations);
       } else if (result is Failure) {
         if (kDebugMode) {
-          debugPrint(
-            '[ConversationsBloc] _onLoadMoreConversations useCase Failure',
-          );
-          debugPrint('[ConversationsBloc]   message: ${result.message}');
-          debugPrint('[ConversationsBloc]   -> emitting ConversationsError');
+          ccLog('[ConversationsBloc] _onLoadMoreConversations useCase Failure');
+          ccLog('[ConversationsBloc]   message: ${result.message}');
+          ccLog('[ConversationsBloc]   -> emitting ConversationsError');
         }
         emit(
           ConversationsError(
@@ -748,13 +755,13 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       } on CometChatException catch (e) {
         _isLoadingMore = false;
         if (kDebugMode) {
-          debugPrint(
+          ccLog(
             '[ConversationsBloc] _onLoadMoreConversations CometChatException',
           );
-          debugPrint('[ConversationsBloc]   code:    ${e.code}');
-          debugPrint('[ConversationsBloc]   message: ${e.message}');
-          debugPrint('[ConversationsBloc]   details: ${e.details}');
-          debugPrint('[ConversationsBloc]   -> emitting ConversationsError');
+          ccLog('[ConversationsBloc]   code:    ${e.code}');
+          ccLog('[ConversationsBloc]   message: ${e.message}');
+          ccLog('[ConversationsBloc]   details: ${e.details}');
+          ccLog('[ConversationsBloc]   -> emitting ConversationsError');
         }
         emit(
           ConversationsError(
@@ -765,10 +772,10 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       } catch (e) {
         _isLoadingMore = false;
         if (kDebugMode) {
-          debugPrint(
+          ccLog(
             '[ConversationsBloc] _onLoadMoreConversations generic catch: $e',
           );
-          debugPrint('[ConversationsBloc]   -> emitting ConversationsError');
+          ccLog('[ConversationsBloc]   -> emitting ConversationsError');
         }
         emit(
           ConversationsError(
@@ -799,18 +806,36 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
   ) async {
     if (state is! ConversationsLoaded) return;
 
-    final result = await deleteConversationUseCase(event.conversationId);
+    // Resolve the SDK delete target from the Conversation OBJECT. The id
+    // string cannot distinguish which participant is the peer in a 1:1
+    // conversation ("{uidA}_user_{uidB}"), so parsing it can select the
+    // logged-in user's own uid → ERR_CONVERSATION_NOT_ACCESSIBLE.
+    final conversation = _findConversation(event.conversationId);
+    String? conversationWith;
+    String? conversationType;
+    final target = conversation?.conversationWith;
+    if (target is User) {
+      conversationWith = target.uid;
+      conversationType = conversation?.conversationType;
+    } else if (target is Group) {
+      conversationWith = target.guid;
+      conversationType = conversation?.conversationType;
+    }
+
+    final result = await deleteConversationUseCase(
+      event.conversationId,
+      conversationWith: conversationWith,
+      conversationType: conversationType,
+    );
 
     if (result is Success<void>) {
-      // OPTIMIZATION: Use O(1) lookup instead of where()
-      final conversation = _findConversation(event.conversationId);
       if (conversation != null) {
         removeItem(conversation);
       }
     } else if (result is Failure) {
       // Don't replace the list with an error view — just log the failure.
       // The conversation stays in the list so the user can retry.
-      debugPrint(
+      ccLog(
         'Failed to delete conversation ${event.conversationId}: ${result.message}',
       );
     }
@@ -1322,7 +1347,36 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       markAsDeliveredUseCase(message);
     }
 
+    _playIncomingMessageSound(message);
     _updateConversationFromMessage(message);
+  }
+
+  /// Plays the incoming-message sound for a message from someone else.
+  ///
+  /// Silent when [disableSoundForMessages] is on, for custom messages that
+  /// don't count as unread, and for the conversation that is open, whose
+  /// message list plays its own. [customSoundForMessages] replaces the kit's
+  /// sound when set.
+  void _playIncomingMessageSound(BaseMessage message) {
+    if (disableSoundForMessages) return;
+    if (message.sender?.uid == _loggedInUser?.uid) return;
+    if (message is CustomMessage &&
+        message.metadata?[UpdateSettingsConstant.incrementUnreadCount] !=
+            true) {
+      return;
+    }
+    final activeConversationId =
+        (state as ConversationsLoaded).activeConversationId;
+    if (activeConversationId != null &&
+        activeConversationId == message.conversationId) {
+      return;
+    }
+    CometChatUIKit.soundManager.play(
+      sound: activeConversationId == null
+          ? Sound.incomingMessageFromOther
+          : Sound.incomingMessage,
+      customSound: customSoundForMessages,
+    );
   }
 
   /// Update conversation directly from message data
@@ -1615,33 +1669,46 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     _refreshSingleConversation(action);
   }
 
+  /// Whether calls update the conversations: the app's "call activities"
+  /// conversation-update setting from the dashboard, on when it is unknown
+  /// (Android's shouldUpdateOnCallActivities). It was fetched and never read.
+  static bool get _updateOnCallActivities =>
+      CometChatUIKit.conversationUpdateSettings?.callActivities ?? true;
+
   /// Handle incoming call received
   void _handleIncomingCallReceived(Call call) {
-    if (isClosed) return;
+    if (isClosed || !_updateOnCallActivities) return;
     _refreshSingleConversation(call);
   }
 
   /// Handle outgoing call accepted
   void _handleOutgoingCallAccepted(Call call) {
-    if (isClosed) return;
+    if (isClosed || !_updateOnCallActivities) return;
     _refreshSingleConversation(call);
   }
 
   /// Handle outgoing call rejected
   void _handleOutgoingCallRejected(Call call) {
-    if (isClosed) return;
+    if (isClosed || !_updateOnCallActivities) return;
     _refreshSingleConversation(call);
   }
 
   /// Handle incoming call cancelled
   void _handleIncomingCallCancelled(Call call) {
-    if (isClosed) return;
+    if (isClosed || !_updateOnCallActivities) return;
     _refreshSingleConversation(call);
   }
 
   /// Handle call ended message received
   void _handleCallEndedMessageReceived(Call call) {
-    if (isClosed) return;
+    if (isClosed || !_updateOnCallActivities) return;
+    _refreshSingleConversation(call);
+  }
+
+  /// A call this device placed, accepted, declined or ended (the UI Kit's
+  /// call events), as Android's conversations view model hears them.
+  void _handleCCCall(Call call) {
+    if (isClosed || !_updateOnCallActivities) return;
     _refreshSingleConversation(call);
   }
 
@@ -2023,7 +2090,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       emit(
         ConversationsLoaded(
           conversations: event.newList,
-          hasMore: event.newList.length >= 30,
+          hasMore: event.newList.length >= _pageSize,
         ),
       );
     }
@@ -2049,7 +2116,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       CometChat.removeUserListener(_userListenerKey);
     }
     CometChat.removeGroupListener(_groupListenerKey);
-    CometChat.removeCallListener(_callListenerKey);
+    ChatSdkListeners.removeCallListener(_callListenerKey);
     CometChat.removeConnectionListener(_connectionListenerKey);
     CometChat.removeConversationListener(_conversationListenerKey);
 
@@ -2059,6 +2126,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     CometChatConversationEvents.removeConversationListListener(
       _ccConversationListenerKey,
     );
+    CometChatCallEvents.removeCallEventsListener(_ccCallListenerKey);
 
     _isLoadingMore = false;
     return super.close();
@@ -2485,6 +2553,25 @@ class _ConversationCallListener with CallListener {
   void onCallEndedMessageReceived(Call call) {
     onCallEndedMessageReceivedCallback(call);
   }
+}
+
+/// The UI Kit's call events, for this device's own calls.
+class _ConversationCallEventsListener with CometChatCallEventListener {
+  final void Function(Call) onCallCallback;
+
+  _ConversationCallEventsListener({required this.onCallCallback});
+
+  @override
+  void ccOutgoingCall(Call call) => onCallCallback(call);
+
+  @override
+  void ccCallAccepted(Call call) => onCallCallback(call);
+
+  @override
+  void ccCallRejected(Call call) => onCallCallback(call);
+
+  @override
+  void ccCallEnded(Call call) => onCallCallback(call);
 }
 
 /// Connection listener for connection state

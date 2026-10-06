@@ -67,6 +67,16 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
   /// The group whose members are being managed
   final Group group;
 
+  /// The app's request builder, from `CometChatGroupMembers`'
+  /// `groupMembersRequestBuilder`. Threaded down to
+  /// GroupMembersRemoteDataSourceImpl, which builds each first page from it
+  /// with [group]'s guid and the search keyword on top, and leaves it
+  /// unchanged.
+  final GroupMembersRequestBuilder? groupMembersRequestBuilder;
+
+  /// Members per page: the app builder's limit, as Android uses it, else 30.
+  int get _pageSize => groupMembersRequestBuilder?.limit ?? 30;
+
   // ============================================================
   // OPTIMIZATION: Map-based O(1) member lookups
   // ============================================================
@@ -136,6 +146,10 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
   /// Pagination state tracking
   bool _isLoadingMore = false;
 
+  /// First-page reloads after a cleared search still in flight. Load-more
+  /// waits for them: until one lands there is no cursor past page one.
+  int _firstPageReloads = 0;
+
   /// Current search keyword
   String? _currentSearchKeyword;
 
@@ -174,6 +188,8 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
   /// [hideBanMemberOption] - Whether to hide ban option (default: false).
   /// [hideScopeChangeOption] - Whether to hide scope change option (default: false).
   /// [disableSDKListeners] - Whether to disable SDK listeners (default: false).
+  /// [groupMembersRequestBuilder] - Optional app builder every page is
+  /// fetched with; its limit is the page size.
   GroupMembersBloc({
     required this.group,
     GetGroupMembersUseCase? getGroupMembersUseCase,
@@ -188,6 +204,7 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     this.hideBanMemberOption = false,
     this.hideScopeChangeOption = false,
     this.disableSDKListeners = false,
+    this.groupMembersRequestBuilder,
   }) : getGroupMembersUseCase =
            getGroupMembersUseCase ??
            _getServiceLocator().getGroupMembersUseCase,
@@ -238,6 +255,7 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     // Internal events for search functionality
     on<_ExecuteSearch>(_onExecuteSearch);
     on<_RestoreOriginalMembers>(_onRestoreOriginalMembers);
+    on<_ReloadFirstPage>(_onReloadFirstPage);
 
     // Initialize and register SDK listeners
     _initializeAndRegisterListeners();
@@ -341,7 +359,7 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
         _ListStateChanged(
           members: newList,
           isEmpty: newList.isEmpty,
-          hasMore: newList.length >= 30,
+          hasMore: newList.length >= _pageSize,
         ),
       );
     }
@@ -538,14 +556,19 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     // cursor returns 0 members on subsequent opens of the same group.
     _repository.resetPagination();
 
+    // This page is unfiltered, so the pages load-more fetches after it must be
+    // too, even when a refresh lands while a search is active.
+    _currentSearchKeyword = null;
+
     // Emit loading state
     emit(const GroupMembersLoading());
 
     // Call use case to fetch group members
-    const int pageLimit = 30;
+    final pageLimit = _pageSize;
     final result = await getGroupMembersUseCase(
       guid: group.guid,
       limit: pageLimit,
+      groupMembersRequestBuilder: groupMembersRequestBuilder,
     );
 
     if (result.isSuccess) {
@@ -589,16 +612,23 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     if (!currentState.hasMore) return;
 
     // Check isLoadingMore flag - if true, return early (prevent duplicate requests)
-    if (currentState.isLoadingMore || _isLoadingMore) return;
+    if (currentState.isLoadingMore || _isLoadingMore || _firstPageReloads > 0) {
+      return;
+    }
 
     // Set loading flag and emit state with isLoadingMore: true
     _isLoadingMore = true;
     emit(currentState.copyWith(isLoadingMore: true));
 
-    // Call LoadMoreGroupMembersUseCase with current members
+    // Call LoadMoreGroupMembersUseCase with current members. The keyword and
+    // builder are the ones the list's first page was fetched with, so the data
+    // source pages on from that request instead of starting a new one.
     final result = await loadMoreGroupMembersUseCase(
       guid: group.guid,
+      limit: _pageSize,
+      searchKeyword: _currentSearchKeyword,
       currentMembers: items,
+      groupMembersRequestBuilder: groupMembersRequestBuilder,
     );
 
     // Reset loading flag
@@ -691,11 +721,12 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     _repository.resetPagination();
 
     // Call use case to fetch group members with search keyword
-    const int pageLimit = 30;
+    final pageLimit = _pageSize;
     final result = await getGroupMembersUseCase(
       guid: group.guid,
       searchKeyword: event.keyword,
       limit: pageLimit,
+      groupMembersRequestBuilder: groupMembersRequestBuilder,
     );
 
     if (isClosed) return;
@@ -717,7 +748,15 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     // On failure: keep current state (don't show error for search failures)
   }
 
-  /// Restore original members after search is cleared
+  /// Restore original members after search is cleared, then reload the first
+  /// page.
+  ///
+  /// The search replaced the SDK request, so the cursor that paged the
+  /// original list is gone. A load-more from a reset cursor fetched page one
+  /// again, deduped it to nothing and ended the list. A fresh first page,
+  /// built from [groupMembersRequestBuilder] as Android rebuilds its request
+  /// on clear, gives later pages a cursor to follow. The restored list shows
+  /// in the meantime.
   void _onRestoreOriginalMembers(
     _RestoreOriginalMembers event,
     Emitter<GroupMembersState> emit,
@@ -725,8 +764,39 @@ class GroupMembersBloc extends Bloc<GroupMembersEvent, GroupMembersState>
     // Clear search-related state
     _currentSearchKeyword = null;
 
+    // Drop the search's request so nothing pages on from it before the reload
+    _repository.resetPagination();
+
     // Replace list with original members (triggers onListReplaced hook)
     replaceAll(event.members);
+    _firstPageReloads++;
+    add(const _ReloadFirstPage());
+  }
+
+  /// Reload the first page in place, keeping the list on screen: no loading
+  /// state, and the restored list stays if the page fails or comes back empty.
+  Future<void> _onReloadFirstPage(
+    _ReloadFirstPage event,
+    Emitter<GroupMembersState> emit,
+  ) async {
+    _repository.resetPagination();
+    final result = await getGroupMembersUseCase(
+      guid: group.guid,
+      limit: _pageSize,
+      groupMembersRequestBuilder: groupMembersRequestBuilder,
+    );
+    _firstPageReloads--;
+
+    // A search typed while this page loaded owns the list now.
+    if (isClosed || _currentSearchKeyword != null) return;
+
+    final members = result.getOrNull() ?? const <GroupMember>[];
+    if (members.isEmpty) return;
+    for (final member in members) {
+      getStatusNotifier(member.uid);
+    }
+    // Triggers onListReplaced, which sets hasMore from the page's length.
+    replaceAll(members);
   }
 
   // ============================================================
@@ -1343,6 +1413,11 @@ class _RestoreOriginalMembers extends GroupMembersEvent {
 
   @override
   List<Object> get props => [members];
+}
+
+/// Internal event to reload the first page silently after a cleared search
+class _ReloadFirstPage extends GroupMembersEvent {
+  const _ReloadFirstPage();
 }
 
 // ============================================================

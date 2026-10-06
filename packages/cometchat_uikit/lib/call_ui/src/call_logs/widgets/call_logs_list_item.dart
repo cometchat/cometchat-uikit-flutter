@@ -42,7 +42,9 @@ class CallLogsListItem extends StatelessWidget {
   /// The call log data to display.
   final CallLog callLog;
 
-  /// The currently logged in user, used to determine call direction.
+  /// The currently logged in user, used to determine call direction. A
+  /// group call shows the group whoever it is; a 1:1 call shows the other
+  /// participant, and nobody (an empty title) when this user is not in it.
   final User loggedInUser;
 
   /// Callback invoked when the item is tapped.
@@ -157,9 +159,9 @@ class CallLogsListItem extends StatelessWidget {
       onLongPress: onLongPress,
       child: CometChatListItem(
         hideSeparator: true,
-        avatarURL: CallLogsUtils.receiverAvatar(loggedInUser, callLog),
-        avatarName: CallLogsUtils.receiverName(loggedInUser, callLog),
-        title: CallLogsUtils.receiverName(loggedInUser, callLog),
+        avatarURL: CallLogsUtils.getAvatarUrl(loggedInUser, callLog),
+        avatarName: CallLogsUtils.getDisplayName(loggedInUser, callLog),
+        title: CallLogsUtils.getDisplayName(loggedInUser, callLog),
         style: ListItemStyle(
           background: effectiveColorPalette.transparent,
           titleStyle:
@@ -285,6 +287,9 @@ class CallLogsListItem extends StatelessWidget {
       width: 24,
       height: 24,
       child: IconButton(
+        tooltip: (callLog.type == CallTypeConstants.audioCall)
+            ? Translations.of(context).audioCall
+            : Translations.of(context).videoCall,
         padding: EdgeInsets.zero,
         onPressed: onCallIconPressed,
         icon:

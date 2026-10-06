@@ -82,7 +82,11 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
   VoidCallback? get onTap => widget.onTap;
   VoidCallback? get onErrorInteract => widget.onErrorInteract;
   VoidCallback? get onRetry => widget.onRetry;
-  double get height => widget.height;
+
+  /// Grows with the user's text size: at 64pt fixed, the file card's name and
+  /// meta lines overflow the tile by 8px at 200%.
+  double heightFor(BuildContext context) =>
+      scaledDimension(context, widget.height);
   CometChatAttachmentTrayStyle? get style => widget.style;
 
   // Hover-capable only on a DESKTOP web browser. Native mobile and web opened
@@ -108,7 +112,7 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
         : _AudioTileCard(
             key: ValueKey('cc_audio_tile_${tile.fileId}'),
             tile: tile,
-            height: height,
+            height: heightFor(context),
             style: style,
           );
     final radius = BorderRadius.circular(
@@ -244,8 +248,8 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SizedBox(
-        width: height,
-        height: height,
+        width: heightFor(context),
+        height: heightFor(context),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -404,8 +408,8 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
 
     return Container(
       key: const Key('cometchat_attachment_file_card'),
-      width: 200,
-      height: height,
+      width: scaledDimension(context, 200),
+      height: heightFor(context),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: style?.tileBackgroundColor ?? colors.background1,
@@ -558,20 +562,24 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
   /// The permanent top-right ✕ — cancels the upload if in flight, then removes
   /// the tile from the tray.
   Widget _removeBadge() {
-    return GestureDetector(
-      onTap: onCancelOrRemove,
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          color: style?.removeBadgeBackgroundColor ?? Colors.black54,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.close,
-          size: 12,
-          color: style?.removeBadgeIconColor ?? Colors.white,
+    return Semantics(
+      button: true,
+      label: Translations.of(context).remove,
+      child: GestureDetector(
+        onTap: onCancelOrRemove,
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: style?.removeBadgeBackgroundColor ?? Colors.black54,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.close,
+            size: 12,
+            color: style?.removeBadgeIconColor ?? Colors.white,
+          ),
         ),
       ),
     );
@@ -760,33 +768,39 @@ class _AudioTileCardState extends State<_AudioTileCard> {
   /// the file card's icon-box treatment.
   Widget _playCircle(CometChatColorPalette colors) {
     final playing = _player?.value.isPlaying ?? false;
-    return GestureDetector(
-      onTap: tile.status == AttachmentTileStatus.done ? _togglePlay : null,
-      child: ClipOval(
-        child: Container(
-          width: 40,
-          height: 40,
-          color:
-              style?.playButtonColor ??
-              colors.primary ??
-              const Color(0xFF6852D6),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Center(
-                child: Icon(
-                  playing ? Icons.pause : Icons.play_arrow_rounded,
-                  size: 24,
-                  color: style?.playIconColor ?? Colors.white,
+    return Semantics(
+      button: true,
+      label: playing
+          ? Translations.of(context).pause
+          : Translations.of(context).play,
+      child: GestureDetector(
+        onTap: tile.status == AttachmentTileStatus.done ? _togglePlay : null,
+        child: ClipOval(
+          child: Container(
+            width: 40,
+            height: 40,
+            color:
+                style?.playButtonColor ??
+                colors.primary ??
+                const Color(0xFF6852D6),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Center(
+                  child: Icon(
+                    playing ? Icons.pause : Icons.play_arrow_rounded,
+                    size: 24,
+                    color: style?.playIconColor ?? Colors.white,
+                  ),
                 ),
-              ),
-              if (tile.status != AttachmentTileStatus.done)
-                Container(
-                  color: style?.scrimColor ?? Colors.black38,
-                  alignment: Alignment.center,
-                  child: _circleStatusChild(colors),
-                ),
-            ],
+                if (tile.status != AttachmentTileStatus.done)
+                  Container(
+                    color: style?.scrimColor ?? Colors.black38,
+                    alignment: Alignment.center,
+                    child: _circleStatusChild(colors),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

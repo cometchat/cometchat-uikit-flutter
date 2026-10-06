@@ -526,6 +526,14 @@ class TranslationsSv extends Translations {
       'Du har inte behörighet att utföra den här åtgärden.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Tillåt åtkomst till mikrofonen för att svara på samtal.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Tillåt åtkomst till kameran och mikrofonen för att svara på videosamtal.';
+
+  @override
   String get pinSaveFailed => 'Det gick inte att uppdatera. Försök igen.';
 
   @override
@@ -1501,4 +1509,88 @@ class TranslationsSv extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Tillbaka';
+
+  @override
+  String get openInBrowser => 'Öppna i webbläsare';
+
+  @override
+  String get failedToLoadSticker => 'Det gick inte att läsa in klistermärket';
+
+  @override
+  String get enterDisplayText => 'Ange visningstext';
+
+  @override
+  String get clearSearch => 'Rensa sökning';
+
+  @override
+  String get done => 'Klar';
+
+  @override
+  String get download => 'Ladda ned';
+
+  @override
+  String get startRecording => 'Starta inspelning';
+
+  @override
+  String get stopRecording => 'Stoppa inspelning';
+
+  @override
+  String get pauseRecording => 'Pausa inspelning';
+
+  @override
+  String get deleteRecording => 'Ta bort inspelning';
+
+  @override
+  String get recordVoiceMessage => 'Spela in röstmeddelande';
+
+  @override
+  String get reorderOption => 'Ändra ordning på alternativ';
+
+  @override
+  String get play => 'Spela upp';
+
+  @override
+  String get pause => 'Pausa';
+
+  @override
+  String get next => 'Nästa';
+
+  @override
+  String get previous => 'Föregående';
+
+  @override
+  String get scrollToBottom => 'Rulla längst ned';
+
+  @override
+  String get attachmentOptionsMenuOpened =>
+      'Menyn med bilagealternativ har öppnats';
+
+  @override
+  String get richTextFormattingToolbar => 'Verktygsfält för textformatering';
+
+  @override
+  String get closeFormattingToolbar => 'Stäng formateringsfältet';
+
+  @override
+  String get sendAudioMessage => 'Skicka ljudmeddelande';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Ytterligare åtgärder för meddelandefältet';
+
+  @override
+  String get attachmentButton => 'Knapp för bilagor';
+
+  @override
+  String get addAttachment => 'Lägg till bilaga';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Förslagslista med $count objekt';
+
+  @override
+  String messageFrom(String sender) => 'Meddelande från $sender';
 }

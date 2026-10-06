@@ -524,6 +524,14 @@ class TranslationsTr extends Translations {
   String get actionPermissionDenied => 'Bu işlemi gerçekleştirme yetkiniz yok.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Aramaları yanıtlamak için mikrofon erişimine izin verin.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Görüntülü aramaları yanıtlamak için kamera ve mikrofon erişimine izin verin.';
+
+  @override
   String get pinSaveFailed => 'Güncellenemedi. Lütfen tekrar deneyin.';
 
   @override
@@ -1502,4 +1510,87 @@ class TranslationsTr extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Geri';
+
+  @override
+  String get openInBrowser => 'Tarayıcıda aç';
+
+  @override
+  String get failedToLoadSticker => 'Çıkartma yüklenemedi';
+
+  @override
+  String get enterDisplayText => 'Görüntülenecek metni girin';
+
+  @override
+  String get clearSearch => 'Aramayı temizle';
+
+  @override
+  String get done => 'Bitti';
+
+  @override
+  String get download => 'İndir';
+
+  @override
+  String get startRecording => 'Kaydı başlat';
+
+  @override
+  String get stopRecording => 'Kaydı durdur';
+
+  @override
+  String get pauseRecording => 'Kaydı duraklat';
+
+  @override
+  String get deleteRecording => 'Kaydı sil';
+
+  @override
+  String get recordVoiceMessage => 'Sesli mesaj kaydet';
+
+  @override
+  String get reorderOption => 'Seçeneği yeniden sırala';
+
+  @override
+  String get play => 'Oynat';
+
+  @override
+  String get pause => 'Duraklat';
+
+  @override
+  String get next => 'Sonraki';
+
+  @override
+  String get previous => 'Önceki';
+
+  @override
+  String get scrollToBottom => 'Aşağı kaydır';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Ek seçenekleri menüsü açıldı';
+
+  @override
+  String get richTextFormattingToolbar =>
+      'Zengin metin biçimlendirme araç çubuğu';
+
+  @override
+  String get closeFormattingToolbar => 'Biçimlendirme araç çubuğunu kapat';
+
+  @override
+  String get sendAudioMessage => 'Sesli mesaj gönder';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Mesaj yazma yardımcı işlemleri';
+
+  @override
+  String get attachmentButton => 'Ek düğmesi';
+
+  @override
+  String get addAttachment => 'Ek ekle';
+
+  @override
+  String suggestionListWithItems(int count) => '$count öğeli öneri listesi';
+
+  @override
+  String messageFrom(String sender) => '$sender kişisinden mesaj';
 }

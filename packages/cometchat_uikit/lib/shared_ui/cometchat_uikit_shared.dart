@@ -7,9 +7,15 @@
 library;
 
 // Export the Clean Architecture structure (includes everything)
-// Hide names that conflict with cometchat_message_list module
+// Hide names that conflict with cometchat_message_list module.
+//
+// `MessageListState` used to be hidden here for the same reason — which is why
+// the base of the message-list state family was reachable from neither
+// published barrel, and MessageListSearchResults had a supertype no consumer
+// could write. It is now `MessageListStateBase`, so there is no conflict and
+// nothing to hide. ENG-39100.
 export 'src/clean_architecture/clean_architecture.dart'
-    hide MessageListState, GetMessagesUseCase, GetMessagesParams;
+    hide GetMessagesUseCase, GetMessagesParams;
 
 // Export translations (not duplicated in clean architecture)
 export 'l10n/translations.dart';

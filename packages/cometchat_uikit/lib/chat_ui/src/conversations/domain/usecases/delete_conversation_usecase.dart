@@ -11,9 +11,16 @@ class DeleteConversationUseCase {
   /// Execute the use case to delete a conversation
   ///
   /// [conversationId] - ID of the conversation to delete
+  /// [conversationWith] / [conversationType] - SDK delete target (peer uid or
+  /// group guid + 'user'/'group') from the Conversation object; preferred over
+  /// deriving them from [conversationId] (ambiguous for 1:1 conversations)
   ///
   /// Returns `Result<void>` indicating success or failure
-  Future<Result<void>> call(String conversationId) async {
+  Future<Result<void>> call(
+    String conversationId, {
+    String? conversationWith,
+    String? conversationType,
+  }) async {
     // Validate input parameters
     if (conversationId.isEmpty) {
       return const Failure(
@@ -23,6 +30,10 @@ class DeleteConversationUseCase {
     }
 
     // Delegate to repository
-    return await repository.deleteConversation(conversationId);
+    return await repository.deleteConversation(
+      conversationId,
+      conversationWith: conversationWith,
+      conversationType: conversationType,
+    );
   }
 }

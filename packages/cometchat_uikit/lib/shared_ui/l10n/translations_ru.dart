@@ -524,6 +524,14 @@ class TranslationsRu extends Translations {
       'У вас нет прав для выполнения этого действия.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Разрешите доступ к микрофону, чтобы отвечать на звонки.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Разрешите доступ к камере и микрофону, чтобы отвечать на видеозвонки.';
+
+  @override
   String get pinSaveFailed => 'Не удалось обновить. Попробуйте ещё раз.';
 
   @override
@@ -1501,4 +1509,87 @@ class TranslationsRu extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Назад';
+
+  @override
+  String get openInBrowser => 'Открыть в браузере';
+
+  @override
+  String get failedToLoadSticker => 'Не удалось загрузить наклейку';
+
+  @override
+  String get enterDisplayText => 'Введите отображаемый текст';
+
+  @override
+  String get clearSearch => 'Очистить поиск';
+
+  @override
+  String get done => 'Готово';
+
+  @override
+  String get download => 'Скачать';
+
+  @override
+  String get startRecording => 'Начать запись';
+
+  @override
+  String get stopRecording => 'Остановить запись';
+
+  @override
+  String get pauseRecording => 'Приостановить запись';
+
+  @override
+  String get deleteRecording => 'Удалить запись';
+
+  @override
+  String get recordVoiceMessage => 'Записать голосовое сообщение';
+
+  @override
+  String get reorderOption => 'Изменить порядок варианта';
+
+  @override
+  String get play => 'Воспроизвести';
+
+  @override
+  String get pause => 'Пауза';
+
+  @override
+  String get next => 'Далее';
+
+  @override
+  String get previous => 'Назад';
+
+  @override
+  String get scrollToBottom => 'Прокрутить вниз';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Меню параметров вложения открыто';
+
+  @override
+  String get richTextFormattingToolbar => 'Панель форматирования текста';
+
+  @override
+  String get closeFormattingToolbar => 'Закрыть панель форматирования';
+
+  @override
+  String get sendAudioMessage => 'Отправить голосовое сообщение';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Дополнительные действия в поле сообщения';
+
+  @override
+  String get attachmentButton => 'Кнопка вложений';
+
+  @override
+  String get addAttachment => 'Добавить вложение';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Список подсказок, элементов: $count';
+
+  @override
+  String messageFrom(String sender) => 'Сообщение от $sender';
 }

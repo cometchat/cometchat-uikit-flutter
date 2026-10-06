@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared_ui/l10n/translations.dart';
 import '../../../../../../shared_ui/src/theme/theme/cometchat_theme_helper.dart';
 import 'cometchat_link_preview_style.dart';
 
@@ -135,7 +136,7 @@ class _LinkEditDialogState extends State<LinkEditDialog> {
             TextField(
               controller: _displayTextController,
               decoration: InputDecoration(
-                hintText: 'Enter display text',
+                hintText: Translations.of(context).enterDisplayText,
                 hintStyle: TextStyle(color: effectiveStyle.textFieldHintColor),
                 filled: true,
                 fillColor: effectiveStyle.textFieldBackgroundColor,

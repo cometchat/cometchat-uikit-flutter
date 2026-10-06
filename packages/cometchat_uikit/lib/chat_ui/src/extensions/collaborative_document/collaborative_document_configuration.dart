@@ -1,24 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
-///[CollaborativeDocumentConfiguration] is a data class that has configuration properties
-///to customize the functionality and appearance of `CollaborativeDocumentExtension`
-///
-/// ```dart
-///  CollaborativeDocumentConfiguration(
-///    title: "Collaborative Editing",
-///    subtitle: "Open a document to edit together",
-///    buttonText: "Open",
-///    optionTitle: "Collaborative Document",
-///    optionIcon: Icon(Icons.edit),
-///    optionStyle: CollaborativeDocumentOptionStyle(
-///    background: Colors.green,
-///    iconTint: Colors.red,
-///    titleStyle: TextStyle(color: Colors.white)
-///    )
-///   );
-/// ```
+///[CollaborativeDocumentConfiguration] configured the v5 collaborative document extension. No v6 API accepts it:
+/// the extension is enabled from the CometChat Dashboard, and the
+/// deprecation message names the components that now configure what it
+/// described.
+@Deprecated(
+  'No API in v6 accepts an extension configuration object; the collaborative document extension is enabled from the CometChat Dashboard. Style the bubble with collaborativeDocumentBubbleStyle on CometChatIncomingMessageBubbleStyle and CometChatOutgoingMessageBubbleStyle, replace or hide the composer\'s option with CometChatMessageComposer.attachmentOptions (id ExtensionType.document) or hideCollaborativeDocumentOption, and style the option sheet with CometChatMessageComposerStyle.attachmentOptionSheetStyle. The bubble\'s title, subtitle, icon and button text have no replacement. Will be removed in 7.0.0.',
+)
 class CollaborativeDocumentConfiguration {
+  /// Creates a [CollaborativeDocumentConfiguration].
   CollaborativeDocumentConfiguration({
     this.title,
     this.subtitle,

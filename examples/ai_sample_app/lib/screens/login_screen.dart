@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
 import 'ai_agents_screen.dart';
 import '../models/user_model.dart';
 import '../services/api_services.dart';
+import '../utils/app_uikit_settings.dart';
 import '../utils/ui_utils.dart';
+import 'app_credentials_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,9 +54,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      User? existingUser = await CometChat.getLoggedInUser();
+      User? existingUser = await CometChatUIKit.getLoggedInUser();
       if (existingUser != null && existingUser.uid != userId) {
-        await CometChat.logout(
+        // Through the UI Kit, not CometChat.logout: its logout also stops
+        // call handling for the previous user and logs the Calls SDK out.
+        await CometChatUIKit.logout(
           onSuccess: (_) => debugPrint("Logout Successful"),
           onError: (_) => debugPrint("Logout failed"),
         );
@@ -63,21 +67,28 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      await CometChatUIKit.login(userId, onSuccess: (User loggedInUser) async {
-        debugPrint("Login Successful: $loggedInUser");
-        await _waitForCallsSdk();
+      // With enableCalls, onSuccess comes once the UI Kit has set up the
+      // Calls SDK for this user, within its own time limit.
+      await CometChatUIKit.login(userId, onSuccess: (User loggedInUser) {
+        // Never log the User object itself: its toString() carries the
+        // live authToken and a signed jwt, and CI copies the raw test log
+        // into a published gallery. uid and name are enough to debug a
+        // login.
+        debugPrint("Login Successful: ${loggedInUser.uid} (${loggedInUser.name})");
         if (mounted) _navigateToHome();
       }, onError: (CometChatException e) {
         debugPrint("Login failed: ${e.message}");
         if (mounted) {
           setState(() => _isLoading = false);
-          showErrorSnackBar(context, "Unable to login.", typography, colorPalette);
+          showErrorSnackBar(
+              context, "Unable to login.", typography, colorPalette);
         }
       });
     } catch (_) {
       if (mounted) {
         setState(() => _isLoading = false);
-        showErrorSnackBar(context, "Unable to login.", typography, colorPalette);
+        showErrorSnackBar(
+            context, "Unable to login.", typography, colorPalette);
       }
     }
   }
@@ -85,12 +96,11 @@ class _LoginScreenState extends State<LoginScreen> {
   void _navigateToHome() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const AiAgentsScreen()),
+      MaterialPageRoute(
+        builder: (_) =>
+            kIsWeb ? const AiAgentsScreen() : const AiAgentsScreen(),
+      ),
     );
-  }
-
-  Future<void> _waitForCallsSdk() async {
-    await CallEventService.instance.waitForCallsSdk();
   }
 
   @override
@@ -116,7 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       // CometChat logo
                       Padding(
-                        padding: EdgeInsets.only(bottom: spacing.padding8 ?? 32),
+                        padding:
+                            EdgeInsets.only(bottom: spacing.padding8 ?? 32),
                         child: Image.asset(
                           'assets/cometchat_logo_with_text.png',
                           color: colorPalette.textPrimary,
@@ -139,98 +150,102 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildDottedBackground() {
     return CustomPaint(
       painter: _DottedPatternPainter(
-        dotColor: colorPalette.borderLight ?? Colors.grey.withValues(alpha: 0.3),
+        dotColor:
+            colorPalette.borderLight ?? Colors.grey.withValues(alpha: 0.3),
       ),
     );
   }
 
   /// Main login card with border, shadow, and rounded corners
   Widget _buildLoginCard() {
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: ShapeDecoration(
-        color: colorPalette.background1,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            width: 1,
-            color: colorPalette.borderDefault ?? const Color(0xFFE8E8E8),
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        shadows: const [
-          BoxShadow(
-            color: Color(0x07101828),
-            blurRadius: 6,
-            offset: Offset(0, 4),
-            spreadRadius: -2,
-          ),
-          BoxShadow(
-            color: Color(0x14101828),
-            blurRadius: 16,
-            offset: Offset(0, 12),
-            spreadRadius: -4,
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        spacing: 20,
-        children: [
-          // Title
-          Center(
-            child: Text(
-              "Sign in to cometchat",
-              style: TextStyle(
-                color: colorPalette.textPrimary,
-                fontSize: typography.heading2?.bold?.fontSize,
-                fontFamily: typography.heading2?.bold?.fontFamily,
-                fontWeight: typography.heading2?.bold?.fontWeight,
-              ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 500),
+      child: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: ShapeDecoration(
+          color: colorPalette.background1,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              width: 1,
+              color: colorPalette.borderDefault ?? const Color(0xFFE8E8E8),
             ),
+            borderRadius: BorderRadius.circular(20),
           ),
-          // Subtitle + User grid
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            spacing: 8,
-            children: [
-              Text(
-                "Using our sample users",
-                textAlign: TextAlign.start,
+          shadows: const [
+            BoxShadow(
+              color: Color(0x07101828),
+              blurRadius: 6,
+              offset: Offset(0, 4),
+              spreadRadius: -2,
+            ),
+            BoxShadow(
+              color: Color(0x14101828),
+              blurRadius: 16,
+              offset: Offset(0, 12),
+              spreadRadius: -4,
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          spacing: 20,
+          children: [
+            // Title
+            Center(
+              child: Text(
+                "Sign in to cometchat",
                 style: TextStyle(
-                  color: colorPalette.textSecondary,
-                  fontSize: typography.body?.medium?.fontSize,
-                  fontFamily: typography.body?.medium?.fontFamily,
-                  fontWeight: typography.body?.medium?.fontWeight,
+                  color: colorPalette.textPrimary,
+                  fontSize: typography.heading2?.bold?.fontSize,
+                  fontFamily: typography.heading2?.bold?.fontFamily,
+                  fontWeight: typography.heading2?.bold?.fontWeight,
                 ),
               ),
-              _buildUserGrid(),
-            ],
-          ),
-          // Or divider
-          _buildOrDivider(),
-          // UID field + Button + Bottom text
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            spacing: 20,
-            children: [
-              _buildUidField(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                spacing: 20,
-                children: [
-                  _buildContinueButton(),
-                  _buildBottomText(),
-                ],
-              ),
-            ],
-          ),
-        ],
+            ),
+            // Subtitle + User grid
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                Text(
+                  "Using our sample users",
+                  textAlign: TextAlign.start,
+                  style: TextStyle(
+                    color: colorPalette.textSecondary,
+                    fontSize: typography.body?.medium?.fontSize,
+                    fontFamily: typography.body?.medium?.fontFamily,
+                    fontWeight: typography.body?.medium?.fontWeight,
+                  ),
+                ),
+                _buildUserGrid(),
+              ],
+            ),
+            // Or divider
+            _buildOrDivider(),
+            // UID field + Button + Bottom text
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 20,
+              children: [
+                _buildUidField(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 20,
+                  children: [
+                    _buildContinueButton(),
+                    _buildBottomText(),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -333,8 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: colorPalette.textPrimary,
-                                    fontSize:
-                                        typography.body?.medium?.fontSize,
+                                    fontSize: typography.body?.medium?.fontSize,
                                     fontFamily:
                                         typography.body?.medium?.fontFamily,
                                     fontWeight:
@@ -377,8 +391,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.only(
                                 bottomLeft:
                                     Radius.circular(spacing.radius2 ?? 8),
-                                topRight:
-                                    Radius.circular(spacing.radius2 ?? 8),
+                                topRight: Radius.circular(spacing.radius2 ?? 8),
                               ),
                             ),
                             child: Center(
@@ -567,30 +580,42 @@ class _LoginScreenState extends State<LoginScreen> {
   /// "Don't have an UID? App Credentials" bottom text
   Widget _buildBottomText() {
     return Center(
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: "Don\u2019t have an UID? ",
-              style: TextStyle(
-                color: colorPalette.textSecondary,
-                fontSize: typography.body?.regular?.fontSize,
-                fontFamily: typography.body?.regular?.fontFamily,
-                fontWeight: typography.body?.regular?.fontWeight,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AppCredentialsScreen(
+                buildSettings: buildAppUIKitSettings,
               ),
             ),
-            TextSpan(
-              text: "App Credentials",
-              style: TextStyle(
-                color: colorPalette.primary,
-                fontSize: typography.body?.medium?.fontSize,
-                fontFamily: typography.body?.medium?.fontFamily,
-                fontWeight: typography.body?.medium?.fontWeight,
+          );
+        },
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: "Change ",
+                style: TextStyle(
+                  color: colorPalette.textSecondary,
+                  fontSize: typography.body?.regular?.fontSize,
+                  fontFamily: typography.body?.regular?.fontFamily,
+                  fontWeight: typography.body?.regular?.fontWeight,
+                ),
               ),
-            ),
-          ],
+              TextSpan(
+                text: "App Credentials",
+                style: TextStyle(
+                  color: colorPalette.primary,
+                  fontSize: typography.body?.medium?.fontSize,
+                  fontFamily: typography.body?.medium?.fontFamily,
+                  fontWeight: typography.body?.medium?.fontWeight,
+                ),
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center,
         ),
-        textAlign: TextAlign.center,
       ),
     );
   }

@@ -4,7 +4,11 @@ import '../../../../cometchat_chat_uikit.dart';
 
 ///[PollsOptionStyle] is a data class that has styling-related properties
 ///to customize the appearance of the option in the attachment options menu for the `PollsExtension`
+@Deprecated(
+  'Only the extension configuration objects accepted it, and no v6 API does. Style the composer\'s option sheet with CometChatMessageComposerStyle.attachmentOptionSheetStyle, or an individual option through the CometChatMessageComposerAction you return from CometChatMessageComposer.attachmentOptions. Will be removed in 7.0.0.',
+)
 class PollsOptionStyle {
+  /// Creates a [PollsOptionStyle].
   PollsOptionStyle({
     this.iconTint,
     this.titleStyle,

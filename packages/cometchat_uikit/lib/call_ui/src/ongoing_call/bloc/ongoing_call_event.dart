@@ -11,16 +11,18 @@ abstract class OngoingCallEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Load the calling screen
-/// Triggers token generation and session start
+/// Load the calling screen: joins the session (the Calls SDK generates the
+/// call token itself).
 class LoadCallingScreen extends OngoingCallEvent {
   const LoadCallingScreen();
 }
 
-/// End call button was pressed
+/// End call button was pressed (or back while the call still connects).
 /// Behavior depends on callWorkFlow:
-/// - directCalling: ends session
-/// - defaultCalling: ends call if usersList.length <= 1
+/// - directCalling (a meeting): leaves the session;
+/// - defaultCalling (a 1-on-1 call): leaves the session, closes the screen
+///   and ends the call on the server (`endCall`).
+/// Once the call is on its way out, a second one is ignored.
 class EndCallButtonPressed extends OngoingCallEvent {
   const EndCallButtonPressed();
 }
@@ -31,8 +33,10 @@ class SessionTimeout extends OngoingCallEvent {
   const SessionTimeout();
 }
 
-/// Call ended (from SDK callback)
-/// Behavior depends on who ended the call
+/// The session was left or its connection closed (from SDK callbacks).
+/// A 1-on-1 call screen then closes without sending `endCall`; a meeting
+/// ignores it. While this screen ends the call itself, it is that end's
+/// echo and is ignored.
 class OngoingCallEnded extends OngoingCallEvent {
   const OngoingCallEnded();
 }
@@ -61,9 +65,9 @@ class ParticipantListChanged extends OngoingCallEvent {
 
 /// A participant left the session (from V5 SDK callback)
 ///
-/// Mirrors the v5 UIKit, which decided the 1-on-1 teardown in `onUserLeft`
-/// rather than on a list update: a leave event inherently implies the peer
-/// had joined, so no "has the peer joined yet" latch is needed.
+/// A peer that leaves was in the session, so it counts as seen: the 1-on-1
+/// "peer left" rule, armed only once the peer has been seen, can then end
+/// the call. It does not count as the native join.
 class ParticipantLeft extends OngoingCallEvent {
   final Participant participant;
 

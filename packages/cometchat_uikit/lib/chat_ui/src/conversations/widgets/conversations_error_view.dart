@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../../cometchat_chat_uikit.dart';
 import '../../../../cometchat_chat_uikit.dart' as cc;
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// A widget that displays the error state for the conversations list.
 ///
@@ -46,14 +47,12 @@ class ConversationsErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
-      debugPrint('[ConversationsErrorView] build');
-      debugPrint(
+      ccLog('[ConversationsErrorView] build');
+      ccLog(
         '[ConversationsErrorView]   hasError: true (this view only renders on error)',
       );
-      debugPrint('[ConversationsErrorView]   errorMessage: $errorMessage');
-      debugPrint(
-        '[ConversationsErrorView]   hasCustomView: ${customView != null}',
-      );
+      ccLog('[ConversationsErrorView]   errorMessage: $errorMessage');
+      ccLog('[ConversationsErrorView]   hasCustomView: ${customView != null}');
     }
 
     // If a custom view is provided, render it instead
@@ -72,6 +71,7 @@ class ConversationsErrorView extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(bottom: spacing.padding5 ?? 0),
               child: Image.asset(
+                excludeFromSemantics: true,
                 AssetConstants(
                   CometChatThemeHelper.getBrightness(context),
                 ).messagesError,

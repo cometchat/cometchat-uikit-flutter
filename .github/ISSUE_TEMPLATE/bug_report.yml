@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a defect in the CometChat Flutter UIKit.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report.
+
+        Please do **not** include your App ID, Auth Key, REST API key, or any
+        other credential in this issue. Redact them from logs before pasting.
+
+        For account, billing or integration questions, use the
+        [help desk](https://help.cometchat.com/hc/en-us) instead — it will get
+        you a faster answer than this repository.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Numbered steps, or a link to a minimal reproduction. A reproduction
+        based on `examples/sample_app` is the fastest route to a fix.
+      placeholder: |
+        1. Add CometChatConversations to the widget tree
+        2. Log in as a user with ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: input
+    id: uikit-version
+    attributes:
+      label: UIKit version
+      description: The `cometchat_chat_uikit` version from your pubspec.lock.
+      placeholder: "6.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: flutter-doctor
+    attributes:
+      label: Output of `flutter doctor -v`
+      description: This is collected automatically as a code block.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Affected platforms
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - Web
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Stack traces or console output, with credentials redacted.
+      render: shell
+    validations:
+      required: false

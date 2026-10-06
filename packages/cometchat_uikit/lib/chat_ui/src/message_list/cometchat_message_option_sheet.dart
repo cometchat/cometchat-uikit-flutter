@@ -4,13 +4,26 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 ///[CometchatMessageOptionSheet] renders a bottom modal sheet
 ///that contains all the actions available to execute on a particular type of message
 class CometchatMessageOptionSheet extends StatefulWidget {
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Title for the bottom sheet.
+  @Deprecated(
+    'Has no effect. The sheet renders its action list without a header. Will be removed in 7.0.0.',
+  )
+  final String? title;
+
+  /// Legacy controller state.
+  @Deprecated('Has no effect. Will be removed in 7.0.0.')
+  final CometChatMessageListControllerProtocol? state;
+
+  /// Legacy data payload.
+  @Deprecated('Has no effect. Will be removed in 7.0.0.')
+  final dynamic data;
+
   const CometchatMessageOptionSheet({
     super.key,
     required this.messageObject,
     required this.actionItems,
-    this.title,
-    this.state,
-    this.data,
     this.favoriteReactions,
     this.hideReactions = false,
     this.onReactionTap,
@@ -18,19 +31,13 @@ class CometchatMessageOptionSheet extends StatefulWidget {
     this.addReactionIcon,
     this.messageOptionStyle,
     this.hideReactionOption,
+    this.title,
+    this.state,
+    this.data,
   });
 
   ///[actionItems] is a list of [ActionItem] which is used to set the actions
   final List<ActionItem> actionItems;
-
-  ///[title] sets the title for the bottom sheet
-  final String? title;
-
-  ///[data] is a parameter used to set the data
-  final dynamic data;
-
-  ///[state] is a parameter used to set the state (legacy, use controllerProtocol instead)
-  final CometChatMessageListControllerProtocol? state;
 
   ///[favoriteReactions] is a list of frequently used reactions
   final List<String>? favoriteReactions;
@@ -195,6 +202,7 @@ class _CometchatMessageOptionSheetState
                               radius: spacing.radiusMax,
                               backgroundColor: colorPalette.background3,
                               child: IconButton(
+                                tooltip: Translations.of(context).addReaction,
                                 onPressed: () async {
                                   if (widget.onAddReactionIconTap != null) {
                                     FocusManager.instance.primaryFocus
@@ -337,9 +345,6 @@ Future<ActionItem?> showMessageOptionSheet({
     builder: (BuildContext context) => CometchatMessageOptionSheet(
       messageObject: message,
       actionItems: actionItems,
-      title: title,
-      data: message,
-      state: state,
       addReactionIcon: addReactionIcon,
       onAddReactionIconTap: addReactionIconTap,
       hideReactions: hideReactions,

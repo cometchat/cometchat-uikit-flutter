@@ -27,6 +27,20 @@ import '../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
 ///  ```
 
 class CometChatConversations extends StatefulWidget {
+  /// Style for every list item: background, gradient, border, corner
+  /// radius, padding, margin, size, title style and a separator line between
+  /// rows (none after the last). [conversationsStyle] wins wherever both set
+  /// a value.
+  final ListItemStyle? listItemStyle;
+
+  // Deprecated in 6.2.0: no effect, removed in 7.0.0.
+
+  /// Tag of a controller from the GetX-based implementation.
+  @Deprecated(
+    'Has no effect. To supply your own bloc, use conversationsBloc. Will be removed in 7.0.0.',
+  )
+  final String? controllerTag;
+
   const CometChatConversations({
     super.key,
     this.conversationsProtocol,
@@ -43,7 +57,6 @@ class CometChatConversations extends StatefulWidget {
     this.hideError,
     this.emptyStateView,
     this.errorStateView,
-    this.listItemStyle,
     this.trailingView,
     this.appBarOptions,
     this.usersStatusVisibility = true,
@@ -85,7 +98,6 @@ class CometChatConversations extends StatefulWidget {
     this.loadingStateView,
     this.leadingView,
     this.titleView,
-    this.controllerTag,
     this.onLoad,
     this.onEmpty,
     this.onError,
@@ -101,6 +113,8 @@ class CometChatConversations extends StatefulWidget {
     this.searchBoxIcon,
     this.searchPadding,
     this.searchContentPadding,
+    this.listItemStyle,
+    this.controllerTag,
   });
 
   ///[routeObserver] Optional RouteObserver to detect when this widget is not visible.
@@ -181,9 +195,6 @@ class CometChatConversations extends StatefulWidget {
   ///[hideError] toggle visibility of error dialog
   final bool? hideError;
 
-  ///[listItemStyle] style for every list item
-  final ListItemStyle? listItemStyle;
-
   ///[appBarOptions] list of options to be visible in app bar
   final List<Widget>? appBarOptions;
 
@@ -232,10 +243,15 @@ class CometChatConversations extends StatefulWidget {
   ///[textFormatters] is a list of text formatters for message bubbles with type text
   final List<CometChatTextFormatter>? textFormatters;
 
-  ///[mentionAllLabel] is a String which is used to set a custom label for @all mentions
+  ///[mentionAllLabel] is the label an @all mention shows in a conversation's
+  ///last-message preview, in place of the localized "Notify All". Ignored when
+  ///[textFormatters] is given: set it on the [CometChatMentionsFormatter] in
+  ///that list instead.
   final String? mentionAllLabel;
 
-  ///[mentionAllLabelId] is a String which is used to set a custom label ID for @all mentions
+  ///[mentionAllLabelId] is the id of the @all mention the preview formats,
+  ///when the app sends @all under an id other than "all". Ignored when
+  ///[textFormatters] is given, like [mentionAllLabel].
   final String? mentionAllLabelId;
 
   ///[datePadding] provides padding for [CometChatDate]
@@ -293,9 +309,6 @@ class CometChatConversations extends StatefulWidget {
 
   ///[groupTypeVisibility] Hide the group type icon which is visible on the group icon.
   final bool? groupTypeVisibility;
-
-  ///[controllerTag] tag to create from , if this is passed its parent responsibility to close this
-  final String? controllerTag;
 
   ///[submitIcon] will override the default submit icon
   final Widget? submitIcon;
@@ -380,8 +393,15 @@ class _CometChatConversationsState extends State<CometChatConversations>
   ///BLoC to manage conversations state
   late ConversationsBloc conversationsBloc;
 
+  /// Where the user last pressed, used to position the options menu.
+
   /// Track which conversation is showing delete overlay
   String? _conversationShowingDeleteOverlay;
+
+  /// The integrator's options for the row whose menu was opened last, fixed
+  /// at long-press so the menu doesn't change under the user while it closes.
+  ({String? id, List<CometChatOption> options, bool keepDefaults})?
+  _menuOptions;
 
   /// Flag to track if theme has been initialized
   bool _themeInitialized = false;
@@ -595,6 +615,7 @@ class _CometChatConversationsState extends State<CometChatConversations>
                     state.selectedConversations.isNotEmpty;
                 return hasSelection
                     ? IconButton(
+                        tooltip: Translations.of(context).clearSearch,
                         onPressed: () {
                           conversationsBloc.add(
                             const ClearConversationSelection(),
@@ -609,10 +630,15 @@ class _CometChatConversationsState extends State<CometChatConversations>
                       )
                     : (widget.backButton ??
                           IconButton(
+                            tooltip: Translations.of(context).back,
                             onPressed: widget.onBack,
                             icon: Icon(
                               Icons.arrow_back,
-                              color: colorPalette.iconPrimary,
+                              // Resolve the style before the palette — see
+                              // ENG-39105.
+                              color:
+                                  style.backIconColor ??
+                                  colorPalette.iconPrimary,
                               size: 24,
                             ),
                             padding: EdgeInsets.zero,
@@ -678,6 +704,7 @@ class _CometChatConversationsState extends State<CometChatConversations>
             container: ConversationsList(
               conversationsBloc: conversationsBloc,
               style: style,
+              listItemStyle: widget.listItemStyle,
               statusStyle: statusStyle,
               typingStyle: typingStyle,
               receiptStyle: receiptStyle,
@@ -695,7 +722,6 @@ class _CometChatConversationsState extends State<CometChatConversations>
               trailingView: widget.trailingView,
               leadingView: widget.leadingView,
               titleView: widget.titleView,
-              listItemStyle: widget.listItemStyle,
               avatarHeight: widget.avatarHeight,
               avatarWidth: widget.avatarWidth,
               avatarPadding: widget.avatarPadding,
@@ -718,7 +744,7 @@ class _CometChatConversationsState extends State<CometChatConversations>
               readIcon: widget.readIcon,
               deliveredIcon: widget.deliveredIcon,
               sentIcon: widget.sentIcon,
-              textFormatters: widget.textFormatters,
+              textFormatters: widget.textFormatters ?? _mentionAllFormatters(),
               datePattern: widget.datePattern,
               datePadding: widget.datePadding,
               dateHeight: widget.dateHeight,
@@ -755,6 +781,7 @@ class _CometChatConversationsState extends State<CometChatConversations>
         if (state is ConversationsLoaded &&
             state.selectedConversations.isNotEmpty) {
           return IconButton(
+            tooltip: Translations.of(context).done,
             onPressed: () {
               final selectedIds = state.selectedConversations;
               final selectedConversations = state.conversations
@@ -779,6 +806,23 @@ class _CometChatConversationsState extends State<CometChatConversations>
     );
   }
 
+  /// The kit's default formatters with the @all label configured, or null
+  /// (the rows build the plain defaults) when no @all prop is set.
+  List<CometChatTextFormatter>? _mentionAllFormatters() {
+    if (widget.mentionAllLabel == null && widget.mentionAllLabelId == null) {
+      return null;
+    }
+    return [
+      for (final formatter in MessageTemplateUtils.getDefaultTextFormatters())
+        formatter is CometChatMentionsFormatter
+            ? CometChatMentionsFormatter(
+                mentionAllLabel: widget.mentionAllLabel,
+                mentionAllLabelId: widget.mentionAllLabelId,
+              )
+            : formatter,
+    ];
+  }
+
   /// Whether the long-press menu offers Pin/Unpin for this row.
   ///
   /// Unpinned → Pin. Pinned by the logged-in user → Unpin. Pinned by an
@@ -794,12 +838,64 @@ class _CometChatConversationsState extends State<CometChatConversations>
     return pinnedBy == CometChatUIKit.loggedInUser?.uid;
   }
 
+  /// The long-press options the integrator supplied for [conversation].
+  ///
+  /// [CometChatConversations.setOptions] replaces the built-in Pin and Delete
+  /// entries; [CometChatConversations.addOptions] goes in front of them.
+  ({List<CometChatOption> options, bool keepDefaults}) _customOptions(
+    Conversation conversation,
+  ) {
+    if (widget.setOptions != null) {
+      return (
+        options:
+            widget.setOptions!(conversation, conversationsBloc, context) ??
+            const <CometChatOption>[],
+        keepDefaults: false,
+      );
+    }
+    return (
+      options:
+          widget.addOptions?.call(conversation, conversationsBloc, context) ??
+          const <CometChatOption>[],
+      keepDefaults: true,
+    );
+  }
+
+  /// Closes the menu, then runs the option's own action.
+  void _handleCustomOption(CometChatOption option) {
+    setState(() => _conversationShowingDeleteOverlay = null);
+    option.onClick?.call();
+  }
+
+  /// The option's icon, drawn the way the kit's other option menus draw it.
+  Widget? _customOptionIcon(CometChatOption option) {
+    if (option.iconWidget != null) return option.iconWidget;
+    final asset = option.icon;
+    if (asset == null || asset.isEmpty) return null;
+    return Image.asset(
+      asset,
+      package: option.packageName ?? UIConstants.packageName,
+      color: option.iconTint ?? colorPalette.iconSecondary,
+      height: 24,
+      width: 24,
+    );
+  }
+
   /// Default long press handler that shows the action overlay on the tile
   void _handleDefaultLongPress(Conversation conversation) {
-    if (widget.deleteConversationOptionVisibility != true &&
-        !_canTogglePin(conversation)) {
+    final custom = _customOptions(conversation);
+    final hasDefaults =
+        custom.keepDefaults &&
+        (widget.deleteConversationOptionVisibility == true ||
+            _canTogglePin(conversation));
+    if (custom.options.isEmpty && !hasDefaults) {
       return;
     }
+    _menuOptions = (
+      id: conversation.conversationId,
+      options: custom.options,
+      keepDefaults: custom.keepDefaults,
+    );
 
     setState(() {
       // Toggle the delete overlay for this conversation
@@ -845,6 +941,10 @@ class _CometChatConversationsState extends State<CometChatConversations>
     final bool showPinAction = _canTogglePin(conversation);
     final bool showDeleteAction =
         widget.deleteConversationOptionVisibility == true;
+    final custom = _menuOptions?.id == conversation.conversationId
+        ? _menuOptions
+        : null;
+    final bool keepDefaults = custom?.keepDefaults ?? true;
 
     return _ConversationContextMenu(
       open: isOpen,
@@ -856,19 +956,32 @@ class _CometChatConversationsState extends State<CometChatConversations>
       colorPalette: colorPalette,
       typography: typography,
       entries: [
-        if (showPinAction)
+        for (final option in custom?.options ?? const <CometChatOption>[])
+          (
+            label: option.title ?? '',
+            icon: null,
+            iconWidget: _customOptionIcon(option),
+            labelStyle: option.titleStyle,
+            isDestructive: false,
+            action: () => _handleCustomOption(option),
+          ),
+        if (keepDefaults && showPinAction)
           (
             label: isPinned
                 ? cc.Translations.of(context).unpinButton
                 : cc.Translations.of(context).pinButton,
             icon: isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            iconWidget: null,
+            labelStyle: null,
             isDestructive: false,
             action: () => _handlePinFromOverlay(conversation),
           ),
-        if (showDeleteAction)
+        if (keepDefaults && showDeleteAction)
           (
             label: cc.Translations.of(context).delete,
             icon: Icons.delete_outline,
+            iconWidget: null,
+            labelStyle: null,
             isDestructive: true,
             action: () => _handleDeleteFromOverlay(conversation),
           ),
@@ -944,7 +1057,8 @@ class _CometChatConversationsState extends State<CometChatConversations>
     switch (error.code) {
       case 'ERR_PINNED_CONVERSATIONS_LIMIT_EXCEEDED':
         return cc.Translations.of(context).conversationPinLimitReachedToast(
-            limit ?? CometChat.getPinnedConversationsLimit() ?? 5);
+          limit ?? CometChat.getPinnedConversationsLimit() ?? 5,
+        );
       case 'ERR_UNAUTHORIZED':
       case 'ERR_FORBIDDEN':
       case 'ERR_PERMISSION_DENIED':
@@ -1081,7 +1195,14 @@ class _ConversationContextMenu extends StatefulWidget {
   final bool open;
   final VoidCallback onDismissed;
   final List<
-    ({String label, IconData icon, bool isDestructive, VoidCallback action})
+    ({
+      String label,
+      IconData? icon,
+      Widget? iconWidget,
+      TextStyle? labelStyle,
+      bool isDestructive,
+      VoidCallback action,
+    })
   >
   entries;
   final CometChatColorPalette colorPalette;
@@ -1164,15 +1285,21 @@ class _ConversationContextMenuState extends State<_ConversationContextMenu> {
                 fontFamily: widget.typography.body?.medium?.fontFamily,
               ),
             ),
-            leadingIcon: Icon(
-              entry.icon,
-              size: 24,
-              color: entry.isDestructive
-                  ? palette.error
-                  : palette.iconSecondary,
-            ),
+            leadingIcon:
+                entry.iconWidget ??
+                Icon(
+                  entry.icon,
+                  size: 24,
+                  color: entry.isDestructive
+                      ? palette.error
+                      : palette.iconSecondary,
+                ),
             onPressed: entry.action,
-            child: Text(entry.label),
+            child: Text(
+              entry.label,
+              style: entry.labelStyle,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
       ],
       child: widget.child,

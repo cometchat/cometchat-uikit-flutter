@@ -6,6 +6,26 @@ import '../../../../cometchat_chat_uikit.dart';
 /// This class encapsulates all visual styling properties for the conversation list item,
 /// integrating with the CometChatTheme system for consistent styling.
 class CometChatConversationListItemStyle {
+  /// Icon shown inside the selection checkbox when the row is selected, in
+  /// place of the default tick. [checkBoxSelectIconTint] tints it unless the
+  /// icon sets its own colour.
+  final Widget? checkBoxSelectIcon;
+
+  /// Colour of the separator line drawn along the bottom of the row.
+  ///
+  /// Unset by default, so rows draw no separator. Setting this or
+  /// [separatorHeight] turns the line on; with only [separatorHeight] set it
+  /// takes the palette's light border colour. [ConversationsList] leaves it
+  /// off the last row, so it only ever divides one conversation from the next.
+  final Color? separatorColor;
+
+  /// Thickness of the separator line drawn along the bottom of the row, in
+  /// logical pixels. Defaults to 1 when only [separatorColor] is set.
+  ///
+  /// Setting it alone turns the line on in the palette's light border
+  /// colour. A value of 0 or less draws no line.
+  final double? separatorHeight;
+
   /// Background color for the list item.
   final Color? backgroundColor;
 
@@ -42,17 +62,8 @@ class CometChatConversationListItemStyle {
   /// Background color for the selected checkbox.
   final Color? checkBoxCheckedBackgroundColor;
 
-  /// Icon to display when checkbox is selected.
-  final Widget? checkBoxSelectIcon;
-
   /// Tint color for the checkbox select icon.
   final Color? checkBoxSelectIconTint;
-
-  /// Color for the item separator line.
-  final Color? separatorColor;
-
-  /// Height of the item separator line.
-  final double? separatorHeight;
 
   /// Style configuration for the avatar component.
   final CometChatAvatarStyle? avatarStyle;
@@ -72,6 +83,12 @@ class CometChatConversationListItemStyle {
   /// Style configuration for typing indicator.
   final CometChatTypingIndicatorStyle? typingIndicatorStyle;
 
+  /// Background of the status dot on a private group's avatar.
+  final Color? privateGroupIconBackground;
+
+  /// Background of the status dot on a password-protected group's avatar.
+  final Color? protectedGroupIconBackground;
+
   const CometChatConversationListItemStyle({
     this.backgroundColor,
     this.selectedBackgroundColor,
@@ -85,57 +102,60 @@ class CometChatConversationListItemStyle {
     this.checkBoxStrokeColor,
     this.checkBoxBackgroundColor,
     this.checkBoxCheckedBackgroundColor,
-    this.checkBoxSelectIcon,
     this.checkBoxSelectIconTint,
-    this.separatorColor,
-    this.separatorHeight,
     this.avatarStyle,
     this.statusIndicatorStyle,
     this.dateStyle,
     this.badgeStyle,
     this.receiptStyle,
     this.typingIndicatorStyle,
+    this.privateGroupIconBackground,
+    this.protectedGroupIconBackground,
+    this.checkBoxSelectIcon,
+    this.separatorColor,
+    this.separatorHeight,
   });
 
   /// Creates a default style with values sourced from CometChatTheme.
-  factory CometChatConversationListItemStyle.fromTheme(BuildContext context) {
-    final colorPalette = CometChatThemeHelper.getColorPalette(context);
-    final typography = CometChatThemeHelper.getTypography(context);
-    final spacing = CometChatThemeHelper.getSpacing(context);
+  ///
+  /// [colorPalette], [typography] and [spacing] replace the theme's own when
+  /// given, so an item built with its own palette takes its defaults from it.
+  factory CometChatConversationListItemStyle.fromTheme(
+    BuildContext context, {
+    CometChatColorPalette? colorPalette,
+    CometChatTypography? typography,
+    CometChatSpacing? spacing,
+  }) {
+    final palette =
+        colorPalette ?? CometChatThemeHelper.getColorPalette(context);
+    final type = typography ?? CometChatThemeHelper.getTypography(context);
+    final space = spacing ?? CometChatThemeHelper.getSpacing(context);
 
     return CometChatConversationListItemStyle(
-      backgroundColor: colorPalette.background1,
-      selectedBackgroundColor: colorPalette.background4,
-      titleTextColor: colorPalette.textPrimary,
-      titleTextStyle: typography.heading4?.medium,
-      subtitleTextColor: colorPalette.textSecondary,
-      subtitleTextStyle: typography.body?.regular,
-      messageTypeIconTint: colorPalette.iconSecondary,
+      backgroundColor: palette.background1,
+      selectedBackgroundColor: palette.background4,
+      titleTextColor: palette.textPrimary,
+      titleTextStyle: type.heading4?.medium,
+      subtitleTextColor: palette.textSecondary,
+      subtitleTextStyle: type.body?.regular,
+      messageTypeIconTint: palette.iconSecondary,
       checkBoxStrokeWidth: 1.5,
-      checkBoxBorderRadius: BorderRadius.circular(spacing.radius1 ?? 4),
-      checkBoxStrokeColor: colorPalette.borderDefault,
+      checkBoxBorderRadius: BorderRadius.circular(space.radius1 ?? 4),
+      checkBoxStrokeColor: palette.borderDefault,
       checkBoxBackgroundColor: Colors.transparent,
-      checkBoxCheckedBackgroundColor: colorPalette.primary,
-      checkBoxSelectIcon: Icon(
-        Icons.check,
-        size: 14,
-        color: colorPalette.white,
-      ),
-      checkBoxSelectIconTint: colorPalette.white,
-      separatorColor: colorPalette.borderLight,
-      separatorHeight: 1,
+      checkBoxCheckedBackgroundColor: palette.primary,
       avatarStyle: const CometChatAvatarStyle(),
       statusIndicatorStyle: const CometChatStatusIndicatorStyle(),
       dateStyle: CometChatDateStyle(
-        textColor: colorPalette.textSecondary,
-        textStyle: typography.caption1?.regular,
+        textColor: palette.textSecondary,
+        textStyle: type.caption1?.regular,
       ),
       badgeStyle: CometChatBadgeStyle(
-        borderRadius: BorderRadius.circular(spacing.radius3?.toDouble() ?? 12),
+        borderRadius: BorderRadius.circular(space.radius3?.toDouble() ?? 12),
       ),
       receiptStyle: CometChatMessageReceiptStyle(),
       typingIndicatorStyle: CometChatTypingIndicatorStyle(
-        textStyle: typography.body?.regular,
+        textStyle: type.body?.regular,
       ),
     );
   }
@@ -163,17 +183,21 @@ class CometChatConversationListItemStyle {
       checkBoxCheckedBackgroundColor:
           other.checkBoxCheckedBackgroundColor ??
           checkBoxCheckedBackgroundColor,
-      checkBoxSelectIcon: other.checkBoxSelectIcon ?? checkBoxSelectIcon,
       checkBoxSelectIconTint:
           other.checkBoxSelectIconTint ?? checkBoxSelectIconTint,
-      separatorColor: other.separatorColor ?? separatorColor,
-      separatorHeight: other.separatorHeight ?? separatorHeight,
       avatarStyle: other.avatarStyle ?? avatarStyle,
       statusIndicatorStyle: other.statusIndicatorStyle ?? statusIndicatorStyle,
       dateStyle: other.dateStyle ?? dateStyle,
       badgeStyle: other.badgeStyle ?? badgeStyle,
       receiptStyle: other.receiptStyle ?? receiptStyle,
       typingIndicatorStyle: other.typingIndicatorStyle ?? typingIndicatorStyle,
+      privateGroupIconBackground:
+          other.privateGroupIconBackground ?? privateGroupIconBackground,
+      protectedGroupIconBackground:
+          other.protectedGroupIconBackground ?? protectedGroupIconBackground,
+      checkBoxSelectIcon: other.checkBoxSelectIcon ?? checkBoxSelectIcon,
+      separatorColor: other.separatorColor ?? separatorColor,
+      separatorHeight: other.separatorHeight ?? separatorHeight,
     );
   }
 
@@ -191,16 +215,18 @@ class CometChatConversationListItemStyle {
     Color? checkBoxStrokeColor,
     Color? checkBoxBackgroundColor,
     Color? checkBoxCheckedBackgroundColor,
-    Widget? checkBoxSelectIcon,
     Color? checkBoxSelectIconTint,
-    Color? separatorColor,
-    double? separatorHeight,
     CometChatAvatarStyle? avatarStyle,
     CometChatStatusIndicatorStyle? statusIndicatorStyle,
     CometChatDateStyle? dateStyle,
     CometChatBadgeStyle? badgeStyle,
     CometChatMessageReceiptStyle? receiptStyle,
     CometChatTypingIndicatorStyle? typingIndicatorStyle,
+    Color? privateGroupIconBackground,
+    Color? protectedGroupIconBackground,
+    Widget? checkBoxSelectIcon,
+    Color? separatorColor,
+    double? separatorHeight,
   }) {
     return CometChatConversationListItemStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -218,17 +244,21 @@ class CometChatConversationListItemStyle {
           checkBoxBackgroundColor ?? this.checkBoxBackgroundColor,
       checkBoxCheckedBackgroundColor:
           checkBoxCheckedBackgroundColor ?? this.checkBoxCheckedBackgroundColor,
-      checkBoxSelectIcon: checkBoxSelectIcon ?? this.checkBoxSelectIcon,
       checkBoxSelectIconTint:
           checkBoxSelectIconTint ?? this.checkBoxSelectIconTint,
-      separatorColor: separatorColor ?? this.separatorColor,
-      separatorHeight: separatorHeight ?? this.separatorHeight,
       avatarStyle: avatarStyle ?? this.avatarStyle,
       statusIndicatorStyle: statusIndicatorStyle ?? this.statusIndicatorStyle,
       dateStyle: dateStyle ?? this.dateStyle,
       badgeStyle: badgeStyle ?? this.badgeStyle,
       receiptStyle: receiptStyle ?? this.receiptStyle,
       typingIndicatorStyle: typingIndicatorStyle ?? this.typingIndicatorStyle,
+      privateGroupIconBackground:
+          privateGroupIconBackground ?? this.privateGroupIconBackground,
+      protectedGroupIconBackground:
+          protectedGroupIconBackground ?? this.protectedGroupIconBackground,
+      checkBoxSelectIcon: checkBoxSelectIcon ?? this.checkBoxSelectIcon,
+      separatorColor: separatorColor ?? this.separatorColor,
+      separatorHeight: separatorHeight ?? this.separatorHeight,
     );
   }
 }

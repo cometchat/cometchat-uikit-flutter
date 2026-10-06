@@ -17,6 +17,17 @@ enum TimeAlignment { top, bottom }
 ///[error] the request for sending a message has failed and an error response has been in received in the `onError` callback
 enum MessageStatus { inProgress, sent, error }
 
+/// Nameable alias for [MessageStatus].
+///
+/// `MessageEntity` declares a different enum that is also called
+/// `MessageStatus`, so `constants.dart` exports this file with
+/// `hide MessageStatus` to keep the barrel unambiguous. That left the enum
+/// used by [CometChatMessageEvents.ccMessageSent] and
+/// [CometChatUIKitHelper.onMessageSent] impossible to name from outside the
+/// package. This alias is exported normally, so a listener can write
+/// `MessageSendStatus.sent` instead of having to import an internal path.
+typedef MessageSendStatus = MessageStatus;
+
 ///[MessageEditStatus] is an enum that contains the various stages of updating a messag
 ///[inProgress] means the request to update a [BaseMessage] is currently ongoing or has been made but awaiting success response
 ///[success] means message was updated successfully and a success response has been received in the `onSuccess` callback for the request to update a [BaseMessage]

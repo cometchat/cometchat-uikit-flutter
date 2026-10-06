@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
-import 'messages_screen.dart';
 
 /// Create Group screen — shown as a bottom sheet.
 /// Supports Public, Private, and Password group types.
@@ -99,14 +98,12 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
         if (!mounted) return;
         setState(() => _isLoading = false);
         CometChatGroupEvents.ccGroupCreated(created);
-        Navigator.pop(context); // close bottom sheet
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'messages'),
-            builder: (_) => MessagesScreen(group: created),
-          ),
-        );
+        // Dismiss the bottom sheet first
+        Navigator.of(context).pop();
+        // Use the UI event to open the conversation — this lets the
+        // ResponsiveHomeScreen (desktop) show the group in its middle panel
+        // while also working on mobile (HomeScreen listens too).
+        CometChatUIEvents.openChat(null, created);
       },
       onError: (CometChatException e) {
         if (!mounted) return;
@@ -136,49 +133,30 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
                 top: Radius.circular(_spacing.radius6 ?? 0),
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Drag handle
-                Padding(
-                  padding: EdgeInsets.only(top: _spacing.padding3 ?? 0),
-                  child: Container(
-                    height: 4,
-                    width: 32,
-                    decoration: BoxDecoration(
-                      color: _colorPalette.neutral500,
-                      borderRadius:
-                          BorderRadius.circular(_spacing.radiusMax ?? 0),
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: _spacing.padding5 ?? 0,
+                left: _spacing.padding6 ?? 0,
+                right: _spacing.padding6 ?? 0,
+                bottom: _spacing.padding10 ?? 0,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildAvatar(),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: _spacing.padding1 ?? 0),
+                      child: _titleText(cc.Translations.of(context).type),
                     ),
-                  ),
+                    _buildTabs(),
+                    _buildInputs(),
+                    _buildErrorBanner(),
+                    _buildCreateButton(),
+                  ],
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      top: _spacing.padding5 ?? 0,
-                      left: _spacing.padding6 ?? 0,
-                      right: _spacing.padding6 ?? 0,
-                      bottom: _spacing.padding10 ?? 0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildAvatar(),
-                        Padding(
-                          padding:
-                              EdgeInsets.only(bottom: _spacing.padding1 ?? 0),
-                          child: _titleText(
-                              cc.Translations.of(context).type),
-                        ),
-                        _buildTabs(),
-                        _buildInputs(),
-                        _buildErrorBanner(),
-                        _buildCreateButton(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -248,12 +226,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: (_colorPalette.black ?? Colors.black).withValues(alpha: 0.04),
+                  color: (_colorPalette.black ?? Colors.black)
+                      .withValues(alpha: 0.04),
                   blurRadius: 3.0,
                   offset: const Offset(0, 1),
                 ),
                 BoxShadow(
-                  color: (_colorPalette.black ?? Colors.black).withValues(alpha: 0.12),
+                  color: (_colorPalette.black ?? Colors.black)
+                      .withValues(alpha: 0.12),
                   blurRadius: 8.0,
                   offset: const Offset(0, 3),
                 ),
@@ -450,23 +430,30 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
   }
 }
 
-/// Show the Create Group bottom sheet.
+/// Show the Create Group bottom sheet (mobile + web).
 Future<void> showCreateGroup({
   required BuildContext context,
   required CometChatColorPalette colorPalette,
 }) {
+  final screenSize = MediaQuery.of(context).size;
+  final isWide = screenSize.width >= 600;
+
   return showModalBottomSheet(
     backgroundColor: colorPalette.background1,
     context: context,
     isDismissible: true,
     useSafeArea: true,
     isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: const Wrap(
-        children: [
-          IntrinsicHeight(child: CreateGroupScreen()),
-        ],
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    constraints: isWide ? const BoxConstraints(maxWidth: 480) : null,
+    builder: (ctx) => SizedBox(
+      height: isWide ? screenSize.height * 0.75 : screenSize.height * 0.5,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: const CreateGroupScreen(),
       ),
     ),
   );

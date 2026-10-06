@@ -236,7 +236,11 @@ class _CometChatSavedMessagesState extends State<CometChatSavedMessages> {
       actionsPadding: const EdgeInsets.only(left: 24, right: 24),
       icon: Icon(
         Icons.bookmark_remove_outlined,
-        color: CometChatThemeHelper.getColorPalette(context).iconHighlight,
+        color:
+            const CometChatSavedMessagesStyle()
+                .merge(widget.style)
+                .unsaveIconColor ??
+            CometChatThemeHelper.getColorPalette(context).iconHighlight,
         size: 32,
       ),
       title: Text(translations.unsaveConfirmTitle, textAlign: TextAlign.center),
@@ -344,6 +348,7 @@ class _CometChatSavedMessagesState extends State<CometChatSavedMessages> {
         titleSpacing: widget.showBackButton && !widget.useCloseButton ? 0 : 16,
         leading: widget.showBackButton && !widget.useCloseButton
             ? IconButton(
+                tooltip: Translations.of(context).back,
                 icon: Icon(
                   Icons.arrow_back,
                   color: style.iconColor ?? colorPalette.iconPrimary,
@@ -354,6 +359,7 @@ class _CometChatSavedMessagesState extends State<CometChatSavedMessages> {
         actions: [
           if (widget.showBackButton && widget.useCloseButton)
             IconButton(
+              tooltip: Translations.of(context).close,
               icon: Icon(
                 Icons.close,
                 color: style.iconColor ?? colorPalette.iconPrimary,

@@ -50,23 +50,25 @@ class CallLogsRemoteDataSourceImpl implements CallLogsRemoteDataSource {
     try {
       final completer = Completer<List<CallLog>>();
 
-      request.fetchNext(
-        onSuccess: (List<CallLog> callLogs) {
-          if (!completer.isCompleted) {
-            completer.complete(callLogs);
-          }
-        },
-        onError: (CometChatCallsException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              CallLogsRemoteDataSourceException(
-                message: exception.message ?? 'Failed to fetch call logs',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        request.fetchNext(
+          onSuccess: (List<CallLog> callLogs) {
+            if (!completer.isCompleted) {
+              completer.complete(callLogs);
+            }
+          },
+          onError: (CometChatCallsException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                CallLogsRemoteDataSourceException(
+                  message: exception.message ?? 'Failed to fetch call logs',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;
@@ -92,23 +94,25 @@ class CallLogsRemoteDataSourceImpl implements CallLogsRemoteDataSource {
     try {
       final completer = Completer<User?>();
 
-      CometChat.getLoggedInUser(
-        onSuccess: (User user) {
-          if (!completer.isCompleted) {
-            completer.complete(user);
-          }
-        },
-        onError: (CometChatException exception) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              CallLogsRemoteDataSourceException(
-                message: exception.message ?? 'Failed to get logged-in user',
-                code: exception.code,
-                originalException: exception,
-              ),
-            );
-          }
-        },
+      unawaited(
+        CometChat.getLoggedInUser(
+          onSuccess: (User user) {
+            if (!completer.isCompleted) {
+              completer.complete(user);
+            }
+          },
+          onError: (CometChatException exception) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                CallLogsRemoteDataSourceException(
+                  message: exception.message ?? 'Failed to get logged-in user',
+                  code: exception.code,
+                  originalException: exception,
+                ),
+              );
+            }
+          },
+        ),
       );
 
       return await completer.future;

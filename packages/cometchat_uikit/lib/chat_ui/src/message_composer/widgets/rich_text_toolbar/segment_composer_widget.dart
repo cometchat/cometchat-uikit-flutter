@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../../../shared_ui/cometchat_uikit_shared.dart';
@@ -426,7 +427,9 @@ class _NormalSegmentWidgetState extends State<_NormalSegmentWidget> {
               final handled = await _tryPasteAsLink(controller, selection);
               if (handled) return;
             }
-            editableTextState.pasteText(SelectionChangedCause.toolbar);
+            unawaited(
+              editableTextState.pasteText(SelectionChangedCause.toolbar),
+            );
           },
         );
       }
@@ -445,7 +448,9 @@ class _NormalSegmentWidgetState extends State<_NormalSegmentWidget> {
           onPressed: () async {
             editableTextState.hideToolbar();
             if (await widget.onPasteImage!()) return;
-            editableTextState.pasteText(SelectionChangedCause.toolbar);
+            unawaited(
+              editableTextState.pasteText(SelectionChangedCause.toolbar),
+            );
           },
         ),
       );

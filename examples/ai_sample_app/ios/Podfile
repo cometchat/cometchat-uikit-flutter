@@ -1,5 +1,5 @@
-# Global platform for CometChat SDK (requires iOS 12.0+)
-platform :ios, '13.0'
+# Global platform for CometChat Calls SDK (requires iOS 15.1+)
+platform :ios, '15.1'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -29,6 +29,7 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   use_frameworks!
+  use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -39,6 +40,16 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    target.build_configurations.each do |build_configuration|
+      # Apple Silicon compatibility: exclude only i386 from simulator builds.
+      build_configuration.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
+      build_configuration.build_settings['ENABLE_BITCODE'] = 'NO'
+      build_configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+      # Disable code signing for Pods (only Runner target needs signing)
+      build_configuration.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+      build_configuration.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+    end
 
     # Enable permission_handler permissions for iOS
     if target.name == 'permission_handler_apple'

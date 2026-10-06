@@ -40,6 +40,12 @@ class CallLogsState extends Equatable {
   /// Error message when status is error
   final String? errorMessage;
 
+  /// Why the last attempt to load the next page failed, or null. The list
+  /// keeps what it has (status stays loaded) and ends with a retry row,
+  /// which asks for the same page again; `CometChatCallLogs` reports it to
+  /// its `onError`. Cleared when the next attempt starts.
+  final String? loadMoreError;
+
   /// Currently logged in user
   final User? loggedInUser;
 
@@ -55,6 +61,7 @@ class CallLogsState extends Equatable {
     this.errorMessage,
     this.loggedInUser,
     this.groupedEntries = const {},
+    this.loadMoreError,
   });
 
   /// Factory constructor for initial state
@@ -69,9 +76,11 @@ class CallLogsState extends Equatable {
     errorMessage,
     loggedInUser,
     groupedEntries,
+    loadMoreError,
   ];
 
-  /// Create a copy of this state with updated fields
+  /// Create a copy of this state with updated fields. [clearLoadMoreError]
+  /// sets [loadMoreError] back to null.
   CallLogsState copyWith({
     CallLogsStatus? status,
     List<CallLog>? callLogs,
@@ -80,6 +89,8 @@ class CallLogsState extends Equatable {
     String? errorMessage,
     User? loggedInUser,
     Map<String, List<CallLog>>? groupedEntries,
+    String? loadMoreError,
+    bool clearLoadMoreError = false,
   }) {
     return CallLogsState(
       status: status ?? this.status,
@@ -89,6 +100,9 @@ class CallLogsState extends Equatable {
       errorMessage: errorMessage ?? this.errorMessage,
       loggedInUser: loggedInUser ?? this.loggedInUser,
       groupedEntries: groupedEntries ?? this.groupedEntries,
+      loadMoreError: clearLoadMoreError
+          ? null
+          : loadMoreError ?? this.loadMoreError,
     );
   }
 }

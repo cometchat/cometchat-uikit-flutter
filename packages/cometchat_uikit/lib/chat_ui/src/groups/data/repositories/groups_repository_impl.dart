@@ -25,13 +25,25 @@ class GroupsRepositoryImpl implements GroupsRepository {
     int limit = 30,
     String? searchKeyword,
     bool? joinedOnly,
+    GroupsRequestBuilder? groupsRequestBuilder,
   }) async {
     try {
-      final groups = await remoteDataSource.getGroups(
-        limit: limit,
-        searchKeyword: searchKeyword,
-        joinedOnly: joinedOnly,
-      );
+      // The builder goes only to the kit's own data source: the interface
+      // keeps its 6.1.1 signature, so an app's implementation does not
+      // take one.
+      final source = remoteDataSource;
+      final groups = source is GroupsRemoteDataSourceImpl
+          ? await source.getGroups(
+              limit: limit,
+              searchKeyword: searchKeyword,
+              joinedOnly: joinedOnly,
+              groupsRequestBuilder: groupsRequestBuilder,
+            )
+          : await source.getGroups(
+              limit: limit,
+              searchKeyword: searchKeyword,
+              joinedOnly: joinedOnly,
+            );
 
       return Success(groups);
     } on GroupsRemoteDataSourceException catch (e) {

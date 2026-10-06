@@ -39,39 +39,58 @@ class CleanupHelper {
     }
   }
 
-  /// Unblock User B from User A's block list.
+  /// Unblock User B from User A's block list, and vice versa.
   /// Ensures the block state doesn't carry over between tests.
+  ///
+  /// This used to DELETE `/users/blockedusers` — with no `{uid}` segment, the
+  /// path `deleteConversation` above gets right. That is not a route, so every
+  /// call 404'd. `http.delete` does not throw on a 404, it returns one, so the
+  /// catch never fired either: the helper reported nothing and cleared
+  /// nothing, for every run. A block left by a failing test therefore survived
+  /// on the shared app and broke every later run's seeding with
+  /// ERR_BLOCKED_RECEIVER, CI's E2E included.
+  ///
+  /// Both directions are still attempted independently and neither throws —
+  /// cleanup must not fail a test run — but a non-200 is now reported with its
+  /// status and body instead of vanishing.
   static Future<void> unblockAll() async {
-    try {
-      // A unblocks B
-      final url = Uri.parse(
-        '${TestCredentials.restBaseUrl}/users/blockedusers',
-      );
-      await http.delete(
-        url,
-        headers: {..._headers, 'onBehalfOf': TestCredentials.userAUid},
-        body: jsonEncode({
-          'blockedUids': [TestCredentials.userBUid],
-        }),
-      );
-    } catch (e) {
-      debugPrint('[Cleanup] unblockAll (A→B): $e');
-    }
+    await _unblock(
+      byUid: TestCredentials.userAUid,
+      blockedUid: TestCredentials.userBUid,
+      label: 'A→B',
+    );
+    await _unblock(
+      byUid: TestCredentials.userBUid,
+      blockedUid: TestCredentials.userAUid,
+      label: 'B→A',
+    );
+  }
 
+  /// One direction of [unblockAll]: [byUid] stops blocking [blockedUid].
+  static Future<void> _unblock({
+    required String byUid,
+    required String blockedUid,
+    required String label,
+  }) async {
     try {
-      // B unblocks A
       final url = Uri.parse(
-        '${TestCredentials.restBaseUrl}/users/blockedusers',
+        '${TestCredentials.restBaseUrl}/users/$byUid/blockedusers',
       );
-      await http.delete(
+      final response = await http.delete(
         url,
-        headers: {..._headers, 'onBehalfOf': TestCredentials.userBUid},
+        headers: {..._headers, 'onBehalfOf': byUid},
         body: jsonEncode({
-          'blockedUids': [TestCredentials.userAUid],
+          'blockedUids': [blockedUid],
         }),
       );
+      if (response.statusCode != 200) {
+        debugPrint(
+          '[Cleanup] unblockAll ($label) did NOT clear the block: '
+          '${response.statusCode} ${response.body}',
+        );
+      }
     } catch (e) {
-      debugPrint('[Cleanup] unblockAll (B→A): $e');
+      debugPrint('[Cleanup] unblockAll ($label): $e');
     }
   }
 

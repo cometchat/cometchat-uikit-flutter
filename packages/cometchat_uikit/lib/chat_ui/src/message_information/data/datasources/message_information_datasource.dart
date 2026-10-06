@@ -36,14 +36,16 @@ class MessageInformationDataSourceImpl implements MessageInformationDataSource {
   @override
   Future<List<MessageReceipt>> fetchMessageReceipts(int messageId) async {
     final completer = Completer<List<MessageReceipt>>();
-    CometChat.getMessageReceipts(
-      messageId,
-      onSuccess: (receipts) => completer.complete(receipts),
-      onError: (error) => completer.completeError(
-        MessageInformationDataSourceException(
-          message: error.message ?? 'Failed to fetch message receipts',
-          code: error.code,
-          originalException: error,
+    unawaited(
+      CometChat.getMessageReceipts(
+        messageId,
+        onSuccess: (receipts) => completer.complete(receipts),
+        onError: (error) => completer.completeError(
+          MessageInformationDataSourceException(
+            message: error.message ?? 'Failed to fetch message receipts',
+            code: error.code,
+            originalException: error,
+          ),
         ),
       ),
     );

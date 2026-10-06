@@ -1,24 +1,31 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../cometchat_calls_uikit.dart';
 import '../../../cometchat_chat_uikit.dart';
+import '../../../src/call_errors.dart';
 
-/// [CometChatIncomingCall] is a widget which is used to display incoming call.
-/// When the logged in user receives a call, this widget will be invoked.
+/// [CometChatIncomingCall] is the incoming call banner: the caller, the
+/// kind of call, and Decline and Accept. With `UIKitSettings.enableCalls`
+/// the UI Kit shows it itself (through [IncomingCallOverlay]) over the
+/// navigator of `CallNavigationContext.navigatorKey` when a call comes in;
+/// configure it with `CallingConfiguration.incomingCallConfiguration`.
 ///
 /// ```dart
 /// CometChatIncomingCall(
 ///   call: call,
-///   user: user,
-///   subtitle: 'Incoming Call',
+///   user: caller,
 ///   declineButtonText: 'Decline',
-///   declineButtonTextStyle: TextStyle(color: Colors.white),
-///   declineButtonIconUrl: 'assets/images/decline.png',
-///   declineButtonIconUrlPackage: 'assets',
 ///   acceptButtonText: 'Accept',
-///   acceptButtonTextStyle: TextStyle(color: Colors.white),
-/// );
+///   incomingCallStyle: CometChatIncomingCallStyle(
+///     backgroundColor: Colors.white,
+///   ),
+///   onError: (e) => debugPrint('${e.code}: ${e.message}'),
+/// )
 /// ```
 class CometChatIncomingCall extends StatefulWidget {
   /// [call] active Call object
@@ -45,7 +52,8 @@ class CometChatIncomingCall extends StatefulWidget {
   /// [acceptButtonText] is used to set a custom accept text
   final String? acceptButtonText;
 
-  /// [callIcon] is used to set a custom call icon
+  /// [callIcon] is used to set a custom call icon. Without one, the subtitle
+  /// shows a phone for a voice call and a video camera for a video call.
   final Widget? callIcon;
 
   /// [titleView] is used to define the title view.
@@ -63,26 +71,86 @@ class CometChatIncomingCall extends StatefulWidget {
   /// [trailingView] is used to define the trailing view.
   final Widget? Function(BuildContext context, Call call)? trailingView;
 
-  /// [onDecline] is called when the call is declined
+  /// [onDecline] is called at the Decline tap, with the navigator's context
+  /// (`CallNavigationContext.navigatorKey`), before the decline goes to the
+  /// server. Not called without that navigator, or for a tap that is
+  /// ignored (the first tap wins). A side effect: the decline goes ahead
+  /// whatever it does, and what it throws goes to [onError]. The UI Kit
+  /// stops the ringtone and closes the banner itself.
   final Function(BuildContext, Call)? onDecline;
 
-  /// [onAccept] is called when the call is accepted
+  /// [onAccept] is called at the Accept tap, as [onDecline], before the
+  /// permission request and the accept. The accept goes ahead whatever it
+  /// does, even if it takes the banner down with
+  /// `IncomingCallOverlay.dismiss()`; a dismiss that names this call's
+  /// session counts as the call being over here, and nothing is sent.
   final Function(BuildContext, Call)? onAccept;
 
-  /// [onError] is called when some error occurs
+  /// Called when something about this call fails:
+  ///
+  /// * the SDK's own exception, code kept, when accepting or declining
+  ///   fails, including when the call was already over (cancelled, ended,
+  ///   declined or answered on another device) by the time the request
+  ///   landed;
+  /// * `PERMISSION_DENIED` / `PERMISSION_PERMANENTLY_DENIED` when microphone
+  ///   or camera access was refused on accept (a video call needs both);
+  ///   `details` lists the missing permissions. The call is declined. Without
+  ///   an [onError] the UI Kit says so in a SnackBar, with a way to the
+  ///   app's settings when the system will not ask again;
+  /// * `HOST_CALLBACK_ERROR` when [onAccept] or [onDecline] throws something
+  ///   other than a `CometChatException` (which is passed on as it is);
+  /// * whatever the call screen then reports: see
+  ///   `CometChatOngoingCall.onError`.
+  ///
+  /// Without an [onError], a failure shows "Something went wrong", except
+  /// for a call that was already over, which needs no message.
   final OnError? onError;
 
-  /// [disableSoundForCalls] is used to define whether to disable sound for call or not.
+  /// [disableSoundForCalls] turns the ringtone and the vibration off.
+  ///
+  /// Otherwise the call rings as the phone's own ringer would for a caller
+  /// who is not a phone contact:
+  ///
+  /// * Android: at the ring volume, silent in Silent and Vibrate mode and at
+  ///   ring volume 0. Under Do Not Disturb it rings only when DND lets calls
+  ///   from anyone through (DND's allowed-contacts list cannot include the
+  ///   caller), and otherwise neither rings nor vibrates. It vibrates
+  ///   always in Vibrate mode, never in Silent mode, and in Sound mode as
+  ///   the phone's "Vibrate while ringing" (or ramping ringer, or from
+  ///   Android 13 the ring vibration intensity) says; the settings differ
+  ///   by maker. It keeps ringing in the background, up to the 60 s limit.
+  /// * iOS: from the loudspeaker (or a headset), silent with the Ring/Silent
+  ///   switch on Silent, vibrating every 2 seconds, at the media volume, and
+  ///   pausing other apps' audio. It rings only while the app is in the
+  ///   foreground and unlocked; back in the foreground it rings again if the
+  ///   call still rings and is within 60 s of the ring's start. Focus modes
+  ///   do not silence it.
+  ///
+  /// Over a group meeting it plays quieter and leaves the meeting's audio
+  /// alone; on iOS it then plays through the meeting's audio, so the
+  /// Ring/Silent switch does not silence it and it may not vibrate.
+  ///
+  /// While it rings, message sounds and other one-shot sounds are skipped.
+  /// With [disableSoundForCalls] nothing rings, and they play as usual.
   final bool? disableSoundForCalls;
 
-  /// [customSoundForCalls] is used to define the custom sound for calls.
+  /// [customSoundForCalls] is the ringtone to play instead of the UI Kit's
+  /// own: an asset path, from [customSoundForCallsPackage]'s assets, or the
+  /// app's own when that is null.
   final String? customSoundForCalls;
 
-  /// [customSoundForCallsPackage] is used to define the custom sound for calls.
+  /// [customSoundForCallsPackage] is the package whose assets hold
+  /// [customSoundForCalls]. A sound not found there is looked for in the
+  /// app's own assets, and the UI Kit's ringtone plays when it is not found
+  /// at all.
   final String? customSoundForCallsPackage;
 
   /// [incomingCallBloc] Optional external IncomingCallBloc instance.
-  /// If provided, this bloc will be used instead of creating a new one internally.
+  /// If provided, this bloc will be used instead of creating a new one
+  /// internally. This widget does not close a bloc it was given: close it
+  /// yourself when you are done with it (it rings and runs a 60-second
+  /// timer from its creation; in a widget test, close it before the test's
+  /// body ends). The one it creates itself it closes.
   final IncomingCallBloc? incomingCallBloc;
 
   const CometChatIncomingCall({
@@ -153,6 +221,30 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
       );
       _isExternalBloc = false;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _announce());
+  }
+
+  /// Tells VoiceOver that a call is coming in: the banner appears without
+  /// focus, so nothing read it out. TalkBack hears it from the banner's live
+  /// region instead (Android has deprecated announcements).
+  void _announce() {
+    if (!mounted || defaultTargetPlatform == TargetPlatform.android) return;
+    final view = View.maybeOf(context);
+    if (view == null) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        view,
+        _semanticsLabel(context),
+        Directionality.maybeOf(context) ?? TextDirection.ltr,
+      ),
+    );
+  }
+
+  /// "Caller, Incoming audio call": what a screen reader says of the banner.
+  String _semanticsLabel(BuildContext context) {
+    final name = widget.user?.name;
+    final subtitle = _incomingCallBloc.getSubtitle(context);
+    return name == null || name.isEmpty ? subtitle : '$name, $subtitle';
   }
 
   @override
@@ -210,7 +302,17 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
       },
       child: BlocProvider.value(
         value: _incomingCallBloc,
-        child: _buildContent(),
+        // A live region, so TalkBack reads the banner out as it appears.
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          label: _semanticsLabel(context),
+          // Scrollable so the card stays whole when the user has scaled their
+          // text up: at 200% on a small phone the caller name, status and the
+          // accept/decline buttons are taller than the viewport, and the
+          // buttons are what falls off the bottom.
+          child: SingleChildScrollView(child: _buildContent()),
+        ),
       ),
     );
   }
@@ -237,13 +339,13 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
             _style.borderRadius ?? BorderRadius.circular(_spacing.radius3 ?? 0),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x10182808),
+            color: Color(0x08101828),
             offset: Offset(0, 4),
             blurRadius: 6,
             spreadRadius: -2,
           ),
           BoxShadow(
-            color: Color(0x10182814),
+            color: Color(0x14101828),
             offset: Offset(0, 12),
             blurRadius: 16,
             spreadRadius: -4,
@@ -269,7 +371,7 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
                   minTileHeight: 0,
                   leading: _getLeadingView(context),
                   title: _getTitleView(context),
-                  subtitle: _getSubTitleView(context),
+                  subtitle: _getSubTitleView(context, state),
                   trailing: _getTrailingView(context),
                 ),
               ),
@@ -283,10 +385,14 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
 
   /// Handle state changes for side effects
   void _handleStateChanges(BuildContext context, IncomingCallState state) {
-    // Handle error state by showing snackbar if no custom error handler
+    // Handle error state by showing snackbar if no custom error handler.
+    // Not for an error the UI Kit has already explained (a refused
+    // permission has its own message) or that needs none (the call was
+    // already over).
     if (state.status == IncomingCallStatus.error &&
         state.errorMessage != null &&
-        widget.onError == null) {
+        widget.onError == null &&
+        explainedIncomingCallErrors[state] != true) {
       _showErrorSnackbar(context, state.errorMessage!);
     }
   }
@@ -318,10 +424,14 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(right: _spacing.padding2 ?? 0),
+            // Off once either button is tapped, as Accept: the first tap
+            // wins.
             child: TextButton(
-              onPressed: () {
-                _incomingCallBloc.add(const RejectCall());
-              },
+              onPressed: state.isDisabled
+                  ? null
+                  : () {
+                      _incomingCallBloc.add(const RejectCall());
+                    },
               style: ButtonStyle(
                 backgroundColor: WidgetStateProperty.all(
                   _style.declineButtonColor ?? _colorPalette.error,
@@ -435,11 +545,14 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
     );
   }
 
-  /// Subtitle view
-  Widget _getSubTitleView(BuildContext context) {
+  /// Subtitle view: the call's kind, or "Connecting..." while the accept
+  /// goes through (the ringtone has stopped and both buttons are off by
+  /// then, and on a slow network that can take a while).
+  Widget _getSubTitleView(BuildContext context, IncomingCallState state) {
     if (widget.subTitleView != null) {
       return widget.subTitleView!(context, widget.call)!;
     }
+    final isVideoCall = widget.call.type == CallTypeConstants.videoCall;
     return Row(
       children: [
         Padding(
@@ -447,13 +560,15 @@ class _CometChatIncomingCallState extends State<CometChatIncomingCall> {
           child:
               widget.callIcon ??
               Icon(
-                Icons.call,
+                isVideoCall ? Icons.videocam : Icons.call,
                 color: _style.callIconColor ?? _colorPalette.iconSecondary,
                 size: 16,
               ),
         ),
         Text(
-          _incomingCallBloc.getSubtitle(context),
+          state.status == IncomingCallStatus.accepting
+              ? Translations.of(context).connecting
+              : _incomingCallBloc.getSubtitle(context),
           style:
               TextStyle(
                     fontSize: _typography.body?.regular?.fontSize,

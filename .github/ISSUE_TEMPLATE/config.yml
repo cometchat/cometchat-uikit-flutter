@@ -1,0 +1,24 @@
+# Routing for the CometChat Flutter UIKit repository.
+#
+# GitHub issues are a supported channel for defects and feature requests in the
+# UIKit itself. Account, billing and integration questions go to the help desk,
+# and security reports go to security@cometchat.com — never to a public issue.
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Documentation
+    url: https://www.cometchat.com/docs/ui-kit/flutter/v6/overview
+    about: Setup, configuration and usage guides for the Flutter UIKit.
+
+  - name: Account, billing or integration support
+    url: https://help.cometchat.com/hc/en-us
+    about: Questions about your CometChat account, plan, or a specific integration. These are answered faster by the support team than by this repository.
+
+  - name: Real-time support
+    url: https://app.cometchat.com/
+    about: Chat with the CometChat team from your dashboard.
+
+  - name: Report a security vulnerability
+    url: mailto:security@cometchat.com
+    about: Email security@cometchat.com. Please do not open a public issue for security reports.

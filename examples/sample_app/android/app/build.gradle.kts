@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("com.google.firebase.crashlytics")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -37,6 +38,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -56,25 +58,11 @@ android {
     }
 }
 
-// androidx.activity 1.13.0's ComponentActivity implements
-// androidx.core.app.PictureInPictureProvider, an interface that does not exist
-// in androidx.core 1.17.0 — the version this app resolves. The result is that
-// ComponentActivity (and therefore FragmentActivity) cannot be loaded at
-// runtime: the classes are in the APK, but resolving them throws
-// NoClassDefFoundError the moment the Calls SDK's React Native view touches
-// them, which kills the app on answering a call.
-//
-// master_app resolves activity 1.12.4 and is unaffected. Pin to the same
-// version. Gradle otherwise picks the highest, so this must be forced.
-configurations.all {
-    resolutionStrategy {
-        force("androidx.activity:activity:1.12.4")
-        force("androidx.activity:activity-ktx:1.12.4")
-    }
-}
-
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    androidTestImplementation("androidx.test:runner:1.2.0")
+    androidTestImplementation("androidx.test:rules:1.2.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
 }
 
 flutter {

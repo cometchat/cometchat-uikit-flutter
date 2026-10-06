@@ -511,6 +511,13 @@ class TranslationsJa extends Translations {
   String get actionPermissionDenied => 'この操作を実行する権限がありません。';
 
   @override
+  String get microphoneRequiredToAnswerCall => '通話に応答するには、マイクへのアクセスを許可してください。';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'ビデオ通話に応答するには、カメラとマイクへのアクセスを許可してください。';
+
+  @override
   String get pinSaveFailed => '更新できませんでした。もう一度お試しください。';
 
   @override
@@ -1451,4 +1458,85 @@ class TranslationsJa extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => '戻る';
+
+  @override
+  String get openInBrowser => 'ブラウザで開く';
+
+  @override
+  String get failedToLoadSticker => 'ステッカーを読み込めませんでした';
+
+  @override
+  String get enterDisplayText => '表示テキストを入力';
+
+  @override
+  String get clearSearch => '検索をクリア';
+
+  @override
+  String get done => '完了';
+
+  @override
+  String get download => 'ダウンロード';
+
+  @override
+  String get startRecording => '録音を開始';
+
+  @override
+  String get stopRecording => '録音を停止';
+
+  @override
+  String get pauseRecording => '録音を一時停止';
+
+  @override
+  String get deleteRecording => '録音を削除';
+
+  @override
+  String get recordVoiceMessage => '音声メッセージを録音';
+
+  @override
+  String get reorderOption => '選択肢を並べ替え';
+
+  @override
+  String get play => '再生';
+
+  @override
+  String get pause => '一時停止';
+
+  @override
+  String get next => '次へ';
+
+  @override
+  String get previous => '前へ';
+
+  @override
+  String get scrollToBottom => '一番下へスクロール';
+
+  @override
+  String get attachmentOptionsMenuOpened => '添付ファイルのオプションメニューを開きました';
+
+  @override
+  String get richTextFormattingToolbar => 'リッチテキスト書式設定ツールバー';
+
+  @override
+  String get closeFormattingToolbar => '書式設定ツールバーを閉じる';
+
+  @override
+  String get sendAudioMessage => '音声メッセージを送信';
+
+  @override
+  String get messageComposerAuxiliaryActions => 'メッセージ作成の補助操作';
+
+  @override
+  String get attachmentButton => '添付ファイルボタン';
+
+  @override
+  String get addAttachment => '添付ファイルを追加';
+
+  @override
+  String suggestionListWithItems(int count) => '候補リスト、$count 件';
+
+  @override
+  String messageFrom(String sender) => '$senderさんからのメッセージ';
 }

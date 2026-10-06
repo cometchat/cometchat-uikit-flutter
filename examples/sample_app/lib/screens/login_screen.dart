@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
 import '../models/user_model.dart';
 import '../services/api_services.dart';
+import '../utils/app_uikit_settings.dart';
 import '../utils/ui_utils.dart';
 import 'home_screen.dart';
 import 'app_credentials_screen.dart';
@@ -55,9 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      User? existingUser = await CometChat.getLoggedInUser();
+      User? existingUser = await CometChatUIKit.getLoggedInUser();
       if (existingUser != null && existingUser.uid != userId) {
-        await CometChat.logout(
+        // Through the UI Kit, not CometChat.logout: its logout also stops
+        // call handling for the previous user and logs the Calls SDK out.
+        await CometChatUIKit.logout(
           onSuccess: (_) => debugPrint("Logout Successful"),
           onError: (_) => debugPrint("Logout failed"),
         );
@@ -66,9 +68,14 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      await CometChatUIKit.login(userId, onSuccess: (User loggedInUser) async {
-        debugPrint("Login Successful: $loggedInUser");
-        await _waitForCallsSdk();
+      // With enableCalls, onSuccess comes once the UI Kit has set up the
+      // Calls SDK for this user, within its own time limit.
+      await CometChatUIKit.login(userId, onSuccess: (User loggedInUser) {
+        // Never log the User object itself: its toString() carries the
+        // live authToken and a signed jwt, and CI copies the raw test log
+        // into a published gallery. uid and name are enough to debug a
+        // login.
+        debugPrint("Login Successful: ${loggedInUser.uid} (${loggedInUser.name})");
         if (mounted) _navigateToHome();
       }, onError: (CometChatException e) {
         debugPrint("Login failed: ${e.message}");
@@ -95,10 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
             kIsWeb ? const ResponsiveHomeScreen() : const HomeScreen(),
       ),
     );
-  }
-
-  Future<void> _waitForCallsSdk() async {
-    await CallEventService.instance.waitForCallsSdk();
   }
 
   @override
@@ -582,7 +585,11 @@ class _LoginScreenState extends State<LoginScreen> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AppCredentialsScreen()),
+            MaterialPageRoute(
+              builder: (_) => const AppCredentialsScreen(
+                buildSettings: buildAppUIKitSettings,
+              ),
+            ),
           );
         },
         child: Text.rich(

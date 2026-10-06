@@ -527,6 +527,14 @@ class TranslationsPt extends Translations {
       'Você não tem permissão para realizar esta ação.';
 
   @override
+  String get microphoneRequiredToAnswerCall =>
+      'Permita o acesso ao microfone para atender chamadas.';
+
+  @override
+  String get cameraAndMicrophoneRequiredToAnswerCall =>
+      'Permita o acesso à câmera e ao microfone para atender chamadas de vídeo.';
+
+  @override
   String get pinSaveFailed => 'Não foi possível atualizar. Tente novamente.';
 
   @override
@@ -1507,4 +1515,87 @@ class TranslationsPt extends Translations {
 
   @override
   String get harassment => "Harassment";
+
+  @override
+  String get back => 'Voltar';
+
+  @override
+  String get openInBrowser => 'Abrir no navegador';
+
+  @override
+  String get failedToLoadSticker => 'Falha ao carregar o adesivo';
+
+  @override
+  String get enterDisplayText => 'Introduza o texto a apresentar';
+
+  @override
+  String get clearSearch => 'Limpar pesquisa';
+
+  @override
+  String get done => 'Concluído';
+
+  @override
+  String get download => 'Transferir';
+
+  @override
+  String get startRecording => 'Iniciar gravação';
+
+  @override
+  String get stopRecording => 'Parar gravação';
+
+  @override
+  String get pauseRecording => 'Pausar gravação';
+
+  @override
+  String get deleteRecording => 'Eliminar gravação';
+
+  @override
+  String get recordVoiceMessage => 'Gravar mensagem de voz';
+
+  @override
+  String get reorderOption => 'Reordenar opção';
+
+  @override
+  String get play => 'Reproduzir';
+
+  @override
+  String get pause => 'Pausar';
+
+  @override
+  String get next => 'Próximo';
+
+  @override
+  String get previous => 'Anterior';
+
+  @override
+  String get scrollToBottom => 'Rolar para o final';
+
+  @override
+  String get attachmentOptionsMenuOpened => 'Menu de opções de anexo aberto';
+
+  @override
+  String get richTextFormattingToolbar => 'Barra de formatação de texto';
+
+  @override
+  String get closeFormattingToolbar => 'Fechar a barra de formatação';
+
+  @override
+  String get sendAudioMessage => 'Enviar mensagem de áudio';
+
+  @override
+  String get messageComposerAuxiliaryActions =>
+      'Ações auxiliares do compositor de mensagens';
+
+  @override
+  String get attachmentButton => 'Botão de anexos';
+
+  @override
+  String get addAttachment => 'Adicionar anexo';
+
+  @override
+  String suggestionListWithItems(int count) =>
+      'Lista de sugestões com $count itens';
+
+  @override
+  String messageFrom(String sender) => 'Mensagem de $sender';
 }

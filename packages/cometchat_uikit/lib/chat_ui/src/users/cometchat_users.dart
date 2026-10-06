@@ -28,6 +28,8 @@ class CometChatUsers extends StatefulWidget {
     this.onBack,
     this.onItemTap,
     this.onItemLongPress,
+    this.setOptions,
+    this.addOptions,
     this.submitIcon,
     this.hideAppbar = false,
     this.height,
@@ -72,6 +74,27 @@ class CometChatUsers extends StatefulWidget {
   final VoidCallback? onBack;
   final Function(BuildContext context, User)? onItemTap;
   final Function(BuildContext context, User)? onItemLongPress;
+
+  /// [setOptions] sets the list of actions a long press on a user offers.
+  /// When it is set, [addOptions] is ignored, as on Android. Starting a
+  /// long-press selection comes first, then [onItemLongPress], when set,
+  /// takes the long press instead.
+  final List<CometChatOption>? Function(
+    User user,
+    UsersBloc bloc,
+    BuildContext context,
+  )?
+  setOptions;
+
+  /// [addOptions] adds to the actions a long press on a user offers. The
+  /// list has no built-in entries, so on its own it behaves as [setOptions]
+  /// does; with [setOptions] set it is not used.
+  final List<CometChatOption>? Function(
+    User user,
+    UsersBloc bloc,
+    BuildContext context,
+  )?
+  addOptions;
   final Widget? submitIcon;
   final bool? hideAppbar;
   final double? height;
@@ -166,71 +189,112 @@ class _CometChatUsersState extends State<CometChatUsers>
     super.dispose();
   }
 
+  /// Reports a state transition to the caller's callbacks exactly once per
+  /// entry into that state. ENG-39104: `onLoad`, `onEmpty` and `onError` were
+  /// declared, documented and never read — the list widget does not even take
+  /// them — so an integrator's "no results yet" affordance never ran.
+  ///
+  /// Keyed on the state's runtime type rather than the state itself: a loaded
+  /// state that gains a user is still `loaded`, and re-reporting on every such
+  /// rebuild would turn `onLoad` into a per-frame callback.
+  Type? _lastReportedState;
+
+  void _reportUsersState(UsersState state) {
+    if (state.runtimeType == _lastReportedState) return;
+    _lastReportedState = state.runtimeType;
+
+    if (state is UsersError) {
+      widget.onError?.call(Exception(state.message));
+    } else if (state is UsersEmpty) {
+      widget.onEmpty?.call();
+    } else if (state is UsersLoaded) {
+      if (state.users.isEmpty) {
+        widget.onEmpty?.call();
+      } else {
+        widget.onLoad?.call(state.users);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Required for AutomaticKeepAliveClientMixin
     super.build(context);
 
     return RepaintBoundary(
-      child: BlocProvider.value(
-        value: usersBloc,
-        child: ClipRRect(
-          borderRadius: style.borderRadius ?? BorderRadius.circular(0),
-          child: CometChatListBase(
-            titleView: _buildTitleView(),
-            titleSpacing: widget.showBackButton ? 0 : 16,
-            hideSearch: widget.hideSearch,
-            backIcon: _buildBackIcon(),
-            placeholder: widget.searchPlaceholder,
-            showBackButton: widget.showBackButton,
-            searchBoxIcon: widget.searchBoxIcon,
-            onSearch: (keyword) => usersBloc.add(SearchUsers(keyword)),
-            hideAppBar: widget.hideAppbar,
-            searchText: widget.searchKeyword,
-            searchPadding: EdgeInsets.symmetric(
-              horizontal: spacing.padding4 ?? 0,
-              vertical: spacing.padding3 ?? 0,
-            ),
-            searchContentPadding: EdgeInsets.symmetric(
-              horizontal: spacing.padding3 ?? 0,
-              vertical: spacing.padding2 ?? 0,
-            ),
-            searchBoxHeight: 40,
-            menuOptions: [
-              if (widget.appBarOptions != null)
-                ...widget.appBarOptions!(context),
-              _getSelectionWidget(),
-            ],
-            onBack: widget.onBack,
-            style: _buildListBaseStyle(),
-            container: UsersList(
-              usersBloc: usersBloc,
-              style: style,
-              colorPalette: colorPalette,
-              spacing: spacing,
-              typography: typography,
-              scrollController: widget.scrollController,
-              loadingStateView: widget.loadingStateView,
-              emptyStateView: widget.emptyStateView,
-              errorStateView: widget.errorStateView,
-              listItemView: widget.listItemView,
-              subtitleView: widget.subtitleView,
-              trailingView: widget.trailingView,
-              leadingView: widget.leadingView,
-              titleView: widget.titleView,
-              usersStatusVisibility: widget.usersStatusVisibility,
-              selectionMode: widget.selectionMode,
-              activateSelection: widget.activateSelection,
-              onItemTap: widget.onItemTap,
-              onItemLongPress: widget.onItemLongPress,
-              stickyHeaderVisibility: widget.stickyHeaderVisibility,
-              avatarStyle: avatarStyle,
-              statusIndicatorStyle: statusIndicatorStyle,
+      child: BlocListener<UsersBloc, UsersState>(
+        bloc: usersBloc,
+        listener: (context, state) => _reportUsersState(state),
+        child: BlocProvider.value(
+          value: usersBloc,
+          child: ClipRRect(
+            borderRadius: style.borderRadius ?? BorderRadius.circular(0),
+            child: CometChatListBase(
+              titleView: _buildTitleView(),
+              titleSpacing: widget.showBackButton ? 0 : 16,
+              hideSearch: widget.hideSearch,
+              backIcon: _buildBackIcon(),
+              placeholder: widget.searchPlaceholder,
+              showBackButton: widget.showBackButton,
+              searchBoxIcon: widget.searchBoxIcon,
+              onSearch: (keyword) => usersBloc.add(SearchUsers(keyword)),
+              hideAppBar: widget.hideAppbar,
+              searchText: widget.searchKeyword,
+              searchPadding: EdgeInsets.symmetric(
+                horizontal: spacing.padding4 ?? 0,
+                vertical: spacing.padding3 ?? 0,
+              ),
+              searchContentPadding: EdgeInsets.symmetric(
+                horizontal: spacing.padding3 ?? 0,
+                vertical: spacing.padding2 ?? 0,
+              ),
+              searchBoxHeight: 40,
+              menuOptions: [
+                if (widget.appBarOptions != null)
+                  ...widget.appBarOptions!(context),
+                _getSelectionWidget(),
+              ],
+              onBack: widget.onBack,
+              style: _buildListBaseStyle(),
+              container: UsersList(
+                usersBloc: usersBloc,
+                style: style,
+                colorPalette: colorPalette,
+                spacing: spacing,
+                typography: typography,
+                scrollController: widget.scrollController,
+                loadingStateView: widget.loadingStateView,
+                emptyStateView: widget.emptyStateView,
+                errorStateView: widget.errorStateView,
+                listItemView: widget.listItemView,
+                subtitleView: widget.subtitleView,
+                trailingView: widget.trailingView,
+                leadingView: widget.leadingView,
+                titleView: widget.titleView,
+                usersStatusVisibility: widget.usersStatusVisibility,
+                selectionMode: widget.selectionMode,
+                activateSelection: widget.activateSelection,
+                onItemTap: widget.onItemTap,
+                onItemLongPress: widget.onItemLongPress,
+                options: widget.setOptions == null && widget.addOptions == null
+                    ? null
+                    : _longPressOptions,
+                stickyHeaderVisibility: widget.stickyHeaderVisibility,
+                avatarStyle: avatarStyle,
+                statusIndicatorStyle: statusIndicatorStyle,
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// The long-press menu for [user]: [CometChatUsers.setOptions] when set,
+  /// else [CometChatUsers.addOptions] — Android's CometChatUsers rule.
+  List<CometChatOption> _longPressOptions(BuildContext context, User user) {
+    final build = widget.setOptions ?? widget.addOptions!;
+    return build(user, usersBloc, context) ?? const <CometChatOption>[];
   }
 
   Widget _buildTitleView() {
@@ -263,6 +327,7 @@ class _CometChatUsersState extends State<CometChatUsers>
             state is UsersLoaded && state.selectedUsers.isNotEmpty;
         return hasSelection
             ? IconButton(
+                tooltip: Translations.of(context).clearSearch,
                 onPressed: () => usersBloc.add(const ClearUserSelection()),
                 icon: Icon(
                   Icons.clear,
@@ -273,10 +338,14 @@ class _CometChatUsersState extends State<CometChatUsers>
               )
             : (widget.backButton ??
                   IconButton(
+                    tooltip: Translations.of(context).back,
                     onPressed: widget.onBack,
                     icon: Icon(
                       Icons.arrow_back,
-                      color: colorPalette.iconPrimary,
+                      // Resolve the style before the palette: ListBase applies
+                      // backIconTint as IconButton.color, which cannot reach an
+                      // icon that sets its own. ENG-39105.
+                      color: style.backIconColor ?? colorPalette.iconPrimary,
                       size: 24,
                     ),
                     padding: EdgeInsets.zero,
@@ -336,6 +405,7 @@ class _CometChatUsersState extends State<CometChatUsers>
       builder: (context, state) {
         if (state is UsersLoaded && state.selectedUsers.isNotEmpty) {
           return IconButton(
+            tooltip: Translations.of(context).done,
             onPressed: () {
               final selectedIds = state.selectedUsers;
               final selectedUsers = state.users

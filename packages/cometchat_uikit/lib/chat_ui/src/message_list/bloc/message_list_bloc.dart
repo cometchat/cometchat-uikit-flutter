@@ -8,6 +8,8 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart'
         CometChatMessageEventListener,
         CometChatGroupEvents,
         CometChatGroupEventListener,
+        CometChatCallEvents,
+        CometChatCallEventListener,
         CometChatUIKitHelper,
         CometChatUIKit,
         CometChatUIEvents,
@@ -15,7 +17,8 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart'
         AIConstants,
         StreamMessage,
         CometChatStreamService,
-        CometChatStreamCallBackEvents;
+        CometChatStreamCallBackEvents,
+        Sound;
 
 import 'message_list_event.dart';
 import 'message_list_state.dart';
@@ -31,8 +34,9 @@ import '../domain/usecases/get_logged_in_user_usecase.dart';
 import '../../../../shared_ui/src/clean_architecture/core/constants/enums.dart'
     as core_enums;
 import '../../../../shared_ui/src/constants/ui_kit_constants.dart'
-    show MessageCategoryConstants;
+    show MessageCategoryConstants, UpdateSettingsConstant;
 import '../../shared/list_base.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 // ============================================================================
 // Message Receipt Status
@@ -149,6 +153,13 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   /// Whether to disable sound for incoming messages
   final bool disableSoundForMessages;
 
+  /// Asset path of the sound played for an incoming message, in place of the
+  /// kit's own. Ignored when [disableSoundForMessages] is true.
+  final String? customSoundForMessages;
+
+  /// Package holding [customSoundForMessages], when it ships in another one.
+  final String? customSoundForMessagePackage;
+
   /// Whether to disable read/delivery receipts
   final bool disableReceipts;
 
@@ -260,6 +271,9 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   /// Fires when the logged-in user performs group actions.
   late final String _uiGroupListenerId;
 
+  /// Unique ID for UI call events listener (ccOutgoingCall, ccCallRejected, …)
+  late final String _uiCallListenerId;
+
   // ============================================================
   // PAGINATION STATE
   // ============================================================
@@ -337,6 +351,8 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     this.categories,
     this.hideDeletedMessages = false,
     this.disableSoundForMessages = false,
+    this.customSoundForMessages,
+    this.customSoundForMessagePackage,
     this.disableReceipts = false,
     this.hideReplies = true,
     this.disableSDKListeners = false,
@@ -368,6 +384,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     _connectionListenerId = 'message_list_bloc_connection_$timestamp';
     _uiMessageListenerId = 'message_list_bloc_ui_message_$timestamp';
     _uiGroupListenerId = 'message_list_bloc_ui_group_$timestamp';
+    _uiCallListenerId = 'message_list_bloc_ui_call_$timestamp';
     _aiAssistantListenerId = 'message_list_bloc_ai_$timestamp';
 
     // Register event handlers (implementations in Task 9)
@@ -909,6 +926,13 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         onCCGroupMemberBannedCallback: _handleCCGroupMemberBanned,
       ),
     );
+
+    // Register UI call events listener — the calls this device acted on
+    // itself, which the SDK never reports back to it.
+    CometChatCallEvents.addCallEventsListener(
+      _uiCallListenerId,
+      _MessageListUICallEventListener(onCallCallback: _handleCCCallEvent),
+    );
   }
 
   // ============================================================
@@ -1327,6 +1351,20 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   ///
   /// Dispatches MessageReceived event for call messages that belong
   /// to the current conversation.
+  /// Handle a UI Kit call event (this device initiated, accepted, declined
+  /// or ended a call).
+  ///
+  /// Goes through [MessageReceived], which updates the call's bubble by id if
+  /// it is already on screen and adds it otherwise.
+  void _handleCCCallEvent(Call call) {
+    if (isClosed) return;
+    // The events carry the Call the SDK returned for the action, which is not
+    // always stamped with a category; without it the bubble would not be
+    // recognised as a call.
+    if (call.category.isEmpty) call.category = MessageCategoryConstants.call;
+    add(MessageReceived(call));
+  }
+
   void _handleCallMessage(Call call) {
     // Call messages are BaseMessage subclass, dispatch as received
     add(MessageReceived(call));
@@ -1415,7 +1453,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   /// The CometChatStreamBubble widget handles word-by-word rendering.
   void _handleAIAssistantEvent(AIAssistantBaseEvent event) {
     if (isClosed) return;
-    debugPrint(
+    ccLog(
       '[MessageListBloc] AI event received: type=${event.type}, id=${event.id}',
     );
     final runId = event.id;
@@ -2589,6 +2627,27 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     }
   }
 
+  /// Plays the incoming-message sound for a message from someone else in this
+  /// conversation. The conversations list stays silent for the open
+  /// conversation and leaves the sound to this list.
+  ///
+  /// Silent when [disableSoundForMessages] is on, and for custom messages that
+  /// don't count as unread — the same rule the conversations list applies.
+  void _playIncomingMessageSound(BaseMessage message) {
+    if (disableSoundForMessages) return;
+    if (message.sender?.uid == _loggedInUser?.uid) return;
+    if (message is CustomMessage &&
+        message.metadata?[UpdateSettingsConstant.incrementUnreadCount] !=
+            true) {
+      return;
+    }
+    CometChatUIKit.soundManager.play(
+      sound: Sound.incomingMessage,
+      customSound: customSoundForMessages,
+      packageName: customSoundForMessagePackage,
+    );
+  }
+
   /// Handle MessageReceived event
   ///
   /// Adds a received message to the list if it belongs to the current
@@ -2601,7 +2660,12 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   ) async {
     final message = event.message;
 
-    debugPrint(
+    // Nothing is shown until LoadMessages runs, and its fetch includes anything
+    // delivered before then — so there is nothing to merge into yet. Accepting
+    // the message here left a list holding messages with status `initial`.
+    if (state.status == MessageListStatus.initial) return;
+
+    ccLog(
       '[MessageListBloc] Message received: id=${message.id}, '
       'category=${message.category}, type=${message.type}, '
       'sender=${message.sender?.uid}, '
@@ -2637,8 +2701,11 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     }
 
     // Check if message belongs to current conversation
-    if (!_isMessageForCurrentConversation(message)) {
-      debugPrint(
+    final belongsHere = message is Call
+        ? _isCallForCurrentConversation(message)
+        : _isMessageForCurrentConversation(message);
+    if (!belongsHere) {
+      ccLog(
         '[MessageListBloc] Message FILTERED: not for current conversation. '
         'message.conversationId=${message.conversationId}',
       );
@@ -2668,6 +2735,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
           // Skip adding to list if hideReplies is true
           if (hideReplies) {
+            _playIncomingMessageSound(message);
             return;
           }
         }
@@ -2682,7 +2750,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Check message type/category filters
     if (!_passesTypeAndCategoryFilters(message)) {
-      debugPrint(
+      ccLog(
         '[MessageListBloc] Message FILTERED: type/category filter failed. '
         'category=${message.category}, type=${message.type}, '
         'allowedCategories=$categories',
@@ -2700,7 +2768,16 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         // If the incoming message is a custom/interactive message with updated
         // metadata (e.g. poll vote, form submission), update the existing
         // message in-place.
-        if (message is CustomMessage || message is InteractiveMessage) {
+        //
+        // Calls too. A call keeps one id for its whole life while its status
+        // moves on — initiated, then declined / cancelled / answered / ended —
+        // and each step arrives as the same id. Dropping it as a duplicate
+        // froze the bubble at its first status, so a declined call never read
+        // as declined (ENG-39486). Kotlin updates call bubbles by id for the
+        // same reason.
+        if (message is CustomMessage ||
+            message is InteractiveMessage ||
+            message is Call) {
           final oldMessage = state.messages[existingIndex];
           final intercepted = onBeforeMessageUpdated(oldMessage, message);
           if (intercepted == null) return;
@@ -2728,10 +2805,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       if (message.muid.isNotEmpty && existing.muid == message.muid) return;
     }
 
+    // Sound before the scrolled-up check: a message the list holds back until
+    // the user returns to the bottom has still arrived.
+    _playIncomingMessageSound(message);
+
     // If user has scrolled up (hasMoreNewer = true), don't append new messages
     // This prevents messages from appearing while user is viewing older messages
     if (state.hasMoreNewer) {
-      debugPrint(
+      ccLog(
         '[MessageListBloc] Message FILTERED: hasMoreNewer=true (user scrolled up)',
       );
       return;
@@ -2745,7 +2826,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     final insertIndex = state.messages.length;
     final updatedMessages = [...state.messages, intercepted];
 
-    debugPrint(
+    ccLog(
       '[MessageListBloc] Adding message to list: id=${intercepted.id}, '
       'category=${intercepted.category}, type=${intercepted.type}, '
       'insertIndex=$insertIndex',
@@ -2871,7 +2952,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     Emitter<MessageListState> emit,
   ) async {
     final deletedMessage = event.message;
-    debugPrint(
+    ccLog(
       '🗑 [delete] event for id=${deletedMessage.id} '
       'muid=${deletedMessage.muid} '
       'batchId=${deletedMessage.metadata?['batchId']}',
@@ -3373,6 +3454,32 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     return false;
   }
 
+  /// Whether [call] belongs to this conversation.
+  ///
+  /// A [Call] is matched on its initiator rather than [BaseMessage.sender]:
+  /// the SDK only fills `sender` when the server payload carries one, and the
+  /// Call objects handed back by initiate/reject/end — which is what the UI Kit
+  /// call events carry — may not. Mirrors Kotlin's `isCallForCurrentChat`,
+  /// falling back to the generic check so nothing that matched before stops
+  /// matching.
+  bool _isCallForCurrentConversation(Call call) {
+    if (user != null) {
+      final initiator = call.callInitiator;
+      final initiatorUid = initiator is User ? initiator.uid : call.sender?.uid;
+      final loggedInUid =
+          state.loggedInUser?.uid ?? CometChatUIKit.loggedInUser?.uid;
+      final targetUid = user!.uid;
+      if (call.receiverUid == targetUid) return true;
+      if (initiatorUid == targetUid &&
+          (loggedInUid == null || call.receiverUid == loggedInUid)) {
+        return true;
+      }
+    } else if (group != null) {
+      if (call.receiverUid == group!.guid) return true;
+    }
+    return _isMessageForCurrentConversation(call);
+  }
+
   /// Check if a message passes type and category filters
   bool _passesTypeAndCategoryFilters(BaseMessage message) {
     // Check type filter
@@ -3672,6 +3779,9 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Remove UI group events listener
     CometChatGroupEvents.removeGroupsListener(_uiGroupListenerId);
+
+    // Remove UI call events listener
+    CometChatCallEvents.removeCallEventsListener(_uiCallListenerId);
 
     // Dispose all receipt notifiers (by ID)
     for (final notifier in _receiptNotifiers.values) {
@@ -4371,7 +4481,7 @@ class _MessageListMessageListener with MessageListener {
 
   @override
   void onTextMessageReceived(TextMessage textMessage) {
-    debugPrint(
+    ccLog(
       '[MessageListener] onTextMessageReceived: id=${textMessage.id}, sender=${textMessage.sender?.uid}',
     );
     onTextMessageReceivedCallback(textMessage);
@@ -4379,7 +4489,7 @@ class _MessageListMessageListener with MessageListener {
 
   @override
   void onMediaMessageReceived(MediaMessage mediaMessage) {
-    debugPrint(
+    ccLog(
       '[MessageListener] onMediaMessageReceived: id=${mediaMessage.id}, type=${mediaMessage.type}, sender=${mediaMessage.sender?.uid}',
     );
     onMediaMessageReceivedCallback(mediaMessage);
@@ -4387,7 +4497,7 @@ class _MessageListMessageListener with MessageListener {
 
   @override
   void onCustomMessageReceived(CustomMessage customMessage) {
-    debugPrint(
+    ccLog(
       '[MessageListener] onCustomMessageReceived: id=${customMessage.id}, type=${customMessage.type}, sender=${customMessage.sender?.uid}',
     );
     onCustomMessageReceivedCallback(customMessage);
@@ -4395,7 +4505,7 @@ class _MessageListMessageListener with MessageListener {
 
   @override
   void onInteractiveMessageReceived(InteractiveMessage interactiveMessage) {
-    debugPrint(
+    ccLog(
       '[MessageListener] onInteractiveMessageReceived: id=${interactiveMessage.id}, type=${interactiveMessage.type}, sender=${interactiveMessage.sender?.uid}',
     );
     onInteractiveMessageReceivedCallback(interactiveMessage);
@@ -4403,7 +4513,7 @@ class _MessageListMessageListener with MessageListener {
 
   @override
   void onCardMessageReceived(CardMessage cardMessage) {
-    debugPrint(
+    ccLog(
       '[MessageListener] onCardMessageReceived: id=${cardMessage.id}, '
       'category=${cardMessage.category}, type=${cardMessage.type}, '
       'hasCard=${cardMessage.getCard() != null}, '
@@ -4415,7 +4525,7 @@ class _MessageListMessageListener with MessageListener {
 
   @override
   void onAIAssistantMessageReceived(AIAssistantMessage aiAssistantMessage) {
-    debugPrint(
+    ccLog(
       '[MessageListener] onAIAssistantMessageReceived: id=${aiAssistantMessage.id}, '
       'runId=${aiAssistantMessage.runId}, '
       'hasElements=${aiAssistantMessage.getElements()?.isNotEmpty ?? false}, '
@@ -4776,6 +4886,32 @@ class _MessageListUIGroupEventListener with CometChatGroupEventListener {
   ) {
     onCCGroupMemberBannedCallback(message, bannedUser, bannedBy, bannedFrom);
   }
+}
+
+/// Forwards the UI Kit's own call events to the message list bloc.
+///
+/// The SDK tells a device about calls other people act on, but never about
+/// what this device did itself: the caller is not told about their own
+/// initiate or cancel, and the callee is not told about their own decline.
+/// Those only exist as UI Kit events, so without this the person who declined
+/// never saw the call in their chat at all (ENG-39486). Kotlin's message list
+/// listens to the same four events.
+class _MessageListUICallEventListener with CometChatCallEventListener {
+  final void Function(Call) onCallCallback;
+
+  _MessageListUICallEventListener({required this.onCallCallback});
+
+  @override
+  void ccOutgoingCall(Call call) => onCallCallback(call);
+
+  @override
+  void ccCallAccepted(Call call) => onCallCallback(call);
+
+  @override
+  void ccCallRejected(Call call) => onCallCallback(call);
+
+  @override
+  void ccCallEnded(Call call) => onCallCallback(call);
 }
 
 // ============================================================================

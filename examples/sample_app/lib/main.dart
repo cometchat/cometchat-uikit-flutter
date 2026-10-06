@@ -1,122 +1,55 @@
 import 'dart:async';
 
+import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
+import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
-import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
 import 'package:sample_app/app_credentials.dart';
+import 'package:sample_app/screens/app_credentials_screen.dart';
+import 'package:sample_app/screens/guard_screen.dart';
 import 'package:sample_app/screens/home_screen.dart';
 import 'package:sample_app/screens/responsive_home_screen.dart';
-import 'package:sample_app/screens/guard_screen.dart';
-import 'package:sample_app/screens/app_credentials_screen.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:sample_app/utils/app_uikit_settings.dart';
+import 'package:sample_app/utils/call_error_snackbar.dart';
 
+/// Entry point for the public sample app.
+///
+/// WHY THIS FILE IS TRACKED RATHER THAN GENERATED
+///
+/// The mirror used to derive this file from master_app/lib/main.dart by
+/// deleting every line that mentioned a push/Firebase/VoIP identifier. That
+/// cannot work: those identifiers appear inside a ternary's false branch, in a
+/// variable whose later uses remain, and on lines that open a block. Deleting
+/// the line leaves a dangling `?` with no `:`, an undefined variable, and an
+/// orphaned closing brace — 33 analyzer errors, none of which a cleverer regex
+/// would avoid, because the fix is to remove the surrounding statement.
+///
+/// So this is a hand-maintained public counterpart instead. It is reviewable,
+/// it compiles, and release-to-public.yml's build gate checks it on every run.
+/// When master_app's main.dart changes in a way that matters to the sample,
+/// change this one too.
+///
+/// WHAT IT DELIBERATELY OMITS versus master_app
+///
+///   * Firebase init and Crashlytics — the sample ships no Firebase config.
+///   * PlatformServices — mobile push, VoIP/CallKit and the cold-start
+///     "accept a call answered from the lock screen" path. That whole feature
+///     needs native set-up a sample cannot assume.
+///   * The staging host switch.
+///
+/// WHAT IT KEEPS
+///
+///   * Credentials entered at runtime, gated by [AppCredentialsScreen].
+///   * Cached-session validation, which is the subtle part worth showing.
+///   * Responsive routing: split-pane on web/desktop, bottom-nav on mobile.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load credentials from SharedPreferences (sample apps use this;
-  // master_app falls back to hardcoded defaults)
+  // Before the first frame, so it is already known whether the credentials
+  // screen is needed.
   await AppCredentials.loadSavedCredentials();
 
-  // Android 14+ (targetSdk 34+) requires RECORD_AUDIO and CAMERA to be
-  // granted at runtime BEFORE the Calls SDK plugin registers its
-  // OngoingCallService (which declares FGS types microphone|camera).
-  // If a queued call push is delivered right after SDK init, the plugin
-  // auto-starts the service and Android throws SecurityException if
-  // either permission is missing — crashing the app before any
-  // Dart-level guard can run. We MUST gate all SDK init on both
-  // permissions being granted.
-  //
-  // Strategy:
-  //   1. Request mic + camera.
-  //   2. If both granted, continue to SDK init.
-  //   3. If denied once, request again (Android re-prompts automatically).
-  //   4. If permanentlyDenied, jump the user to App Settings and wait for
-  //      them to return; re-check status on resume.
-  //   5. Only when both are granted do we init Firebase / VoIP / CometChat.
-  //
-  // Still on the old (pre-crash) path if both already granted: request()
-  // returns `granted` immediately with no UI.
-  bool callPermsGranted = true;
-  if (!kIsWeb) {
-    callPermsGranted = await _ensureCallPermissions();
-  }
-
-  // Only initialise the push stack when call perms are granted. If the
-  // user is still denying, skipping FCM/VoIP prevents the plugin from
-  // ever receiving a call push that would try to start its FGS and
-  // crash us. The app is still usable for messaging; call features
-  // simply stay inert until perms are granted on a later launch.
-  if (!kIsWeb && callPermsGranted) {}
-
-  // Initialize Firebase (works on all platforms with proper config)
-
-  // Crashlytics — mobile only
-
-  // Share the navigator key with CometChat's call overlay system
-
   runApp(const BlocSampleApp());
-}
-
-/// Ensure mic + camera are granted before we init any part of CometChat.
-///
-/// Android 14+ FGS rule: OngoingCallService declares `microphone|camera`
-/// FGS types, and the OS throws SecurityException at startForeground()
-/// if the matching runtime perms aren't granted. Because the plugin can
-/// auto-start that service in response to a push that arrives right
-/// after CometChat init, we MUST have these granted before SDK init.
-///
-/// Returns `true` if both perms are granted at the end of the flow,
-/// `false` otherwise. Callers use this to decide whether it is safe
-/// to bring up FCM / VoIP / the Calls SDK on this launch.
-///
-/// Behaviour:
-/// - Already granted → returns true immediately (no UI).
-/// - First deny → prompts again once.
-/// - permanentlyDenied → opens system Settings. Once the user returns,
-///   we re-check status. We keep looping while any deny is recoverable.
-/// - If user chooses to keep denying from Settings, we give up after a
-///   few tries and return false. The app stays usable for messaging;
-///   calling features stay inert until a future launch where perms get
-///   granted. No crash possible because FCM/VoIP never initialise.
-Future<bool> _ensureCallPermissions() async {
-  // Cheap path: already granted.
-  final initialMic = await Permission.microphone.status;
-  final initialCam = await Permission.camera.status;
-  if (initialMic.isGranted && initialCam.isGranted) {
-    return true;
-  }
-
-  // Try prompting up to 3 times total. Each iteration asks for whichever
-  // perm is not yet granted; if a perm is permanentlyDenied we send the
-  // user to Settings and wait for them to return.
-  for (var attempt = 0; attempt < 3; attempt++) {
-    final micStatus = await Permission.microphone.status;
-    final camStatus = await Permission.camera.status;
-    if (micStatus.isGranted && camStatus.isGranted) return true;
-
-    final needsSettings =
-        micStatus.isPermanentlyDenied || camStatus.isPermanentlyDenied;
-
-    if (needsSettings) {
-      // Opens the app's settings page; the returned Future resolves
-      // immediately (it just launches the intent). We then await a
-      // short delay and re-check on the next loop iteration so the
-      // user has time to toggle the switch and return.
-      await openAppSettings();
-      // Give the user time to act. If they take longer, the next
-      // call attempt (Layer 3 chokepoint) will re-prompt anyway.
-      await Future<void>.delayed(const Duration(seconds: 3));
-      continue;
-    }
-
-    // Normal deny — request again. Android shows the system dialog.
-    await [Permission.microphone, Permission.camera].request();
-  }
-
-  final finalMic = await Permission.microphone.status;
-  final finalCam = await Permission.camera.status;
-  return finalMic.isGranted && finalCam.isGranted;
 }
 
 class BlocSampleApp extends StatefulWidget {
@@ -137,49 +70,25 @@ class _BlocSampleAppState extends State<BlocSampleApp> {
     _initCometChat();
   }
 
-  Future<void> _initCallsSdk() async {
-    await CallEventService.instance.init(
-      configuration: CallingConfiguration(),
-    );
-  }
-
   Future<void> _initCometChat() async {
+    // Nothing to initialise until the user has supplied credentials. Mark the
+    // app initialised so [_buildHome] renders the credentials screen rather
+    // than spinning forever on the splash.
     if (!AppCredentials.hasValidCredentials) {
       if (mounted) setState(() => _isInitialized = true);
       return;
     }
+
     try {
-      final settingsBuilder = UIKitSettingsBuilder()
-        ..subscriptionType = CometChatSubscriptionType.allUsers
-        ..region = AppCredentials.region
-        ..autoEstablishSocketConnection = true
-        ..appId = AppCredentials.appId
-        ..authKey = AppCredentials.authKey;
-
-      // Calls SDK — all platforms (including web via JS bridge)
-      settingsBuilder
-        ..enableCalls = true
-        ..callingConfiguration = CallingConfiguration();
-
-      // Thread subscription is gated off by default in the UI Kit, because
-      // there is no server capability to detect it from. Opting in renders
-      // both follow/unfollow surfaces: the message action sheet entry and
-      // the bell on the threaded header.
-      settingsBuilder.enableThreadSubscription = true;
-
-      final uiKitSettings = settingsBuilder.build();
-
-      debugPrint('🚀 Initializing CometChat UIKit...');
+      // Shared with AppCredentialsScreen, so entering credentials there and
+      // starting cold both configure the same UI Kit.
+      final uiKitSettings = buildAppUIKitSettings();
 
       CometChatUIKit.init(
         uiKitSettings: uiKitSettings,
         onSuccess: (message) async {
-          debugPrint('✅ CometChat initialized: $message');
-
+          debugPrint('CometChat initialized: $message');
           final isValid = await _resolveCachedSession();
-          if (isValid) {
-            await _initCallsSdk();
-          }
           if (mounted) {
             setState(() {
               _isLoggedIn = isValid;
@@ -188,44 +97,32 @@ class _BlocSampleAppState extends State<BlocSampleApp> {
           }
         },
         onError: (error) {
-          debugPrint(
-              '❌ CometChat init error: ${error.code} - ${error.message}');
+          debugPrint('CometChat init error: ${error.code} - ${error.message}');
           if (mounted) setState(() => _error = error.toString());
         },
       );
     } catch (e, stackTrace) {
-      debugPrint('❌ Exception during CometChat init: $e');
-      debugPrint('   Stack trace: $stackTrace');
+      debugPrint('Exception during CometChat init: $e');
+      debugPrint('  $stackTrace');
       if (mounted) setState(() => _error = e.toString());
     }
   }
 
-  /// Resolve whether we have a valid, live session.
+  /// Resolve whether there is a valid, live session.
   ///
-  /// The UIKit / SDK can return a non-null `getLoggedInUser()` when all we
-  /// have is a cached user blob in the TokenStore (Keychain on iOS,
-  /// EncryptedSharedPreferences on Android). On iOS that cache survives
-  /// app uninstall, so a stale session from a previous install can make
-  /// the app route straight to HomeScreen with a dead auth token, after
-  /// which every authenticated API call fails with
+  /// `getLoggedInUser()` can return a user when all that exists is a cached
+  /// blob in the token store (Keychain on iOS, EncryptedSharedPreferences on
+  /// Android). On iOS that cache survives app uninstall, so a stale session
+  /// from a previous install would route straight to the home screen with a
+  /// dead auth token, after which every authenticated call fails with
   /// `AUTH_ERR_AUTH_TOKEN_NOT_FOUND`.
   ///
-  /// This method does a lightweight authenticated call
-  /// (`CometChat.getUser(uid)`) to prove the cached token is still good.
-  /// If the server rejects it with an auth-invalidated code, we tell the
-  /// UIKit to log out (which now clears local state cleanly even on
-  /// server error) and treat the user as logged out.
-  ///
-  /// Returns true only when:
-  /// 1. A cached user exists, AND
-  /// 2. An authenticated call succeeds OR fails with a non-auth reason
-  ///    (e.g. offline — we don't want to nuke the session just because
-  ///    the device is offline).
+  /// So prove the token with one lightweight authenticated call. Returns true
+  /// when a cached user exists AND that call either succeeds or fails for a
+  /// non-auth reason — being offline must not discard a good session.
   Future<bool> _resolveCachedSession() async {
     final cachedUser = await CometChatUIKit.getLoggedInUser();
-    if (cachedUser == null) {
-      return false;
-    }
+    if (cachedUser == null) return false;
 
     final completer = Completer<_SessionCheckResult>();
     await CometChat.getUser(
@@ -237,37 +134,31 @@ class _BlocSampleAppState extends State<BlocSampleApp> {
       },
       onError: (error) {
         if (completer.isCompleted) return;
-        if (_isAuthInvalidatedCode(error.code)) {
-          completer.complete(_SessionCheckResult.authInvalidated);
-        } else {
-          // Any other error (network, 5xx, etc.) — trust the cache and
-          // let normal retry flows handle it. Do NOT log the user out.
-          completer.complete(_SessionCheckResult.unknown);
-        }
+        completer.complete(_isAuthInvalidatedCode(error.code)
+            ? _SessionCheckResult.authInvalidated
+            : _SessionCheckResult.unknown);
       },
     );
 
-    final result = await completer.future;
-    switch (result) {
+    switch (await completer.future) {
       case _SessionCheckResult.valid:
         return true;
       case _SessionCheckResult.unknown:
-        debugPrint('⚠️ Session validation inconclusive (likely offline). '
-            'Trusting cached session.');
+        debugPrint('Session check inconclusive (likely offline). '
+            'Trusting the cached session.');
         return true;
       case _SessionCheckResult.authInvalidated:
-        debugPrint('⚠️ Cached auth token is no longer valid server-side. '
-            'Clearing local session and routing to login.');
+        debugPrint('Cached auth token is no longer valid server-side. '
+            'Clearing the local session.');
         await _forceLogout();
         return false;
     }
   }
 
-  /// Ask the UIKit to log out so local state (TokenStore + loggedInUser)
-  /// is cleaned up. Thanks to the SDK fix in AuthRepository.logout(),
-  /// this now succeeds even when the server has already revoked the
-  /// token — the repository treats auth-invalidated errors from the
-  /// logout API as "already logged out" and clears local state anyway.
+  /// Log out so the token store and cached user are cleared. Succeeds even
+  /// when the server has already revoked the token: the SDK treats an
+  /// auth-invalidated error from the logout API as "already logged out" and
+  /// clears local state anyway.
   Future<void> _forceLogout() async {
     final completer = Completer<void>();
     await CometChatUIKit.logout(
@@ -275,22 +166,18 @@ class _BlocSampleAppState extends State<BlocSampleApp> {
         if (!completer.isCompleted) completer.complete();
       },
       onError: (e) {
-        debugPrint('forceLogout onError (ignored): ${e.code} ${e.message}');
+        debugPrint('logout error (ignored): ${e.code} ${e.message}');
         if (!completer.isCompleted) completer.complete();
       },
     );
     await completer.future;
   }
 
-  /// Known server error codes indicating the auth token has been
-  /// invalidated. Kept in sync with `ErrorCodes.authInvalidatedCodes` in
-  /// the SDK. Declared locally because the app only depends on the
-  /// UIKit and does not import SDK internals directly.
+  /// Server codes meaning the auth token is gone. Declared locally because the
+  /// app depends on the UI Kit and does not import SDK internals.
   bool _isAuthInvalidatedCode(String? code) {
     if (code == null) return false;
-    const invalidated = <String>{
-      'AUTH_ERR_AUTH_TOKEN_NOT_FOUND',
-    };
+    const invalidated = <String>{'AUTH_ERR_AUTH_TOKEN_NOT_FOUND'};
     return invalidated.contains(code);
   }
 
@@ -299,12 +186,13 @@ class _BlocSampleAppState extends State<BlocSampleApp> {
     return MaterialApp(
       title: 'CometChat Sample App',
       debugShowCheckedModeBanner: false,
-      // The Kit's calling UI is presented through an Overlay obtained from
-      // this navigator key. Leaving it null on mobile meant
-      // CallScreenOverlay.show() had no Overlay to insert into: the call
-      // screen silently never appeared, and the stale un-inserted entry
-      // then crashed the next dismiss(). Needed on every platform.
+      // master_app swaps in its own key on mobile to drive the native
+      // call-notification flow. With no PlatformServices here, the UI Kit's
+      // own key is used on every platform, which is what its call overlay
+      // expects.
       navigatorKey: CallNavigationContext.navigatorKey,
+      // Call errors raised by the UI Kit's call components surface here.
+      scaffoldMessengerKey: appScaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
@@ -359,27 +247,26 @@ class _BlocSampleAppState extends State<BlocSampleApp> {
       );
     }
 
-    // Show credentials screen if not configured (sample apps with blank credentials)
+    // First launch, or credentials cleared: collect them before anything else.
     if (!AppCredentials.hasValidCredentials) {
-      return const AppCredentialsScreen();
+      return const AppCredentialsScreen(buildSettings: buildAppUIKitSettings);
     }
 
     if (!_isLoggedIn) return const GuardScreen();
 
-    // Web/desktop → responsive split-pane layout
-    // Mobile → standard bottom-nav with push navigation
+    // Web and desktop get the split-pane layout; mobile gets bottom-nav.
     return kIsWeb ? const ResponsiveHomeScreen() : const HomeScreen();
   }
 }
 
 enum _SessionCheckResult {
-  /// Server accepted the cached auth token.
+  /// The server accepted the cached auth token.
   valid,
 
-  /// Server explicitly told us the token is gone / revoked.
+  /// The server said the token is gone or revoked.
   authInvalidated,
 
-  /// Could not reach the server or got a non-auth error. Don't drop
-  /// the session for this — probably transient.
+  /// The server could not be reached, or returned a non-auth error. Do not
+  /// discard the session for this — it is probably transient.
   unknown,
 }

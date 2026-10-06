@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../../../cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/logging/cometchat_log.dart';
 
 /// [CometChatStickerKeyboard] renders a keyboard consisting of stickers provided by the extension
 ///
 /// ```dart
 /// CometChatStickerKeyboard(
-///   theme: CometChatTheme(),
 ///   onStickerTap: (sticker) {
 ///     print('Sticker tapped: ${sticker.id}');
 ///   },
-///   errorIcon: Icon(Icons.error),
 ///   emptyStateView: (context) => Center(child: Text('No stickers')),
 ///   errorStateView: (context) => Center(child: Text('Error fetching stickers')),
 ///   loadingStateView: (context) => Center(child: CircularProgressIndicator()),
-///   errorStateText: 'Failed to load stickers',
-///   emptyStateText: 'No stickers available',
-///   keyboardStyle: StickerKeyboardStyle(),
+///   style: CometChatStickerKeyboardStyle(
+///     separatorColor: Colors.black12,
+///   ),
 /// );
 ///
 /// ```
@@ -27,6 +26,7 @@ class CometChatStickerKeyboard extends StatefulWidget {
     this.errorStateView,
     this.emptyStateView,
     this.height,
+    this.style,
   });
 
   ///[onStickerTap] takes the call back function on tap of some sticker
@@ -44,6 +44,10 @@ class CometChatStickerKeyboard extends StatefulWidget {
   ///[height] optional height for the keyboard (defaults to 296 if not provided)
   ///Use this to match the system keyboard height for smooth transitions
   final double? height;
+
+  ///[style] styles the keyboard. Its non-null fields win over a
+  ///[CometChatStickerKeyboardStyle] registered on the theme.
+  final CometChatStickerKeyboardStyle? style;
 
   /// Default height for the sticker keyboard
   static const double defaultHeight = 296.0;
@@ -69,11 +73,13 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
       'GET',
       ExtensionUrls.stickers,
       null,
+      // The keyboard can close before the fetch answers.
       onSuccess: (Map<String, dynamic> map) {
-        _getStickers(map);
+        if (mounted) _getStickers(map);
       },
       onError: (CometChatException excep) {
-        debugPrint('$excep');
+        ccLog('$excep');
+        if (!mounted) return;
         isError = true;
         isLoading = false;
         setState(() {});
@@ -142,7 +148,9 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
 
     stickerSets = defaultStickersMap.keys.toList();
     stickerSets.sort();
-    selectedSet = stickerSets[0];
+    // No sets at all is the empty state. Indexing the empty list here threw,
+    // and the SDK routed that to onError, so the empty state was unreachable.
+    if (stickerSets.isNotEmpty) selectedSet = stickerSets[0];
     isLoading = false;
     setState(() {});
   }
@@ -152,6 +160,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
     CometChatColorPalette colorPalette,
     CometChatSpacing spacing,
     CometChatTypography typography,
+    CometChatStickerKeyboardStyle style,
     double keyboardHeight,
   ) {
     if (widget.errorStateView != null) {
@@ -160,7 +169,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
       return Container(
         height: keyboardHeight,
         width: double.infinity,
-        color: colorPalette.background1,
+        color: style.backgroundColor ?? colorPalette.background1,
         child: Padding(
           padding: EdgeInsets.symmetric(
             vertical: spacing.padding2 ?? 0,
@@ -187,12 +196,17 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                   child: Text(
                     "${Translations.of(context).looksLikeSomethingWrong} \n ${Translations.of(context).pleaseTryAgain}",
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: typography.body?.regular?.fontSize,
-                      fontWeight: typography.body?.regular?.fontWeight,
-                      fontFamily: typography.body?.regular?.fontFamily,
-                      color: colorPalette.textSecondary,
-                    ),
+                    style:
+                        TextStyle(
+                              fontSize: typography.body?.regular?.fontSize,
+                              fontWeight: typography.body?.regular?.fontWeight,
+                              fontFamily: typography.body?.regular?.fontFamily,
+                              color:
+                                  style.errorStateTextColor ??
+                                  colorPalette.textSecondary,
+                            )
+                            .merge(style.errorStateTextStyle)
+                            .copyWith(color: style.errorStateTextColor),
                   ),
                 ),
               ),
@@ -208,6 +222,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
     CometChatColorPalette colorPalette,
     CometChatSpacing spacing,
     CometChatTypography typography,
+    CometChatStickerKeyboardStyle style,
     double keyboardHeight,
   ) {
     if (widget.emptyStateView != null) {
@@ -216,7 +231,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
       return Container(
         height: keyboardHeight,
         width: double.infinity,
-        color: colorPalette.background1,
+        color: style.backgroundColor ?? colorPalette.background1,
         child: Padding(
           padding: EdgeInsets.symmetric(
             vertical: spacing.padding2 ?? 0,
@@ -258,23 +273,40 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                         child: Text(
                           "No Stickers Available",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: typography.heading4?.bold?.fontSize,
-                            fontWeight: typography.heading4?.bold?.fontWeight,
-                            fontFamily: typography.heading4?.bold?.fontFamily,
-                            color: colorPalette.textPrimary,
-                          ),
+                          style:
+                              TextStyle(
+                                    fontSize:
+                                        typography.heading4?.bold?.fontSize,
+                                    fontWeight:
+                                        typography.heading4?.bold?.fontWeight,
+                                    fontFamily:
+                                        typography.heading4?.bold?.fontFamily,
+                                    color:
+                                        style.emptyStateTextColor ??
+                                        colorPalette.textPrimary,
+                                  )
+                                  .merge(style.emptyStateTextStyle)
+                                  .copyWith(color: style.emptyStateTextColor),
                         ),
                       ),
                       Text(
                         "You don’t have any stickers yet.",
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: typography.body?.regular?.fontSize,
-                          fontWeight: typography.body?.regular?.fontWeight,
-                          fontFamily: typography.body?.regular?.fontFamily,
-                          color: colorPalette.textSecondary,
-                        ),
+                        style:
+                            TextStyle(
+                                  fontSize: typography.body?.regular?.fontSize,
+                                  fontWeight:
+                                      typography.body?.regular?.fontWeight,
+                                  fontFamily:
+                                      typography.body?.regular?.fontFamily,
+                                  color:
+                                      style.emptyStateSubTitleTextColor ??
+                                      colorPalette.textSecondary,
+                                )
+                                .merge(style.emptyStateSubTitleTextStyle)
+                                .copyWith(
+                                  color: style.emptyStateSubTitleTextColor,
+                                ),
                       ),
                     ],
                   ),
@@ -291,6 +323,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
     CometChatColorPalette colorPalette,
     CometChatSpacing spacing,
     CometChatTypography typography,
+    CometChatStickerKeyboardStyle style,
     double keyboardHeight,
   ) {
     if (widget.loadingStateView != null) {
@@ -299,7 +332,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
       return Container(
         height: keyboardHeight,
         width: double.infinity,
-        color: colorPalette.background1,
+        color: style.backgroundColor ?? colorPalette.background1,
         child: CometChatShimmerEffect(
           colorPalette: colorPalette,
           child: Padding(
@@ -357,10 +390,15 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
     final typography = CometChatThemeHelper.getTypography(context);
     final colorPalette = CometChatThemeHelper.getColorPalette(context);
     final spacing = CometChatThemeHelper.getSpacing(context);
+    final style = CometChatThemeHelper.getTheme<CometChatStickerKeyboardStyle>(
+      context: context,
+      defaultTheme: CometChatStickerKeyboardStyle.of,
+    ).merge(widget.style);
+    final backgroundColor = style.backgroundColor ?? colorPalette.background1;
     final keyboardHeight =
         widget.height ?? CometChatStickerKeyboard.defaultHeight;
     return Container(
-      decoration: BoxDecoration(color: colorPalette.background1),
+      decoration: BoxDecoration(color: backgroundColor),
       child:
           //---loading widget---
           isLoading
@@ -368,6 +406,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
               colorPalette,
               spacing,
               typography,
+              style,
               keyboardHeight,
             )
           //---on error---
@@ -377,6 +416,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
               colorPalette,
               spacing,
               typography,
+              style,
               keyboardHeight,
             )
           : stickerSets.isEmpty
@@ -385,6 +425,7 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
               colorPalette,
               spacing,
               typography,
+              style,
               keyboardHeight,
             )
           : Column(
@@ -432,33 +473,38 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                               itemBuilder: (context, index) {
                                 final sticker =
                                     defaultStickersMap[selectedSet]![index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    if (widget.onStickerTap != null) {
-                                      widget.onStickerTap!(sticker);
-                                    }
-                                  },
-                                  child: Image.network(
-                                    sticker.stickerUrl,
-                                    loadingBuilder:
-                                        (context, child, loadingProgress) {
-                                          return loadingProgress == null
-                                              ? child
-                                              : Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        color: colorPalette
-                                                            .iconPrimary,
-                                                      ),
-                                                );
-                                        },
-                                    errorBuilder:
-                                        (context, object, stackTrace) {
-                                          return Image.asset(
-                                            AssetConstants.imagePlaceholder,
-                                            package: UIConstants.packageName,
-                                          );
-                                        },
+                                return Semantics(
+                                  button: true,
+                                  label: sticker.stickerName,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (widget.onStickerTap != null) {
+                                        widget.onStickerTap!(sticker);
+                                      }
+                                    },
+                                    child: Image.network(
+                                      sticker.stickerUrl,
+                                      excludeFromSemantics: true,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            return loadingProgress == null
+                                                ? child
+                                                : Center(
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          color: colorPalette
+                                                              .iconPrimary,
+                                                        ),
+                                                  );
+                                          },
+                                      errorBuilder:
+                                          (context, object, stackTrace) {
+                                            return Image.asset(
+                                              AssetConstants.imagePlaceholder,
+                                              package: UIConstants.packageName,
+                                            );
+                                          },
+                                    ),
                                   ),
                                 );
                               },
@@ -469,8 +515,16 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                     ),
                   ),
                 ),
+                // Android draws a 1dp line here; opt-in so the default look
+                // is unchanged.
+                if (style.separatorColor != null)
+                  Container(
+                    height: 1,
+                    width: double.infinity,
+                    color: style.separatorColor,
+                  ),
                 Container(
-                  decoration: BoxDecoration(color: colorPalette.background1),
+                  decoration: BoxDecoration(color: backgroundColor),
                   child: Padding(
                     padding: EdgeInsets.all(spacing.padding2 ?? 0),
                     child: SingleChildScrollView(
@@ -479,34 +533,47 @@ class _CometChatStickerKeyboardState extends State<CometChatStickerKeyboard> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: stickerSets.map((stickerSetOrder) {
                           final containerColor = selectedSet == stickerSetOrder
-                              ? colorPalette.extendedPrimary100
-                              : colorPalette.background1;
+                              ? style.tabActiveIndicatorColor ??
+                                    colorPalette.extendedPrimary100
+                              : backgroundColor;
+                          // stickerSets holds set *order* numbers, not names;
+                          // the readable name lives on the stickers themselves.
+                          final setStickers =
+                              defaultStickersMap[stickerSetOrder];
+                          final setName =
+                              (setStickers == null || setStickers.isEmpty)
+                              ? ''
+                              : setStickers.first.stickerSetName;
 
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                selectedSet = stickerSetOrder;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.all(spacing.padding2 ?? 0),
-                              decoration: BoxDecoration(
-                                color: containerColor,
-                                borderRadius: BorderRadius.circular(
-                                  spacing.radiusMax ?? 0,
+                          return Semantics(
+                            button: true,
+                            label: setName,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedSet = stickerSetOrder;
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(spacing.padding2 ?? 0),
+                                decoration: BoxDecoration(
+                                  color: containerColor,
+                                  borderRadius: BorderRadius.circular(
+                                    spacing.radiusMax ?? 0,
+                                  ),
                                 ),
-                              ),
-                              child: Center(
-                                child: Image.network(
-                                  defaultStickersMap[stickerSetOrder]![0]
-                                      .stickerUrl,
-                                  height: 28,
-                                  width: 28,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
-                                      Icons.image_not_supported,
-                                    ); // Show fallback image
-                                  },
+                                child: Center(
+                                  child: Image.network(
+                                    defaultStickersMap[stickerSetOrder]![0]
+                                        .stickerUrl,
+                                    height: 28,
+                                    width: 28,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(
+                                        Icons.image_not_supported,
+                                      ); // Show fallback image
+                                    },
+                                  ),
                                 ),
                               ),
                             ),

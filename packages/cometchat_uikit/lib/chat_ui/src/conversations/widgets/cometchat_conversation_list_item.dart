@@ -97,9 +97,11 @@ class CometChatConversationListItem extends StatelessWidget {
     this.hideReceipts = false,
     this.hideThreadIndicator = true,
     this.typingIndicators = const [],
+    this.hideSeparator = false,
     this.textFormatters,
     this.dateTimeFormatterCallback,
     this.style,
+    this.listItemStyle,
     this.avatarStyle,
     this.statusIndicatorStyle,
     this.receiptStyle,
@@ -113,6 +115,15 @@ class CometChatConversationListItem extends StatelessWidget {
     this.statusIndicatorHeight,
     this.statusIndicatorWidth,
     this.statusIndicatorBorderRadius,
+    this.datePattern,
+    this.datePadding,
+    this.dateHeight,
+    this.dateWidth,
+    this.dateBackgroundIsTransparent,
+    this.badgePadding,
+    this.badgeWidth,
+    this.badgeHeight,
+    this.typingIndicatorText,
     this.leadingView,
     this.titleView,
     this.subtitleView,
@@ -122,6 +133,8 @@ class CometChatConversationListItem extends StatelessWidget {
     this.typography,
     this.privateGroupIcon,
     this.protectedGroupIcon,
+    this.privateGroupIconBackground,
+    this.protectedGroupIconBackground,
     this.readIcon,
     this.deliveredIcon,
     this.sentIcon,
@@ -161,14 +174,35 @@ class CometChatConversationListItem extends StatelessWidget {
   /// Shows "Name is typing" for 1 user, "N people are typing" for multiple
   final List<TypingIndicator> typingIndicators;
 
+  /// Leaves the separator line off this row, whichever of [style] or
+  /// [listItemStyle] asks for it. Defaults to false.
+  ///
+  /// [ConversationsList] sets it on the last row when [style] draws a
+  /// separator, so the line only ever divides one conversation from the next.
+  final bool hideSeparator;
+
   /// [textFormatters] list of formatters to apply to message text
   final List<CometChatTextFormatter>? textFormatters;
 
   /// [dateTimeFormatterCallback] custom callback for formatting date/time
   final DateTimeFormatterCallback? dateTimeFormatterCallback;
 
-  /// [style] comprehensive style configuration for the list item
+  /// [style] comprehensive style configuration for the list item.
+  ///
+  /// Its [CometChatConversationListItemStyle.separatorColor] and
+  /// [CometChatConversationListItemStyle.separatorHeight] draw a line along
+  /// the bottom of the row; see [hideSeparator].
   final CometChatConversationListItemStyle? style;
+
+  /// Generic list-item style for the row: [ListItemStyle.background],
+  /// [ListItemStyle.gradient], [ListItemStyle.border],
+  /// [ListItemStyle.borderRadius], [ListItemStyle.padding],
+  /// [ListItemStyle.margin], [ListItemStyle.width], [ListItemStyle.height],
+  /// [ListItemStyle.titleStyle] and [ListItemStyle.separatorColor], which
+  /// draws a line under the row unless [hideSeparator] is set. [style] wins
+  /// wherever both set a value, and [ListItemStyle.border] replaces the
+  /// separator line.
+  final ListItemStyle? listItemStyle;
 
   /// [avatarStyle] style configuration for the avatar (overrides style.avatarStyle)
   final CometChatAvatarStyle? avatarStyle;
@@ -208,6 +242,41 @@ class CometChatConversationListItem extends StatelessWidget {
 
   /// [statusIndicatorBorderRadius] provides border radius to the status indicator
   final BorderRadiusGeometry? statusIndicatorBorderRadius;
+
+  /// Text shown while someone is typing, replacing the default.
+  final String? typingIndicatorText;
+
+  /// Builds the timestamp text for the conversation, replacing the default
+  /// date format.
+  final String Function(Conversation)? datePattern;
+
+  /// Padding for the timestamp. Defaults to none.
+  final EdgeInsets? datePadding;
+
+  /// Height for the timestamp.
+  final double? dateHeight;
+
+  /// Width for the timestamp.
+  final double? dateWidth;
+
+  /// Whether the timestamp background is transparent. Defaults to true.
+  final bool? dateBackgroundIsTransparent;
+
+  /// Width for the unread badge. Defaults to a 20 px circle for one digit and
+  /// auto width for more.
+  final double? badgeWidth;
+
+  /// Height for the unread badge. Defaults to 20.
+  final double? badgeHeight;
+
+  /// Padding for the unread badge.
+  final EdgeInsetsGeometry? badgePadding;
+
+  /// Background colour for the private-group badge, overriding the style.
+  final Color? privateGroupIconBackground;
+
+  /// Background colour for the protected-group badge, overriding the style.
+  final Color? protectedGroupIconBackground;
 
   /// [leadingView] custom widget builder for the leading section (avatar area)
   final Widget? Function(Conversation, TypingIndicator?)? leadingView;
@@ -254,12 +323,64 @@ class CometChatConversationListItem extends StatelessWidget {
     final effectiveTypography =
         typography ?? CometChatThemeHelper.getTypography(context);
     final effectiveStyle =
-        style ?? CometChatConversationListItemStyle.fromTheme(context);
+        style ??
+        CometChatConversationListItemStyle.fromTheme(
+          context,
+          colorPalette: effectiveColorPalette,
+          typography: effectiveTypography,
+          spacing: effectiveSpacing,
+        );
 
+    // An explicit [style] beats [listItemStyle], which beats the theme
+    // defaults [effectiveStyle] falls back to when no [style] is given.
+    final itemStyle = listItemStyle;
     final backgroundColor = isSelected
         ? (effectiveStyle.selectedBackgroundColor ??
               effectiveColorPalette.background4)
-        : (effectiveStyle.backgroundColor ?? effectiveColorPalette.background1);
+        : (style?.backgroundColor ??
+              itemStyle?.background ??
+              effectiveStyle.backgroundColor ??
+              effectiveColorPalette.background1);
+    // A gradient paints over the colour, so it stands in for the default
+    // background only: not while selected, nor over an explicit colour.
+    final gradient = isSelected || style?.backgroundColor != null
+        ? null
+        : itemStyle?.gradient;
+    // The line along the bottom of the row: [style]'s colour, then
+    // [listItemStyle]'s, 1 px unless [style] sets a height. A height alone
+    // draws in the light border colour, and nothing set draws nothing.
+    final separatorHeight = style?.separatorHeight;
+    final separatorColor =
+        hideSeparator || (separatorHeight != null && separatorHeight <= 0)
+        ? null
+        : style?.separatorColor ??
+              itemStyle?.separatorColor ??
+              (separatorHeight == null
+                  ? null
+                  : effectiveColorPalette.borderLight ??
+                        effectiveColorPalette.borderDefault ??
+                        Colors.transparent);
+    final border =
+        itemStyle?.border ??
+        (separatorColor == null
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: separatorColor,
+                  width: separatorHeight ?? 1,
+                ),
+              ));
+    // A plain colour unless the item style asks for more, so the default row
+    // keeps its simple box.
+    final decoration =
+        gradient == null && border == null && itemStyle?.borderRadius == null
+        ? null
+        : BoxDecoration(
+            color: backgroundColor,
+            gradient: gradient,
+            border: border,
+            borderRadius: itemStyle?.borderRadius,
+          );
 
     return Semantics(
       label: _buildAccessibilityLabel(context),
@@ -271,11 +392,17 @@ class CometChatConversationListItem extends StatelessWidget {
             ? () => onItemLongClick!(conversation)
             : null,
         child: Container(
-          color: backgroundColor,
-          padding: EdgeInsets.symmetric(
-            horizontal: effectiveSpacing.padding4 ?? 16,
-            vertical: effectiveSpacing.padding3 ?? 12,
-          ),
+          width: itemStyle?.width,
+          height: itemStyle?.height,
+          margin: itemStyle?.margin,
+          color: decoration == null ? backgroundColor : null,
+          decoration: decoration,
+          padding:
+              itemStyle?.padding ??
+              EdgeInsets.symmetric(
+                horizontal: effectiveSpacing.padding4 ?? 16,
+                vertical: effectiveSpacing.padding3 ?? 12,
+              ),
           child: Row(
             children: [
               if (selectionMode != SelectionMode.none)
@@ -346,6 +473,15 @@ class CometChatConversationListItem extends StatelessWidget {
     CometChatColorPalette effectiveColorPalette,
     CometChatSpacing effectiveSpacing,
   ) {
+    final checkBoxBorderRadius =
+        effectiveStyle.checkBoxBorderRadius ??
+        BorderRadius.circular(effectiveSpacing.radius1 ?? 4);
+    final checkBoxStrokeColor =
+        effectiveStyle.checkBoxStrokeColor ??
+        effectiveColorPalette.borderDefault ??
+        Colors.grey;
+    final checkBoxStrokeWidth = effectiveStyle.checkBoxStrokeWidth ?? 1.5;
+    final selectIcon = effectiveStyle.checkBoxSelectIcon;
     return Padding(
       padding: EdgeInsets.only(
         left: effectiveSpacing.padding3 ?? 12,
@@ -354,29 +490,60 @@ class CometChatConversationListItem extends StatelessWidget {
       child: SizedBox(
         width: 20,
         height: 20,
-        child: Checkbox(
-          value: isSelected,
-          onChanged: (value) => onSelectionToggle?.call(),
-          fillColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return effectiveStyle.checkBoxCheckedBackgroundColor ??
-                  effectiveColorPalette.primary;
-            }
-            return effectiveStyle.checkBoxBackgroundColor ?? Colors.transparent;
-          }),
-          shape: RoundedRectangleBorder(
-            borderRadius:
-                effectiveStyle.checkBoxBorderRadius ??
-                BorderRadius.circular(effectiveSpacing.radius1 ?? 4),
-          ),
-          side: BorderSide(
-            color:
-                effectiveStyle.checkBoxStrokeColor ??
-                effectiveColorPalette.borderDefault ??
-                Colors.grey,
-            width: effectiveStyle.checkBoxStrokeWidth ?? 1.5,
-          ),
-        ),
+        // A Material Checkbox can only draw its own tick, so a custom select
+        // icon gets a box built from the same fill, border and radius.
+        child: selectIcon != null
+            ? GestureDetector(
+                onTap: onSelectionToggle,
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? effectiveStyle.checkBoxCheckedBackgroundColor ??
+                              effectiveColorPalette.primary
+                        : effectiveStyle.checkBoxBackgroundColor ??
+                              Colors.transparent,
+                    borderRadius: checkBoxBorderRadius,
+                    border: isSelected
+                        ? null
+                        : Border.all(
+                            color: checkBoxStrokeColor,
+                            width: checkBoxStrokeWidth,
+                          ),
+                  ),
+                  child: isSelected
+                      ? IconTheme.merge(
+                          data: IconThemeData(
+                            color:
+                                effectiveStyle.checkBoxSelectIconTint ??
+                                effectiveColorPalette.white,
+                            size: 14,
+                          ),
+                          child: selectIcon,
+                        )
+                      : null,
+                ),
+              )
+            : Checkbox(
+                value: isSelected,
+                onChanged: (value) => onSelectionToggle?.call(),
+                checkColor: effectiveStyle.checkBoxSelectIconTint,
+                fillColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return effectiveStyle.checkBoxCheckedBackgroundColor ??
+                        effectiveColorPalette.primary;
+                  }
+                  return effectiveStyle.checkBoxBackgroundColor ??
+                      Colors.transparent;
+                }),
+                shape: RoundedRectangleBorder(
+                  borderRadius: checkBoxBorderRadius,
+                ),
+                side: BorderSide(
+                  color: checkBoxStrokeColor,
+                  width: checkBoxStrokeWidth,
+                ),
+              ),
       ),
     );
   }
@@ -398,18 +565,19 @@ class CometChatConversationListItem extends StatelessWidget {
     final effectiveTypography =
         typography ?? CometChatThemeHelper.getTypography(context);
 
-    // Create avatar style with explicit text size to match old behavior
-    final effectiveAvatarStyle =
-        (avatarStyle ??
-                effectiveStyle.avatarStyle ??
-                const CometChatAvatarStyle())
-            .copyWith(
-              placeHolderTextStyle: TextStyle(
-                fontSize: effectiveTypography.heading2?.bold?.fontSize,
-                fontWeight: effectiveTypography.heading2?.bold?.fontWeight,
-                fontFamily: effectiveTypography.heading2?.bold?.fontFamily,
-              ),
-            );
+    // Initials default to heading2 bold (the old size). A placeholder text
+    // style the caller set is merged over that, not replaced by it.
+    final baseAvatarStyle =
+        avatarStyle ??
+        effectiveStyle.avatarStyle ??
+        const CometChatAvatarStyle();
+    final effectiveAvatarStyle = baseAvatarStyle.copyWith(
+      placeHolderTextStyle: TextStyle(
+        fontSize: effectiveTypography.heading2?.bold?.fontSize,
+        fontWeight: effectiveTypography.heading2?.bold?.fontWeight,
+        fontFamily: effectiveTypography.heading2?.bold?.fontFamily,
+      ).merge(baseAvatarStyle.placeHolderTextStyle),
+    );
 
     return Padding(
       padding: EdgeInsets.only(right: effectiveSpacing.padding3 ?? 12),
@@ -433,6 +601,10 @@ class CometChatConversationListItem extends StatelessWidget {
                 width: statusIndicatorWidth ?? 14,
                 backgroundImage: _getStatusIndicatorIcon(effectiveColorPalette),
                 style: CometChatStatusIndicatorStyle(
+                  borderRadius:
+                      statusIndicatorBorderRadius ??
+                      statusIndicatorStyle?.borderRadius ??
+                      effectiveStyle.statusIndicatorStyle?.borderRadius,
                   border:
                       statusIndicatorStyle?.border ??
                       effectiveStyle.statusIndicatorStyle?.border ??
@@ -443,6 +615,7 @@ class CometChatConversationListItem extends StatelessWidget {
                             Colors.transparent,
                       ),
                   backgroundColor: _getStatusIndicatorBackgroundColor(
+                    effectiveStyle,
                     effectiveColorPalette,
                   ),
                 ),
@@ -467,17 +640,23 @@ class CometChatConversationListItem extends StatelessWidget {
       return customView ?? const SizedBox.shrink();
     }
 
+    // An explicit [style], then [listItemStyle], then the theme defaults.
+    final givenTitleStyle = style?.titleTextStyle ?? listItemStyle?.titleStyle;
+    final titleTextStyle = givenTitleStyle ?? effectiveStyle.titleTextStyle;
     return Text(
       _getConversationTitle(),
-      style:
-          (effectiveStyle.titleTextStyle ??
-                  effectiveTypography.heading4?.medium)
-              ?.copyWith(
-                color:
-                    effectiveStyle.titleTextColor ??
-                    effectiveColorPalette.textPrimary,
-              ),
-      maxLines: 1,
+      style: (titleTextStyle ?? effectiveTypography.heading4?.medium)?.copyWith(
+        // The colour field wins, then the text style's own colour,
+        // matching the subtitle.
+        color:
+            style?.titleTextColor ??
+            givenTitleStyle?.color ??
+            effectiveStyle.titleTextColor ??
+            effectiveStyle.titleTextStyle?.color ??
+            effectiveColorPalette.textPrimary,
+      ),
+      // Wraps rather than clipping the conversation name at larger text sizes.
+      maxLines: scaledMaxLines(context),
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -506,7 +685,7 @@ class CometChatConversationListItem extends StatelessWidget {
     }
 
     if (typingIndicators.isNotEmpty) {
-      final typingText = _getTypingText(context);
+      final typingText = typingIndicatorText ?? _getTypingText(context);
 
       return Text(
         typingText,
@@ -514,8 +693,14 @@ class CometChatConversationListItem extends StatelessWidget {
             (typingIndicatorStyle?.textStyle ??
                     effectiveStyle.typingIndicatorStyle?.textStyle ??
                     effectiveTypography.body?.regular)
-                ?.copyWith(color: effectiveColorPalette.textHighlight),
-        maxLines: 1,
+                ?.copyWith(
+                  color:
+                      (typingIndicatorStyle?.textStyle ??
+                              effectiveStyle.typingIndicatorStyle?.textStyle)
+                          ?.color ??
+                      effectiveColorPalette.textHighlight,
+                ),
+        maxLines: scaledMaxLines(context),
         overflow: TextOverflow.ellipsis,
       );
     }
@@ -525,7 +710,7 @@ class CometChatConversationListItem extends StatelessWidget {
         // When hideThreadIndicator is false, show receipt + arrow (matching old GetX code behavior)
         if (!hideThreadIndicator) ...[
           if (_shouldShowReceipt()) ...[
-            _buildReceiptIndicator(effectiveColorPalette),
+            _buildReceiptIndicator(effectiveStyle, effectiveColorPalette),
             SizedBox(width: effectiveSpacing.padding1 ?? 4),
           ],
           Icon(
@@ -537,7 +722,7 @@ class CometChatConversationListItem extends StatelessWidget {
         ]
         // When hideThreadIndicator is true, just show receipt
         else if (_shouldShowReceipt()) ...[
-          _buildReceiptIndicator(effectiveColorPalette),
+          _buildReceiptIndicator(effectiveStyle, effectiveColorPalette),
           SizedBox(width: effectiveSpacing.padding1 ?? 4),
         ],
         Expanded(
@@ -560,6 +745,11 @@ class CometChatConversationListItem extends StatelessWidget {
     final count = typingIndicators.length;
 
     if (count == 0) return '';
+
+    // A caller-supplied string replaces the wording outright, for every
+    // arity — the built-in variants below are localized phrasings of the same
+    // thing, so mixing them with an override would be inconsistent.
+    if (typingIndicatorText != null) return typingIndicatorText!;
 
     if (count == 1) {
       // For user conversations, show just "is typing..."
@@ -596,8 +786,9 @@ class CometChatConversationListItem extends StatelessWidget {
 
     AdditionalConfigurations? configurations;
 
-    if (conversation.lastMessage != null &&
-        conversation.lastMessage is TextMessage) {
+    // Text messages and media captions both render through the formatters.
+    final lastMessage = conversation.lastMessage;
+    if (lastMessage is TextMessage || lastMessage is MediaMessage) {
       // Pass all formatters including MarkdownTextFormatter so the conversation
       // subtitle renders with the same rich formatting as message bubbles
       // (bold, italic, code, etc.) but truncated to a single line.
@@ -609,7 +800,7 @@ class CometChatConversationListItem extends StatelessWidget {
       }
       for (CometChatTextFormatter formatter in allFormatters) {
         if (formatter is CometChatMentionsFormatter) {
-          formatter.message = conversation.lastMessage as TextMessage;
+          formatter.message = lastMessage;
         }
       }
       configurations = AdditionalConfigurations(textFormatters: allFormatters);
@@ -624,7 +815,18 @@ class CometChatConversationListItem extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptIndicator(CometChatColorPalette effectiveColorPalette) {
+  Widget _buildReceiptIndicator(
+    CometChatConversationListItemStyle effectiveStyle,
+    CometChatColorPalette effectiveColorPalette,
+  ) {
+    // The caller's receipt style takes precedence over the palette default for
+    // each status. Both this widget's receiptStyle and the one on
+    // CometChatConversationListItemStyle were declared and read nowhere.
+    // ENG-39124. Merged per colour, as the date and status styles are, so a
+    // receiptStyle that leaves a colour unset lets the style's through.
+    final receiptColors =
+        effectiveStyle.receiptStyle?.merge(receiptStyle) ?? receiptStyle;
+
     // If the last message was disapproved by moderation, show the error
     // receipt icon (matches message-bubble behavior).
     final lastMessage = conversation.lastMessage;
@@ -635,7 +837,7 @@ class CometChatConversationListItem extends StatelessWidget {
       return Icon(
         Icons.error_outline,
         size: 16,
-        color: effectiveColorPalette.error,
+        color: receiptColors?.errorIconColor ?? effectiveColorPalette.error,
       );
     }
 
@@ -647,21 +849,26 @@ class CometChatConversationListItem extends StatelessWidget {
       case 'read':
         if (readIcon != null) return readIcon!;
         receiptIcon = Icons.done_all;
-        receiptColor = effectiveColorPalette.primary;
+        receiptColor =
+            receiptColors?.readIconColor ?? effectiveColorPalette.primary;
         break;
       case 'delivered':
         if (deliveredIcon != null) return deliveredIcon!;
         receiptIcon = Icons.done_all;
-        receiptColor = effectiveColorPalette.iconSecondary;
+        receiptColor =
+            receiptColors?.deliveredIconColor ??
+            effectiveColorPalette.iconSecondary;
         break;
       case 'sent':
         if (sentIcon != null) return sentIcon!;
         receiptIcon = Icons.done;
-        receiptColor = effectiveColorPalette.iconSecondary;
+        receiptColor =
+            receiptColors?.sentIconColor ?? effectiveColorPalette.iconSecondary;
         break;
       default:
         receiptIcon = Icons.schedule;
-        receiptColor = effectiveColorPalette.iconSecondary;
+        receiptColor =
+            receiptColors?.waitIconColor ?? effectiveColorPalette.iconSecondary;
     }
 
     return Icon(receiptIcon, size: 16, color: receiptColor);
@@ -748,10 +955,17 @@ class CometChatConversationListItem extends StatelessWidget {
 
     return CometChatDate(
       date: lastMessageTime,
-      padding: const EdgeInsets.all(0),
-      isTransparentBackground: true,
+      customDateString: datePattern?.call(conversation),
+      height: dateHeight,
+      width: dateWidth,
+      padding: datePadding ?? EdgeInsets.zero,
+      isTransparentBackground: dateBackgroundIsTransparent ?? true,
       style: CometChatDateStyle(
-        backgroundColor: effectiveColorPalette.transparent,
+        // CometChatDate clears this while isTransparentBackground is on, and
+        // falls back to background2 when it is off and nothing is set.
+        backgroundColor:
+            dateStyle?.backgroundColor ??
+            effectiveStyle.dateStyle?.backgroundColor,
         textStyle:
             TextStyle(
                   color: effectiveColorPalette.textSecondary,
@@ -767,7 +981,10 @@ class CometChatConversationListItem extends StatelessWidget {
                       dateStyle?.textColor ??
                       effectiveStyle.dateStyle?.textColor,
                 ),
-        border: Border.all(width: 0, color: Colors.transparent),
+        border:
+            dateStyle?.border ??
+            effectiveStyle.dateStyle?.border ??
+            Border.all(width: 0, color: Colors.transparent),
         borderRadius:
             dateStyle?.borderRadius ?? effectiveStyle.dateStyle?.borderRadius,
         textColor: dateStyle?.textColor ?? effectiveStyle.dateStyle?.textColor,
@@ -781,10 +998,11 @@ class CometChatConversationListItem extends StatelessWidget {
     final count = conversation.unreadMessageCount;
     return CometChatBadge(
       count: count,
-      width: (count < 10)
-          ? 20
-          : null, // Fixed 20x20 circle for single digit, auto-width for multi-digit
-      height: 20,
+      // A fixed 20x20 circle for one digit and auto width for more, unless
+      // the caller sizes it.
+      width: badgeWidth ?? ((count < 10) ? 20 : null),
+      height: badgeHeight ?? 20,
+      padding: badgePadding,
       style:
           badgeStyle ??
           effectiveStyle.badgeStyle ??
@@ -819,7 +1037,10 @@ class CometChatConversationListItem extends StatelessWidget {
     return config.show;
   }
 
+  /// The status dot's fill: a group-type background from the style first,
+  /// then the status indicator style's backgroundColor, then the palette.
   Color? _getStatusIndicatorBackgroundColor(
+    CometChatConversationListItemStyle effectiveStyle,
     CometChatColorPalette effectiveColorPalette,
   ) {
     final config = StatusIndicatorHelper.getStatusIndicator(
@@ -827,21 +1048,34 @@ class CometChatConversationListItem extends StatelessWidget {
       hideUserStatus: hideUserStatus,
       hideGroupType: hideGroupType,
     );
+    final styledBackground =
+        statusIndicatorStyle?.backgroundColor ??
+        effectiveStyle.statusIndicatorStyle?.backgroundColor;
 
     // If there's a color (for online users), use it
     if (config.color != null) {
-      return config.color;
+      return styledBackground ?? config.color;
     }
 
     // If there's an icon (for group types), use specific colors based on group type
     if (config.icon != null && conversation.conversationWith is Group) {
       final group = conversation.conversationWith as Group;
+      // Caller-supplied colours win over the palette defaults, matching the
+      // precedence StatusIndicatorUtils already uses for the same two badges.
       if (group.type == CometChatGroupType.password) {
         // Protected groups use success color (green)
-        return effectiveColorPalette.success ?? Colors.green;
+        return protectedGroupIconBackground ??
+            effectiveStyle.protectedGroupIconBackground ??
+            styledBackground ??
+            effectiveColorPalette.success ??
+            Colors.green;
       } else if (group.type == CometChatGroupType.private) {
         // Private groups use warning color (yellow)
-        return effectiveColorPalette.warning ?? Colors.yellow;
+        return privateGroupIconBackground ??
+            effectiveStyle.privateGroupIconBackground ??
+            styledBackground ??
+            effectiveColorPalette.warning ??
+            Colors.yellow;
       }
     }
 
