@@ -149,10 +149,10 @@ Voice and video call icon buttons. Supports direct calls (user) and meetings (gr
 
 ### CometChatIncomingCall
 
-Full-screen incoming call UI with accept/decline buttons. Shown when the logged-in user receives a call.
+Incoming call banner (a card at the top of the screen) with decline and accept buttons. The UI Kit shows it itself, over `CallNavigationContext.navigatorKey`'s navigator, when the logged-in user receives a call (with `enableCalls`); configure it through `CallingConfiguration.incomingCallConfiguration`.
 
 - **Location:** `call_ui/src/incoming_call/cometchat_incoming_call.dart`
-- **Key props:** `call` (required), `user`, `callSettingsBuilder`, `onDecline`, `onAccept`, `disableSoundForCalls`, `customSoundForCalls`
+- **Key props:** `call` (required), `user`, `callSettingsBuilder`, `onDecline`, `onAccept`, `onError`, `disableSoundForCalls`, `customSoundForCalls`, `customSoundForCallsPackage`, `incomingCallBloc` (yours to close)
 - **View slots:** `titleView(ctx, Call)`, `subTitleView(ctx, Call)`, `leadingView(ctx, Call)`, `trailingView(ctx, Call)`, `itemView(ctx, Call)`
 - **Style:** `CometChatIncomingCallStyle`
 

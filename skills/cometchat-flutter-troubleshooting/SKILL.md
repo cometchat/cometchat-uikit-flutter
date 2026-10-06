@@ -114,6 +114,8 @@ CometChatUIKit.init(
 );
 ```
 
+`CometChatUIKit.loginWithAuthToken` does not use this code. With a user already logged in it calls `onSuccess` only for the auth token the SDK already holds; any other token gets `onError` with `ERR_USER_ALREADY_LOGGED_IN` (and a null return). Same fix: check `CometChatUIKit.loggedInUser` first, and `CometChatUIKit.logout()` before logging in as another user.
+
 ### 2.4 "Android internal error" on login
 
 - **Symptom**: Login fails with a vague `Android internal error` message.
@@ -388,19 +390,21 @@ Widget build(BuildContext context) {
 - **Cause**: Multiple possible causes:
   1. `subscriptionType` not set (presence/events disabled)
   2. Push notification / VoIP setup incomplete
-  3. Call listeners not registered
-  4. App is in background without proper background handling
+  3. Call listeners not registered (`UIKitSettings.enableCalls` off, and no `CallEventService.instance.init()` of your own)
+  4. `CallNavigationContext.navigatorKey` is not the root `MaterialApp`'s `navigatorKey`: the banner has nowhere to show (`onError` gets `NO_NAVIGATOR`)
+  5. App is in background without proper background handling. On iOS the in-app banner is not shown at all while the app is not in the foreground: background calls are VoIP push / CallKit's
 - **Fix**:
   1. Ensure `subscriptionType` is set to `CometChatSubscriptionType.allUsers`
   2. Verify FCM/APNs push notification setup for background calls
-  3. Check that call event listeners are registered
-  4. For cross-platform issues (Android↔iOS↔React), verify all platforms are on compatible SDK versions
+  3. Turn on `UIKitSettings.enableCalls` (the UI Kit registers the call listeners at login)
+  4. `MaterialApp(navigatorKey: CallNavigationContext.navigatorKey, ...)`
+  5. For cross-platform issues (Android↔iOS↔React), verify all platforms are on compatible SDK versions
 
-### 4.6 Calls SDK not re-initialized after logout
+### 4.6 Calls don't work after logout and re-login
 
 - **Symptom**: After logout and re-login, calls don't work. Call screens may be blank or throw errors.
-- **Cause**: The Calls SDK maintains its own session state. After `CometChatUIKit.logout()`, the Calls SDK session is invalidated but may not be properly re-initialized on the next login.
-- **Fix**: Ensure the Calls SDK is re-initialized after login. The UIKit handles this internally — if you're managing calls manually, call the Calls SDK init after each successful login.
+- **Cause**: Usually a second Calls SDK init or login of the app's own racing the UI Kit's, or a logout that bypassed the UI Kit (`CometChat.logout()` directly).
+- **Fix**: Do not re-initialise the Calls SDK yourself. With `UIKitSettings.enableCalls`, `CometChatUIKit.logout()` logs the Calls SDK out and the next `login` logs it in again; nothing else is needed (`CallEventService.reinitializeAfterSession()` is deprecated). To wait for it (a push handler, say), `await CallEventService.instance.waitForCallsSdk()`.
 
 ---
 
@@ -691,6 +695,7 @@ if (!kIsWeb) {
 | "Authentication null" | 2.1 | Call `CometChatUIKit.init()` before any usage |
 | "APP ID null" | 2.2 | Set `..appId = 'YOUR_APP_ID'` in UIKitSettingsBuilder |
 | ERR_ALREADY_LOGGED_IN | 2.3 | Check `CometChatUIKit.loggedInUser` before calling login |
+| ERR_USER_ALREADY_LOGGED_IN | 2.3 | `loginWithAuthToken` with another token: check `loggedInUser`, `logout()` first |
 | "Android internal error" | 2.4 | Verify credentials, UID existence, try stable SDK |
 | Guard screen stuck on spinner | 2.5 | Use `CometChatUIKit.loggedInUser` synchronously after init |
 | ERR_INVALID_REGION | 2.6 | Use lowercase: `'us'`, `'eu'`, `'in'` |

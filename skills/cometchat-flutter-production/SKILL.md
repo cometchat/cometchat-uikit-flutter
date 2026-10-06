@@ -129,6 +129,11 @@ Your Flutter app calls your own backend (after the user authenticates with your 
 
 ```dart
 Future<void> loginWithToken(String uid) async {
+  // 0. A session restored by CometChatUIKit.init is already logged in.
+  //    loginWithAuthToken with a newly minted token would fail with
+  //    ERR_USER_ALREADY_LOGGED_IN (log out first to switch users).
+  if (CometChatUIKit.loggedInUser?.uid == uid) return;
+
   // 1. Call YOUR backend to get a CometChat auth token
   final response = await http.post(
     Uri.parse('https://your-api.com/cometchat/token'),
@@ -151,6 +156,8 @@ Future<void> loginWithToken(String uid) async {
 ```
 
 **Note**: `loginWithAuthToken` populates `CometChatUIKit.loggedInUser` before calling `onSuccess` — same as `login()` and `init()`. No need to call `getLoggedInUser()` afterward.
+
+**Note**: When a user is already logged in, `loginWithAuthToken` calls `onSuccess` only for the auth token the SDK already holds. Any other token gets `onError` with `ERR_USER_ALREADY_LOGGED_IN` and returns null: check `CometChatUIKit.loggedInUser` first, and call `CometChatUIKit.logout()` before logging in as someone else.
 
 ---
 
@@ -369,9 +376,9 @@ Never hardcode credentials in source code. The `AppCredentials` pattern used in 
 ```dart
 // ❌ DON'T ship this — credentials visible in decompiled binary
 class AppCredentials {
-  static const String appId = '26580020f03ff346';
+  static const String appId = 'YOUR_APP_ID';
   static const String region = 'in';
-  static const String authKey = '4152b0366478871f0fa8d19a287dd6f5ed5f8eff';
+  static const String authKey = 'YOUR_AUTH_KEY';
 }
 ```
 
@@ -615,17 +622,19 @@ CometChatUIKit.loginWithAuthToken(authToken,
 ```dart
 // Always logout when user signs out of your app
 Future<void> signOut() async {
-  // 1. Logout from CometChat
-  CometChatUIKit.logout(
-    onSuccess: (_) => debugPrint('CometChat logout success'),
-    onError: (e) => debugPrint('CometChat logout failed: ${e.message}'),
+  // Awaited: it first ends this device's calls on the server (within ~3 s),
+  // then logs out. Leave the app's screens only once it has succeeded.
+  await CometChatUIKit.logout(
+    onSuccess: (_) async {
+      // Clear your own auth state, then go to the login screen.
+      await yourAuthService.signOut();
+      navigator.pushReplacementNamed('/login');
+    },
+    onError: (e) {
+      // Still logged in (calls still arrive): stay, and say so.
+      debugPrint('CometChat logout failed: ${e.message}');
+    },
   );
-
-  // 2. Clear your own auth state
-  await yourAuthService.signOut();
-
-  // 3. Navigate to login screen
-  navigator.pushReplacementNamed('/login');
 }
 ```
 

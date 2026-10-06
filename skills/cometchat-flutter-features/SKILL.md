@@ -362,6 +362,8 @@ final settings = (UIKitSettingsBuilder()
       ..enableCalls = true)
     .build();
 
+// With enableCalls, init completes once the Calls SDK is set up as well
+// (bounded, about 22 s at most): await it behind a splash, not before runApp.
 await CometChatUIKit.init(uiKitSettings: settings);
 
 // Then in your messages screen:

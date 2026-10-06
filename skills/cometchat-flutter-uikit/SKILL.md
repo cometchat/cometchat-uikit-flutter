@@ -138,8 +138,10 @@ final settings = (UIKitSettingsBuilder()
     .build();
 await CometChatUIKit.init(uiKitSettings: settings);
 
-// 2. Login
-await CometChatUIKit.loginWithAuthToken('AUTH_TOKEN');
+// 2. Login (init may already have restored a session)
+if (CometChatUIKit.loggedInUser == null) {
+  await CometChatUIKit.loginWithAuthToken('AUTH_TOKEN');
+}
 
 // 3. Show conversations
 CometChatConversations(
@@ -372,6 +374,7 @@ Key points in this scaffold:
 | Theme jank during keyboard | Theme looked up in `build()` | Cache in `didChangeDependencies()` with `_themeInitialized` flag |
 | Listener leak / duplicate events | Listener not removed in `dispose()` | Always remove with same ID used to register |
 | "ERR_ALREADY_LOGGED_IN" | Calling login when session exists | Check `CometChatUIKit.getLoggedInUser()` first |
+| "ERR_USER_ALREADY_LOGGED_IN" | `loginWithAuthToken` with another token while a user is logged in | Check `CometChatUIKit.loggedInUser` first; `logout()` before switching users |
 | Messages not updating in real-time | SDK listener not registered | BLoC registers automatically; check component is mounted |
 | Stale user/group data | Passing widget params instead of mutable state | Keep mutable `_user`/`_group` in State, update from listeners |
 | Region error | Uppercase region string | Use lowercase: 'us', 'eu', 'in' |
@@ -439,4 +442,3 @@ buildTypes {
 ```
 
 Without these rules, release builds crash with `ClassNotFoundException` for CometChat classes.
-

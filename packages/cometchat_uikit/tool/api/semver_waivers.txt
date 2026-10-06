@@ -1,0 +1,12 @@
+# Breaking changes the API semver gate accepts against the latest release on
+# pub.dev. Anything breaking that is not listed here fails package-checks.
+#
+# One per line: <dart-apitool change code>|<exact change description>|<why>.
+# The description must match the report word for word. Delete a line once the
+# release it covers is on pub.dev; the gate names waivers that no longer match.
+
+CPI03|iOS platform minimum version changed from 9.0 to 13.0|The package requires Flutter 3.38.9, which supports iOS 13 and above, so the declared 9.0 could never be honoured. See the 6.2.0 Breaking Changes entry.
+CI01|Interface "MessageListState" removed|Only the abstract base of the message-list state family was renamed, to MessageListStateBase (0db244af6). The shared barrel hid it behind the concrete bloc state of the same name, so no app could name it; the concrete MessageListState is unchanged.
+CI05|Super Type "MessageListState" removed|The same rename, reported once for each of the 11 state classes that extend the base.
+CE02|Parameter "conversationWith" added (required)|Optional named param on ConversationsRepository.deleteConversation; existing callers deleteConversation(id) are unaffected. Threads the SDK delete target from the Conversation object to fix ENG-39438 (ERR_CONVERSATION_NOT_ACCESSIBLE). Backward-compatible for callers; delete once 6.2.0 is on pub.dev.
+CE02|Parameter "conversationType" added (required)|Same change, second added param on deleteConversation. See ENG-39438.

@@ -28,7 +28,7 @@ Complete guide for migrating a consumer app from UIKit v5 to v6.
 | State | GetX (`Get.put`, `GetBuilder`, `Obx`, `.obs`, `RxBool`) | Plain `StatefulWidget` + `setState()` |
 | Navigation | `PageManager` (GetxController singleton) | Direct `Navigator.push` |
 | Init | `InitializeCometChat.init()` + `CometChatCallingExtension()` + `extensions` + `aiFeature` | Inline `CometChatUIKit.init()` + `enableCalls: true` + `CallingConfiguration()` |
-| Calls SDK init | `CometChatCallingExtension()` in extensions list | `CallEventService.instance.init()` after login |
+| Calls SDK init | `CometChatCallingExtension()` in extensions list | Automatic with `enableCalls: true`: the UI Kit sets the Calls SDK up in `init`/`login` |
 | Screens | Separate controller + widget files per screen | Single file, state in StatefulWidget |
 | Dashboard | `MyHomePage`/`MyPageView` with GetX `PageManager` | `HomeScreen` with `IndexedStack` |
 | Messages | `MessagesSample` + `CometChatMessagesController` | `MessagesScreen` with listener mixins |
@@ -123,14 +123,24 @@ CometChatUIKit.init(uiKitSettings: settings, onSuccess: (_) { ... });
 ```dart
 // ❌ v5 — CometChatCallingExtension handled it automatically
 
-// ✅ v6 — explicit init needed when restoring cached session (no login call)
-Future<void> _initCallsSdk() async {
-  await CallEventService.instance.init(
-    configuration: CallingConfiguration(),
-  );
-}
-// Call after checking getLoggedInUser() returns non-null
+// ✅ v6 — with enableCalls, nothing to add. CometChatUIKit.init restores the
+// cached session and, before its onSuccess, starts call handling (incoming
+// call listener) and initialises and logs the user into the Calls SDK.
+// login / loginWithAuthToken do the same for a fresh login, and logout stops
+// it and logs the Calls SDK out.
+CometChatUIKit.init(
+  uiKitSettings: settings, // ..enableCalls = true ..callingConfiguration = ...
+  onSuccess: (_) {
+    final hasUser = CometChatUIKit.loggedInUser != null;
+    // Route to home or login.
+  },
+);
 ```
+
+- The Calls set-up is bounded: `onSuccess` (and the returned future) comes within about 22 s even when the Calls SDK is slow or fails, and a Calls failure never becomes `onError` (it is retried when a call needs it). Show a splash rather than holding `runApp` on `await CometChatUIKit.init(...)`.
+- Configure the call UI with `UIKitSettings.callingConfiguration`. `CallEventService.instance.init(configuration:)` is deprecated (removal in 7.0.0): its `configuration` is only used when `UIKitSettings.callingConfiguration` is not set. Do not call it with an empty `CallingConfiguration()`.
+- Only apps that keep `enableCalls` off and want the incoming call UI call `await CallEventService.instance.init();` themselves, after login.
+- `CallEventService.instance.waitForCallsSdk()` returns within 22 s. `CallEventService.instance.reinitializeAfterSession()` is deprecated and no longer needed after a call.
 
 ## Step 4: Remove GetX
 
@@ -365,7 +375,7 @@ android.enableJetifier=true  // Required for support library conflicts
 - [ ] All imports — `cometchat_calls_uikit` → `cometchat_chat_uikit/cometchat_calls_uikit.dart`
 - [ ] All imports — remove `get/get.dart`
 - [ ] Init — remove `CometChatCallingExtension`, `extensions`, `aiFeature`; add `enableCalls` + `CallingConfiguration`
-- [ ] Add `CallEventService.instance.init()` for cached sessions
+- [ ] Calls — `enableCalls: true` + `callingConfiguration` in UIKitSettings; remove any `CallEventService.instance.init(configuration: ...)` / `CometChatUIKitCalls.init()` calls after login or session restore
 - [ ] Remove `PageManager` — replace with `Navigator.push`
 - [ ] Remove all `GetBuilder`/`Obx`/`Get.put`/`Get.find`
 - [ ] Remove all `*_controller.dart` files

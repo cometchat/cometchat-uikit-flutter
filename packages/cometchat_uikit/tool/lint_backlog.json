@@ -1,0 +1,9 @@
+{
+  "lib/": {
+    "public_member_api_docs": 4225,
+    "avoid_dynamic_calls": 188
+  },
+  "test/": {
+    "avoid_dynamic_calls": 11
+  }
+}

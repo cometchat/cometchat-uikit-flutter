@@ -326,22 +326,17 @@ Scaffold(
 
 ## Incoming Calls — Global Placement
 
-Incoming call handling MUST be at the app root level, not per-screen. Use `VoipCallHandler` or mount the call overlay in `MaterialApp.builder`:
+Incoming call handling MUST be at the app root level, not per-screen. With `UIKitSettings.enableCalls` the UI Kit listens for calls itself and shows its banner over the navigator of `CallNavigationContext.navigatorKey`: give that key to the root `MaterialApp`, and every screen rings.
 
 ```dart
-// In main.dart — before runApp
-VoipCallHandler.instance.init();
-
-// Or in MaterialApp builder for overlay approach
+// UIKitSettings: ..enableCalls = true (and a callingConfiguration)
 MaterialApp(
-  builder: (context, child) {
-    return Stack(children: [
-      child!,
-      // Global incoming call overlay
-    ]);
-  },
+  navigatorKey: CallNavigationContext.navigatorKey,
+  home: const HomeScreen(),
 )
 ```
+
+Calls that arrive while the app is in the background or killed come by push (FCM, or VoIP push and CallKit on iOS): that is your app's code, as in the sample app, not a UI Kit class.
 
 ---
 

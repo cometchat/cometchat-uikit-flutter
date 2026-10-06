@@ -46,6 +46,8 @@ CometChatUIKit.init(uiKitSettings: settings);
 CometChatUIKit.login('uid'); // Race condition
 ```
 
+With `..enableCalls = true`, `init` (and `login`/`loginWithAuthToken`) call `onSuccess`, and complete their futures, only once the Calls SDK is set up too: within about 22 s, and a Calls failure never becomes `onError`. Await init behind a splash screen, not before `runApp`.
+
 ## Rule: AUTH_CHECK_AFTER_INIT
 
 After `CometChatUIKit.init()` completes (in its `onSuccess`), the static field `CometChatUIKit.loggedInUser` is already populated if a cached session exists. Use this synchronous check — do NOT call `CometChat.getLoggedInUser()` separately.
