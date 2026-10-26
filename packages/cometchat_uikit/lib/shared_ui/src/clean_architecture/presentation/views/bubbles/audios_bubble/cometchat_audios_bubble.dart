@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart' as vp;
 
 import '../../../../clean_architecture.dart';
 import '../../../../../logging/cometchat_log.dart';
+import '../audio_bubble/audio_playback_session.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform_file;
 import '../../../../core/utils/platform_utils/web_download.dart'
@@ -531,6 +532,7 @@ class _AudioRowState extends State<_AudioRow> {
       final ok = await _download();
       if (ok && mounted && _controller != null) {
         _broadcastPause();
+        await AudioPlaybackSession.prepare();
         await _controller!.play();
       }
       return;
@@ -543,6 +545,7 @@ class _AudioRowState extends State<_AudioRow> {
       if (mounted) setState(() => _busy = false);
       if (_error || _controller == null) return;
       _broadcastPause();
+      await AudioPlaybackSession.prepare();
       await _controller!.play();
       return;
     }
@@ -551,6 +554,7 @@ class _AudioRowState extends State<_AudioRow> {
       await c.pause();
     } else {
       _broadcastPause();
+      await AudioPlaybackSession.prepare();
       await c.play();
     }
   }

@@ -57,11 +57,15 @@ void main(List<String> args) {
     );
     exit(2);
   }
+  // A report with only additive changes carries `nonBreakingChanges` and neither of
+  // the other two keys (dart_apitool 0.23.2, JsonDiffReporter.getChanges), so that
+  // key also proves the report was read.
   final noChanges = body['noChangesDetected'] == true;
   final breaking = body['breakingChanges'];
-  if (breaking == null && !noChanges) {
+  final nonBreaking = body['nonBreakingChanges'];
+  if (breaking == null && nonBreaking == null && !noChanges) {
     stderr.writeln(
-      'api_semver_gate: no "breakingChanges" and no "noChangesDetected" flag — the '
+      'api_semver_gate: no "breakingChanges", "nonBreakingChanges" or "noChangesDetected" — the '
       'dart-apitool report schema is not what this gate expects, so it cannot tell '
       '"clean" from "unreadable". Refusing to pass. Report keys: ${body.keys.toList()}',
     );

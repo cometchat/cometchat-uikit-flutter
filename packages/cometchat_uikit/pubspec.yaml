@@ -1,6 +1,6 @@
 name: cometchat_chat_uikit
 description: CometChat's Flutter UI Kit offers custom UI components for streamlined text and chat features in your app, designed with developers in mind to minimize development effort.
-version: 6.2.0
+version: 6.2.1
 homepage: https://www.cometchat.com/
 repository: https://github.com/cometchat/cometchat-uikit-flutter
 issue_tracker: https://github.com/cometchat/cometchat-uikit-flutter/issues
@@ -30,11 +30,7 @@ dependencies:
   path_provider: ^2.1.2
   webview_flutter: ^4.13.0
   url_launcher: ^6.3.2
-  # Transitive dependency lag is inherited from these two SDKs and cannot be
-  # closed from this repository:
-  #   connectivity_plus      6.1.5  (latest 7.x)  via cometchat_calls_sdk
-  #   flutter_secure_storage 10.3.1 (latest 11.x) via cometchat_sdk
-  cometchat_sdk: ^5.0.8
+  cometchat_sdk: ^5.0.9
   cometchat_cards: ^1.0.1
   video_player: ^2.10.1
   http: ^1.4.0
@@ -46,14 +42,7 @@ dependencies:
   # Held at 3.x deliberately: cached_network_image 4.0.0 requires Dart
   # ^3.12.0, above this package's 3.10.8 floor.
   cached_network_image: ^3.4.1
-  # Floor at 5.0.8, the release the call UI is tested against. 5.0.4's
-  # CometChatCalls.logout() also de-initialised the plugin, and it pinned
-  # the native CometChatCallsSDK and calls-sdk-android at 5.0.2 (5.0.8 pins
-  # 5.0.4). The floor is a hard requirement: the kit calls
-  # CometChatOngoingCallService.launch(isVideo:), which 5.0.4 lacks, so a
-  # dependency_override back to 5.0.4 stops the kit compiling. iOS apps with
-  # an existing Podfile.lock need `pod update CometChatCallsSDK` once.
-  cometchat_calls_sdk: ^5.0.8
+  cometchat_calls_sdk: ^5.0.10
   # Ceiling held below 13 deliberately. Admitting 13.x does not merely permit
   # it, it lets pub choose it, and permission_handler 13.0.1 pulls
   # permission_handler_android 14.0.0, whose build.gradle.kts uses a top-level

@@ -11,7 +11,7 @@
 #  for what that obliges you to do.
 #
 #  package        : cometchat_chat_uikit
-#  version        : 6.2.0
+#  version        : 6.2.1
 #  dart sdk floor : 3.10.8
 #  api elements   : 20713
 #  deprecated     : 68

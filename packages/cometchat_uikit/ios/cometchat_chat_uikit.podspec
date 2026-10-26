@@ -5,7 +5,7 @@
 Pod::Spec.new do |s|
   s.name             = 'cometchat_chat_uikit'
   # Keep in step with `version:` in ../pubspec.yaml.
-  s.version          = '6.2.0'
+  s.version          = '6.2.1'
   s.summary          = 'CometChat Flutter UI KIt'
   s.description      = <<-DESC
 CometChat Flutter UI KIt

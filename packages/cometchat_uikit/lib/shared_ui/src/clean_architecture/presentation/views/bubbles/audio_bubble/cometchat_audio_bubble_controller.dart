@@ -6,6 +6,7 @@ import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform;
 
+import 'audio_playback_session.dart';
 import 'voice_note_audio_session.dart';
 
 // Conditional import for web audio player
@@ -367,7 +368,11 @@ class AudioBubbleState {
       }
       try {
         AudioStateManager().pauseAllExcept(id);
-        if (_playsLocalFile) await VoiceNoteAudioSession.takeForSpeaker(id);
+        if (_playsLocalFile) {
+          await VoiceNoteAudioSession.takeForSpeaker(id);
+        } else {
+          await AudioPlaybackSession.prepare();
+        }
         _playState = PlayStates.playing;
         await controller.play();
         _notifyStateUpdate();

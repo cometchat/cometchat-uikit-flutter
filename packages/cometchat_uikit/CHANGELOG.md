@@ -1,3 +1,14 @@
+# v6.2.1
+
+## New
+- None
+
+## Enhancements
+- Optimized connection reliability, call handling, and audio routing on iOS, including improved WebSocket reconnection and earpiece/speaker switching.
+
+## Fixes
+- Fixed iOS call and audio issues, including failed call joins showing a black screen, silent audio messages after calls, and audio remaining on the earpiece after unanswered calls.
+
 # v6.2.0
 
 ## New

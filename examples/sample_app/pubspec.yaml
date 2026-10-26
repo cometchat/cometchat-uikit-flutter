@@ -5,7 +5,7 @@ publish_to: 'none'
 # release it demonstrates; only the dependency constraint below tracks the
 # library. The build number feeds Android versionCode via flutter.versionCode,
 # so it must only ever increase.
-version: 6.2.0
+version: 6.2.1
 
 environment:
   sdk: '>=3.10.8 <4.0.0'
@@ -14,7 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cometchat_chat_uikit: ^6.2.0
+  cometchat_chat_uikit: ^6.2.1
 
 dev_dependencies:
   flutter_test:

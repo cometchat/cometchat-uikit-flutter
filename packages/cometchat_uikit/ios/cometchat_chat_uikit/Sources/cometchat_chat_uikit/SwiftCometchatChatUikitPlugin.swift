@@ -404,6 +404,8 @@ UINavigationControllerDelegate {
             setAudioSessionToSpeaker(result: result)
         case "restoreAudioSession":
             restoreAudioSession(result: result)
+        case "prepareAudioSessionForPlayback":
+            prepareAudioSessionForPlayback(result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -481,6 +483,60 @@ UINavigationControllerDelegate {
             NSLog("CometChatUIKit: could not restore the audio session: \(error.localizedDescription)")
             return false
         }
+    }
+
+    /// Readies the shared session for an audio message about to play:
+    /// playback, from the loudspeaker. Answers whether it is ready.
+    ///
+    /// After a call the session was left as the call or its tones had it (a
+    /// play-and-record, voice-chat session on the earpiece, say), and an
+    /// audio message played there was not heard until the app restarted.
+    /// The audio message's player never set the session itself: it only
+    /// upgrades it once, when it is first used.
+    ///
+    /// A ringtone, ringback or voice note that has the session keeps it. The
+    /// caller checks that no call is on.
+    private func prepareAudioSessionForPlayback(result: @escaping FlutterResult) {
+        let voiceNoteHasSession = sessionBeforeVoiceNote != nil
+        callToneQueue.async {
+            guard !voiceNoteHasSession, self.callTonePlayer == nil, self.ringtonePlayer == nil else {
+                DispatchQueue.main.async { result(false) }
+                return
+            }
+            let session = AVAudioSession.sharedInstance()
+            if session.category == .playAndRecord {
+                // A forced loudspeaker or receiver route from a call or a
+                // tone; it only applies to play-and-record.
+                try? session.overrideOutputAudioPort(.none)
+            }
+            do {
+                if session.category != .playback || session.mode != .default {
+                    try session.setCategory(.playback, mode: .default, options: [])
+                }
+                try session.setActive(true)
+                DispatchQueue.main.async { result(true) }
+            } catch {
+                self.callToneLog("could not ready the session for playback: \(error.localizedDescription)")
+                DispatchQueue.main.async { result(false) }
+            }
+        }
+    }
+
+    /// Whether `session` is still in the setup a tone gave it. Mixing and
+    /// ducking, which other components switch on by themselves (an audio
+    /// message's player turns mixing on), do not count: a ringback whose
+    /// session had gained `.mixWithOthers` took it for someone else's and
+    /// left it on the earpiece after an unanswered call.
+    private func isSessionStill(
+        _ session: AVAudioSession,
+        category: AVAudioSession.Category,
+        mode: AVAudioSession.Mode,
+        options: AVAudioSession.CategoryOptions
+    ) -> Bool {
+        let ignored: AVAudioSession.CategoryOptions = [.mixWithOthers, .duckOthers]
+        return session.category == category
+            && session.mode == mode
+            && session.categoryOptions.subtracting(ignored) == options.subtracting(ignored)
     }
 
     /// Reads a file off the system pasteboard (e.g. copied from Files or
@@ -815,9 +871,7 @@ UINavigationControllerDelegate {
     /// changed it since.
     private func sessionIsCallTones(_ session: AVAudioSession) -> Bool {
         guard let ours = callToneSession else { return true }
-        return session.category == ours.category
-            && session.mode == ours.mode
-            && session.categoryOptions == ours.options
+        return isSessionStill(session, category: ours.category, mode: ours.mode, options: ours.options)
     }
 
     /// On `callToneQueue`. Starts nothing when a later request (a stop, the
@@ -1239,9 +1293,7 @@ UINavigationControllerDelegate {
     /// changed it since (the ringback, a call, a voice note).
     private func sessionIsRingtones(_ session: AVAudioSession) -> Bool {
         guard let ours = ringtoneSession else { return true }
-        return session.category == ours.category
-            && session.mode == ours.mode
-            && session.categoryOptions == ours.options
+        return isSessionStill(session, category: ours.category, mode: ours.mode, options: ours.options)
     }
 
     /// On `callToneQueue`. Starts nothing when a later request arrived
@@ -1399,9 +1451,7 @@ UINavigationControllerDelegate {
     ) -> Bool {
         let session = AVAudioSession.sharedInstance()
         func isAsSet() -> Bool {
-            return session.category == set.category
-                && session.mode == set.mode
-                && session.categoryOptions == set.options
+            return isSessionStill(session, category: set.category, mode: set.mode, options: set.options)
         }
         guard isAsSet() else { return false }
         do {
