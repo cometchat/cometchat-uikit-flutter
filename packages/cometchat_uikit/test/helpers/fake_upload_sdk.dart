@@ -68,6 +68,11 @@ class FakeUploadRepository extends Fake implements sdk.UploadRepository {
 
   int _seq = 0;
 
+  /// No offline upload store here, so the request takes [generateBatchId]'s
+  /// random ids, as an app without offline support does.
+  @override
+  bool get durabilityAvailable => false;
+
   @override
   String generateBatchId() {
     final id = 'batch_${_seq++}';

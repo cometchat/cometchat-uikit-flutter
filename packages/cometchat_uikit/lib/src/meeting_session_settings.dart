@@ -56,6 +56,12 @@ abstract final class MeetingSessionSettings {
         hostFallback ??
         SessionSettingsBuilder().setLayout(LayoutType.tile);
     if (!isAudioOnly) return base;
-    return CallTypeSessionSettingsBuilder(base, isVideo: false);
+    // Not a peer call: a member who leaves must not end the meeting for
+    // everyone else.
+    return CallTypeSessionSettingsBuilder(
+      base,
+      isVideo: false,
+      peerCall: false,
+    );
   }
 }

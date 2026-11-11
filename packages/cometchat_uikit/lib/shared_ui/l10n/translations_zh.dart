@@ -266,6 +266,9 @@ class TranslationsZh extends Translations {
   String get calling => '正在呼叫...';
 
   @override
+  String get ringing => '响铃中...';
+
+  @override
   String get add => '添加';
 
   @override
@@ -1815,6 +1818,9 @@ class TranslationsZhTw extends TranslationsZh {
 
   @override
   String get calling => '呼叫...';
+
+  @override
+  String get ringing => '響鈴中...';
 
   @override
   String get add => '新增';

@@ -246,7 +246,7 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  Translations.of(context).popScreenDisabled,
+                  CometChatLocalize.of(context).popScreenDisabled,
                   style: TextStyle(
                     color: _colorPalette.white,
                     fontSize: _typography.button?.medium?.fontSize,
@@ -270,8 +270,11 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
               borderRadius: _style.borderRadius,
             ),
             child: BlocConsumer<OutgoingCallBloc, OutgoingCallState>(
+              // The status, and "Calling..." turning "Ringing..." once the
+              // callee's device rings.
               buildWhen: (previous, current) =>
-                  previous.status != current.status,
+                  previous.status != current.status ||
+                  previous.isCalleeRinging != current.isCalleeRinging,
               listener: _handleStateChanges,
               builder: (context, state) {
                 return Padding(
@@ -286,25 +289,14 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
                     titleView: _getTitleView(context, widget.call),
                     avatarHeight: 120,
                     avatarWidth: 120,
-                    titlePadding: EdgeInsets.only(
-                      bottom: _spacing.padding2 ?? 0,
+                    subtitleView: _getSubtitleView(
+                      context,
+                      widget.call,
+                      calleeRinging: state.isCalleeRinging,
                     ),
-                    subtitleView: _getSubtitleView(context, widget.call),
                     avatarView: _getAvatarView(context, widget.call),
                     cardStyle: CardStyle(
-                      titleStyle:
-                          TextStyle(
-                                fontSize: _typography.heading1?.bold?.fontSize,
-                                fontWeight:
-                                    _typography.heading1?.bold?.fontWeight,
-                                fontFamily:
-                                    _typography.heading1?.bold?.fontFamily,
-                                color:
-                                    _style.titleColor ??
-                                    _colorPalette.textPrimary,
-                              )
-                              .merge(_style.titleTextStyle)
-                              .copyWith(color: _style.titleColor),
+                      titleStyle: _titleTextStyle(),
                       avatarStyle: CometChatAvatarStyle(
                         placeHolderTextStyle: TextStyle(
                           fontSize: _typography.heading1?.bold?.fontSize,
@@ -336,14 +328,22 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
     }
   }
 
-  Widget _getSubtitleView(BuildContext context, Call call) {
+  /// The line under the callee's name: "Calling...", then "Ringing..." once
+  /// the callee's device rings ([calleeRinging], ringing v2), unless the
+  /// host gave its own [CometChatOutgoingCall.subtitleView].
+  Widget _getSubtitleView(
+    BuildContext context,
+    Call call, {
+    bool calleeRinging = false,
+  }) {
     if (widget.subtitleView != null) {
       return widget.subtitleView!(context, call)!;
     }
+    final translations = CometChatLocalize.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: _spacing.padding10 ?? 0),
       child: Text(
-        Translations.of(context).calling,
+        calleeRinging ? translations.ringing : translations.calling,
         style: TextStyle(
           fontSize: _typography.body?.regular?.fontSize,
           fontWeight: _typography.body?.regular?.fontWeight,
@@ -358,8 +358,46 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
     return widget.avatarView?.call(context, call);
   }
 
-  Widget? _getTitleView(BuildContext context, Call call) {
-    return widget.titleView?.call(context, call);
+  TextStyle _titleTextStyle() {
+    return TextStyle(
+      fontSize: _typography.heading1?.bold?.fontSize,
+      fontWeight: _typography.heading1?.bold?.fontWeight,
+      fontFamily: _typography.heading1?.bold?.fontFamily,
+      color: _style.titleColor ?? _colorPalette.textPrimary,
+    ).merge(_style.titleTextStyle).copyWith(color: _style.titleColor);
+  }
+
+  /// The callee's name on one line, ending in "…" when it is too long (as
+  /// the native Android UI Kits show it), unless the host gave its own
+  /// [CometChatOutgoingCall.titleView].
+  ///
+  /// [CometChatCard] lays its title out in a vertical [Wrap], which leaves
+  /// it no width limit, so the line is held to the screen's width here; the
+  /// ellipsis needs one.
+  Widget _getTitleView(BuildContext context, Call call) {
+    final custom = widget.titleView?.call(context, call);
+    if (custom != null) {
+      return custom;
+    }
+    final horizontalPadding = 2 * (_spacing.padding5 ?? 0);
+    final width = widget.width != null && widget.width!.isFinite
+        ? widget.width!
+        : MediaQuery.sizeOf(context).width;
+    return Padding(
+      padding: EdgeInsets.only(bottom: _spacing.padding2 ?? 0),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: (width - horizontalPadding).clamp(0, double.infinity),
+        ),
+        child: Text(
+          widget.user?.name ?? '',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: _titleTextStyle(),
+        ),
+      ),
+    );
   }
 
   Widget _getCancelledView(
@@ -380,7 +418,7 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
             BorderRadius.circular(_spacing.radiusMax ?? 0),
       ),
       child: IconButton(
-        tooltip: Translations.of(context).decline,
+        tooltip: CometChatLocalize.of(context).decline,
         onPressed: state.isCallRejected
             ? null
             : () => _bloc.add(const CancelCall()),
@@ -401,7 +439,7 @@ class _CometChatOutgoingCallState extends State<CometChatOutgoingCall> {
         SnackBar(
           backgroundColor: _colorPalette.error,
           content: Text(
-            Translations.of(context).somethingWentWrongError,
+            CometChatLocalize.of(context).somethingWentWrongError,
             style: TextStyle(
               color: _colorPalette.white,
               fontSize: _typography.button?.medium?.fontSize,

@@ -269,6 +269,9 @@ class TranslationsPt extends Translations {
   String get calling => 'Ligando...';
 
   @override
+  String get ringing => 'Tocando...';
+
+  @override
   String get add => 'Adicionar';
 
   @override

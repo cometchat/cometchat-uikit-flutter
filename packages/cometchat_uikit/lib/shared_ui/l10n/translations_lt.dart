@@ -268,6 +268,9 @@ class TranslationsLt extends Translations {
   String get calling => 'Skambina...';
 
   @override
+  String get ringing => 'Skamba...';
+
+  @override
   String get add => 'Pridėti';
 
   @override

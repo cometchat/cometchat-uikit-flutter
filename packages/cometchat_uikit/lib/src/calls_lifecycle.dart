@@ -9,17 +9,21 @@ import '../call_ui/src/incoming_call/cometchat_display_incoming_call_overlay.dar
 import '../call_ui/src/utils/call_state_service.dart';
 import '../call_ui/src/ongoing_call/call_screen_overlay.dart';
 import '../call_ui/src/utils/call_extension_constants.dart';
+// Web keeps the chat SDK's call listener (ringing v1). The UI Kit's barrels
+// no longer pass it along, so it comes from the chat SDK itself.
+// ignore: deprecated_member_use
+import 'package:cometchat_sdk/cometchat_sdk.dart' show CallListener;
+
 import '../cometchat_calls_uikit.dart'
     show
         Call,
-        CallListener,
         CallSession,
         CometChat,
         CometChatOngoingCallService,
         LoginListener,
         User;
 import '../shared_ui/src/constants/ui_kit_constants.dart'
-    show CallStatusConstants, MessageCategoryConstants;
+    show CallStatusConstants, MessageCategoryConstants, ReceiverTypeConstants;
 import '../shared_ui/src/cometchat_ui_kit/cometchat_ui_kit.dart';
 import '../shared_ui/src/events/call_events/cometchat_call_event_listener.dart';
 import '../shared_ui/src/events/call_events/cometchat_call_events.dart';
@@ -29,6 +33,8 @@ import 'calling_configuration_resolver.dart';
 import 'calls_sdk_session.dart';
 import 'ghost_join_guard.dart';
 import 'incoming_ringtone.dart';
+import 'push_ringing.dart';
+import 'ringing_call_mapping.dart';
 
 /// Starts and stops the UI Kit's call handling for the logged-in user.
 ///
@@ -66,15 +72,23 @@ abstract final class CallsLifecycle {
   static final _OutOfBandLoginListener _loginListener =
       _OutOfBandLoginListener();
 
-  /// Registers a chat SDK call listener. A seam: the chat SDK does not expose
-  /// its listener map.
+  /// Registers a chat SDK call listener, on web (ringing v1). A seam: the
+  /// chat SDK does not expose its listener map.
+  // Web keeps ringing v1 (the chat SDK's call listener).
   @visibleForTesting
+  // ignore: deprecated_member_use
   static void Function(String listenerId, CallListener listener)
-  addChatCallListener = CometChat.addCallListener;
+  addChatCallListener = _addChatCallListener;
+
+  // ignore: deprecated_member_use
+  static void _addChatCallListener(String id, CallListener listener) =>
+      // ignore: deprecated_member_use
+      CometChat.addCallListener(id, listener);
 
   /// Removes a chat SDK call listener. See [addChatCallListener].
   @visibleForTesting
   static void Function(String listenerId) removeChatCallListener =
+      // ignore: deprecated_member_use
       CometChat.removeCallListener;
 
   /// The user the call listeners are registered for, or null when stopped.
@@ -213,8 +227,8 @@ abstract final class CallsLifecycle {
   /// Best effort and bounded by [logoutCleanupTimeout] altogether: an
   /// incoming call still ringing is declined (`rejected`), a call this
   /// device placed that is still ringing is cancelled (`cancelled`), a
-  /// 1-on-1 call in progress is ended (`endCall`). A group meeting is only
-  /// left (locally). Failures are logged; they never stop the logout. Then
+  /// 1-on-1 call in progress is left (ringing v2 sends no end) and its end
+  /// announced. A group meeting is only left (locally). Failures are logged; they never stop the logout. Then
   /// [tearDownLocalCalls]. The call listeners stay registered: if the chat
   /// logout fails, the user is still logged in and must still get calls.
   ///
@@ -288,7 +302,7 @@ abstract final class CallsLifecycle {
     ActiveCallTracker.mayHaveMediaSession = false;
     try {
       unawaited(CometChatOngoingCallService.abort());
-      final leave = CallSession.getInstance()?.leaveSession();
+      final leave = CallSession.getInstance()?.leave();
       if (leave != null) {
         // Fails when no session is up; that is fine, but it must not surface
         // as an unhandled error.
@@ -321,7 +335,9 @@ abstract final class CallsLifecycle {
 
     final ringing = ActiveCallTracker.ringingCall?.sessionId;
     if (claim(ringing)) {
-      requests.add(_reject(ringing!, CallStatusConstants.rejected));
+      // Ringing through push (ringing v2): its ring stops too.
+      _dismissRinging(ringing!);
+      requests.add(_reject(ringing, CallStatusConstants.rejected));
     }
     for (final call in ActiveCallTracker.ringingOutgoingCalls) {
       final sessionId = call.sessionId;
@@ -331,17 +347,17 @@ abstract final class CallsLifecycle {
     }
     if (ActiveCallTracker.callScreenWorkFlow == CallWorkFlow.defaultCalling) {
       final onScreen = ActiveCallTracker.callScreenSessionId;
-      if (claim(onScreen)) requests.add(_end(onScreen!));
+      if (claim(onScreen)) endedHere(onScreen!);
     }
     final active = CallEventService.instance.activeCall;
     if (active is Call && claim(active.sessionId)) {
       // A call this device placed that nobody answered yet is cancelled; one
       // that was answered is ended.
-      requests.add(
-        active.callStatus == CallStatusConstants.initiated
-            ? _reject(active.sessionId!, CallStatusConstants.cancelled)
-            : _end(active.sessionId!),
-      );
+      if (active.callStatus == CallStatusConstants.initiated) {
+        requests.add(_reject(active.sessionId!, CallStatusConstants.cancelled));
+      } else {
+        endedHere(active.sessionId!, call: active);
+      }
     }
     return requests;
   }
@@ -367,23 +383,45 @@ abstract final class CallsLifecycle {
     }
   }
 
-  static Future<void> _end(String sessionId) async {
-    try {
-      final result = await CallOperationsServiceLocator.instance.endCallUseCase
-          .call(sessionId);
-      result.fold(
-        (failure) => ccLog(
-          'CallsLifecycle: ending $sessionId at logout failed: '
-          '${failure.message}',
-        ),
-        (call) {
-          call.category = MessageCategoryConstants.call;
-          CometChatCallEvents.ccCallEnded(call);
-        },
-      );
-    } catch (e) {
-      ccLog('CallsLifecycle: ending $sessionId at logout failed: $e');
-    }
+  /// A 1-on-1 call in progress at logout, or ended for a call answered over
+  /// it (`PushRinging`). Ringing v2 ends a call by leaving it, which
+  /// [tearDownLocalCalls] does: nothing goes to the server. Its end
+  /// is announced (`ccCallEnded`, with the call as this device knows it, no
+  /// call message ID), and the push ringer hears it is over (iOS CallKit).
+  static void endedHere(String sessionId, {Call? call}) {
+    final base =
+        call ??
+        Call(
+          sessionId: sessionId,
+          receiverUid: '',
+          type: '',
+          receiverType: ReceiverTypeConstants.user,
+        );
+    CometChatCallEvents.ccCallEnded(
+      RingingCallMapping.withStatus(base, CallStatusConstants.ended),
+    );
+    final push = PushRinging.bridge;
+    if (push == null) return;
+    unawaited(
+      push
+          .reportCallEnded(sessionId)
+          .catchError(
+            (Object e) => ccLog('CallsLifecycle: reporting the end: $e'),
+          ),
+    );
+  }
+
+  /// Stops the push ring of [sessionId], declined at logout.
+  static void _dismissRinging(String sessionId) {
+    final push = PushRinging.bridge;
+    if (push == null) return;
+    unawaited(
+      push
+          .dismissRinging(sessionId, answered: false)
+          .catchError(
+            (Object e) => ccLog('CallsLifecycle: stopping the ring: $e'),
+          ),
+    );
   }
 
   /// [call] was placed while this device's calls were being torn down: its
@@ -446,7 +484,8 @@ abstract final class CallsLifecycle {
     stop();
     _logoutCleanups = 0;
     CometChat.removeLoginListener(_loginListenerId);
-    addChatCallListener = CometChat.addCallListener;
+    addChatCallListener = _addChatCallListener;
+    // ignore: deprecated_member_use
     removeChatCallListener = CometChat.removeCallListener;
   }
 
@@ -491,7 +530,15 @@ abstract final class CallsLifecycle {
 
   static void _registerListeners() {
     final service = CallEventService.instance;
-    addChatCallListener(callListenerId, service);
+    if (kIsWeb) {
+      // Web keeps ringing v1: the chat SDK's call listener and the UI Kit's
+      // incoming call screen. The Calls SDK has no push ringing on web.
+      addChatCallListener(callListenerId, service);
+    } else {
+      // Ringing v2: calls ring through push (the app's push ringer), and the
+      // UI Kit follows them through the Calls SDK.
+      PushRinging.start();
+    }
     // First in line, so the call records are updated before any screen
     // hears the event (dispatch is synchronous and in registration order).
     final others = Map<String, CometChatCallEventListener>.of(
@@ -505,7 +552,11 @@ abstract final class CallsLifecycle {
   }
 
   static void _unregisterListeners() {
-    removeChatCallListener(callListenerId);
+    if (kIsWeb) {
+      removeChatCallListener(callListenerId);
+    } else {
+      PushRinging.stop();
+    }
     CometChatCallEvents.removeCallEventsListener(callListenerId);
     _listenersRegistered = false;
   }

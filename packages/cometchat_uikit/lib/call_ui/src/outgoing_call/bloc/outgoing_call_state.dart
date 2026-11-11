@@ -30,25 +30,37 @@ class OutgoingCallState extends Equatable {
   /// Error message when status is error
   final String? errorMessage;
 
+  /// Whether the callee's device is ringing: the callee's device prepared the
+  /// call's session (ringing v2). False until it is known.
+  final bool isCalleeRinging;
+
   const OutgoingCallState({
     this.status = OutgoingCallStatus.idle,
     this.isCallRejected = false,
     this.errorMessage,
+    this.isCalleeRinging = false,
   });
 
   @override
-  List<Object?> get props => [status, isCallRejected, errorMessage];
+  List<Object?> get props => [
+    status,
+    isCallRejected,
+    errorMessage,
+    isCalleeRinging,
+  ];
 
   /// Create a copy of this state with updated fields
   OutgoingCallState copyWith({
     OutgoingCallStatus? status,
     bool? isCallRejected,
     String? errorMessage,
+    bool? isCalleeRinging,
   }) {
     return OutgoingCallState(
       status: status ?? this.status,
       isCallRejected: isCallRejected ?? this.isCallRejected,
       errorMessage: errorMessage,
+      isCalleeRinging: isCalleeRinging ?? this.isCalleeRinging,
     );
   }
 }

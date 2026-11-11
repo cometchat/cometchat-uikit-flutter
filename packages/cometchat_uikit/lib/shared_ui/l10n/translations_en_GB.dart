@@ -270,6 +270,9 @@ class TranslationsEnGb extends Translations {
   String get calling => 'Calling...';
 
   @override
+  String get ringing => 'Ringing...';
+
+  @override
   String get add => 'Add';
 
   @override

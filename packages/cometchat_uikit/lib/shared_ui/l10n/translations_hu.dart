@@ -268,6 +268,9 @@ class TranslationsHu extends Translations {
   String get calling => 'Hívás...';
 
   @override
+  String get ringing => 'Kicseng...';
+
+  @override
   String get add => 'Hozzáadás';
 
   @override

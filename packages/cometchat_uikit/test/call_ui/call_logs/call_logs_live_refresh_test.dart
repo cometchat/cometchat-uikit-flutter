@@ -8,6 +8,12 @@
 /// top, changed rows in place, older pages kept. The refresh reads the first
 /// page through a request of its own, so load-more keeps its place.
 ///
+/// Ringing v2 registers the chat SDK's call listener on web only. These
+/// tests run on the Dart VM, so they cover Android and iOS, where a call of
+/// this device's being over (`ActiveCallTracker.releasedSessions`) or
+/// stopping ringing here (`ringingEndedSessions`) takes its place. The chat
+/// SDK triggers are covered when run with `--platform chrome`.
+///
 /// Time is fake throughout (testWidgets); no test awaits a future that
 /// depends on it.
 ///
@@ -28,8 +34,10 @@ import 'package:cometchat_chat_uikit/call_ui/src/call_logs/domain/usecases/load_
 import 'package:cometchat_chat_uikit/call_ui/src/utils/call_state_service.dart';
 import 'package:cometchat_chat_uikit/shared_ui/src/clean_architecture/core/result.dart';
 import 'package:cometchat_chat_uikit/shared_ui/src/events/call_events/cometchat_call_events.dart';
+import 'package:cometchat_chat_uikit/src/active_call_tracker.dart';
 import 'package:cometchat_chat_uikit/src/chat_sdk_listeners.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/call_bloc_harness.dart';
@@ -56,9 +64,21 @@ Future<void> _settle(WidgetTester tester) =>
 Future<void> _close(WidgetTester tester, CallLogsBloc bloc) =>
     tester.runAsync<void>(bloc.close);
 
-/// One SDK call event, as the chat SDK would deliver it.
-void _sdkCallEvent() =>
+var _sessions = 0;
+
+/// A call of this device's is over here, as ringing v2 reports it on
+/// Android and iOS: its record is released. On web, one chat SDK call event.
+void _callOver() {
+  if (kIsWeb) {
     _callListeners.values.single.onIncomingCallCancelled(_call());
+  } else {
+    ActiveCallTracker.release('over-${++_sessions}');
+  }
+}
+
+/// A call stopped ringing on this device without being answered or declined
+/// here (Android and iOS).
+void _ringingEnded() => ActiveCallTracker.ringingEnded('rang-${++_sessions}');
 
 List<String?> _ids(CallLogsBloc bloc) =>
     bloc.state.callLogs.map((log) => log.sessionId).toList();
@@ -121,7 +141,7 @@ void main() {
     final statuses = <CallLogsStatus>[];
     final sub = bloc.stream.listen((s) => statuses.add(s.status));
 
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(milliseconds: 500));
     CometChatCallEvents.ccCallRejected(_call());
     await tester.pump(const Duration(milliseconds: 500));
@@ -172,7 +192,7 @@ void main() {
     expect(_ids(bloc), ['s1', 's2', 's3']);
     expect(bloc.state.hasMore, isTrue);
 
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 2));
 
     expect(_ids(bloc), ['s0', 's1', 's2', 's3']);
@@ -212,7 +232,7 @@ void main() {
     bloc.add(const LoadMoreCallLogs());
     await _settle(tester);
 
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 2));
     bloc.add(const LoadMoreCallLogs());
     await _settle(tester);
@@ -248,7 +268,7 @@ void main() {
     await _settle(tester);
 
     // Two attempts, both failing: the list stays, nothing is reported.
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 5));
     expect(remote.requests, hasLength(3));
     expect(_ids(bloc), ['a']);
@@ -256,7 +276,7 @@ void main() {
     expect(bloc.state.loadMoreError, isNull);
 
     // The next refresh's second attempt succeeds.
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 5));
     expect(remote.requests, hasLength(5));
     expect(_ids(bloc), ['n', 'a']);
@@ -276,16 +296,24 @@ void main() {
     await _settle(tester);
 
     final triggers = <String, void Function()>{
-      'onIncomingCallReceived': () =>
-          _callListeners.values.single.onIncomingCallReceived(_call()),
-      'onOutgoingCallAccepted': () =>
-          _callListeners.values.single.onOutgoingCallAccepted(_call()),
-      'onOutgoingCallRejected': () =>
-          _callListeners.values.single.onOutgoingCallRejected(_call()),
-      'onIncomingCallCancelled': () =>
-          _callListeners.values.single.onIncomingCallCancelled(_call()),
-      'onCallEndedMessageReceived': () =>
-          _callListeners.values.single.onCallEndedMessageReceived(_call()),
+      // The chat SDK's call listener exists on web only (ringing v2); on
+      // Android and iOS the call tracker's sessions take its place.
+      if (kIsWeb) ...{
+        'onIncomingCallReceived': () =>
+            _callListeners.values.single.onIncomingCallReceived(_call()),
+        'onOutgoingCallAccepted': () =>
+            _callListeners.values.single.onOutgoingCallAccepted(_call()),
+        'onOutgoingCallRejected': () =>
+            _callListeners.values.single.onOutgoingCallRejected(_call()),
+        'onIncomingCallCancelled': () =>
+            _callListeners.values.single.onIncomingCallCancelled(_call()),
+        'onCallEndedMessageReceived': () =>
+            _callListeners.values.single.onCallEndedMessageReceived(_call()),
+      } else ...{
+        'a call released here (releasedSessions)': _callOver,
+        'a call that stopped ringing here (ringingEndedSessions)':
+            _ringingEnded,
+      },
       'P5-E29 onConnected': () =>
           _connectionListeners.values.single.onConnected(),
       'ccOutgoingCall': () => CometChatCallEvents.ccOutgoingCall(_call()),
@@ -315,8 +343,9 @@ void main() {
     await _close(tester, bloc);
   });
 
-  testWidgets('P5-C14: close() removes the chat SDK call and connection '
-      'listeners and the UI Kit call listener, and cancels the timer', (
+  testWidgets('P5-C14: close() removes the call triggers (the chat SDK call '
+      'listener on web, the call tracker on Android and iOS), the connection '
+      'listener and the UI Kit call listener, and cancels the timer', (
     tester,
   ) async {
     final remote = FakeCallLogsRemote(
@@ -329,13 +358,13 @@ void main() {
     final (:bloc, repository: _) = callLogsBlocOver(remote);
     bloc.add(const LoadCallLogs());
     await _settle(tester);
-    final id = _callListeners.keys.single;
-    expect(_connectionListeners.keys, [id]);
+    final id = _connectionListeners.keys.single;
+    expect(_callListeners.keys, kIsWeb ? [id] : isEmpty);
     expect(CometChatCallEvents.callEventsListener.keys, contains(id));
 
     // A refresh is pending when the bloc closes. The test ends right after:
     // a timer close() left would fail it as pending.
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(milliseconds: 500));
     await _close(tester, bloc);
 
@@ -343,6 +372,14 @@ void main() {
     expect(_connectionListeners, isEmpty);
     expect(CometChatCallEvents.callEventsListener.keys, isNot(contains(id)));
     expect(remote.requests, hasLength(1));
+
+    // The call tracker no longer reaches the closed bloc.
+    if (!kIsWeb) {
+      _callOver();
+      _ringingEnded();
+      await tester.pump(const Duration(seconds: 2));
+      expect(remote.requests, hasLength(1));
+    }
   });
 
   testWidgets('P5-C14: a call screen closing after close() refreshes nothing', (
@@ -386,7 +423,7 @@ void main() {
     remote.gate = Completer<void>();
     bloc.add(const LoadMoreCallLogs());
     await tester.pump();
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 3));
     // Only the load-more has asked.
     expect(remote.pagesAsked, [1, 2]);
@@ -420,7 +457,7 @@ void main() {
     );
 
     remote.gate = Completer<void>();
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 2));
     expect(remote.requests, hasLength(2));
     bloc.add(const RefreshCallLogs());
@@ -446,7 +483,7 @@ void main() {
     );
     final (:bloc, repository: _) = callLogsBlocOver(remote);
 
-    _sdkCallEvent();
+    _callOver();
     CometChatCallEvents.ccCallEnded(_call());
     await tester.pump(const Duration(milliseconds: 200));
     expect(remote.requests, isEmpty);
@@ -473,7 +510,7 @@ void main() {
     await _settle(tester);
     expect(repository.fetches, 1);
 
-    _sdkCallEvent();
+    _callOver();
     await tester.pump(const Duration(seconds: 3));
     expect(repository.fetches, 1);
     await _close(tester, bloc);

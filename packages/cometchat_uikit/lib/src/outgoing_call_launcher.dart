@@ -11,6 +11,7 @@ import '../cometchat_calls_uikit.dart' show Call, SessionSettingsBuilder, User;
 import '../shared_ui/src/constants/ui_kit_constants.dart'
     show
         CallStatusConstants,
+        CallTypeConstants,
         MessageCategoryConstants,
         OnError,
         ReceiverTypeConstants;
@@ -19,6 +20,7 @@ import '../shared_ui/src/logging/cometchat_log.dart';
 import 'active_call_tracker.dart';
 import 'call_errors.dart';
 import 'calls_lifecycle.dart';
+import 'push_ringing.dart';
 
 /// The one place the UI Kit opens the outgoing call screen for a call this
 /// device has just placed: the call buttons, the call logs' call-back, and
@@ -94,24 +96,47 @@ abstract final class OutgoingCallLauncher {
       return false;
     }
     try {
+      final title = user ?? _receiverOf(call);
       unawaited(
         navigator.push(
           MaterialPageRoute<void>(
             builder: (_) => _screen(
               call,
-              title: user ?? _receiverOf(call),
+              title: title,
               configuration: configuration,
               sessionSettingsBuilder: sessionSettingsBuilder,
             ),
           ),
         ),
       );
+      _reportOutgoing(call, title);
       return true;
     } catch (e, stackTrace) {
       ccLog('OutgoingCallLauncher: pushing the screen failed: $e\n$stackTrace');
       _abandon(call, onError);
       return false;
     }
+  }
+
+  /// Tells the push ringer about [call], placed from here: on iOS it becomes
+  /// a CallKit call (ended from the lock screen, kept through a cellular
+  /// call, listed in Recents). The call screens report when it connects and
+  /// ends.
+  static void _reportOutgoing(Call call, User? callee) {
+    final push = PushRinging.bridge;
+    final sessionId = call.sessionId;
+    if (push == null || sessionId == null || sessionId.isEmpty) return;
+    unawaited(
+      push
+          .reportOutgoingCall(
+            sessionId: sessionId,
+            calleeName: callee?.name ?? call.receiverUid,
+            hasVideo: call.type == CallTypeConstants.videoCall,
+          )
+          .catchError(
+            (Object e) => ccLog('OutgoingCallLauncher: reporting the call: $e'),
+          ),
+    );
   }
 
   /// The next frame, or [frameWaitLimit] when none comes.

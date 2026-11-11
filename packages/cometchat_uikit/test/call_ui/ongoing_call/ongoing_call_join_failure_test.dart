@@ -372,7 +372,8 @@ void main() {
       expect(CallsPluginChannelRecorder.methods, isEmpty);
       expect(bloc.state.callingWidget, isNull);
       expect(ActiveCallTracker.mayHaveMediaSession, isFalse);
-      expect(dataSource.endCallCount, 1);
+      // Ringing v2: End sends no endCall, and nothing had joined to leave.
+      expect(dataSource.endCallCount, 0);
     });
 
     test('P4-C04: a join that lands after its screen closed starts nothing '

@@ -188,8 +188,8 @@ void main() {
     expect(dataSource.calls, isEmpty);
   });
 
-  testWidgets('the unanswered reject fails: onError gets the SDK code, a '
-      'best-effort endCall goes out, and the screen still closes', (
+  testWidgets('the unanswered reject fails: onError gets the SDK code, no '
+      'endCall goes out, and the screen still closes', (
     WidgetTester tester,
   ) async {
     final CometChatException sdkError = CometChatException(
@@ -208,10 +208,12 @@ void main() {
     await tester.pump(const Duration(seconds: 45));
     await tester.pumpAndSettle();
 
-    expect(dataSource.calls, <String>[
-      'rejectCall:session_1:unanswered',
-      'endCall:session_1',
-    ]);
+    expect(
+      dataSource.calls,
+      <String>['rejectCall:session_1:unanswered'],
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
     expect(errors.single, same(sdkError));
     expect(find.byType(CometChatOutgoingCall), findsNothing);
     expect(CallEventService.instance.activeCall, isNull);

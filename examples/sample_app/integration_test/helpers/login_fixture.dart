@@ -11,7 +11,7 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 ///     --dart-define=COMETCHAT_APP_ID=xxx \
 ///     --dart-define=TEST_USER_UID=yyy
 class LoginFixture {
-  // Hardcoded for internal test app (26580020f03ff346).
+  // Hardcoded for internal test app (YOUR_APP_ID).
   // For CI, override via --dart-define.
   static const String appId = String.fromEnvironment(
     'COMETCHAT_APP_ID',

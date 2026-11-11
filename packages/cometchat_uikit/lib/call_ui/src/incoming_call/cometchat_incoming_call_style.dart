@@ -13,6 +13,12 @@ import 'package:flutter/material.dart';
 ///  acceptIconColor: Colors.green,
 ///  );
 ///
+@Deprecated(
+  'Styles the incoming call screen, deprecated since ringing v2: incoming '
+  'calls ring on the push ringer\'s own screen (cometchat_voip, through '
+  'UIKitSettings.callPushBridge) on Android and iOS, and this screen shows '
+  'on web only.',
+)
 class CometChatIncomingCallStyle
     extends ThemeExtension<CometChatIncomingCallStyle> {
   CometChatIncomingCallStyle({

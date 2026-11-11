@@ -57,6 +57,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       User? existingUser = await CometChatUIKit.getLoggedInUser();
       if (existingUser != null && existingUser.uid != userId) {
+        // The previous user's chat and call pushes stop reaching this
+        // device: unregistered while their auth tokens still work.
         // Through the UI Kit, not CometChat.logout: its logout also stops
         // call handling for the previous user and logs the Calls SDK out.
         await CometChatUIKit.logout(

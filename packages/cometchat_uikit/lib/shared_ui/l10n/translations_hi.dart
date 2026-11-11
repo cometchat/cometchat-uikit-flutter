@@ -269,6 +269,9 @@ class TranslationsHi extends Translations {
   String get calling => 'कॉलिंग...';
 
   @override
+  String get ringing => 'घंटी बज रही है...';
+
+  @override
   String get add => 'जोड़ें';
 
   @override

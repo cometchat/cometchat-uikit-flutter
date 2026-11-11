@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,6 +83,9 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
 
     // Reload credentials into AppCredentials
     await AppCredentials.loadSavedCredentials();
+
+    // Chat notifications and the push ringer are for one app: initialized
+    // again for the new one (ringing v2).
 
     if (!mounted) return;
 

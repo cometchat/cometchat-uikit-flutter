@@ -10,6 +10,11 @@
 ///   the echo filter reads the user at event time.
 /// * A host's direct CometChat.login/logout is followed.
 ///
+/// These run on the Dart VM, so they cover Android and iOS: ringing v2
+/// follows incoming calls through push ringing (`PushRinging`, the Calls
+/// SDK's incoming call listener) and registers the chat SDK's call listener
+/// on web only.
+///
 ///   flutter test test/call_ui/call_event_service_lifecycle_test.dart
 library;
 
@@ -28,6 +33,7 @@ import 'package:cometchat_chat_uikit/src/calling_configuration_resolver.dart';
 import 'package:cometchat_chat_uikit/src/calls_lifecycle.dart';
 import 'package:cometchat_chat_uikit/src/calls_sdk_session.dart';
 import 'package:cometchat_chat_uikit/src/chat_auth_gateway.dart';
+import 'package:cometchat_chat_uikit/src/push_ringing.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,14 +84,19 @@ void main() {
   late Map<String, CallListener> chatListeners;
   late Map<String, CometChatCallEventListener> savedBus;
 
+  /// Call handling is up, as on Android and iOS: push ringing is started and
+  /// the service is on the UI Kit's call event bus. The chat SDK's call
+  /// listener is registered on web only (ringing v2).
   bool registered() =>
-      identical(chatListeners[CallsLifecycle.callListenerId], service) &&
+      PushRinging.isStarted &&
+      !chatListeners.containsKey(CallsLifecycle.callListenerId) &&
       identical(
         CometChatCallEvents.callEventsListener[CallsLifecycle.callListenerId],
         service,
       );
 
   bool unregistered() =>
+      !PushRinging.isStarted &&
       !chatListeners.containsKey(CallsLifecycle.callListenerId) &&
       !CometChatCallEvents.callEventsListener.containsKey(
         CallsLifecycle.callListenerId,

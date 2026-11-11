@@ -11,19 +11,20 @@
 #  for what that obliges you to do.
 #
 #  package        : cometchat_chat_uikit
-#  version        : 6.2.1
+#  version        : 6.3.0
 #  dart sdk floor : 3.10.8
-#  api elements   : 20713
-#  deprecated     : 68
-#  entry points   : 725
+#  api elements   : 20792
+#  deprecated     : 77
+#  entry points   : 728
 #
 # --- entry points ------------------------------------------------------------
 #
 #  Declared barrels:
-#    101  cometchat_calls_uikit.dart
-#   1026  cometchat_chat_uikit.dart
+#    106  cometchat_calls_uikit.dart
+#   1028  cometchat_chat_uikit.dart
 #      1  cometchat_chat_uikit_web.dart
-#    519  shared_ui/cometchat_uikit_shared.dart
+#    521  shared_ui/cometchat_uikit_shared.dart
+#      3  shared_ui/l10n/cometchat_localize.dart
 #      3  shared_ui/l10n/translations.dart
 #      1  shared_ui/l10n/translations_ar.dart
 #      1  shared_ui/l10n/translations_de.dart
@@ -44,7 +45,7 @@
 #      1  shared_ui/l10n/translations_tr.dart
 #      2  shared_ui/l10n/translations_zh.dart
 #
-#  …and 702 further file-level entry points. `lib/` has no top-level
+#  …and 704 further file-level entry points. `lib/` has no top-level
 #  `src/` directory, so pub treats every file under it as importable and the
 #  whole tree is public whether or not a barrel names it. Narrowing that is
 #  a breaking change, so it is tracked, not silently fixed.
@@ -61,6 +62,7 @@
 [alias] CometChatAudioBubbleV2 : CometChatAudioPlayer [deprecated]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/audio_bubble/cometchat_audio_player.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
 [alias] CometChatInteractiveCardMessage : CardMessage  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/data/data.dart, shared_ui/src/clean_architecture/data/models/interactive_message/card_message.dart, shared_ui/src/clean_architecture/data/models/interactive_message/interactive_message.dart, shared_ui/src/clean_architecture/data/models/models.dart
 [alias] CometChatKeyboardDiagnosticsCallback : void Function(CometChatKeyboardDiagnostics)  @ chat_ui/src/message_composer/cometchat_message_composer.dart, chat_ui/src/message_composer/utils/cometchat_keyboard_diagnostics.dart, cometchat_chat_uikit.dart
+[alias] CometChatLocalizations : Translations  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/cometchat_localize.dart
 [alias] ComposerActionsBuilder : List<CometChatMessageComposerAction> Function(BuildContext, User?, Group?, Map<String, dynamic>?)  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/core/constants/constants.dart, shared_ui/src/clean_architecture/core/constants/ui_kit_constants.dart, shared_ui/src/clean_architecture/core/core.dart
 [alias] ComposerWidgetBuilder : Widget Function(BuildContext, User?, Group?, Map<String, dynamic>?)  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/core/constants/constants.dart, shared_ui/src/clean_architecture/core/constants/ui_kit_constants.dart, shared_ui/src/clean_architecture/core/core.dart
 [alias] EmptyMessageListBuilder : Widget Function(BuildContext)  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/cometchat_message_list/widgets/empty_message_list.dart
@@ -243,6 +245,7 @@
 [ctor] CometChatCallEvents.new() : CometChatCallEvents
 [ctor] CometChatCallLogs.new({Key? key, Widget? Function(CallLog, BuildContext)? listItemView, Widget? Function(CallLog, BuildContext)? subTitleView, Widget? backButton, Widget Function(BuildContext)? emptyStateView, Widget Function(BuildContext)? errorStateView, Widget Function(BuildContext)? loadingStateView, dynamic Function(CallLog)? onItemClick, dynamic Function(Exception)? onError, void Function()? onBack, dynamic Function(BuildContext, CallLog)? trailingView, CallLogsBuilderProtocol? callLogsBuilderProtocol, String? datePattern, String? dateSeparatorPattern, CometChatCallLogsStyle? callLogsStyle, CallLogRequestBuilder? callLogsRequestBuilder, CometChatOutgoingCallConfiguration? outgoingCallConfiguration, Widget? audioCallIcon, Widget? videoCallIcon, Widget? incomingCallIcon, Widget? outgoingCallIcon, Widget? missedCallIcon, bool? hideAppbar, List<Widget>? appBarOptions, dynamic Function(CallLog)? onCallLogIconClicked, dynamic Function(CallLog)? onItemLongPress, List<CometChatOption>? Function(CallLog, CallLogsBloc, BuildContext)? addOptions, List<CometChatOption>? Function(CallLog, CallLogsBloc, BuildContext)? setOptions, void Function()? onEmpty, dynamic Function(List<CallLog>)? onLoad, Widget? Function(BuildContext, CallLog)? leadingStateView, Widget? Function(BuildContext, CallLog)? titleView, bool? showBackButton, CallLogsBloc? callLogsBloc}) : CometChatCallLogs
 [ctor] CometChatCallLogsStyle.new({Color? backgroundColor, Border? border, BorderRadiusGeometry? borderRadius, Color? backIconColor, TextStyle? titleTextStyle, Color? titleTextColor, TextStyle? emptyStateTextStyle, Color? emptyStateTextColor, TextStyle? errorStateTextStyle, Color? errorStateTextColor, TextStyle? emptyStateSubTitleTextStyle, Color? emptyStateSubTitleTextColor, TextStyle? errorStateSubTitleTextStyle, Color? errorStateSubTitleTextColor, TextStyle? itemTitleTextStyle, Color? itemTitleTextColor, Color? separatorColor, double? separatorHeight, CometChatAvatarStyle? avatarStyle, CometChatDateStyle? dateStyle, Color? retryButtonBackgroundColor, BorderSide? retryButtonBorder, BorderRadiusGeometry? retryButtonBorderRadius, Color? retryButtonTextColor, TextStyle? retryButtonTextStyle, Color? incomingCallIconColor, Color? outgoingCallIconColor, Color? missedCallIconColor, Color? audioCallIconColor, Color? videoCallIconColor}) : CometChatCallLogsStyle
+[ctor] CometChatCallPushBridge.new() : CometChatCallPushBridge
 [ctor] CometChatCard.new({Key? key, String? title, Widget? subtitleView, CardStyle? cardStyle, String? avatarName, String? avatarUrl, Widget? bottomView, double? avatarWidth, double? avatarHeight, EdgeInsetsGeometry? avatarPadding, EdgeInsetsGeometry? avatarMargin, EdgeInsetsGeometry? titlePadding, Widget? avatarView, Widget? titleView}) : CometChatCard
 [ctor] CometChatChangeScope.new({Key? key, required Group group, required GroupMember member, Future<void> Function(Group, GroupMember, String, String)? onSave, CometChatChangeScopeStyle? style, EdgeInsetsGeometry? padding}) : CometChatChangeScope
 [ctor] CometChatChangeScopeStyle.new({Color? backgroundColor, BorderRadiusGeometry? borderRadius, BoxBorder? border, Color? radioButtonColor, Color? radioButtonSelectedColor, TextStyle? scopeTextStyle, TextStyle? selectedScopeTextStyle, Color? cancelButtonBackgroundColor, BorderSide? cancelButtonBorder, TextStyle? cancelButtonTextStyle, BorderRadiusGeometry? cancelButtonBorderRadius, Color? saveButtonBackgroundColor, BorderSide? saveButtonBorder, TextStyle? saveButtonTextStyle, BorderRadiusGeometry? saveButtonBorderRadius, BoxBorder? scopeSectionBorder, TextStyle? titleTextStyle, TextStyle? subtitleTextStyle, Color? iconColor, Color? iconBackgroundColor, Color? tileColor, Color? selectedTileColor}) : CometChatChangeScopeStyle
@@ -291,8 +294,12 @@
 [ctor] CometChatImagesBubble.new({Key? key, required MediaMessage message, required BubbleAlignment alignment, List<CometChatTextFormatter>? formatters, double maxWidth, double gridGap, CometChatImagesBubbleStyle? style}) : CometChatImagesBubble
 [ctor] CometChatImagesBubbleStyle.new({double? tileBorderRadius, double? gridSpacing, Color? placeholderColor, Color? overflowScrimColor, TextStyle? overflowTextStyle, TextStyle? captionTextStyle}) : CometChatImagesBubbleStyle
 [ctor] CometChatIncomingCall.new({Key? key, required Call call, User? user, dynamic Function(Exception)? onError, dynamic Function(BuildContext, Call)? onDecline, dynamic Function(BuildContext, Call)? onAccept, bool? disableSoundForCalls, String? customSoundForCalls, String? customSoundForCallsPackage, CometChatIncomingCallStyle? incomingCallStyle, SessionSettingsBuilder? callSettingsBuilder, double? height, double? width, String? declineButtonText, String? acceptButtonText, Widget? callIcon, Widget? Function(BuildContext, Call)? titleView, Widget? Function(BuildContext, Call)? subTitleView, Widget? Function(BuildContext, Call)? leadingView, Widget? Function(BuildContext, Call)? itemView, Widget? Function(BuildContext, Call)? trailingView, IncomingCallBloc? incomingCallBloc}) : CometChatIncomingCall
+[ctor] CometChatIncomingCallColors.new({required Color background, required Color callerName, required Color subtitle, required Color avatarBackground, required Color avatarText, required Color acceptButton, required Color acceptIcon, required Color acceptLabel, required Color declineButton, required Color declineIcon, required Color declineLabel}) : CometChatIncomingCallColors
 [ctor] CometChatIncomingCallConfiguration.new({dynamic Function(Exception)? onError, bool? disableSoundForCalls, String? customSoundForCalls, String? customSoundForCallsPackage, dynamic Function(BuildContext, Call)? onDecline, dynamic Function(BuildContext, Call)? onAccept, CometChatIncomingCallStyle? incomingCallStyle, SessionSettingsBuilder? callSettingsBuilder, String? acceptButtonText, String? declineButtonText, double? height, double? width, Widget? Function(BuildContext, Call)? titleView, Widget? Function(BuildContext, Call)? subTitleView, Widget? Function(BuildContext, Call)? leadingView, Widget? Function(BuildContext, Call)? itemView, Widget? Function(BuildContext, Call)? trailingView}) : CometChatIncomingCallConfiguration
 [ctor] CometChatIncomingCallStyle.new({Color? backgroundColor, CometChatAvatarStyle? avatarStyle, Color? subtitleColor, TextStyle? subtitleTextStyle, Color? titleColor, TextStyle? titleTextStyle, BorderRadiusGeometry? borderRadius, Border? border, Color? declineButtonColor, Color? acceptButtonColor, Color? acceptTextColor, TextStyle? acceptTextStyle, Color? declineTextColor, TextStyle? declineTextStyle, Color? callIconColor}) : CometChatIncomingCallStyle
+[ctor] CometChatIncomingCallTheme.from({ThemeData? light, ThemeData? dark, ThemeMode? mode}) : CometChatIncomingCallTheme
+[ctor] CometChatIncomingCallTheme.new({required ThemeMode mode, required CometChatIncomingCallColors light, required CometChatIncomingCallColors dark}) : CometChatIncomingCallTheme
+[ctor] CometChatIncomingCallTheme.of(BuildContext context) : CometChatIncomingCallTheme
 [ctor] CometChatIncomingMessageBubbleStyle.new({DecorationImage? messageBubbleBackgroundImage, Color? backgroundColor, BoxBorder? border, BorderRadiusGeometry? borderRadius, TextStyle? threadedMessageIndicatorTextStyle, Color? threadedMessageIndicatorIconColor, CometChatAvatarStyle? messageBubbleAvatarStyle, CometChatReactionsStyle? messageBubbleReactionStyle, CometChatDateStyle? messageBubbleDateStyle, CometChatTextBubbleStyle? textBubbleStyle, CometChatImageBubbleStyle? imageBubbleStyle, CometChatVideoBubbleStyle? videoBubbleStyle, CometChatVoiceNoteBubbleStyle? audioBubbleStyle @deprecated, CometChatVoiceNoteBubbleStyle? voiceNoteBubbleStyle, CometChatFileBubbleStyle? fileBubbleStyle, CometChatCollaborativeBubbleStyle? collaborativeDocumentBubbleStyle, CometChatCollaborativeBubbleStyle? collaborativeWhiteboardBubbleStyle, CometChatPollsBubbleStyle? pollsBubbleStyle, CometChatDeletedBubbleStyle? deletedBubbleStyle, CometChatLinkPreviewBubbleStyle? linkPreviewBubbleStyle, CometChatMessageTranslationBubbleStyle? messageTranslationBubbleStyle, CometChatStickerBubbleStyle? stickerBubbleStyle, TextStyle? senderNameTextStyle, CometChatCallBubbleStyle? voiceCallBubbleStyle, CometChatCallBubbleStyle? videoCallBubbleStyle}) : CometChatIncomingMessageBubbleStyle
 [ctor] CometChatInlineAudioRecorder.new({Key? key, dynamic Function(String, {List<int>? fileBytes})? onSubmit, void Function()? onCancel, CometChatInlineAudioRecorderStyle? style, Widget? deleteIcon, Widget? sendIcon, Widget? recordIcon, Widget? pauseIcon, Widget? playIcon, Widget? stopIcon}) : CometChatInlineAudioRecorder
 [ctor] CometChatInlineAudioRecorderStyle.new({Color? backgroundColor, BoxBorder? border, BorderRadiusGeometry? borderRadius, Color? waveformColor, Color? waveformRecordingColor, Color? waveformPlayingColor, Color? durationTextColor, TextStyle? durationTextStyle, Color? recordButtonIconColor, Color? recordButtonBackgroundColor, Color? pauseButtonIconColor, Color? pauseButtonBackgroundColor, Color? stopButtonIconColor, Color? stopButtonBackgroundColor, Color? deleteButtonIconColor, Color? deleteButtonBackgroundColor, Color? sendButtonIconColor, Color? sendButtonBackgroundColor, Color? playButtonIconColor, Color? playButtonBackgroundColor, Color? recordingIndicatorColor}) : CometChatInlineAudioRecorderStyle
@@ -354,6 +361,8 @@
 [ctor] CometChatPinnedMessagesStyle.new({Color? backgroundColor, Color? appBarColor, TextStyle? titleTextStyle, TextStyle? itemTitleTextStyle, TextStyle? itemSubtitleTextStyle, TextStyle? itemDateTextStyle, Color? iconColor, Color? unpinIconColor, Color? separatorColor, BorderRadiusGeometry? borderRadius}) : CometChatPinnedMessagesStyle
 [ctor] CometChatPollsBubble.new({Key? key, String? loggedInUser, String? pollQuestion, List<PollOptions>? options, String? pollId, required Future<void> Function(String, String) choosePoll, String? senderUid, Map<String, dynamic>? metadata, BubbleAlignment? alignment, CometChatPollsBubbleStyle? style}) : CometChatPollsBubble
 [ctor] CometChatPollsBubbleStyle.new({TextStyle? questionTextStyle, TextStyle? voteCountTextStyle, TextStyle? pollOptionsTextStyle, Color? radioButtonColor, Color? pollOptionsBackgroundColor, Color? selectedOptionColor, Color? unSelectedOptionColor, Color? backgroundColor, Color? iconColor, BoxBorder? border, BorderRadiusGeometry? borderRadius, Color? progressColor, Color? progressBackgroundColor, CometChatAvatarStyle? voterAvatarStyle, CometChatAvatarStyle? messageBubbleAvatarStyle, CometChatDateStyle? messageBubbleDateStyle, DecorationImage? messageBubbleBackgroundImage, TextStyle? threadedMessageIndicatorTextStyle, Color? threadedMessageIndicatorIconColor, TextStyle? senderNameTextStyle, CometChatMessageReceiptStyle? messageReceiptStyle}) : CometChatPollsBubbleStyle
+[ctor] CometChatPushCall.new({required String sessionId, required String callType, String receiverType, String? callerUid, String? callerName, String? callerAvatarUrl}) : CometChatPushCall
+[ctor] CometChatPushCallEnded.new({required CometChatPushCall call, required String reason}) : CometChatPushCallEnded
 [ctor] CometChatQuickView.new({Key? key, required String title, String? subtitle, QuickViewStyle? quickViewStyle}) : CometChatQuickView
 [ctor] CometChatReactionList.new({Key? key, ReactionsRequestBuilder? reactionRequestBuilder, Widget Function(BuildContext)? errorStateView, String? errorStateText, Widget Function(BuildContext)? loadingStateView, Widget Function(BuildContext)? emptyStateView, String? emptyStateText, Widget? loadingIcon, dynamic Function(Reaction, BaseMessage)? onTap, CometChatReactionListStyle? style, String? selectedReaction, ListItemStyle? listItemStyle, CometChatAvatarStyle? avatarStyle, BaseMessage? message, double? height, double? width, EdgeInsetsGeometry? padding, dynamic Function(String?, BaseMessage?)? onReactionListItemClick, ReactionListBloc? reactionListBloc}) : CometChatReactionList
 [ctor] CometChatReactionListStyle.new({TextStyle? subtitleTextStyle, Color? backgroundColor, BoxBorder? border, BorderRadiusGeometry? borderRadius, TextStyle? errorTextStyle, Color? errorTextColor, TextStyle? errorSubtitleStyle, Color? errorSubtitleColor, TextStyle? titleTextStyle, Color? titleTextColor, TextStyle? tabTextStyle, Color? tabTextColor, Color? activeTabTextColor, Color? activeTabIndicatorColor, Color? activeTabBackgroundColor, TextStyle? tailViewTextStyle, Color? subtitleTextColor, TextStyle? emptyTextStyle, CometChatAvatarStyle? avatarStyle}) : CometChatReactionListStyle
@@ -800,7 +809,7 @@
 [ctor] OutgoingCallBloc.new({required Call call, User? user, SessionSettingsBuilder? callSettingsBuilder, dynamic Function(BuildContext, Call)? onCancelledCallTap, bool? disableSoundForCalls, String? customSoundForCalls, String? customSoundForCallsPackage, dynamic Function(Exception)? errorCallback}) : OutgoingCallBloc
 [ctor] OutgoingCallEvent.new() : OutgoingCallEvent
 [ctor] OutgoingCallRejected.new(Call call) : OutgoingCallRejected
-[ctor] OutgoingCallState.new({OutgoingCallStatus status, bool isCallRejected, String? errorMessage}) : OutgoingCallState
+[ctor] OutgoingCallState.new({OutgoingCallStatus status, bool isCallRejected, String? errorMessage, bool isCalleeRinging}) : OutgoingCallState
 [ctor] ParticipantLeft.new(Participant participant) : ParticipantLeft
 [ctor] ParticipantListChanged.new(List<Participant> participants) : ParticipantListChanged
 [ctor] PauseAllExceptUseCase.new(AudioStateRepository repository) : PauseAllExceptUseCase
@@ -2152,6 +2161,8 @@
 [fld] CometChatCallLogsStyle.titleTextColor : Color? [get]
 [fld] CometChatCallLogsStyle.titleTextStyle : TextStyle? [get]
 [fld] CometChatCallLogsStyle.videoCallIconColor : Color? [get]
+[fld] CometChatCallPushBridge.answered : Stream<CometChatPushCall> [get]
+[fld] CometChatCallPushBridge.ended : Stream<CometChatPushCallEnded> [get]
 [fld] CometChatCard.avatarHeight : double? [get]
 [fld] CometChatCard.avatarMargin : EdgeInsetsGeometry? [get]
 [fld] CometChatCard.avatarName : String? [get]
@@ -2973,6 +2984,17 @@
 [fld] CometChatIncomingCall.trailingView : Widget? Function(BuildContext, Call)? [get]
 [fld] CometChatIncomingCall.user : User? [get]
 [fld] CometChatIncomingCall.width : double? [get]
+[fld] CometChatIncomingCallColors.acceptButton : Color [get]
+[fld] CometChatIncomingCallColors.acceptIcon : Color [get]
+[fld] CometChatIncomingCallColors.acceptLabel : Color [get]
+[fld] CometChatIncomingCallColors.avatarBackground : Color [get]
+[fld] CometChatIncomingCallColors.avatarText : Color [get]
+[fld] CometChatIncomingCallColors.background : Color [get]
+[fld] CometChatIncomingCallColors.callerName : Color [get]
+[fld] CometChatIncomingCallColors.declineButton : Color [get]
+[fld] CometChatIncomingCallColors.declineIcon : Color [get]
+[fld] CometChatIncomingCallColors.declineLabel : Color [get]
+[fld] CometChatIncomingCallColors.subtitle : Color [get]
 [fld] CometChatIncomingCallConfiguration.acceptButtonText : String? [get]
 [fld] CometChatIncomingCallConfiguration.callSettingsBuilder : SessionSettingsBuilder? [get]
 [fld] CometChatIncomingCallConfiguration.customSoundForCalls : String? [get]
@@ -3005,6 +3027,9 @@
 [fld] CometChatIncomingCallStyle.subtitleTextStyle : TextStyle? [get]
 [fld] CometChatIncomingCallStyle.titleColor : Color? [get]
 [fld] CometChatIncomingCallStyle.titleTextStyle : TextStyle? [get]
+[fld] CometChatIncomingCallTheme.dark : CometChatIncomingCallColors [get]
+[fld] CometChatIncomingCallTheme.light : CometChatIncomingCallColors [get]
+[fld] CometChatIncomingCallTheme.mode : ThemeMode [get]
 [fld] CometChatIncomingMessageBubbleStyle.audioBubbleStyle : CometChatVoiceNoteBubbleStyle? [get] [deprecated]
 [fld] CometChatIncomingMessageBubbleStyle.backgroundColor : Color? [get]
 [fld] CometChatIncomingMessageBubbleStyle.border : BoxBorder? [get]
@@ -3163,6 +3188,10 @@
 [fld] CometChatListItem.title : String? [get]
 [fld] CometChatListItem.titlePadding : EdgeInsetsGeometry? [get]
 [fld] CometChatListItem.titleView : Widget? [get]
+[fld] CometChatLocalize.delegate : LocalizationsDelegate<Translations> [get] [static]
+[fld] CometChatLocalize.localeListenable : ValueListenable<Locale?> [get] [static]
+[fld] CometChatLocalize.localizationsDelegates : List<LocalizationsDelegate<dynamic>> [get] [static]
+[fld] CometChatLocalize.supportedLocales : List<Locale> [get] [static]
 [fld] CometChatMarquee.blankSpace : double [get]
 [fld] CometChatMarquee.pauseDuration : Duration [get]
 [fld] CometChatMarquee.style : TextStyle? [get]
@@ -3940,6 +3969,15 @@
 [fld] CometChatPollsBubbleType.poll : CometChatPollsBubbleType [get] [static]
 [fld] CometChatPollsBubbleType.result : CometChatPollsBubbleType [get] [static]
 [fld] CometChatPollsBubbleType.values : List<CometChatPollsBubbleType> [get] [static]
+[fld] CometChatPushCall.callType : String [get]
+[fld] CometChatPushCall.callerAvatarUrl : String? [get]
+[fld] CometChatPushCall.callerName : String? [get]
+[fld] CometChatPushCall.callerUid : String? [get]
+[fld] CometChatPushCall.isVideo : bool [get]
+[fld] CometChatPushCall.receiverType : String [get]
+[fld] CometChatPushCall.sessionId : String [get]
+[fld] CometChatPushCallEnded.call : CometChatPushCall [get]
+[fld] CometChatPushCallEnded.reason : String [get]
 [fld] CometChatQuickView.quickViewStyle : QuickViewStyle? [get]
 [fld] CometChatQuickView.subtitle : String? [get]
 [fld] CometChatQuickView.title : String [get]
@@ -6087,6 +6125,7 @@
 [fld] OutgoingCallRejected.props : List<Object?> [get]
 [fld] OutgoingCallState.errorMessage : String? [get]
 [fld] OutgoingCallState.isCallRejected : bool [get]
+[fld] OutgoingCallState.isCalleeRinging : bool [get]
 [fld] OutgoingCallState.props : List<Object?> [get]
 [fld] OutgoingCallState.status : OutgoingCallStatus [get]
 [fld] OutgoingCallStatus.accepted : OutgoingCallStatus [get] [static]
@@ -7131,6 +7170,7 @@
 [fld] Translations.resize : String [get]
 [fld] Translations.retry : String [get]
 [fld] Translations.richTextFormattingToolbar : String [get]
+[fld] Translations.ringing : String [get]
 [fld] Translations.sameLanguageMessage : String [get]
 [fld] Translations.saturday : String [get]
 [fld] Translations.save : String [get]
@@ -7658,6 +7698,7 @@
 [fld] TranslationsAr.resize : String [get]
 [fld] TranslationsAr.retry : String [get]
 [fld] TranslationsAr.richTextFormattingToolbar : String [get]
+[fld] TranslationsAr.ringing : String [get]
 [fld] TranslationsAr.sameLanguageMessage : String [get]
 [fld] TranslationsAr.saturday : String [get]
 [fld] TranslationsAr.save : String [get]
@@ -8185,6 +8226,7 @@
 [fld] TranslationsDe.resize : String [get]
 [fld] TranslationsDe.retry : String [get]
 [fld] TranslationsDe.richTextFormattingToolbar : String [get]
+[fld] TranslationsDe.ringing : String [get]
 [fld] TranslationsDe.sameLanguageMessage : String [get]
 [fld] TranslationsDe.saturday : String [get]
 [fld] TranslationsDe.save : String [get]
@@ -8712,6 +8754,7 @@
 [fld] TranslationsEn.resize : String [get]
 [fld] TranslationsEn.retry : String [get]
 [fld] TranslationsEn.richTextFormattingToolbar : String [get]
+[fld] TranslationsEn.ringing : String [get]
 [fld] TranslationsEn.sameLanguageMessage : String [get]
 [fld] TranslationsEn.saturday : String [get]
 [fld] TranslationsEn.save : String [get]
@@ -9239,6 +9282,7 @@
 [fld] TranslationsEnGb.resize : String [get]
 [fld] TranslationsEnGb.retry : String [get]
 [fld] TranslationsEnGb.richTextFormattingToolbar : String [get]
+[fld] TranslationsEnGb.ringing : String [get]
 [fld] TranslationsEnGb.sameLanguageMessage : String [get]
 [fld] TranslationsEnGb.saturday : String [get]
 [fld] TranslationsEnGb.save : String [get]
@@ -9766,6 +9810,7 @@
 [fld] TranslationsEs.resize : String [get]
 [fld] TranslationsEs.retry : String [get]
 [fld] TranslationsEs.richTextFormattingToolbar : String [get]
+[fld] TranslationsEs.ringing : String [get]
 [fld] TranslationsEs.sameLanguageMessage : String [get]
 [fld] TranslationsEs.saturday : String [get]
 [fld] TranslationsEs.save : String [get]
@@ -10293,6 +10338,7 @@
 [fld] TranslationsFr.resize : String [get]
 [fld] TranslationsFr.retry : String [get]
 [fld] TranslationsFr.richTextFormattingToolbar : String [get]
+[fld] TranslationsFr.ringing : String [get]
 [fld] TranslationsFr.sameLanguageMessage : String [get]
 [fld] TranslationsFr.saturday : String [get]
 [fld] TranslationsFr.save : String [get]
@@ -10820,6 +10866,7 @@
 [fld] TranslationsHi.resize : String [get]
 [fld] TranslationsHi.retry : String [get]
 [fld] TranslationsHi.richTextFormattingToolbar : String [get]
+[fld] TranslationsHi.ringing : String [get]
 [fld] TranslationsHi.sameLanguageMessage : String [get]
 [fld] TranslationsHi.saturday : String [get]
 [fld] TranslationsHi.save : String [get]
@@ -11347,6 +11394,7 @@
 [fld] TranslationsHu.resize : String [get]
 [fld] TranslationsHu.retry : String [get]
 [fld] TranslationsHu.richTextFormattingToolbar : String [get]
+[fld] TranslationsHu.ringing : String [get]
 [fld] TranslationsHu.sameLanguageMessage : String [get]
 [fld] TranslationsHu.saturday : String [get]
 [fld] TranslationsHu.save : String [get]
@@ -11874,6 +11922,7 @@
 [fld] TranslationsJa.resize : String [get]
 [fld] TranslationsJa.retry : String [get]
 [fld] TranslationsJa.richTextFormattingToolbar : String [get]
+[fld] TranslationsJa.ringing : String [get]
 [fld] TranslationsJa.sameLanguageMessage : String [get]
 [fld] TranslationsJa.saturday : String [get]
 [fld] TranslationsJa.save : String [get]
@@ -12401,6 +12450,7 @@
 [fld] TranslationsKo.resize : String [get]
 [fld] TranslationsKo.retry : String [get]
 [fld] TranslationsKo.richTextFormattingToolbar : String [get]
+[fld] TranslationsKo.ringing : String [get]
 [fld] TranslationsKo.sameLanguageMessage : String [get]
 [fld] TranslationsKo.saturday : String [get]
 [fld] TranslationsKo.save : String [get]
@@ -12928,6 +12978,7 @@
 [fld] TranslationsLt.resize : String [get]
 [fld] TranslationsLt.retry : String [get]
 [fld] TranslationsLt.richTextFormattingToolbar : String [get]
+[fld] TranslationsLt.ringing : String [get]
 [fld] TranslationsLt.sameLanguageMessage : String [get]
 [fld] TranslationsLt.saturday : String [get]
 [fld] TranslationsLt.save : String [get]
@@ -13455,6 +13506,7 @@
 [fld] TranslationsMs.resize : String [get]
 [fld] TranslationsMs.retry : String [get]
 [fld] TranslationsMs.richTextFormattingToolbar : String [get]
+[fld] TranslationsMs.ringing : String [get]
 [fld] TranslationsMs.sameLanguageMessage : String [get]
 [fld] TranslationsMs.saturday : String [get]
 [fld] TranslationsMs.save : String [get]
@@ -13982,6 +14034,7 @@
 [fld] TranslationsNl.resize : String [get]
 [fld] TranslationsNl.retry : String [get]
 [fld] TranslationsNl.richTextFormattingToolbar : String [get]
+[fld] TranslationsNl.ringing : String [get]
 [fld] TranslationsNl.sameLanguageMessage : String [get]
 [fld] TranslationsNl.saturday : String [get]
 [fld] TranslationsNl.save : String [get]
@@ -14509,6 +14562,7 @@
 [fld] TranslationsPt.resize : String [get]
 [fld] TranslationsPt.retry : String [get]
 [fld] TranslationsPt.richTextFormattingToolbar : String [get]
+[fld] TranslationsPt.ringing : String [get]
 [fld] TranslationsPt.sameLanguageMessage : String [get]
 [fld] TranslationsPt.saturday : String [get]
 [fld] TranslationsPt.save : String [get]
@@ -15036,6 +15090,7 @@
 [fld] TranslationsRu.resize : String [get]
 [fld] TranslationsRu.retry : String [get]
 [fld] TranslationsRu.richTextFormattingToolbar : String [get]
+[fld] TranslationsRu.ringing : String [get]
 [fld] TranslationsRu.sameLanguageMessage : String [get]
 [fld] TranslationsRu.saturday : String [get]
 [fld] TranslationsRu.save : String [get]
@@ -15563,6 +15618,7 @@
 [fld] TranslationsSv.resize : String [get]
 [fld] TranslationsSv.retry : String [get]
 [fld] TranslationsSv.richTextFormattingToolbar : String [get]
+[fld] TranslationsSv.ringing : String [get]
 [fld] TranslationsSv.sameLanguageMessage : String [get]
 [fld] TranslationsSv.saturday : String [get]
 [fld] TranslationsSv.save : String [get]
@@ -16090,6 +16146,7 @@
 [fld] TranslationsTr.resize : String [get]
 [fld] TranslationsTr.retry : String [get]
 [fld] TranslationsTr.richTextFormattingToolbar : String [get]
+[fld] TranslationsTr.ringing : String [get]
 [fld] TranslationsTr.sameLanguageMessage : String [get]
 [fld] TranslationsTr.saturday : String [get]
 [fld] TranslationsTr.save : String [get]
@@ -16617,6 +16674,7 @@
 [fld] TranslationsZh.resize : String [get]
 [fld] TranslationsZh.retry : String [get]
 [fld] TranslationsZh.richTextFormattingToolbar : String [get]
+[fld] TranslationsZh.ringing : String [get]
 [fld] TranslationsZh.sameLanguageMessage : String [get]
 [fld] TranslationsZh.saturday : String [get]
 [fld] TranslationsZh.save : String [get]
@@ -17144,6 +17202,7 @@
 [fld] TranslationsZhTw.resize : String [get]
 [fld] TranslationsZhTw.retry : String [get]
 [fld] TranslationsZhTw.richTextFormattingToolbar : String [get]
+[fld] TranslationsZhTw.ringing : String [get]
 [fld] TranslationsZhTw.sameLanguageMessage : String [get]
 [fld] TranslationsZhTw.saturday : String [get]
 [fld] TranslationsZhTw.save : String [get]
@@ -17304,6 +17363,7 @@
 [fld] UIKitSettings.appId : String? [get]
 [fld] UIKitSettings.authKey : String? [get]
 [fld] UIKitSettings.autoEstablishSocketConnection : bool? [get]
+[fld] UIKitSettings.callPushBridge : CometChatCallPushBridge? [get]
 [fld] UIKitSettings.callingConfiguration : CallingConfiguration? [get]
 [fld] UIKitSettings.clientHost : String? [get]
 [fld] UIKitSettings.dateTimeFormatterCallback : DateTimeFormatterCallback? [get]
@@ -17316,6 +17376,7 @@
 [fld] UIKitSettingsBuilder.appId : String? [get/set]
 [fld] UIKitSettingsBuilder.authKey : String? [get/set]
 [fld] UIKitSettingsBuilder.autoEstablishSocketConnection : bool? [get/set]
+[fld] UIKitSettingsBuilder.callPushBridge : CometChatCallPushBridge? [get/set]
 [fld] UIKitSettingsBuilder.callingConfiguration : CallingConfiguration? [get/set]
 [fld] UIKitSettingsBuilder.clientHost : String? [get/set]
 [fld] UIKitSettingsBuilder.dateTimeFormatterCallback : DateTimeFormatterCallback? [get/set]
@@ -17748,7 +17809,7 @@
 [meth] CallLogsUtils.returnReceiverId(User? loggedInUser, CallLog? callLog) : String [static] [deprecated]
 [meth] CallLogsUtils.storeValueInMapTime(int? epochTimestampInSeconds) : String [static]
 [meth] CallOperationsDataSource.acceptCall(String sessionId) : Future<Call>
-[meth] CallOperationsDataSource.endCall(String sessionId) : Future<Call>
+[meth] CallOperationsDataSource.endCall(String sessionId) : Future<Call> [deprecated]
 [meth] CallOperationsDataSource.endSession() : Future<void>
 [meth] CallOperationsDataSource.generateCallToken(String sessionId) : Future<String>
 [meth] CallOperationsDataSource.getLoggedInUser() : Future<User?>
@@ -17759,7 +17820,7 @@
 [meth] CallOperationsDataSource.startSession(String sessionId, SessionSettings settings) : Future<Widget>
 [meth] CallOperationsDataSource.waitForCallsSdk() : Future<void>
 [meth] CallOperationsDataSourceImpl.acceptCall(String sessionId) : Future<Call>
-[meth] CallOperationsDataSourceImpl.endCall(String sessionId) : Future<Call>
+[meth] CallOperationsDataSourceImpl.endCall(String sessionId) : Future<Call> [deprecated]
 [meth] CallOperationsDataSourceImpl.endSession() : Future<void>
 [meth] CallOperationsDataSourceImpl.generateCallToken(String sessionId) : Future<String>
 [meth] CallOperationsDataSourceImpl.getLoggedInUser() : Future<User?>
@@ -17770,7 +17831,7 @@
 [meth] CallOperationsDataSourceImpl.startSession(String sessionId, SessionSettings settings) : Future<Widget>
 [meth] CallOperationsDataSourceImpl.waitForCallsSdk() : Future<void>
 [meth] CallOperationsRepository.acceptCall(String sessionId) : Future<Result<Call>>
-[meth] CallOperationsRepository.endCall(String sessionId) : Future<Result<Call>>
+[meth] CallOperationsRepository.endCall(String sessionId) : Future<Result<Call>> [deprecated]
 [meth] CallOperationsRepository.endSession() : Future<Result<void>>
 [meth] CallOperationsRepository.generateCallToken(String sessionId) : Future<Result<String>>
 [meth] CallOperationsRepository.getLoggedInUser() : Future<Result<User?>>
@@ -17781,7 +17842,7 @@
 [meth] CallOperationsRepository.startSession(String sessionId, SessionSettings settings) : Future<Result<Widget>>
 [meth] CallOperationsRepository.waitForCallsSdk() : Future<void>
 [meth] CallOperationsRepositoryImpl.acceptCall(String sessionId) : Future<Result<Call>>
-[meth] CallOperationsRepositoryImpl.endCall(String sessionId) : Future<Result<Call>>
+[meth] CallOperationsRepositoryImpl.endCall(String sessionId) : Future<Result<Call>> [deprecated]
 [meth] CallOperationsRepositoryImpl.endSession() : Future<Result<void>>
 [meth] CallOperationsRepositoryImpl.generateCallToken(String sessionId) : Future<Result<String>>
 [meth] CallOperationsRepositoryImpl.getLoggedInUser() : Future<Result<User?>>
@@ -17865,6 +17926,12 @@
 [meth] CometChatCallEvents.removeCallEventsListener(String listenerId) : void [static]
 [meth] CometChatCallLogsStyle.merge(CometChatCallLogsStyle? style) : CometChatCallLogsStyle
 [meth] CometChatCallLogsStyle.of(BuildContext context) : CometChatCallLogsStyle [static]
+[meth] CometChatCallPushBridge.answer(String sessionId) : Future<void>
+[meth] CometChatCallPushBridge.decline(String sessionId) : Future<void>
+[meth] CometChatCallPushBridge.dismissRinging(String sessionId, {required bool answered}) : Future<void>
+[meth] CometChatCallPushBridge.reportCallConnected(String sessionId) : Future<void>
+[meth] CometChatCallPushBridge.reportCallEnded(String sessionId) : Future<void>
+[meth] CometChatCallPushBridge.reportOutgoingCall({required String sessionId, required String calleeName, bool hasVideo}) : Future<void>
 [meth] CometChatChangeScopeStyle.merge(CometChatChangeScopeStyle? other) : CometChatChangeScopeStyle
 [meth] CometChatChangeScopeStyle.of(BuildContext context) : CometChatChangeScopeStyle [static]
 [meth] CometChatCollaborativeBubbleStyle.merge(CometChatCollaborativeBubbleStyle? other) : CometChatCollaborativeBubbleStyle
@@ -18055,6 +18122,13 @@
 [meth] CometChatListProtocol.removeElement(T1 element) : void
 [meth] CometChatListProtocol.removeElementAt(int index) : void
 [meth] CometChatListProtocol.updateElement(T1 element, {int? index}) : void
+[meth] CometChatLocalize.getLanguage(BuildContext context) : String [static]
+[meth] CometChatLocalize.getLocale(BuildContext context) : Locale [static]
+[meth] CometChatLocalize.isRtl(BuildContext context) : bool [static]
+[meth] CometChatLocalize.of(BuildContext context) : Translations [static]
+[meth] CometChatLocalize.registerTranslations(Translations translations) : void [static]
+[meth] CometChatLocalize.resetToDefault() : void [static]
+[meth] CometChatLocalize.setLocale(Locale locale) : void [static]
 [meth] CometChatMediaGridStyle.merge(CometChatMediaGridStyle? style) : CometChatMediaGridStyle
 [meth] CometChatMediaGridStyle.of(BuildContext context) : CometChatMediaGridStyle [static]
 [meth] CometChatMediaRecorderStyle.merge(CometChatMediaRecorderStyle? style) : CometChatMediaRecorderStyle
@@ -18411,7 +18485,7 @@
 [meth] CometChatUIKitCalls.generateToken(String sessionId, {dynamic Function(CallToken)? onSuccess, dynamic Function(CometChatCallsException)? onError}) : void [static]
 [meth] CometChatUIKitCalls.getUserAuthToken() : Future<String?> [static]
 [meth] CometChatUIKitCalls.init(String appId, String region, {dynamic Function(String)? onSuccess, dynamic Function(CometChatCallsException)? onError}) : void [static]
-[meth] CometChatUIKitCalls.initiateCall(Call call, {dynamic Function(Call)? onSuccess, dynamic Function(CometChatException)? onError}) : void [static]
+[meth] CometChatUIKitCalls.initiateCall(Call call, {dynamic Function(Call)? onSuccess, dynamic Function(CometChatException)? onError, SessionSettings? sessionSettings}) : void [static]
 [meth] CometChatUIKitCalls.rejectCall(String sessionId, String status, {dynamic Function(Call)? onSuccess, dynamic Function(CometChatException)? onError}) : void [static]
 [meth] CometChatUIKitCalls.startSession(String sessionId, SessionSettings sessionSettings, {dynamic Function(Widget?)? onSuccess, dynamic Function(CometChatCallsException)? onError, bool launchOngoingCallService}) : void [static]
 [meth] CometChatUIKitChatAIFeatures.getDefaultAiFeatures() : List<Map<String, dynamic>> [static]
@@ -19294,7 +19368,7 @@
 [meth] OutgoingCallBloc.ccCallEnded(Call call) : void
 [meth] OutgoingCallBloc.ccCallRejected(Call call) : void
 [meth] OutgoingCallBloc.ccOutgoingCall(Call call) : void
-[meth] OutgoingCallState.copyWith({OutgoingCallStatus? status, bool? isCallRejected, String? errorMessage}) : OutgoingCallState
+[meth] OutgoingCallState.copyWith({OutgoingCallStatus? status, bool? isCallRejected, String? errorMessage, bool? isCalleeRinging}) : OutgoingCallState
 [meth] PauseAllExceptUseCase.call(int excludeId) : Future<Result<void>>
 [meth] PauseAudioUseCase.call(int audioId) : Future<Result<void>>
 [meth] PlayAudioUseCase.call(int audioId) : Future<Result<void>>
@@ -19868,6 +19942,7 @@
 [type] CometChatCallEvents : Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/events/call_events/cometchat_call_events.dart
 [type] CometChatCallLogs : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ call_ui/src/call_logs/cometchat_call_logs/cometchat_call_logs.dart, cometchat_calls_uikit.dart
 [type] CometChatCallLogsStyle : ThemeExtension<CometChatCallLogsStyle>, Object  @ call_ui/src/call_logs/cometchat_call_logs/call_logs_style.dart, cometchat_calls_uikit.dart
+[type] CometChatCallPushBridge : Object  @ call_ui/src/call_settings/cometchat_call_push_bridge.dart, cometchat_calls_uikit.dart
 [type] CometChatCard : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/presentation/views/misc/card/cometchat_card.dart
 [type] CometChatChangeScope : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ chat_ui/src/group_members/cometchat_change_scope.dart, cometchat_chat_uikit.dart
 [type] CometChatChangeScopeStyle : ThemeExtension<CometChatChangeScopeStyle>, Object  @ chat_ui/src/group_members/cometchat_change_scope_style.dart, cometchat_chat_uikit.dart
@@ -19916,9 +19991,11 @@
 [type] CometChatImageBubbleStyle : ThemeExtension<CometChatImageBubbleStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/image_bubble/cometchat_image_bubble_style.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
 [type] CometChatImagesBubble : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/images_bubble/cometchat_images_bubble.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
 [type] CometChatImagesBubbleStyle : ThemeExtension<CometChatImagesBubbleStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/images_bubble/cometchat_images_bubble_style.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
-[type] CometChatIncomingCall : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ call_ui/src/incoming_call/cometchat_incoming_call.dart, cometchat_calls_uikit.dart
+[type] CometChatIncomingCall : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable [deprecated]  @ call_ui/src/incoming_call/cometchat_incoming_call.dart, cometchat_calls_uikit.dart
+[type] CometChatIncomingCallColors : Object  @ call_ui/src/call_settings/cometchat_incoming_call_theme.dart, cometchat_calls_uikit.dart
 [type] CometChatIncomingCallConfiguration : Object  @ call_ui/src/incoming_call/cometchat_incoming_call_configuration.dart, cometchat_calls_uikit.dart
-[type] CometChatIncomingCallStyle : ThemeExtension<CometChatIncomingCallStyle>, Object  @ call_ui/src/incoming_call/cometchat_incoming_call_style.dart, cometchat_calls_uikit.dart
+[type] CometChatIncomingCallStyle : ThemeExtension<CometChatIncomingCallStyle>, Object [deprecated]  @ call_ui/src/incoming_call/cometchat_incoming_call_style.dart, cometchat_calls_uikit.dart
+[type] CometChatIncomingCallTheme : Object  @ call_ui/src/call_settings/cometchat_incoming_call_theme.dart, cometchat_calls_uikit.dart
 [type] CometChatIncomingMessageBubbleStyle : ThemeExtension<CometChatIncomingMessageBubbleStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/data/data.dart, shared_ui/src/clean_architecture/data/models/extension_bubble_styles/cometchat_incoming_message_bubble_style.dart, shared_ui/src/clean_architecture/data/models/extension_bubble_styles/extension_bubble_styles.dart, shared_ui/src/clean_architecture/data/models/models.dart
 [type] CometChatInlineAudioRecorder : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ chat_ui/src/message_composer/widgets/inline_audio_recorder/cometchat_inline_audio_recorder.dart, chat_ui/src/message_composer/widgets/inline_audio_recorder/inline_audio_recorder.dart, cometchat_chat_uikit.dart
 [type] CometChatInlineAudioRecorderStyle : Object  @ chat_ui/src/message_composer/widgets/inline_audio_recorder/inline_audio_recorder.dart, chat_ui/src/message_composer/widgets/inline_audio_recorder/inline_audio_recorder_style.dart, cometchat_chat_uikit.dart
@@ -19932,6 +20009,7 @@
 [type] CometChatListException : Object, Exception  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/cometchat_list/cometchat_list_controller.dart
 [type] CometChatListItem : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/presentation/views/misc/list_item/cometchat_list_item.dart
 [type] CometChatListProtocol : <T1> Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/cometchat_list/list_protocols.dart
+[type] CometChatLocalize : Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/cometchat_localize.dart
 [type] CometChatMarquee : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/core/core.dart, shared_ui/src/clean_architecture/core/utils/text_marquee_effect.dart, shared_ui/src/clean_architecture/core/utils/utils.dart
 [type] CometChatMediaCaption : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/media_caption/cometchat_media_caption.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
 [type] CometChatMediaGrid : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/media_grid/cometchat_media_grid.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
@@ -19984,6 +20062,8 @@
 [type] CometChatPollsBubble : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ chat_ui/src/extensions/extension.dart, chat_ui/src/extensions/polls/cometchat_polls_bubble.dart, cometchat_chat_uikit.dart
 [type] CometChatPollsBubbleStyle : ThemeExtension<CometChatPollsBubbleStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/data/data.dart, shared_ui/src/clean_architecture/data/models/extension_bubble_styles/cometchat_polls_bubble_style.dart, shared_ui/src/clean_architecture/data/models/extension_bubble_styles/extension_bubble_styles.dart, shared_ui/src/clean_architecture/data/models/models.dart
 [type] CometChatPollsBubbleType : Enum, Object  @ chat_ui/src/extensions/extension.dart, chat_ui/src/extensions/polls/cometchat_polls_bubble.dart, cometchat_chat_uikit.dart
+[type] CometChatPushCall : Object  @ call_ui/src/call_settings/cometchat_call_push_bridge.dart, cometchat_calls_uikit.dart
+[type] CometChatPushCallEnded : Object  @ call_ui/src/call_settings/cometchat_call_push_bridge.dart, cometchat_calls_uikit.dart
 [type] CometChatQuickView : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/presentation/views/misc/quick_view/cometchat_quick_view.dart
 [type] CometChatReactionList : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/components/reaction_list/cometchat_reaction_list.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
 [type] CometChatReactionListStyle : ThemeExtension<CometChatReactionListStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/presentation/presentation.dart, shared_ui/src/clean_architecture/presentation/views/components/reaction_list/cometchat_reaction_list_style.dart, shared_ui/src/clean_architecture/presentation/views/views.dart
@@ -20129,7 +20209,7 @@
 [type] EmojiUtils : Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/core/core.dart, shared_ui/src/clean_architecture/core/utils/emoji_utils.dart, shared_ui/src/clean_architecture/core/utils/utils.dart
 [type] EmptyMessageList : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/cometchat_message_list/widgets/empty_message_list.dart
 [type] EndCallButtonPressed : OngoingCallEvent, Equatable, Object  @ call_ui/src/ongoing_call/bloc/bloc.dart, call_ui/src/ongoing_call/bloc/ongoing_call_event.dart, cometchat_calls_uikit.dart
-[type] EndCallUseCase : Object  @ call_ui/src/call_operations/call_operations.dart, call_ui/src/call_operations/domain/domain.dart, call_ui/src/call_operations/domain/usecases/end_call_usecase.dart, cometchat_calls_uikit.dart
+[type] EndCallUseCase : Object [deprecated]  @ call_ui/src/call_operations/call_operations.dart, call_ui/src/call_operations/domain/domain.dart, call_ui/src/call_operations/domain/usecases/end_call_usecase.dart, cometchat_calls_uikit.dart
 [type] EndSessionUseCase : Object  @ call_ui/src/call_operations/call_operations.dart, call_ui/src/call_operations/domain/domain.dart, call_ui/src/call_operations/domain/usecases/end_session_usecase.dart, cometchat_calls_uikit.dart
 [type] EndTyping : MessageComposerEvent, Equatable, Object  @ chat_ui/src/message_composer/bloc/message_composer_event.dart, cometchat_chat_uikit.dart
 [type] EndTypingUseCase : Object  @ chat_ui/src/message_composer/domain/usecases/typing_usecases.dart, cometchat_chat_uikit.dart
@@ -20260,7 +20340,7 @@
 [type] ImageViewer : StatefulWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/presentation/views/bubbles/image_bubble/image_viewer.dart
 [type] IncomingCallBloc : Bloc<IncomingCallEvent, IncomingCallState>, BlocBase<IncomingCallState>, Object, EmittableStateStreamableSource<IncomingCallState>, StateStreamableSource<IncomingCallState>, StateStreamable<IncomingCallState>, Streamable<IncomingCallState>, Closable, Emittable<IncomingCallState>, ErrorSink, BlocEventSink<IncomingCallEvent>, CallListener, EventHandler  @ call_ui/src/incoming_call/bloc/bloc.dart, call_ui/src/incoming_call/bloc/incoming_call_bloc.dart, cometchat_calls_uikit.dart
 [type] IncomingCallEvent : Equatable, Object  @ call_ui/src/incoming_call/bloc/bloc.dart, call_ui/src/incoming_call/bloc/incoming_call_event.dart, cometchat_calls_uikit.dart
-[type] IncomingCallOverlay : Object  @ call_ui/src/incoming_call/cometchat_display_incoming_call_overlay.dart, cometchat_calls_uikit.dart
+[type] IncomingCallOverlay : Object [deprecated]  @ call_ui/src/incoming_call/cometchat_display_incoming_call_overlay.dart, cometchat_calls_uikit.dart
 [type] IncomingCallState : Equatable, Object  @ call_ui/src/incoming_call/bloc/bloc.dart, call_ui/src/incoming_call/bloc/incoming_call_state.dart, cometchat_calls_uikit.dart
 [type] IncomingCallStatus : Enum, Object  @ call_ui/src/incoming_call/bloc/bloc.dart, call_ui/src/incoming_call/bloc/incoming_call_state.dart, cometchat_calls_uikit.dart
 [type] IncrementReplyCount : ThreadedHeaderEvent, Equatable, Object  @ chat_ui/src/threaded_header/bloc/bloc.dart, chat_ui/src/threaded_header/bloc/threaded_header_event.dart, chat_ui/src/threaded_header/threaded_header.dart, cometchat_chat_uikit.dart
@@ -20670,7 +20750,7 @@
 [type] ToggleGroupSelection : GroupsEvent, Equatable, Object  @ chat_ui/src/groups/bloc/bloc.dart, chat_ui/src/groups/bloc/groups_event.dart, cometchat_chat_uikit.dart
 [type] ToggleMemberSelection : GroupMembersEvent, Equatable, Object  @ chat_ui/src/group_members/bloc/bloc.dart, chat_ui/src/group_members/bloc/group_members_event.dart, cometchat_chat_uikit.dart
 [type] ToggleUserSelection : UsersEvent, Equatable, Object  @ chat_ui/src/users/bloc/bloc.dart, chat_ui/src/users/bloc/users_event.dart, cometchat_chat_uikit.dart
-[type] Translations : Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/translations.dart, shared_ui/src/clean_architecture/clean_architecture.dart
+[type] Translations : Object [deprecated]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/cometchat_localize.dart, shared_ui/l10n/translations.dart, shared_ui/src/clean_architecture/clean_architecture.dart
 [type] TranslationsAr : Translations, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/translations_ar.dart
 [type] TranslationsDe : Translations, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/translations_de.dart
 [type] TranslationsEn : Translations, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/translations_en.dart

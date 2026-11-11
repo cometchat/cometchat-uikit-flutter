@@ -89,6 +89,7 @@ class _ServedRequest extends Fake implements UsersRequest {
 
   @override
   Future<List<User>> fetchNext({
+    UserFetchListener? listener,
     required Function(List<User> userList)? onSuccess,
     required Function(CometChatException excep)? onError,
   }) async {

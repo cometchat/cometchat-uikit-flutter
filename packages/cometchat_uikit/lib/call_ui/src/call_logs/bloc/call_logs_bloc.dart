@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart' hide User;
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../shared_ui/src/clean_architecture/core/result.dart';
@@ -22,6 +23,8 @@ import '../../../../shared_ui/src/logging/cometchat_log.dart';
 import '../../../../src/active_call_tracker.dart';
 import '../../../../src/call_errors.dart';
 import '../../../../src/call_permission_check.dart';
+import '../../../../src/call_prepare_settings.dart';
+import '../../../../src/call_session_settings.dart';
 import '../../../../src/call_user_lookup.dart';
 import '../../../../src/calling_configuration_resolver.dart';
 import '../../../../src/calls_lifecycle.dart';
@@ -126,6 +129,10 @@ class CallLogsBloc extends Bloc<CallLogsEvent, CallLogsState>
   /// This bloc's listener id, the same for each kind of listener.
   final String _listenerId = 'call_logs_bloc_${++_instances}';
 
+  /// This device's calls ending or stopping ringing (ringing v2, Android and
+  /// iOS): see [_listenForChanges].
+  List<StreamSubscription<String>> _trackerSubscriptions = const [];
+
   late final _CallLogsSdkCallListener _sdkCallListener =
       _CallLogsSdkCallListener(_scheduleRefresh);
   late final _CallLogsConnectionListener _connectionListener =
@@ -202,8 +209,25 @@ class CallLogsBloc extends Bloc<CallLogsEvent, CallLogsState>
   /// which also tell of a call this device placed or declined that the SDK
   /// does not echo here, and a call screen closing. Private delegates, so
   /// the bloc's public API does not grow listener methods.
+  ///
+  /// Ringing v2: the chat SDK's call listener (deprecated) is registered on
+  /// web only. On Android and iOS the list also refreshes when a call of
+  /// this device's is over or stops ringing here (its record released, an
+  /// incoming call cancelled, missed or handled elsewhere). Calls handled
+  /// only on another device show at the next refresh: the other side's
+  /// call messages are not delivered live until the backend's path for them
+  /// is settled (a known, deliberate gap, phase 5).
   void _listenForChanges() {
-    ChatSdkListeners.addCallListener(_listenerId, _sdkCallListener);
+    if (kIsWeb) {
+      ChatSdkListeners.addCallListener(_listenerId, _sdkCallListener);
+    } else {
+      _trackerSubscriptions = [
+        ActiveCallTracker.releasedSessions.listen((_) => _scheduleRefresh()),
+        ActiveCallTracker.ringingEndedSessions.listen(
+          (_) => _scheduleRefresh(),
+        ),
+      ];
+    }
     ChatSdkListeners.addConnectionListener(_listenerId, _connectionListener);
     CometChatCallEvents.addCallEventsListener(_listenerId, _uiCallListener);
     CallStateService.instance.isActiveCall.addListener(_onActiveCallChanged);
@@ -782,6 +806,17 @@ class CallLogsBloc extends Bloc<CallLogsEvent, CallLogsState>
       receiverUid: receiverId,
       receiverType: receiverType,
       type: callType,
+    )..receiver = callee;
+
+    // Placed with the Calls SDK (ringing v2), which prepares this device's
+    // session with these settings: they are frozen by that prepare, so the
+    // join once the call is answered uses them too.
+    CallPrepareSettings.attach(
+      call,
+      CallSessionSettings.forCall(
+        isVideo: isVideo,
+        hostBuilder: _outgoingConfiguration?.sessionSettingsBuilder,
+      ).build(),
     );
 
     // Tracked, so a logout that starts meanwhile waits for it, and the call
@@ -996,7 +1031,11 @@ class CallLogsBloc extends Bloc<CallLogsEvent, CallLogsState>
   Future<void> close() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
-    ChatSdkListeners.removeCallListener(_listenerId);
+    if (kIsWeb) ChatSdkListeners.removeCallListener(_listenerId);
+    for (final subscription in _trackerSubscriptions) {
+      unawaited(subscription.cancel());
+    }
+    _trackerSubscriptions = const [];
     ChatSdkListeners.removeConnectionListener(_listenerId);
     CometChatCallEvents.removeCallEventsListener(_listenerId);
     CallStateService.instance.isActiveCall.removeListener(_onActiveCallChanged);
@@ -1017,6 +1056,8 @@ class _SilentRefreshCallLogs extends CallLogsEvent {
 }
 
 /// The chat SDK's call events: any of them may mean a new or changed log.
+// Web only (ringing v1).
+// ignore: deprecated_member_use
 class _CallLogsSdkCallListener with CallListener {
   _CallLogsSdkCallListener(this._onChange);
 

@@ -241,6 +241,25 @@ abstract final class ActiveCallTracker {
   /// tap until the server's answer has been dealt with.
   static final Set<String> _responding = <String>{};
 
+  /// The incoming calls an incoming call screen of the UI Kit is accepting:
+  /// from its accept request until the screen closes, the permission prompt
+  /// and its own join included.
+  static final Set<String> _acceptingOnScreen = <String>{};
+
+  /// An incoming call screen accepts [sessionId] and joins it itself: the
+  /// push ringer's report of the answer (ringing v2) is not joined again.
+  static void acceptingOnScreen(String sessionId) =>
+      _acceptingOnScreen.add(sessionId);
+
+  /// That screen closed.
+  static void doneAcceptingOnScreen(String sessionId) =>
+      _acceptingOnScreen.remove(sessionId);
+
+  /// Whether an incoming call screen is accepting [sessionId] and joins it
+  /// itself.
+  static bool isAcceptingOnScreen(String sessionId) =>
+      _acceptingOnScreen.contains(sessionId);
+
   /// The incoming call [sessionId] is being answered or declined here.
   static void respondingTo(String? sessionId) {
     if (sessionId != null && sessionId.isNotEmpty) _responding.add(sessionId);
@@ -346,10 +365,13 @@ abstract final class ActiveCallTracker {
   /// declined, cancelled or fails to be answered is over too.
   ///
   /// [sessionId] is remembered as finished for a while: see
-  /// [finishedLately].
+  /// [finishedLately], and announced on [releasedSessions].
   static void release(String? sessionId) {
     final anySession = sessionId == null || sessionId.isEmpty;
-    if (!anySession) _rememberFinished(sessionId);
+    if (!anySession) {
+      _rememberFinished(sessionId);
+      _released.add(sessionId);
+    }
     final service = CallEventService.instance;
     final active = service.activeCall;
     if (active != null &&
@@ -361,6 +383,16 @@ abstract final class ActiveCallTracker {
       ringingCall = null;
     }
   }
+
+  static final StreamController<String> _released =
+      StreamController<String>.broadcast(sync: true);
+
+  /// The sessions [release] let go of, as it does: a call this device took
+  /// part in is over here (declined, cancelled, unanswered, ended, or given
+  /// up). The call buttons come back on it for the call they placed; the
+  /// chat SDK's call listener, which told them before ringing v2, is
+  /// deprecated.
+  static Stream<String> get releasedSessions => _released.stream;
 
   /// Releases the records held for [call]: [release] with its session.
   ///
@@ -406,7 +438,17 @@ abstract final class ActiveCallTracker {
     if (sessionId == null || sessionId.isEmpty) return;
     _rememberFinished(sessionId);
     releaseRinging(sessionId);
+    _ringingEnded.add(sessionId);
   }
+
+  static final StreamController<String> _ringingEnded =
+      StreamController<String>.broadcast(sync: true);
+
+  /// The sessions [ringingEnded] reported: calls that stopped ringing here
+  /// without being answered or declined here. An incoming call screen for
+  /// one closes on it (ringing v2: the chat SDK's cancel, which told it
+  /// before, is deprecated).
+  static Stream<String> get ringingEndedSessions => _ringingEnded.stream;
 
   /// The call component placing a call or starting a meeting right now —
   /// a call buttons bloc, a call logs bloc — from the tap until its screen

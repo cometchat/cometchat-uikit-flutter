@@ -22,9 +22,29 @@ class CallOperationsException implements Exception {
 
 /// Abstract interface for call operations data source.
 abstract class CallOperationsDataSource {
+  /// Places [call] and returns it as the server has it.
+  ///
+  /// Since ringing v2 the UI Kit's own implementation places it with the
+  /// Calls SDK (`CometChatUIKitCalls.initiateCall`), on web with the chat SDK.
   Future<Call> initiateCall(Call call);
+
+  /// Answers the incoming call [sessionId] and returns it, now ongoing.
+  ///
+  /// Since ringing v2 the UI Kit's own implementation answers through the
+  /// app's push ringer (`CometChatUIKitCalls.acceptCall`), or with the chat
+  /// SDK when there is none.
   Future<Call> acceptCall(String sessionId);
+
+  /// Ends [sessionId] before it is joined with [status] (`rejected`, `busy`,
+  /// `cancelled`, `unanswered`) and returns the call message of that status.
+  ///
+  /// Since ringing v2 the UI Kit's own implementation ends it with the Calls
+  /// SDK (`CometChatUIKitCalls.rejectCall`), on web with the chat SDK.
   Future<Call> rejectCall(String sessionId, String status);
+  @Deprecated(
+    'Use endSession instead: a joined call is left, not ended with the Chat '
+    'SDK. The Chat SDK\'s calling APIs are deprecated (ringing v2).',
+  )
   Future<Call> endCall(String sessionId);
   Future<String> generateCallToken(String sessionId);
 

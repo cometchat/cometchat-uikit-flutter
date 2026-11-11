@@ -9,10 +9,12 @@
 /// logout that failed still left the user without call listeners.
 ///
 /// Owner decisions: best effort within ~3 s — decline a ringing incoming
-/// call ("rejected"), cancel my ringing outgoing call ("cancelled"), end an
-/// active 1-on-1 call, only leave a meeting — then local teardown, then the
-/// chat logout. On success call handling stops and the Calls SDK logs out;
-/// on failure the call listeners stay.
+/// call ("rejected"), cancel my ringing outgoing call ("cancelled"), and
+/// leave an active 1-on-1 call or a meeting — then local teardown, then the
+/// chat logout. Ringing v2 ends a 1-on-1 call by leaving it: no endCall goes
+/// to the server, and its end is still announced (ccCallEnded). On success
+/// call handling stops and the Calls SDK logs out; on failure the call
+/// listeners stay.
 ///
 /// The chat SDK is a fake behind `ChatAuthGateway` that writes into the same
 /// log as the fake call operations, so their order can be checked.
@@ -43,6 +45,7 @@ import 'package:cometchat_chat_uikit/shared_ui/src/events/call_events/cometchat_
 import 'package:cometchat_chat_uikit/shared_ui/src/events/call_events/cometchat_call_events.dart';
 import 'package:cometchat_chat_uikit/src/active_call_tracker.dart';
 import 'package:cometchat_chat_uikit/src/calls_lifecycle.dart';
+import 'package:cometchat_chat_uikit/src/push_ringing.dart';
 import 'package:cometchat_chat_uikit/src/calls_sdk_session.dart';
 import 'package:cometchat_chat_uikit/src/chat_auth_gateway.dart';
 import 'package:cometchat_sdk/cometchat_sdk.dart';
@@ -187,15 +190,23 @@ void main() {
       ]);
     });
 
-    test('an answered 1-on-1 call is ended', () async {
-      service.activeCall = _call('call-1');
+    test(
+      'an answered 1-on-1 call is left: no endCall, its end announced',
+      () async {
+        service.activeCall = _call('call-1');
 
-      await logout();
+        await logout();
 
-      expect(dataSource.calls, <String>['endCall:call-1', 'chat logout']);
-      expect(events.ordered, <String>['ended:call-1']);
-      expect(service.activeCall, isNull);
-    });
+        expect(
+          dataSource.calls,
+          <String>['chat logout'],
+          reason:
+              'ringing v2: hang-up only leaves; the callee ends the call themselves',
+        );
+        expect(events.ordered, <String>['ended:call-1']);
+        expect(service.activeCall, isNull);
+      },
+    );
 
     test('one request per call, whichever record holds it', () async {
       final placed = _call('placed-3', status: 'initiated');
@@ -240,7 +251,7 @@ void main() {
   });
 
   group('local teardown', () {
-    testWidgets('a 1-on-1 call screen is ended on the server and closed', (
+    testWidgets('a 1-on-1 call screen is left (no endCall) and closed', (
       tester,
     ) async {
       await mountCallNavigator(tester);
@@ -254,14 +265,11 @@ void main() {
       await tester.runAsync(logout);
       await tester.pump();
 
-      // The call screen joined first; then the end, then the chat logout.
+      // The call screen joined first; then the chat logout. The call is
+      // left locally, with no endCall (ringing v2).
       final log = dataSource.calls;
-      expect(log, contains('endCall:call-2'));
+      expect(log, isNot(contains('endCall:call-2')));
       expect(log.last, 'chat logout');
-      expect(
-        log.indexOf('endCall:call-2'),
-        lessThan(log.indexOf('chat logout')),
-      );
       expect(CallScreenOverlay.isShowing, isFalse);
       expect(find.text('chat'), findsOneWidget);
     });
@@ -671,7 +679,10 @@ void main() {
 
       expect(host, <String>['onError:ERR_NETWORK']);
       expect(CallsLifecycle.isStarted, isTrue);
-      expect(chatListeners[CallsLifecycle.callListenerId], same(service));
+      // Android and iOS: incoming calls keep coming through push ringing.
+      // The chat SDK's call listener is registered on web only (ringing v2).
+      expect(PushRinging.isStarted, isTrue);
+      expect(chatListeners, isNot(contains(CallsLifecycle.callListenerId)));
       expect(
         CometChatCallEvents.callEventsListener[CallsLifecycle.callListenerId],
         same(service),
@@ -696,11 +707,12 @@ void main() {
         onSuccess: (user) => host.add('onSuccess:${user.uid}'),
       );
 
-      expect(dataSource.calls.take(3), <String>[
+      // The answered call-4 is left, with no endCall (ringing v2).
+      expect(dataSource.calls.take(2), <String>[
         'rejectCall:ring-6:rejected',
-        'endCall:call-4',
         'chat login:uid-2',
       ]);
+      expect(dataSource.calls, isNot(contains('endCall:call-4')));
       expect(host, <String>['onSuccess:uid-2']);
       expect(CallsLifecycle.uid, 'uid-2');
       expect(ActiveCallTracker.ringingCall, isNull);

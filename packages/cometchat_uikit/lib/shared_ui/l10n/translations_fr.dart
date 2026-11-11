@@ -270,6 +270,9 @@ class TranslationsFr extends Translations {
   String get calling => 'J\'appelle...';
 
   @override
+  String get ringing => 'Ça sonne...';
+
+  @override
   String get add => 'Ajouter';
 
   @override

@@ -13,8 +13,10 @@ import 'calls_sdk_gateway.dart';
 /// again.
 ///
 /// The hosts are part of it so that a later `CometChatUIKit.init` against
-/// another environment re-initialises the Calls SDK. They are not passed to
-/// the Calls SDK itself (out of scope for now, by the owner's decision).
+/// another environment re-initialises the Calls SDK, and they are passed to
+/// the Calls SDK too ([callsSdkClientHost], [callsSdkAdminHost],
+/// [callsSdkCallsHost]): without them a staging or dedicated app's calls
+/// went to the production hosts, which do not know its app ID.
 @immutable
 final class CallsSdkSettings {
   /// Creates a settings snapshot.
@@ -42,6 +44,40 @@ final class CallsSdkSettings {
   /// (`CometChatUIKit.initFromSettings`). The Calls SDK is then initialised
   /// the same way, so it records the "ai-agent" integration source.
   final bool fromSettings;
+
+  /// [clientHost] as the Calls SDK takes it (`CallAppSettingBuilder.clientHost`):
+  /// the host without the scheme, with the API version
+  /// (`{appId}.apiclient-us.example.com/v3.0`), or null.
+  ///
+  /// The version is part of it because the native Calls SDK (5.1.0-alpha.6)
+  /// appends nothing to an override: without it its login went to `/me` and
+  /// failed with ERR_API_NOT_FOUND. The Calls SDK's Dart REST calls
+  /// (`getCallDetails`, call logs) append `/v3` again, so on a host override
+  /// those fail until the Calls SDK settles one format (reported, 9 Oct 2026).
+  String? get callsSdkClientHost => _versioned(_bareHost(clientHost));
+
+  /// [adminHost] as the Calls SDK takes it, or null.
+  String? get callsSdkAdminHost => _versioned(_bareHost(adminHost));
+
+  /// The Calls API host of the app [clientHost] names, or null for the
+  /// default: the same host with `call-` for `apiclient-`
+  /// (`{appId}.apiclient-us.example.com` →
+  /// `{appId}.call-us.example.com`), the pattern of the Calls
+  /// SDK's own default (`{appId}.call-{region}.cometchat.io`).
+  String? get callsSdkCallsHost {
+    final client = _bareHost(clientHost);
+    if (client == null || !client.contains('.apiclient-')) return null;
+    return _versioned(client.replaceFirst('.apiclient-', '.call-'));
+  }
+
+  static String? _versioned(String? host) => host == null ? null : '$host/v3.0';
+
+  static String? _bareHost(String? url) {
+    if (url == null) return null;
+    var host = url.trim().replaceFirst(RegExp(r'^[a-zA-Z]+://'), '');
+    host = host.replaceFirst(RegExp(r'/+(v3(\.0)?)?/*$'), '');
+    return host.isEmpty ? null : host;
+  }
 
   /// The snapshot of what `CometChatUIKit` was last initialised with, or null
   /// when it has no app id or region yet.
@@ -343,7 +379,13 @@ final class CallsSdkSession {
     try {
       final init = settings.fromSettings
           ? _gateway.initFromSettings()
-          : _gateway.init(settings.appId, settings.region);
+          : _gateway.init(
+              settings.appId,
+              settings.region,
+              clientHost: settings.callsSdkClientHost,
+              adminHost: settings.callsSdkAdminHost,
+              callsHost: settings.callsSdkCallsHost,
+            );
       await init.timeout(timeouts.init);
       ok = true;
     } on TimeoutException {

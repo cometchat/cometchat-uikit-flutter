@@ -107,9 +107,13 @@ class FakeCallOperationsDataSource extends Fake
 
   /// Places [call] as the server does: the same call, with a session
   /// ([placedSessionId]) and status `initiated`.
+  /// Every call `initiateCall` was asked to place, in order.
+  final List<Call> initiatedCalls = <Call>[];
+
   @override
   Future<Call> initiateCall(Call call) async {
     calls.add('initiateCall:${call.receiverUid}');
+    initiatedCalls.add(call);
     await initiateGate?.future;
     return Call(
       sessionId: placedSessionId,
@@ -514,7 +518,13 @@ class FakeCallsSdkGateway implements CallsSdkGateway {
   bool get isInitialized => _initialized;
 
   @override
-  Future<void> init(String appId, String region) async {
+  Future<void> init(
+    String appId,
+    String region, {
+    String? clientHost,
+    String? adminHost,
+    String? callsHost,
+  }) async {
     calls.add('init:$appId:$region');
     await (onInit?.call() ?? Future<void>.value());
     _initialized = true;

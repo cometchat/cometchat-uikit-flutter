@@ -317,6 +317,7 @@ void main() {
       expect(CallScreenOverlay.isShowing, isTrue);
 
       // Its own join, then its own peer, who then leaves: the rule ends it.
+      // Ringing v2 ends a call by leaving its session: no endCall.
       sdkSession((SessionStatusListeners l) => l.onSessionJoined());
       await tester.pump();
       sdkParticipants(<Participant>[
@@ -324,15 +325,19 @@ void main() {
         Participant(uid: 'peer'),
       ]);
       await tester.pump();
+      final int leaves = dataSource.endSessionCount;
       sdkParticipants(<Participant>[]);
       await tester.pump(Duration.zero);
       await tester.pump();
 
-      expect(dataSource.endCallCount, 1);
+      expect(dataSource.endSessionCount, leaves + 1);
+      expect(dataSource.endCallCount, 0);
+      expect(CallScreenOverlay.isShowing, isFalse);
     });
 
     testWidgets('End still works in the window', (WidgetTester tester) async {
       await answerOverMeeting(tester);
+      final int leaves = dataSource.endSessionCount;
 
       for (final ButtonClickListeners l in List.of(
         CallSession.getInstance()!.buttonClickListeners,
@@ -342,8 +347,10 @@ void main() {
       await tester.pump(Duration.zero);
       await tester.pump();
 
+      // Ringing v2 ends a call by leaving its session: no endCall.
       expect(CallScreenOverlay.isShowing, isFalse);
-      expect(dataSource.endCallCount, 1);
+      expect(dataSource.endSessionCount, leaves + 1);
+      expect(dataSource.endCallCount, 0);
     });
   });
 

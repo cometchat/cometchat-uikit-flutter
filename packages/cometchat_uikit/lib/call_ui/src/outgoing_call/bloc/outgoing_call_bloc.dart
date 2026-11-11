@@ -12,6 +12,9 @@ import '../../../../src/call_permission_check.dart';
 import '../../../../src/call_session_settings.dart';
 import '../../../../src/call_tone.dart';
 import '../../../../src/calls_lifecycle.dart';
+import '../../../../src/outgoing_call_watch.dart';
+import '../../../../src/push_ringing.dart';
+import '../../../../src/ringing_call_mapping.dart';
 
 /// BLoC for managing outgoing call screen state and actions
 ///
@@ -22,26 +25,38 @@ import '../../../../src/calls_lifecycle.dart';
 /// - Outgoing call rejected handling (pops screen)
 /// - CallStateService updates on init and close
 ///
+/// Ringing v2: the call was placed with the Calls SDK, which prepared this
+/// device's session without joining it. The bloc follows that session: the
+/// callee's device ringing ([OutgoingCallState.isCalleeRinging]), the callee
+/// joining (the call is answered: this device joins it on the call screen),
+/// or the session closing before anyone joined (declined, busy). The call's
+/// status is also read from the server while it rings, in case an event
+/// does not come. The chat SDK's call listener, whose calling APIs are
+/// deprecated, is no longer registered: its callbacks here are kept for
+/// compatibility only.
+///
 /// Closing it while its call still rings (not answered, declined, cancelled
 /// or handed to the host's own cancel) sends `rejectCall` with status
-/// `cancelled`, so the callee stops ringing, and releases the call's record;
-/// a failed cancel reaches [errorCallback]. The widget closes its own bloc
-/// when it is disposed.
+/// `cancelled` (on the Calls SDK since ringing v2), so the callee stops
+/// ringing, and releases the call's record; a failed cancel reaches
+/// [errorCallback]. The widget closes its own bloc when it is disposed.
 ///
 /// A call still ringing 45 seconds after it was placed is given up:
 /// `rejectCall` with status `unanswered`, then the screen closes. Once End
-/// was tapped or that happened, an accept for the call is not joined, and a
-/// best-effort `endCall` tries to free the callee, as it does when that
-/// cancel or reject fails (not when the cancel of a screen that went away
-/// fails). After End the screen closes when the server answers, or after
+/// was tapped or that happened, an accept for the call is not joined (a
+/// callee who answered meanwhile ends the call themselves: ringing v2 sends
+/// no end for a call this device never joined). After End the screen closes
+/// when the server answers, or after
 /// 10 seconds at most. Once a logout has begun, nothing more is sent for
 /// the call and nothing reaches [errorCallback]: the logout ends it.
 ///
-/// Uses [CometChatCallEventListener] and [CallListener] mixins for SDK events
-///
 /// Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
 class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
-    with CometChatCallEventListener, CallListener {
+    with
+        CometChatCallEventListener,
+        // Kept so the public API stays as it was until 7.0.0; not registered.
+        // ignore: deprecated_member_use
+        CallListener {
   /// The active outgoing call
   final Call call;
 
@@ -95,6 +110,7 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
     on<OutgoingCallAccepted>(_onOutgoingCallAccepted);
     on<OutgoingCallRejected>(_onOutgoingCallRejected);
     on<_NoAnswer>(_onNoAnswer);
+    on<_CalleeRinging>(_onCalleeRinging);
 
     // Initialize
     _initialize();
@@ -129,9 +145,12 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
       ),
     );
 
-    // Add SDK listeners for call events
-    CometChat.addCallListener(_listenerId, this);
+    // The UI Kit's own call events.
     CometChatCallEvents.addCallEventsListener(_listenerId, this);
+
+    // What the callee does, from the session the Calls SDK prepared for
+    // this call (ringing v2).
+    _watchCall();
 
     // Play outgoing call sound unless disabled
     if (disableSoundForCalls != true) {
@@ -150,6 +169,67 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
         if (!isClosed) add(const _NoAnswer());
       });
     }
+  }
+
+  /// Follows the call while it rings: see [OutgoingCallWatch].
+  OutgoingCallWatch? _watch;
+
+  /// Starts following the call: the callee's device ringing, the callee
+  /// answering, or the call ending before anyone joined.
+  ///
+  /// Guarded like the ringback: a `Call` whose getters throw (a test fake)
+  /// must not fail the screen as it opens. It is then not followed.
+  void _watchCall() {
+    final String sessionId;
+    final String? callerUid;
+    final String? calleeUid;
+    try {
+      final session = call.sessionId;
+      if (session == null || session.isEmpty) return;
+      sessionId = session;
+      final initiator = call.callInitiator;
+      callerUid = initiator is User ? initiator.uid : null;
+      calleeUid = call.receiverType == ReceiverTypeConstants.user
+          ? call.receiverUid
+          : null;
+    } catch (e) {
+      ccLog('OutgoingCallBloc: the call cannot be followed: $e');
+      return;
+    }
+    final watch = OutgoingCallWatch(
+      sessionId: sessionId,
+      callerUid: callerUid,
+      calleeUid: calleeUid,
+      onRinging: () {
+        if (!isClosed) add(const _CalleeRinging());
+      },
+      onAnswered: () {
+        if (isClosed) return;
+        add(
+          OutgoingCallAccepted(
+            RingingCallMapping.withStatus(call, CallStatusConstants.ongoing),
+          ),
+        );
+      },
+      onEnded: (status) {
+        if (isClosed) return;
+        add(OutgoingCallRejected(RingingCallMapping.withStatus(call, status)));
+      },
+    );
+    _watch = watch;
+    watch.start();
+  }
+
+  /// Stops following the call: it is answered, over, or given up.
+  void _stopWatching() {
+    _watch?.stop();
+    _watch = null;
+  }
+
+  /// The callee's device rings.
+  void _onCalleeRinging(_CalleeRinging event, Emitter<OutgoingCallState> emit) {
+    if (_screenClosed || state.status != OutgoingCallStatus.idle) return;
+    emit(state.copyWith(isCalleeRinging: true));
   }
 
   /// Gives up on the call once it has rung for
@@ -187,6 +267,7 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
   /// that does not come through here. The accept stops only the playback:
   /// see [_onOutgoingCallAccepted].
   void _stopRinging() {
+    _stopWatching();
     _noAnswerTimer?.cancel();
     _noAnswerTimer = null;
     if (disableSoundForCalls != true) _stopSound();
@@ -205,6 +286,11 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
 
   /// Called when the outgoing call is accepted by the receiver — for this
   /// call only: both sessions known and the same.
+  @Deprecated(
+    'No longer called: the UI Kit does not listen to the chat SDK\'s call '
+    'events, which are deprecated (ringing v2). The bloc follows the call '
+    'from the session the Calls SDK prepared for it.',
+  )
   @override
   void onOutgoingCallAccepted(Call accepted) {
     if (!_isThisCall(accepted)) return;
@@ -213,6 +299,11 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
 
   /// Called when the outgoing call is rejected by the receiver — for this
   /// call only: both sessions known and the same.
+  @Deprecated(
+    'No longer called: the UI Kit does not listen to the chat SDK\'s call '
+    'events, which are deprecated (ringing v2). The bloc follows the call '
+    'from the session the Calls SDK prepared for it.',
+  )
   @override
   void onOutgoingCallRejected(Call rejected) {
     if (!_isThisCall(rejected)) return;
@@ -241,6 +332,11 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
   /// Kotlin's outgoing ViewModel handles this callback; this matches it,
   /// including the session check — the SDK broadcasts it to every listener,
   /// and an unrelated call ending must not close this one.
+  @Deprecated(
+    'No longer called: the UI Kit does not listen to the chat SDK\'s call '
+    'events, which are deprecated (ringing v2). The bloc follows the call '
+    'from the session the Calls SDK prepared for it.',
+  )
   @override
   void onCallEndedMessageReceived(Call endedCall) {
     if (!_isThisCall(endedCall)) return;
@@ -264,6 +360,11 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
   /// once: it used to be skipped too, and the screen then waited up to
   /// 10 s for the cancel's answer, a failure, and sent an endCall for a
   /// callee who was not in the call.
+  @Deprecated(
+    'No longer called: the UI Kit does not listen to the chat SDK\'s call '
+    'events, which are deprecated (ringing v2). The bloc follows the call '
+    'from the session the Calls SDK prepared for it.',
+  )
   @override
   void onIncomingCallCancelled(Call cancelledCall) {
     if (!_isThisCall(cancelledCall) || _screenClosed) return;
@@ -366,11 +467,10 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
   /// `unanswered`) and closes the screen.
   ///
   /// On success the call's rejection is announced (ccCallRejected). A
-  /// failure reaches onError with the SDK's code, and a best-effort endCall
-  /// goes out ([_freeCallee]): the request most often fails because the
-  /// callee answered at that very moment, and would be left alone in the
-  /// call. By the time any other failure comes the call is usually over
-  /// already: master_app shows these to nobody.
+  /// failure reaches onError with the SDK's code. It most often fails
+  /// because the callee answered at that very moment ([_freeCallee]). By the
+  /// time any other failure comes the call is usually over already:
+  /// master_app shows these to nobody.
   ///
   /// From here on an accept is not joined: End wins ([_endRequested]).
   ///
@@ -412,6 +512,8 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
       _popScreen();
     });
 
+    // Ringing v2: ended with the Calls SDK, which also leaves the session it
+    // prepared.
     final result = await CallOperationsServiceLocator.instance.rejectCallUseCase
         .call(sessionId, status);
     _closeCap?.cancel();
@@ -449,37 +551,22 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
   /// Closes the screen if the server has not answered a cancel in time.
   Timer? _closeCap;
 
-  /// Set once a best-effort endCall has gone out for this call, or the call
-  /// ended in a way that leaves nobody to free (declined, busy, ended by the
-  /// server).
+  /// Set once [_freeCallee] has run for this call, or the call ended in a
+  /// way that leaves nobody in it (declined, busy, ended by the server).
   bool _calleeFreed = false;
 
-  /// Sends a best-effort `endCall` for [sessionId], once: the callee may
-  /// have answered a call this device is giving up on, and would otherwise
-  /// sit alone in it. A call that is not in progress just fails to end,
-  /// which is only logged.
+  /// The callee may have answered a call this device is giving up on. Before
+  /// ringing v2 a best-effort chat SDK `endCall` let them go; ringing v2 ends
+  /// a call only by leaving it, and this device never joined, so nothing is
+  /// sent: the callee stays in the call until they hang up (as on Android).
+  /// Logged once.
   void _freeCallee(String sessionId) {
     if (_calleeFreed) return;
     _calleeFreed = true;
-    unawaited(_endCallBestEffort(sessionId));
-  }
-
-  static Future<void> _endCallBestEffort(String sessionId) async {
-    try {
-      final result = await CallOperationsServiceLocator.instance.endCallUseCase
-          .call(sessionId);
-      result.fold(
-        (failure) => ccLog(
-          'OutgoingCallBloc: best-effort end of $sessionId: ${failure.message}',
-        ),
-        (endedCall) {
-          endedCall.category = MessageCategoryConstants.call;
-          CometChatCallEvents.ccCallEnded(endedCall);
-        },
-      );
-    } catch (e) {
-      ccLog('OutgoingCallBloc: best-effort end of $sessionId: $e');
-    }
+    ccLog(
+      'OutgoingCallBloc: gave up on $sessionId; a callee who answered it '
+      'meanwhile ends it themselves',
+    );
   }
 
   /// Handle outgoing call accepted event
@@ -494,8 +581,8 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
 
     // End wins (owner decision): once End was tapped or the no-answer timer
     // fired, the call is not joined, even while that cancel is still on its
-    // way. The callee, who has just answered, would be left alone in the
-    // call: a best-effort endCall lets them go. (Android joins here.)
+    // way. The callee, who has just answered, ends it themselves
+    // ([_freeCallee]).
     if (_endRequested) {
       // After a logout began, the logout owns the call: nothing is sent.
       if (_tornDown) {
@@ -505,7 +592,7 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
         );
         return;
       }
-      ccLog('OutgoingCallBloc: accepted after the caller gave up; ending it');
+      ccLog('OutgoingCallBloc: accepted after the caller gave up; not joined');
       final sessionId = call.sessionId;
       if (sessionId != null && sessionId.isNotEmpty) _freeCallee(sessionId);
       return;
@@ -514,6 +601,9 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
     // The screen is gone (a logout closed it, say); don't open a call screen
     // for a call nobody is waiting on.
     if (_screenClosed) return;
+
+    // Answered: nothing more to follow while it rings.
+    _stopWatching();
 
     // A logout is ending this device's calls: it has cancelled this one, so
     // the call is not joined. The screen closes now rather than when the
@@ -683,6 +773,7 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
     _stopRinging();
     if (callOver) {
       ActiveCallTracker.release(call.sessionId);
+      _reportEnded();
     }
 
     // The widget records its own route in ActiveCallTracker; null when the
@@ -711,6 +802,33 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
     final navigatorContext = CallNavigationContext.navigatorKey.currentContext;
     if (navigatorContext != null && navigatorContext.mounted) {
       Navigator.pop(navigatorContext);
+    }
+  }
+
+  /// Tells the push ringer the call is over without being joined: on iOS it
+  /// ends the CallKit call the launcher reported. Not for an answered call,
+  /// which the call screen reports when it ends.
+  void _reportEnded() {
+    final push = PushRinging.bridge;
+    final sessionId = _sessionIdOrNull;
+    if (push == null || sessionId == null) return;
+    unawaited(
+      push
+          .reportCallEnded(sessionId)
+          .catchError(
+            (Object e) => ccLog('OutgoingCallBloc: reporting the end: $e'),
+          ),
+    );
+  }
+
+  /// The call's session, or null when it has none or cannot be read (a
+  /// test's fake call).
+  String? get _sessionIdOrNull {
+    try {
+      final sessionId = call.sessionId;
+      return sessionId == null || sessionId.isEmpty ? null : sessionId;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -795,6 +913,7 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
 
   @override
   Future<void> close() {
+    _stopWatching();
     _noAnswerTimer?.cancel();
     _noAnswerTimer = null;
     _closeCap?.cancel();
@@ -805,8 +924,7 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
     // Update CallStateService
     CallStateService.instance.setActiveOutgoingValue(false);
 
-    // Remove SDK listeners
-    CometChat.removeCallListener(_listenerId);
+    // Remove the UI Kit's call event listener
     CometChatCallEvents.removeCallEventsListener(_listenerId);
 
     // Stop sound playback
@@ -824,4 +942,10 @@ class OutgoingCallBloc extends Bloc<OutgoingCallEvent, OutgoingCallState>
 /// no public event is added for it.
 final class _NoAnswer extends OutgoingCallEvent {
   const _NoAnswer();
+}
+
+/// The callee's device rings: see `OutgoingCallBloc._onCalleeRinging`.
+/// Private, so no public event is added for it.
+final class _CalleeRinging extends OutgoingCallEvent {
+  const _CalleeRinging();
 }

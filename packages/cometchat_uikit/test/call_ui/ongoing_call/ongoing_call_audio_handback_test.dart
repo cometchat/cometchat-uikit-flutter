@@ -194,7 +194,8 @@ void main() {
     await tester.pump(Duration.zero);
     await tester.pump();
     expect(order, <String>['leave', 'restore']);
-    expect(dataSource.endCallCount, 1);
+    // Ringing v2: the call is ended by the leave, with no endCall.
+    expect(dataSource.endCallCount, 0);
   });
 
   testWidgets('a leave that never returns: the audio is given back after 2 s '

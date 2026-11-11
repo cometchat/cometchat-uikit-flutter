@@ -18,6 +18,8 @@ import '../../../../src/call_permission_check.dart';
 import '../../../../src/calls_lifecycle.dart';
 import '../../../../src/calls_sdk_session.dart';
 import '../../../../src/ghost_join_guard.dart';
+import '../../../../src/push_ringing.dart';
+import '../../../../src/ringing_call_mapping.dart';
 
 /// Session status listener for the ongoing call
 class _OngoingCallSessionListener extends SessionStatusListeners {
@@ -82,13 +84,12 @@ class _OngoingCallParticipantListener extends ParticipantEventListeners {
 /// - Device orientation restoration in close()
 ///
 /// Ending a 1-on-1 call (End, or back while it is still connecting) leaves
-/// the media session first, closes the screen at once, and sends `endCall`
-/// in the background; `ccCallEnded` goes out when the server confirms it,
-/// whether or not the screen is still there. A second End tap is ignored.
-/// When the other side ends the call at about the same time (its own End,
-/// or its "peer left" rule as this side leaves), one of the two `endCall`s
-/// fails because the call has already ended: that failure reaches
-/// `onError`, and the side that lost gets no `ccCallEnded`.
+/// the media session and closes the screen at once. Since ringing v2 that is
+/// all: nothing is sent to the server (no chat SDK `endCall`, deprecated);
+/// the other side's screen closes on its "peer left" rule. `ccCallEnded`
+/// goes out once the leave is done, with the call as this device knows it
+/// (no call message ID), and the push ringer hears the call is over (iOS
+/// CallKit). A second End tap is ignored.
 ///
 /// A call screen that cannot join closes at once: the device is freed, the
 /// media session left and the Android ongoing-call service stopped, and
@@ -468,6 +469,22 @@ class OngoingCallBloc extends Bloc<OngoingCallEvent, OngoingCallState> {
       (screen) {
         _joined = true;
 
+        // The push ringer hears the call is up (iOS: CallKit starts its
+        // timer). 1-on-1 calls only: a meeting is not a CallKit call.
+        if (callWorkFlow == CallWorkFlow.defaultCalling) {
+          final push = PushRinging.bridge;
+          if (push != null) {
+            unawaited(
+              push
+                  .reportCallConnected(sessionId)
+                  .catchError(
+                    (Object e) =>
+                        ccLog('OngoingCallBloc: reporting the join: $e'),
+                  ),
+            );
+          }
+        }
+
         // The user's own call is up (a call screen a host shows itself, not
         // through CallScreenOverlay): an incoming call still ringing under
         // it is answered busy.
@@ -617,13 +634,11 @@ class OngoingCallBloc extends Bloc<OngoingCallEvent, OngoingCallState> {
   /// onError as a false error.
   ///
   /// A 1-on-1 call (the owner's order, round 4): the media session is left
-  /// first (when the call joined), the screen closes at once, and the
-  /// server's endCall goes out in the background once the leave is done
-  /// ([_finishEndCall]). It used to wait for endCall before the screen
-  /// closed; and on Android the leave's own "left" closed the bloc first,
-  /// which dropped ccCallEnded. Also back while the call still connects
-  /// (see [CometChatOngoingCall]): the join is cancelled and endCall still
-  /// goes out, as the user ended the call.
+  /// first (when the call joined) and the screen closes at once; once the
+  /// leave is done, the end is announced ([_finishEndCall]). Since ringing
+  /// v2 nothing goes to the server: a call is ended by leaving it. Also back
+  /// while the call still connects (see [CometChatOngoingCall]): the join is
+  /// cancelled, as the user ended the call.
   ///
   /// A meeting is only left.
   Future<void> _onEndCallButtonPressed(
@@ -651,76 +666,66 @@ class OngoingCallBloc extends Bloc<OngoingCallEvent, OngoingCallState> {
     // only once this side's media is down. A call still connecting has no
     // session to leave yet.
     final Future<void> left = _joined ? _leaveSession() : Future<void>.value();
+    // Read before the screen closes, which releases the call's record.
+    final ended = _endedCall();
     _closeCallScreen();
-    // Always end the call on the server for 1-on-1 calls so the other
-    // participant gets the "call ended" event.
-    unawaited(_finishEndCall(left));
+    unawaited(_finishEndCall(left, ended));
   }
 
-  /// The server side of ending a 1-on-1 call from here, once [left] (the
-  /// media session left) is done, or after [_leaveWaitLimit].
+  /// The call this screen shows, as ended: the active call record when it
+  /// holds it, else what the screen knows (its session). No call message ID:
+  /// leaving sends nothing that would create one.
+  Call _endedCall() {
+    final active = CallEventService.instance.activeCall;
+    final base = active is Call && active.sessionId == sessionId
+        ? active
+        : Call(
+            sessionId: sessionId,
+            receiverUid: '',
+            type: '',
+            receiverType: ReceiverTypeConstants.user,
+          );
+    return RingingCallMapping.withStatus(base, CallStatusConstants.ended);
+  }
+
+  /// Announces the end of a 1-on-1 call ended here ([ended]), once [left]
+  /// (the media session left) is done, or after [_leaveWaitLimit].
   ///
-  /// ccCallEnded goes out when the server confirms, whether or not the
-  /// screen and this bloc are still there: the chat's call bubble, the call
-  /// buttons and the call logs hear of the end. A failure reaches onError
-  /// with the SDK's code (the owner: report everything); a logout that began
-  /// meanwhile owns the call, and the failure is only logged. A logout waits
-  /// for this request (within its bound) before it logs out: the whole of
-  /// it, the wait for the leave included. Only endCall used to be tracked,
-  /// so a logout within 2 s of End saw nothing in flight and logged out
-  /// before endCall went out (round 4 review, probe E).
-  Future<void> _finishEndCall(Future<void> left) async {
-    final epoch = CallsLifecycle.callEpoch;
+  /// Ringing v2 ends a call by leaving it: nothing goes to the server (the
+  /// chat SDK's `endCall` is deprecated, and the Calls SDK has no end for a
+  /// joined call). `ccCallEnded` goes out, whether or not the screen and
+  /// this bloc are still there, so the call buttons, the call logs and the
+  /// call records hear of the end; and the push ringer is told the call is
+  /// over (on iOS that ends the CallKit call). A logout waits for this
+  /// (within its bound) before it logs out.
+  Future<void> _finishEndCall(Future<void> left, Call ended) async {
     try {
       await ActiveCallTracker.trackCallRequest(() async {
         await left.timeout(_leaveWaitLimit, onTimeout: () {});
-        final result = await CallOperationsServiceLocator
-            .instance
-            .endCallUseCase
-            .call(sessionId);
-        result.fold(
-          (failure) {
-            ccLog(
-              'OngoingCallBloc: ending $sessionId failed: ${failure.message}',
-            );
-            if (epoch != CallsLifecycle.callEpoch) return;
-            final error = callFailureException(failure);
-            _handleError(error);
-            _addFromSdk(
-              _EndCallSettled(
-                errorMessage: failure.message,
-                errorCode: error.code,
-              ),
-            );
-          },
-          (endedCall) {
-            endedCall.category = MessageCategoryConstants.call;
-            CometChatCallEvents.ccCallEnded(endedCall);
-            _addFromSdk(const _EndCallSettled());
-          },
-        );
+        CometChatCallEvents.ccCallEnded(ended);
+        _addFromSdk(const _EndCallSettled());
       });
     } catch (e) {
       ccLog('OngoingCallBloc: ending $sessionId failed: $e');
     }
+    final push = PushRinging.bridge;
+    if (push != null) {
+      unawaited(
+        push
+            .reportCallEnded(sessionId)
+            .catchError(
+              (Object e) => ccLog('OngoingCallBloc: reporting the end: $e'),
+            ),
+      );
+    }
   }
 
-  /// What ending the call on the server came to, for the state.
+  /// A call ended here is over, for the state.
   void _onEndCallSettled(
     _EndCallSettled event,
     Emitter<OngoingCallState> emit,
   ) {
-    if (event.errorMessage == null && event.errorCode == null) {
-      emit(state.copyWith(status: OngoingCallStatus.ended));
-      return;
-    }
-    emit(
-      state.copyWith(
-        status: OngoingCallStatus.error,
-        errorMessage: event.errorMessage,
-        errorCode: event.errorCode,
-      ),
-    );
+    emit(state.copyWith(status: OngoingCallStatus.ended));
   }
 
   /// Handle session timeout event
@@ -1080,9 +1085,24 @@ class OngoingCallBloc extends Bloc<OngoingCallEvent, OngoingCallState> {
       (_) => CallOperationsServiceLocator.instance.endSessionUseCase.call(),
     );
     _leaving = leaving.then<void>((_) {}, onError: (Object _) {});
-    final result = await leaving;
+    // Bounded: the screen closes even when the native leave never answers.
+    // A meeting's End waits for this leave, and an unanswered one left the
+    // Calls SDK's "session has ended" view up with no way out.
+    final Result<void>? result = await leaving
+        .then<Result<void>?>((Result<void> r) => r)
+        .timeout(_leaveWaitLimit, onTimeout: () => null);
 
     if (isClosed) return;
+
+    if (result == null) {
+      ccLog(
+        'OngoingCallBloc: leaving $sessionId did not finish in time; '
+        'closing the call screen',
+      );
+      _closeCallScreen();
+      emit(state.copyWith(status: OngoingCallStatus.ended));
+      return;
+    }
 
     result.fold(
       (failure) {
@@ -1351,16 +1371,10 @@ final class _NativeJoinTimedOut extends OngoingCallEvent {
   const _NativeJoinTimedOut();
 }
 
-/// What the server's endCall came to: ended, or failed with
-/// [errorMessage] and [errorCode].
+/// A call ended here is over: the leave is done (ringing v2 sends nothing
+/// to the server).
 final class _EndCallSettled extends OngoingCallEvent {
-  const _EndCallSettled({this.errorMessage, this.errorCode});
-
-  final String? errorMessage;
-  final String? errorCode;
-
-  @override
-  List<Object?> get props => [errorMessage, errorCode];
+  const _EndCallSettled();
 }
 
 /// Tells a call screen's bloc when the app leaves or comes back to the

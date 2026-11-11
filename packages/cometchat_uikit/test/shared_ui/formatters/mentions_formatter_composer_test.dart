@@ -56,6 +56,7 @@ class _FakeUsersRequest implements cc.UsersRequest {
 
   @override
   Future<List<cc.User>> fetchNext({
+    cc.UserFetchListener? listener,
     required Function(List<cc.User> userList)? onSuccess,
     required Function(cc.CometChatException excep)? onError,
   }) async {

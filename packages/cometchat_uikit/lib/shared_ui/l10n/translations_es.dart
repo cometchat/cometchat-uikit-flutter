@@ -269,6 +269,9 @@ class TranslationsEs extends Translations {
   String get calling => 'Llamando...';
 
   @override
+  String get ringing => 'Sonando...';
+
+  @override
   String get add => 'Añadir';
 
   @override

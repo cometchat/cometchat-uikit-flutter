@@ -276,7 +276,8 @@ void main() {
       await pumpEventQueue();
 
       expect(dataSource.endSessionCount, 1);
-      expect(dataSource.endCallCount, 1);
+      // Ringing v2: End only leaves, with no endCall.
+      expect(dataSource.endCallCount, 0);
     });
 
     test('a screen closed while still connecting leaves nothing (no view '

@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart' hide User;
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 
+import '../../../../../src/call_prepare_settings.dart';
+import '../../../call_settings/cometchat_uikit_calls.dart';
+
 /// Exception thrown when remote data source operations fail
 class CallLogsRemoteDataSourceException implements Exception {
   final String message;
@@ -132,8 +135,11 @@ class CallLogsRemoteDataSourceImpl implements CallLogsRemoteDataSource {
     try {
       final completer = Completer<Call>();
 
-      CometChat.initiateCall(
+      // Ringing v2: placed with the Calls SDK (on web with the chat SDK),
+      // as the call buttons place theirs.
+      CometChatUIKitCalls.initiateCall(
         call,
+        sessionSettings: CallPrepareSettings.of(call),
         onSuccess: (Call returnedCall) {
           if (!completer.isCompleted) {
             completer.complete(returnedCall);

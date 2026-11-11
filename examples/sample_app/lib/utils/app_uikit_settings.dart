@@ -1,5 +1,6 @@
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_calls_uikit.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sample_app/app_credentials.dart';
 import 'package:sample_app/utils/call_debug_switches.dart';
 import 'package:sample_app/utils/call_error_snackbar.dart';
@@ -48,6 +49,10 @@ UIKitSettings buildAppUIKitSettings() {
       groupSessionSettingsBuilder:
           CallDebugSwitches.groupSessionSettingsBuilder,
     );
+
+  // Ringing v2: incoming calls ring on the push ringer (cometchat_voip), and
+  // the UI Kit joins the calls answered there. Web has no push ringer and
+  // keeps the chat SDK's calling.
 
   // Thread subscription (ENG-37601): the feature gate defaults to OFF in
   // the kit; the master app opts in so both follow/unfollow surfaces

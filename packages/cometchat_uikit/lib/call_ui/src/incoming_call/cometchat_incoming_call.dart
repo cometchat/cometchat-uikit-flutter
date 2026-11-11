@@ -27,6 +27,11 @@ import '../../../src/call_errors.dart';
 ///   onError: (e) => debugPrint('${e.code}: ${e.message}'),
 /// )
 /// ```
+@Deprecated(
+  'Since ringing v2, incoming calls ring on the push ringer\'s own screen '
+  '(cometchat_voip, through UIKitSettings.callPushBridge) on Android and '
+  'iOS. The UI Kit shows this screen on web only.',
+)
 class CometChatIncomingCall extends StatefulWidget {
   /// [call] active Call object
   final Call call;

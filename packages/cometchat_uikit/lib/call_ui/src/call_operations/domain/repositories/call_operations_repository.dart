@@ -20,6 +20,10 @@ abstract class CallOperationsRepository {
   Future<Result<Call>> rejectCall(String sessionId, String status);
 
   /// End an active call via CometChat SDK.
+  @Deprecated(
+    'Use endSession instead: a joined call is left, not ended with the Chat '
+    'SDK. The Chat SDK\'s calling APIs are deprecated (ringing v2).',
+  )
   Future<Result<Call>> endCall(String sessionId);
 
   /// Generate a call token for joining a session.

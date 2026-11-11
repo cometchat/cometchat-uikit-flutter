@@ -128,8 +128,11 @@ export 'shared_ui/cometchat_uikit_shared.dart';
 //Message information
 export 'chat_ui/src/message_information/message_information.dart';
 
-export 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
-export 'package:cometchat_sdk/handlers/call_listener.dart';
+// The chat SDK's call listeners are not passed along: since ringing v2 the
+// UI Kit calls through the Calls SDK only. An app that still uses them
+// (deprecated) imports them from cometchat_sdk itself.
+export 'package:cometchat_sdk/cometchat_sdk.dart'
+    hide CardMessage, CallListener, CallListener2;
 
 /// Ai features
 

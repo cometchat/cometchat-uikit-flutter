@@ -1,4 +1,5 @@
 import '../../../shared_ui/cometchat_uikit_shared.dart';
+import '../../../call_ui/src/call_settings/cometchat_call_push_bridge.dart';
 import '../../../call_ui/src/calling_configuration.dart';
 
 ///Used to set Ui kit level settings
@@ -30,6 +31,13 @@ class UIKitSettings {
   ///passed to the deprecated `CallEventService.init(configuration:)`.
   final CallingConfiguration? callingConfiguration;
 
+  ///[callPushBridge] the push ringer incoming calls ring through (ringing
+  ///v2): the UI Kit joins the calls answered on its ring screen, answers
+  ///and declines through it, and reports its calls to CallKit on iOS. See
+  ///[CometChatCallPushBridge]. Needed for calls to ring on Android and iOS;
+  ///not used on web.
+  final CometChatCallPushBridge? callPushBridge;
+
   ///[enableThreadSubscription] feature gate for the thread follow/unfollow
   ///surfaces (the message action-sheet option and the threaded-header
   ///control). Defaults to false: with the gate off neither surface renders
@@ -52,6 +60,7 @@ class UIKitSettings {
       authKey = builder.authKey,
       enableCalls = builder.enableCalls,
       callingConfiguration = builder.callingConfiguration,
+      callPushBridge = builder.callPushBridge,
       enableThreadSubscription = builder.enableThreadSubscription,
       adminHost = builder.adminHost,
       clientHost = builder.clientHost,
@@ -76,6 +85,10 @@ class UIKitSettingsBuilder {
   ///[callingConfiguration] optional configuration for call buttons, incoming call, outgoing call, and group call settings.
   ///See [UIKitSettings.callingConfiguration] for where it is read.
   CallingConfiguration? callingConfiguration;
+
+  ///[callPushBridge] the push ringer incoming calls ring through (ringing
+  ///v2). See [UIKitSettings.callPushBridge].
+  CometChatCallPushBridge? callPushBridge;
 
   ///[enableThreadSubscription] feature gate for the thread follow/unfollow
   ///surfaces. Defaults to false (both surfaces stay hidden).

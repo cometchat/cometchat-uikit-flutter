@@ -267,6 +267,9 @@ class TranslationsNl extends Translations {
   String get calling => 'Bellen...';
 
   @override
+  String get ringing => 'Gaat over...';
+
+  @override
   String get add => 'Toevoegen';
 
   @override

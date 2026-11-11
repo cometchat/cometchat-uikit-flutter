@@ -1,8 +1,12 @@
 library;
 
-export 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
-export 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart' hide User;
-export 'package:cometchat_sdk/handlers/call_listener.dart';
+// The chat SDK's call listeners are not passed along: since ringing v2 the
+// UI Kit calls through the Calls SDK only. An app that still uses them
+// (deprecated) imports them from cometchat_sdk itself.
+export 'package:cometchat_sdk/cometchat_sdk.dart'
+    hide CardMessage, CallListener, CallListener2;
+export 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart'
+    hide User, LoginListener;
 export 'call_ui/src/call_bubble/cometchat_call_bubble.dart';
 
 export 'call_ui/src/calling_configuration.dart';
@@ -33,6 +37,8 @@ export 'call_ui/src/incoming_call/bloc/bloc.dart';
 // call settings
 export 'call_ui/src/call_settings/cometchat_uikit_calls.dart';
 export 'call_ui/src/call_settings/call_navigation_context.dart';
+export 'call_ui/src/call_settings/cometchat_call_push_bridge.dart';
+export 'call_ui/src/call_settings/cometchat_incoming_call_theme.dart';
 
 //ongoing call
 export 'call_ui/src/ongoing_call/cometchat_ongoing_call.dart';

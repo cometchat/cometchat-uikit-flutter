@@ -263,6 +263,9 @@ class TranslationsKo extends Translations {
   String get calling => '전화 중...';
 
   @override
+  String get ringing => '벨 울리는 중...';
+
+  @override
   String get add => '추가';
 
   @override

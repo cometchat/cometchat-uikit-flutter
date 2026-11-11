@@ -263,6 +263,9 @@ class TranslationsJa extends Translations {
   String get calling => '呼び出し中...';
 
   @override
+  String get ringing => '呼び出し音が鳴っています...';
+
+  @override
   String get add => '追加';
 
   @override

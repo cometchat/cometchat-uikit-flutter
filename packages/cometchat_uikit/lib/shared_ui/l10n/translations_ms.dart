@@ -270,6 +270,9 @@ class TranslationsMs extends Translations {
   String get calling => 'Memanggil...';
 
   @override
+  String get ringing => 'Berdering...';
+
+  @override
   String get add => 'Tambah';
 
   @override

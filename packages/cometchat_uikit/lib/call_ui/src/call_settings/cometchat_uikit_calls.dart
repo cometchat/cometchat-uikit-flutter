@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../cometchat_calls_uikit.dart';
 
 import 'package:flutter/foundation.dart';
@@ -5,6 +7,12 @@ import 'package:flutter/material.dart';
 import '../../../shared_ui/src/logging/cometchat_log.dart';
 import '../../../src/active_call_tracker.dart';
 import '../../../src/calls_join.dart';
+import '../../../src/calls_ringing.dart';
+import '../../../src/push_ringing.dart';
+import '../../../src/ringing_call_mapping.dart';
+import '../../../shared_ui/src/cometchat_ui_kit/cometchat_ui_kit.dart';
+import '../../../shared_ui/src/constants/ui_kit_constants.dart'
+    show CallStatusConstants, ReceiverTypeConstants;
 
 ///[CometChatUIKitCalls] is a class that initializes the CometChat Calls SDK. And contains methods to initiate a call, accept a call, reject a call, end a call
 class CometChatUIKitCalls {
@@ -56,41 +64,84 @@ class CometChatUIKitCalls {
     );
   }
 
-  ///[initiateCall] is the method to initiate a call. It takes [Call] as input. And an optional [onSuccess] and [onError] callback.
+  ///[initiateCall] places [call] (to [Call.receiverUid], a user or a group,
+  /// as an audio or video call by [Call.type]) and gives back the call as the
+  /// server has it. It takes an optional [onSuccess] and [onError] callback.
+  ///
+  /// Since ringing v2 the call is placed with the Calls SDK
+  /// (`CometChatCalls.initiateCall`): the receiver's devices ring through
+  /// push, and this device's session starts preparing with
+  /// [sessionSettings] (the Calls SDK's defaults when null). Those settings
+  /// are frozen by the prepare, so the join once the call is answered uses
+  /// them. The caller does not join yet: it joins with [startSession] once
+  /// the receiver has joined, and gives up on the call with [rejectCall].
+  /// [onSuccess] gets the call as a chat [Call], with the ID of its call
+  /// message; a refusal reaches [onError] with the Calls SDK's code.
+  ///
+  /// On web, where the Calls SDK cannot place calls, it is placed with the
+  /// chat SDK, as before ringing v2.
   static void initiateCall(
     Call call, {
     dynamic Function(Call)? onSuccess,
     dynamic Function(CometChatException)? onError,
+    SessionSettings? sessionSettings,
   }) {
+    if (kIsWeb) {
+      _initiateWithChatSdk(call, onSuccess: onSuccess, onError: onError);
+      return;
+    }
+    unawaited(
+      CallsRinging.initiateCall(
+        receiver: call.receiverUid,
+        options: InitiateCallOptions(
+          type: call.type.isEmpty ? CallType.video : call.type,
+          receiverType: call.receiverType.isEmpty
+              ? ReceiverType.user
+              : call.receiverType,
+          sessionSettings: sessionSettings,
+        ),
+        onSuccess: (InitiatedCall placed) {
+          // The prepared session is the Calls SDK's one session: a logout or
+          // dispose leaves it, even if the call is never joined.
+          ActiveCallTracker.mayHaveMediaSession = true;
+          final Call placedCall = RingingCallMapping.fromInitiated(
+            placed,
+            caller: CometChatUIKit.loggedInUser,
+            receiver: call.receiver ?? call.callReceiver,
+          );
+          _succeed(onSuccess, placedCall);
+          if (kDebugMode) {
+            ccLog('call initiated successfully: ${placed.sessionId}');
+          }
+        },
+        onError: (CometChatCallsException e) {
+          _fail(onError, _chatException(e));
+          if (kDebugMode) {
+            ccLog('call could not be initiated ${e.message} ${e.code}');
+          }
+        },
+      ),
+    );
+  }
+
+  /// Places [call] with the chat SDK: [initiateCall] on web.
+  static void _initiateWithChatSdk(
+    Call call, {
+    dynamic Function(Call)? onSuccess,
+    dynamic Function(CometChatException)? onError,
+  }) {
+    // The Calls SDK cannot place calls on web.
+    // ignore: deprecated_member_use
     CometChat.initiateCall(
       call,
       onSuccess: (Call call) {
-        //execute custom onSuccess callback
-        try {
-          if (onSuccess != null) {
-            onSuccess(call);
-          }
-        } catch (e, stackTrace) {
-          if (kDebugMode) {
-            ccLog('unable to execute custom onSuccess callback: $e');
-            ccLog('Stack trace: $stackTrace');
-          }
-        }
+        _succeed(onSuccess, call);
         if (kDebugMode) {
           ccLog('call initiated successfully');
         }
       },
       onError: (CometChatException e) {
-        //execute custom onError callback
-        try {
-          if (onError != null) {
-            onError(e);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            ccLog('unable to execute custom onError callback');
-          }
-        }
+        _fail(onError, e);
         if (kDebugMode) {
           ccLog(
             'call could not be initiated ${e.message} ${e.details} ${e.code}',
@@ -100,27 +151,45 @@ class CometChatUIKitCalls {
     );
   }
 
-  ///[acceptCall] is the method to accept a call. It takes [sessionId] as input. And an optional [onSuccess] and [onError] callback.
+  ///[acceptCall] answers the incoming call [sessionId]. It takes an optional
+  /// [onSuccess] and [onError] callback.
+  ///
+  /// Since ringing v2, with the app's push ringer set
+  /// (`UIKitSettings.callPushBridge`), the call is answered through it, as
+  /// the ring screen's Answer is (`cometchat_voip` tells CometChat it was
+  /// answered and stops ringing), and [onSuccess] gets the call as this
+  /// device knows it, now ongoing. The UI Kit then joins it on its call
+  /// screen, unless the caller of this method shows the call screen itself
+  /// first (the UI Kit's incoming call screen does). Without a push ringer,
+  /// and on web, the call is accepted with the chat SDK, as before.
+  ///
+  /// A failure reaches [onError], and the UI Kit's record of the call is
+  /// dropped so a later incoming call is not answered with busy.
   static void acceptCall(
     String sessionId, {
     dynamic Function(Call)? onSuccess,
     dynamic Function(CometChatException)? onError,
   }) {
+    final push = PushRinging.bridge;
+    if (push != null) {
+      unawaited(
+        _answerThroughPush(
+          push,
+          sessionId,
+          onSuccess: onSuccess,
+          onError: onError,
+        ),
+      );
+      return;
+    }
+    // No push ringer (or web): the chat SDK accepts it, as before ringing v2.
+    // ignore: deprecated_member_use
     CometChat.acceptCall(
       sessionId,
       onSuccess: (Call call) {
-        //execute custom onSuccess callback
-        try {
-          if (onSuccess != null) {
-            onSuccess(call);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            ccLog('unable to execute custom onSuccess callback');
-          }
-        }
+        _succeed(onSuccess, call);
         if (kDebugMode) {
-          ccLog('call initiated successfully');
+          ccLog('call accepted successfully');
         }
       },
       onError: (CometChatException e) {
@@ -130,44 +199,151 @@ class CometChatUIKitCalls {
         if (e.message?.contains('already started') != true) {
           ActiveCallTracker.release(sessionId);
         }
-        //execute custom onError callback
-        try {
-          if (onError != null) {
-            onError(e);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            ccLog('unable to execute custom onError callback');
-          }
-        }
+        _fail(onError, e);
         if (kDebugMode) {
-          ccLog('call could not be initiated ${e.message}');
+          ccLog('call could not be accepted ${e.message}');
         }
       },
     );
   }
 
-  ///[rejectCall] is the method to reject or cancel a call. It takes [sessionId] and [status] as input. And an optional [onSuccess] and [onError] callback.
+  /// Answers [sessionId] through the app's push ringer: [acceptCall] with
+  /// one set.
+  static Future<void> _answerThroughPush(
+    CometChatCallPushBridge push,
+    String sessionId, {
+    dynamic Function(Call)? onSuccess,
+    dynamic Function(CometChatException)? onError,
+  }) async {
+    final ringing = ActiveCallTracker.ringingCall;
+    final Call base = ringing != null && ringing.sessionId == sessionId
+        ? ringing
+        : Call(
+            sessionId: sessionId,
+            receiverUid: CometChatUIKit.loggedInUser?.uid ?? '',
+            type: '',
+            receiverType: ReceiverTypeConstants.user,
+          );
+    try {
+      await push.answer(sessionId);
+    } catch (e) {
+      ActiveCallTracker.release(sessionId);
+      _fail(
+        onError,
+        e is CometChatException
+            ? e
+            : CometChatException(
+                'ERR_ANSWER_FAILED',
+                e.toString(),
+                'The call could not be answered',
+              ),
+      );
+      if (kDebugMode) {
+        ccLog('call could not be answered: $e');
+      }
+      return;
+    }
+    _succeed(
+      onSuccess,
+      RingingCallMapping.withStatus(base, CallStatusConstants.ongoing),
+    );
+    if (kDebugMode) {
+      ccLog('call answered through the push ringer: $sessionId');
+    }
+  }
+
+  ///[rejectCall] ends the call [sessionId] before it is joined, with
+  /// [status]: the receiver declines (`rejected`, or `busy`), or the caller
+  /// withdraws (`cancelled`) or gives up on a call nobody answered
+  /// (`unanswered`). It takes an optional [onSuccess] and [onError] callback.
+  ///
+  /// Since ringing v2 the call is ended with the Calls SDK
+  /// (`CometChatCalls.endCall`), which leaves the call's session first if it
+  /// is the session in progress. [onSuccess] gets the call in its new status
+  /// as a chat [Call] (the Calls SDK reports no call message for it); a
+  /// refusal reaches [onError] with the Calls SDK's code. A call that was joined is ended with [endSession] instead.
+  ///
+  /// On web, where the Calls SDK cannot end calls, it is ended with the chat
+  /// SDK, as before ringing v2.
   static void rejectCall(
     String sessionId,
     String status, {
     dynamic Function(Call)? onSuccess,
     dynamic Function(CometChatException)? onError,
   }) {
+    if (kIsWeb) {
+      _rejectWithChatSdk(
+        sessionId,
+        status,
+        onSuccess: onSuccess,
+        onError: onError,
+      );
+      return;
+    }
+    // The caller's own call: the Calls SDK leaves the session it prepared,
+    // whatever the network result.
+    final leavesOwnSession =
+        status == CallStatusConstants.cancelled ||
+        status == CallStatusConstants.unanswered;
+    unawaited(
+      CallsRinging.endCall(
+        sessionId: sessionId,
+        status: status,
+        onSuccess: () {
+          if (leavesOwnSession) ActiveCallTracker.mayHaveMediaSession = false;
+          // The Calls SDK reports no data (5.1.0-team): the call as this
+          // device knows it, in its new status.
+          _succeed(
+            onSuccess,
+            RingingCallMapping.ended(
+              sessionId,
+              status,
+              known: _knownCall(sessionId),
+            ),
+          );
+          if (kDebugMode) {
+            ccLog('call ended before the join: $status');
+          }
+        },
+        onError: (CometChatCallsException e) {
+          if (leavesOwnSession) ActiveCallTracker.mayHaveMediaSession = false;
+          // No ccCallRejected goes out when a reject fails, so drop the UI
+          // Kit's record of the call here, or every later incoming call is
+          // answered with busy.
+          ActiveCallTracker.release(sessionId);
+          _fail(onError, _chatException(e));
+          if (kDebugMode) {
+            ccLog('call could not be rejected ${e.message} ${e.code}');
+          }
+        },
+      ),
+    );
+  }
+
+  /// The call [sessionId] as this device knows it: the incoming call ringing
+  /// here, or the call it placed, or null.
+  static Call? _knownCall(String sessionId) {
+    final ringing = ActiveCallTracker.ringingCall;
+    if (ringing != null && ringing.sessionId == sessionId) return ringing;
+    final active = CallEventService.instance.activeCall;
+    if (active is Call && active.sessionId == sessionId) return active;
+    return null;
+  }
+
+  /// Ends [sessionId] with the chat SDK: [rejectCall] on web.
+  static void _rejectWithChatSdk(
+    String sessionId,
+    String status, {
+    dynamic Function(Call)? onSuccess,
+    dynamic Function(CometChatException)? onError,
+  }) {
+    // The Calls SDK cannot end calls on web.
+    // ignore: deprecated_member_use
     CometChat.rejectCall(
       sessionId,
       status,
       onSuccess: (Call call) {
-        //execute custom onSuccess callback
-        try {
-          if (onSuccess != null) {
-            onSuccess(call);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            ccLog('unable to execute custom onSuccess callback');
-          }
-        }
+        _succeed(onSuccess, call);
         if (kDebugMode) {
           ccLog('call rejected successfully');
         }
@@ -177,22 +353,49 @@ class CometChatUIKitCalls {
         // record of the call here, or every later incoming call is answered
         // with busy.
         ActiveCallTracker.release(sessionId);
-        //execute custom onError callback
-        try {
-          if (onError != null) {
-            onError(e);
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            ccLog('unable to execute custom onError callback: $e}');
-          }
-        }
+        _fail(onError, e);
         if (kDebugMode) {
           ccLog('call could not be rejected ${e.message}');
         }
       },
     );
   }
+
+  /// Hands [call] to a host's [onSuccess]; a callback that throws is only
+  /// logged.
+  static void _succeed(dynamic Function(Call)? onSuccess, Call call) {
+    try {
+      if (onSuccess != null) {
+        onSuccess(call);
+      }
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        ccLog('unable to execute custom onSuccess callback: $e');
+        ccLog('Stack trace: $stackTrace');
+      }
+    }
+  }
+
+  /// Hands [e] to a host's [onError]; a callback that throws is only logged.
+  static void _fail(
+    dynamic Function(CometChatException)? onError,
+    CometChatException e,
+  ) {
+    try {
+      if (onError != null) {
+        onError(e);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        ccLog('unable to execute custom onError callback: $e');
+      }
+    }
+  }
+
+  /// A Calls SDK refusal as the chat SDK's exception the calling API hands
+  /// on: its code, message and details kept.
+  static CometChatException _chatException(CometChatCallsException e) =>
+      CometChatException(e.code, e.details, e.message);
 
   ///[generateToken] generates a call token for the given [sessionId].
   /// Uses [CometChatCalls.generateCallToken] which manages the auth token
@@ -316,13 +519,13 @@ class CometChatUIKitCalls {
       // later. The mark used to stay set when the leave failed, and every
       // incoming call after it rang as if over a call.
       try {
-        await CallSession.getInstance()?.leaveSession();
+        await CallSession.getInstance()?.leave();
       } finally {
         ActiveCallTracker.mayHaveMediaSession = false;
       }
       // NOTE: do NOT clear the active call here.
       //
-      // The documented teardown order is leaveSession() first, then
+      // The documented teardown order is leave() first, then
       // CometChat.endCall(). endCall resolves the required `joinedAt` post
       // parameter from the call cached by initiateCall/acceptCall, so wiping
       // that cache here left endCall sending `joinedAt: 0`, which the server

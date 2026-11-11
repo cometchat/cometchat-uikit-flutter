@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:permission_handler/permission_handler.dart'
-    show openAppSettings;
 
 import '../../../../cometchat_calls_uikit.dart';
 import '../../../../cometchat_chat_uikit.dart';
@@ -12,9 +10,11 @@ import '../../../../shared_ui/src/logging/cometchat_log.dart';
 import '../../../../src/active_call_tracker.dart';
 import '../../../../src/call_errors.dart';
 import '../../../../src/call_permission_check.dart';
+import '../../../../src/call_permission_notice.dart';
 import '../../../../src/call_session_settings.dart';
 import '../../../../src/calls_lifecycle.dart';
 import '../../../../src/incoming_ringtone.dart';
+import '../../../../src/push_ringing.dart';
 
 /// BLoC for managing incoming call screen state and actions
 ///
@@ -31,14 +31,24 @@ import '../../../../src/incoming_ringtone.dart';
 /// cancelled, answered or declined on another device of the same user, or
 /// when it has rung for 60 seconds with nobody acting on it.
 ///
-/// Hears the call's own events through [CallListener]: a cancel
+/// Hears the call's own events through the chat SDK's call listener on web: a cancel
 /// (`onIncomingCallCancelled`), and the same user answering or declining it
 /// on another device (`onOutgoingCallAccepted` / `onOutgoingCallRejected`
 /// naming them as the actor).
 ///
+/// Ringing v2 (Android and iOS): the call rings on the push ringer's own
+/// screen, so this bloc plays no ringtone when the app set one
+/// (`UIKitSettings.callPushBridge`); Accept answers through it, Decline
+/// stops its ring; and the call is given up when it stops ringing
+/// (cancelled, timed out, or answered or declined on another device), as the
+/// push ringer reports it. The chat SDK's call listener is not registered.
+///
 /// Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
 class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
-    with CallListener {
+    with
+        // Registered on web only (ringing v1); kept for the public API.
+        // ignore: deprecated_member_use
+        CallListener {
   /// The active incoming call
   final Call call;
 
@@ -115,8 +125,19 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
     // Update CallStateService to track active incoming call
     CallStateService.instance.setActiveIncomingValue(true);
 
-    // Add SDK listener for call events
-    CometChat.addCallListener(_listenerId, this);
+    // The call's own events: the chat SDK's call listener on web; the push
+    // ringer's report that it stopped ringing elsewhere (ringing v2).
+    if (kIsWeb) {
+      // ignore: deprecated_member_use
+      CometChat.addCallListener(_listenerId, this);
+    } else {
+      _ringingEnded = ActiveCallTracker.ringingEndedSessions.listen((ended) {
+        // This bloc's own announcements are not news: see [_announcing].
+        if (!isClosed && !_announcing && ended == call.sessionId) {
+          add(const CallCancelled());
+        }
+      });
+    }
 
     _ringDeadline = ActiveCallTracker.wallClock().add(
       ActiveCallTracker.incomingRingTimeout,
@@ -175,6 +196,36 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
     add(const CallCancelled());
   }
 
+  /// The push ringer's calls that stopped ringing: see
+  /// [ActiveCallTracker.ringingEndedSessions].
+  StreamSubscription<String>? _ringingEnded;
+
+  /// Set while this bloc announces its own call as no longer ringing (its
+  /// banner dismissed by session, or [ActiveCallTracker.ringingEnded]). The
+  /// stream is synchronous, so the announcement reaches [_ringingEnded]
+  /// while this is set, and is ignored there. Before, a cancel announced
+  /// itself and was heard as another cancel, forever (100% CPU), and a
+  /// decline or a failed accept heard its own announcement as a cancel.
+  bool _announcing = false;
+
+  void _announce(void Function() announcement) {
+    final was = _announcing;
+    _announcing = true;
+    try {
+      announcement();
+    } finally {
+      _announcing = was;
+    }
+  }
+
+  /// [IncomingCallOverlay.dismiss] for this bloc's own call.
+  void _dismissOwnBanner(String? sessionId) =>
+      _announce(() => IncomingCallOverlay.dismiss(sessionId: sessionId));
+
+  /// [ActiveCallTracker.ringingEnded] for this bloc's own call.
+  void _ownRingingEnded(String? sessionId) =>
+      _announce(() => ActiveCallTracker.ringingEnded(sessionId));
+
   void _stopRingTimeout() {
     _ringTimeout?.cancel();
     _ringTimeout = null;
@@ -183,6 +234,8 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
   /// Rings. The ringtone is this bloc's until another one starts: see
   /// [_stopSound]. A custom sound with no package is the app's own asset.
   void _playIncomingSound() {
+    // Ringing v2: the push ringer rings it already.
+    if (PushRinging.bridge != null) return;
     try {
       unawaited(
         IncomingRingtone.play(
@@ -305,8 +358,8 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
 
   /// Handle accept call event.
   ///
-  /// Uses a [Completer] to bridge the callback-based [CometChat.acceptCall]
-  /// into the async handler so that [emit] is called within the handler scope
+  /// Uses a [Completer] to bridge the callback-based accept
+  /// (`CometChatUIKitCalls.acceptCall`) into the async handler so that [emit] is called within the handler scope
   /// (prevents "emit was called after an event handler completed normally").
   Future<void> _onAcceptCall(
     AcceptCall event,
@@ -439,6 +492,9 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
     // this accept, and was taken for this device's echo.
     _acceptRequested = true;
     ActiveCallTracker.respondingTo(sessionId);
+    // This screen joins the call itself: the push ringer's report of the
+    // answer (ringing v2) is not joined a second time.
+    ActiveCallTracker.acceptingOnScreen(sessionId);
     try {
       await ActiveCallTracker.trackCallRequest(() async {
         final result = await acceptCallUseCase.call(sessionId);
@@ -596,7 +652,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
     _declined = true;
     _stopSound();
     // Dismiss the overlay so the user isn't stuck on a frozen call screen
-    IncomingCallOverlay.dismiss(sessionId: sessionId);
+    _dismissOwnBanner(sessionId);
     final message =
         'Microphone${isVideoCall ? '/camera' : ''} permission denied';
     if (permissions == null) {
@@ -604,7 +660,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
     } else {
       _handleError(permissions.toException(message));
       if (errorCallback == null) {
-        _showPermissionNotice(
+        CallPermissionNotice.show(
           isVideoCall: isVideoCall,
           permanentlyDenied: permissions.permanentlyDenied,
         );
@@ -664,54 +720,6 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
   /// Whether this call was declined here after a refused permission: the
   /// buttons stay off, and Accept and Decline are ignored from then on.
   bool _declined = false;
-
-  /// Tells the user an incoming call could not be answered without its
-  /// permissions, in a SnackBar on the app's navigator: the banner is gone
-  /// by then, and nothing else said why. With [permanentlyDenied] it offers
-  /// the app's settings page, where they can be granted now.
-  void _showPermissionNotice({
-    required bool isVideoCall,
-    required bool permanentlyDenied,
-  }) {
-    final context = CallNavigationContext.navigatorKey.currentContext;
-    if (context == null || !context.mounted) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-    final translations = Translations.of(context);
-    final colors = CometChatThemeHelper.getColorPalette(context);
-    final typography = CometChatThemeHelper.getTypography(context);
-    messenger.showSnackBar(
-      SnackBar(
-        backgroundColor: colors.error,
-        content: Text(
-          isVideoCall
-              ? translations.cameraAndMicrophoneRequiredToAnswerCall
-              : translations.microphoneRequiredToAnswerCall,
-          style: TextStyle(
-            color: colors.white,
-            fontSize: typography.button?.medium?.fontSize,
-            fontWeight: typography.button?.medium?.fontWeight,
-            fontFamily: typography.button?.medium?.fontFamily,
-          ),
-        ),
-        action: permanentlyDenied
-            ? SnackBarAction(
-                label: translations.settings,
-                textColor: colors.white,
-                onPressed: () => unawaited(_openSettings()),
-              )
-            : null,
-      ),
-    );
-  }
-
-  static Future<void> _openSettings() async {
-    try {
-      await openAppSettings();
-    } catch (e) {
-      ccLog('IncomingCallBloc: could not open the app settings: $e');
-    }
-  }
 
   /// Runs the host's [hook] with the navigator's context, as a side effect:
   /// a [CometChatException] it throws goes to [errorCallback] as it is,
@@ -783,7 +791,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
         _stopSound();
         // Dismiss overlay on accept failure — the call is likely already
         // ended by the remote party. This call's banner only.
-        IncomingCallOverlay.dismiss(sessionId: sessionId);
+        _dismissOwnBanner(sessionId);
         ActiveCallTracker.release(sessionId);
 
         // A call that was already over (cancelled while the socket was down
@@ -803,7 +811,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
         }
 
         // Dismiss overlay: this call's banner only.
-        IncomingCallOverlay.dismiss(sessionId: sessionId);
+        _dismissOwnBanner(sessionId);
 
         // Fire call accepted event
         CometChatCallEvents.ccCallAccepted(acceptedCall);
@@ -870,7 +878,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
   /// failed is reported, as every failure is, and nothing more.
   Future<void> _landAfterGivingUp(Result<Call> result, String sessionId) async {
     _stopSound();
-    ActiveCallTracker.ringingEnded(sessionId);
+    _ownRingingEnded(sessionId);
     if (result is Failure) {
       _handleError(callFailureException(result));
       return;
@@ -984,6 +992,19 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
       return;
     }
 
+    // Ringing v2: the push ringer stops ringing it; the decline itself goes
+    // to CometChat below.
+    final push = PushRinging.bridge;
+    if (push != null) {
+      unawaited(
+        push
+            .dismissRinging(sessionId, answered: false)
+            .catchError(
+              (Object e) => ccLog('IncomingCallBloc: stopping the ring: $e'),
+            ),
+      );
+    }
+
     // Reject call via use case. Its "rejected" echo is this device's own.
     ccLog('Trying to reject call');
     final rejectCallUseCase =
@@ -1015,7 +1036,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
         _handleError(error);
 
         // Still dismiss overlay on error: this call's banner only.
-        IncomingCallOverlay.dismiss(sessionId: sessionId);
+        _dismissOwnBanner(sessionId);
 
         // A call that was already over needs no "Something went wrong".
         _emitError(emit, failure.message, explained: isCallAlreadyOver(error));
@@ -1026,7 +1047,7 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
         ccLog('Incoming call was rejected');
 
         // Dismiss overlay: this call's banner only.
-        IncomingCallOverlay.dismiss(sessionId: sessionId);
+        _dismissOwnBanner(sessionId);
 
         emit(
           state.copyWith(
@@ -1067,8 +1088,8 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
       return;
     }
     // Dismiss overlay — this call's, not whatever may have replaced it.
-    IncomingCallOverlay.dismiss(sessionId: sessionId);
-    ActiveCallTracker.ringingEnded(sessionId);
+    _dismissOwnBanner(sessionId);
+    _ownRingingEnded(sessionId);
   }
 
   /// Hands [e] to [errorCallback], if provided. A callback that throws is
@@ -1093,6 +1114,8 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
 
   @override
   Future<void> close() {
+    final sessionId = call.sessionId;
+    if (sessionId != null) ActiveCallTracker.doneAcceptingOnScreen(sessionId);
     // The banner went away without this call being answered: however it was
     // taken down (the host, a replacing banner, a logout), the call can no
     // longer be answered here, so it stops counting as ringing and the next
@@ -1115,8 +1138,13 @@ class IncomingCallBloc extends Bloc<IncomingCallEvent, IncomingCallState>
       CallStateService.instance.setActiveIncomingValue(false);
     }
 
-    // Remove SDK listener
-    CometChat.removeCallListener(_listenerId);
+    // Remove the call's own event listeners
+    if (kIsWeb) {
+      // ignore: deprecated_member_use
+      CometChat.removeCallListener(_listenerId);
+    }
+    unawaited(_ringingEnded?.cancel());
+    _ringingEnded = null;
 
     _stopRingTimeout();
     _lifecycle?.dispose();

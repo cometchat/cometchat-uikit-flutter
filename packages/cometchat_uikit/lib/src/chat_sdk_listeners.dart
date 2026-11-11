@@ -1,5 +1,11 @@
+// The call listener parts are for web only, where calls still ring through
+// the chat SDK (ringing v1).
 import 'package:cometchat_sdk/cometchat_sdk.dart'
-    show CallListener, CometChat, ConnectionListener;
+    show
+        // ignore: deprecated_member_use
+        CallListener,
+        CometChat,
+        ConnectionListener;
 import 'package:flutter/foundation.dart';
 
 /// Registers chat SDK call and connection listeners for the UI Kit's own
@@ -12,11 +18,14 @@ import 'package:flutter/foundation.dart';
 /// Package-private (see `lib/src/`).
 abstract final class ChatSdkListeners {
   /// Registers [listener] for the chat SDK's call events under [id].
+  // ignore: deprecated_member_use
   static void addCallListener(String id, CallListener listener) =>
+      // ignore: deprecated_member_use
       (debugAddCallListener ?? CometChat.addCallListener)(id, listener);
 
   /// Removes the call listener registered under [id].
   static void removeCallListener(String id) =>
+      // ignore: deprecated_member_use
       (debugRemoveCallListener ?? CometChat.removeCallListener)(id);
 
   /// Registers [listener] for the chat SDK's connection events under [id].
@@ -32,6 +41,7 @@ abstract final class ChatSdkListeners {
 
   /// Replaces [addCallListener]'s SDK call in tests.
   @visibleForTesting
+  // ignore: deprecated_member_use
   static void Function(String id, CallListener listener)? debugAddCallListener;
 
   /// Replaces [removeCallListener]'s SDK call in tests.

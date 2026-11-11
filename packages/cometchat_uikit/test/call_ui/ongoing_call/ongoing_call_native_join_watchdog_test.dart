@@ -163,7 +163,10 @@ void main() {
     await tester.pump(const Duration(seconds: 40));
 
     expect(errors, isEmpty);
-    expect(dataSource.endCallCount, 1);
+    // The leave button ended the call: by leaving it, with no endCall
+    // (ringing v2).
+    expect(CallScreenOverlay.isShowing, isFalse);
+    expect(dataSource.endCallCount, 0);
   });
 
   testWidgets('counted from when the view is on screen, not from the join: '

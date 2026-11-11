@@ -64,6 +64,7 @@ class CallOperationsRepositoryImpl implements CallOperationsRepository {
   @override
   Future<Result<Call>> endCall(String sessionId) async {
     try {
+      // ignore: deprecated_member_use_from_same_package
       final result = await dataSource.endCall(sessionId);
       return Success(result);
     } on CallOperationsException catch (e) {

@@ -29,7 +29,24 @@ UIImagePickerControllerDelegate,
 UINavigationControllerDelegate {
 
     lazy var previewItem = NSURL()
-    static var uiViewController: UIViewController?
+
+    /// The screen to present native UI on, looked up each time. Under the scene
+    /// lifecycle the app delegate has no window, and the window does not exist
+    /// yet when the plugin registers, so it cannot be kept from registration.
+    /// The topmost one, because a screen already presenting cannot present.
+    static var uiViewController: UIViewController? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        let window = scene?.windows.first { $0.isKeyWindow }
+            ?? scene?.windows.first
+            ?? UIApplication.shared.delegate?.window ?? nil
+
+        var top = window?.rootViewController
+        while let presented = top?.presentedViewController, !presented.isBeingDismissed {
+            top = presented
+        }
+        return top
+    }
     
     // Keyboard height tracking
     private var keyboardHeightEventSink: FlutterEventSink?
@@ -207,8 +224,7 @@ UINavigationControllerDelegate {
             binaryMessenger: registrar.messenger()
         )
 
-        let rootVC = UIApplication.shared.delegate?.window??.rootViewController
-        let instance = CometchatChatUikitPlugin(viewController: rootVC)
+        let instance = CometchatChatUikitPlugin()
 
         registrar.addMethodCallDelegate(instance, channel: channel)
         globalRegistrar = registrar
@@ -221,9 +237,8 @@ UINavigationControllerDelegate {
         keyboardHeightChannel.setStreamHandler(instance)
     }
 
-    init(viewController: UIViewController?) {
+    override init() {
         super.init()
-        CometchatChatUikitPlugin.uiViewController = viewController
         documentPicker.delegate = self
         imagePicker.delegate = self
         imagePicker.sourceType = .photoLibrary
@@ -586,7 +601,12 @@ UINavigationControllerDelegate {
         let allowMultiple = args["allowMultipleSelection"] as? Bool ?? false
 
         DispatchQueue.main.async {
-            guard let controller = CometchatChatUikitPlugin.uiViewController else { return }
+            guard let controller = CometchatChatUikitPlugin.uiViewController else {
+                // Dart is waiting on this call: null is "nothing picked".
+                self.filePickerResult = nil
+                result(nil)
+                return
+            }
 
             if type == "image" {
                 self.imagePicker.mediaTypes = ["public.image"]

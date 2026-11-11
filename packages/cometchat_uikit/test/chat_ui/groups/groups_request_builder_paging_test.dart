@@ -93,6 +93,7 @@ class _ServedRequest extends Fake implements GroupsRequest {
 
   @override
   Future<List<Group>> fetchNext({
+    GroupFetchListener? listener,
     required Function(List<Group> groupList)? onSuccess,
     required Function(CometChatException excep)? onError,
   }) async {

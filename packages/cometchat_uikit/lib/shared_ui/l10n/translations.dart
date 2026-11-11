@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'cometchat_localize.dart';
 import 'translations_ar.dart';
 import 'translations_de.dart';
 import 'translations_en.dart';
@@ -96,6 +96,11 @@ const kCometChatSupportedLanguage = {
   'zh',
 };
 
+@Deprecated(
+  'Use CometChatLocalize instead, and CometChatLocalizations to name the '
+  'strings type. Translations remains available and keeps working for the '
+  'rest of the v6 line.',
+)
 abstract class Translations {
   Translations(String locale)
     : localeName = intl.Intl.canonicalizedLocale(locale.toString());
@@ -664,6 +669,16 @@ abstract class Translations {
   /// In en, this message translates to:
   /// **'Calling...'**
   String get calling;
+
+  /// Shown on the outgoing call screen once the callee's device is ringing
+  /// (ringing v2), in place of [calling].
+  ///
+  /// In en, this message translates to:
+  /// **'Ringing...'**
+  ///
+  /// Not abstract, so a language an app adds by extending [Translations]
+  /// keeps compiling; it then shows the English text until it overrides it.
+  String get ringing => 'Ringing...';
 
   /// No description provided for @add.
   ///
@@ -2958,15 +2973,14 @@ class _TranslationsDelegate extends LocalizationsDelegate<Translations> {
   bool isSupported(Locale locale) =>
       kCometChatSupportedLanguage.contains(locale.languageCode);
 
-  static final _loadedTranslations = <Locale, Future<Translations>>{};
-
   @override
   Future<Translations> load(Locale locale) {
     assert(isSupported(locale), '');
-    return _loadedTranslations.putIfAbsent(
-      locale,
-      () => SynchronousFuture<Translations>(lookupTranslations(locale)),
-    );
+    // Through CometChatLocalize's delegate, which serves the strings the app
+    // registered with registerTranslations before the built-in ones: an app
+    // that has not moved off Translations.delegate must not silently lose its
+    // overrides while it migrates.
+    return CometChatLocalize.delegate.load(locale);
   }
 
   @override

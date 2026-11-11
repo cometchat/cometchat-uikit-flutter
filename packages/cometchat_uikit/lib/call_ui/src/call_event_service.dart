@@ -12,6 +12,7 @@ import '../../src/call_errors.dart';
 import '../../src/calling_configuration_resolver.dart';
 import '../../src/calls_lifecycle.dart';
 import '../../src/calls_sdk_session.dart';
+import '../../src/incoming_call_gate.dart';
 
 /// Singleton service that manages global call SDK event listeners
 /// with proper lifecycle (init/dispose).
@@ -37,7 +38,13 @@ import '../../src/calls_sdk_session.dart';
 /// // To wait for the Calls SDK before a call, e.g. from a push handler.
 /// await CallEventService.instance.waitForCallsSdk();
 /// ```
-class CallEventService with CallListener, CometChatCallEventListener {
+class CallEventService
+    with
+        // Registered with the chat SDK on web only (ringing v1): elsewhere
+        // calls ring through push (ringing v2). Kept for the public API.
+        // ignore: deprecated_member_use
+        CallListener,
+        CometChatCallEventListener {
   CallEventService._();
 
   /// The service.
@@ -52,11 +59,6 @@ class CallEventService with CallListener, CometChatCallEventListener {
   /// `clearActiveCall` are HTTP calls to an endpoint the server does not
   /// have, so the UI Kit keeps the record itself.
   BaseMessage? activeCall;
-
-  /// Whether a new incoming call should be answered with busy. The ringing
-  /// call, the busy check and the release live in [ActiveCallTracker], which
-  /// the other call components read too.
-  bool get _isBusy => ActiveCallTracker.isBusy;
 
   /// Starts call handling for the logged-in user: registers the call
   /// listeners (at once), then initialises the Calls SDK and logs the user
@@ -201,15 +203,6 @@ class CallEventService with CallListener, CometChatCallEventListener {
       user = call.callInitiator as User;
     }
 
-    // Ignore calls initiated by the logged-in user (echo). Read now, not at
-    // start: the user may have switched since. The started user comes first
-    // because a host's direct CometChat.login leaves
-    // CometChatUIKit.loggedInUser unset or stale.
-    final myUid = CallsLifecycle.uid ?? CometChatUIKit.loggedInUser?.uid;
-    if (user != null && myUid != null && user.uid == myUid) {
-      return;
-    }
-
     // On iOS background, the VoIP push + CallKit handles the call.
     // The WebSocket listener should NOT interfere — setting activeCall
     // here can cause the server to auto-reject new calls with "busy"
@@ -223,49 +216,16 @@ class CallEventService with CallListener, CometChatCallEventListener {
       return;
     }
 
-    // Deduplicate: ignore a call this device is already handling. Duplicate
-    // FCM pushes can trigger this listener twice for the same call, which
-    // creates a second overlay/bloc and causes the reject API to fail with
-    // "call is ended".
-    //
-    // "Already handling" is not just activeCall. A call accepted from the
-    // native call UI (CallKit, or the Android call notification) is opened by
-    // the host app straight onto the call screen and never sets activeCall; if
-    // the SDK then delivers this callback for it as the app comes to the
-    // foreground, the busy check below saw a call screen up and rejected the
-    // very call the user had just accepted.
-    if (_isHandlingSession(call.sessionId)) {
-      ccLog(
-        'CallEventService: ignoring duplicate onIncomingCallReceived '
-        'for sessionId=${call.sessionId}',
-      );
-      return;
-    }
-
-    // A call this device has already finished with (declined, cancelled,
-    // ended, given up on) in the last two minutes: a late copy of its
-    // "initiated", after a socket reconnect or from a duplicate push. It
-    // rang again, or was answered busy. Ignored as a duplicate is.
-    if (ActiveCallTracker.finishedLately(call.sessionId)) {
-      ccLog(
-        'CallEventService: ignoring onIncomingCallReceived for '
-        '${call.sessionId}, a call this device already finished',
-      );
-      return;
-    }
-
-    // Already in a call, or another one is ringing: answer this one with busy
-    // instead of stacking a second incoming screen over the first. Kotlin's
-    // app does exactly this (SampleApplication / master-app-kotlin
-    // `rejectCallWithBusyStatus`). The records of the call in progress are
-    // left untouched — the bounced call never becomes the ringing one.
-    if (_isBusy) {
-      ccLog(
-        'CallEventService: busy — rejecting incoming ${call.sessionId}, '
-        'already in a call',
-      );
-      unawaited(_rejectAsBusy(call));
-      return;
+    // Echoes, duplicates, late copies, and busy: the same checks a call
+    // ringing through push goes through (ringing v2).
+    switch (IncomingCallGate.admit(call)) {
+      case IncomingVerdict.ignore:
+        return;
+      case IncomingVerdict.busy:
+        unawaited(_rejectAsBusy(call));
+        return;
+      case IncomingVerdict.ring:
+        break;
     }
 
     ccLog(
@@ -273,17 +233,6 @@ class CallEventService with CallListener, CometChatCallEventListener {
     );
     ActiveCallTracker.ringingCall = call;
     _showIncomingCallOverlay(call, user);
-  }
-
-  /// Whether [sessionId] is a call this device is already on: the active
-  /// call, the call screen, or the incoming call ringing on screen.
-  bool _isHandlingSession(String? sessionId) {
-    if (sessionId == null || sessionId.isEmpty) return false;
-    final active = activeCall;
-    return (active is Call && active.sessionId == sessionId) ||
-        ActiveCallTracker.ringingCall?.sessionId == sessionId ||
-        ActiveCallTracker.callScreenSessionId == sessionId ||
-        ActiveCallTracker.incomingCallSessionId == sessionId;
   }
 
   /// Rejects [call] with the busy status. Best-effort: if it fails the call

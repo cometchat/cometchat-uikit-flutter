@@ -267,6 +267,9 @@ class TranslationsRu extends Translations {
   String get calling => 'Вызов...';
 
   @override
+  String get ringing => 'Идут гудки...';
+
+  @override
   String get add => 'Добавить';
 
   @override

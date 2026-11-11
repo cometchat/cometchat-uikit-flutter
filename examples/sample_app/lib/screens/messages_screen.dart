@@ -72,6 +72,8 @@ class _MessagesScreenState extends State<MessagesScreen>
     _user = widget.user;
     _group = widget.group;
     _listenerId = DateTime.now().millisecondsSinceEpoch.toString();
+    // The chat is on screen: its pushes are not shown, and its notification
+    // is cleared.
 
     // Add listeners for blocked/kicked state
     if (_user != null) {

@@ -268,6 +268,9 @@ class TranslationsSv extends Translations {
   String get calling => 'Ringer...';
 
   @override
+  String get ringing => 'Det ringer...';
+
+  @override
   String get add => 'Lägg till';
 
   @override

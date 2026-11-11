@@ -182,7 +182,11 @@ class _FakeRealtime extends Fake implements sdk.RealtimeRepository {
 
 class _FakeAuth extends Fake implements sdk.AuthRepository {
   @override
-  Future<User> loginWithApiKey(String uid, String apiKey) async => _me;
+  Future<User> loginWithApiKey(
+    String uid,
+    String apiKey, {
+    void Function()? onSessionEnded,
+  }) async => _me;
 
   @override
   User? getLoggedInUser() => _me;

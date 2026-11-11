@@ -1,8 +1,8 @@
 /// Ending a 1-on-1 call from here (round 4, P4-C05 with the owner's end
-/// order): the media session is left first, the screen closes at once, and
-/// the server's endCall goes out in the background once the leave is done.
-/// ccCallEnded fires when the server confirms, whether or not the screen
-/// and its bloc are still there. Repeat taps are ignored.
+/// order): the media session is left first and the screen closes at once.
+/// Ringing v2 ends a call by leaving it (0df8214ef): no endCall goes to the
+/// server. ccCallEnded fires once the leave is done, whether or not the
+/// screen and its bloc are still there. Repeat taps are ignored.
 ///
 /// Before: the screen waited for endCall to come back before it closed. On
 /// the Android plugin the local leave fired the native onSessionLeft, whose
@@ -10,7 +10,7 @@
 /// on its way, and the bloc's `if (isClosed) return` then dropped
 /// ccCallEnded: the ender's chat bubble stayed on "Call accepted". A double
 /// tap, or the peer-left rule plus a tap, ran a second leave and endCall and
-/// raised a false error.
+/// raised a false error. (That was ringing v1, which still sent endCall.)
 ///
 ///   flutter test test/call_ui/ongoing_call/ongoing_call_end_order_test.dart
 @Timeout(Duration(seconds: 60))
@@ -123,7 +123,7 @@ void main() {
     return bloc;
   }
 
-  test('P4-N01: the leave comes first, then endCall', () async {
+  test('P4-N01: End only leaves the session: no endCall', () async {
     final OngoingCallBloc bloc = buildBloc();
     await joined(bloc);
 
@@ -132,28 +132,28 @@ void main() {
 
     expect(
       dataSource.calls.where((String c) => c.startsWith('end')).toList(),
-      <String>['endSession', 'endCall:session_1'],
+      <String>['endSession'],
     );
   });
 
-  test('endCall waits for the leave to finish', () async {
+  test('ccCallEnded waits for the leave to finish', () async {
     final OngoingCallBloc bloc = buildBloc();
     await joined(bloc);
     dataSource.leaveGate = Completer<void>();
 
     bloc.add(const EndCallButtonPressed());
     await pumpEventQueue();
-    expect(dataSource.endCallCount, 0);
+    expect(events.ended, isEmpty);
 
     dataSource.leaveGate!.complete();
     await pumpEventQueue();
-    expect(dataSource.endCallCount, 1);
+    expect(events.ended.map((Call c) => c.sessionId), <String?>['session_1']);
+    expect(dataSource.endCallCount, 0);
   });
 
   testWidgets('P4-E02 (Android plugin race): the native "left" during the '
-      'local end: one endCall, one ccCallEnded, the screen closed once', (
-    WidgetTester tester,
-  ) async {
+      'local end: one leave, no endCall, one ccCallEnded, the screen closed '
+      'once', (WidgetTester tester) async {
     final OngoingCallBloc bloc = await showJoined(tester);
     int dismissals = 0;
     CallStateService.instance.isActiveCall.addListener(() {
@@ -165,7 +165,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(dataSource.endCallCount, 1);
+    expect(dataSource.endCallCount, 0);
     expect(dataSource.endSessionCount, 1);
     expect(events.ended.map((Call c) => c.sessionId), <String?>['session_1']);
     expect(events.ended.single.category, MessageCategoryConstants.call);
@@ -174,45 +174,44 @@ void main() {
     expect(errors, isEmpty);
   });
 
-  testWidgets('the screen closes at once, before endCall answers; '
-      'ccCallEnded still fires once it does, after the bloc has closed', (
+  testWidgets('the screen closes at once, before the leave is done; '
+      'ccCallEnded still fires once it is, after the bloc has closed', (
     WidgetTester tester,
   ) async {
     final OngoingCallBloc bloc = await showJoined(tester);
-    dataSource.endCallGate = Completer<void>();
+    dataSource.leaveGate = Completer<void>();
 
     bloc.add(const EndCallButtonPressed());
     await tester.pump(Duration.zero);
     expect(CallScreenOverlay.isShowing, isFalse);
     expect(ActiveCallTracker.hasActiveCall, isFalse);
     expect(CallStateService.instance.isActiveCall.value, isFalse);
-    expect(dataSource.endCallCount, 1);
-    expect(events.ended, isEmpty, reason: 'endCall has not answered yet');
+    expect(events.ended, isEmpty, reason: 'the leave is not done yet');
 
     // The widget is gone, so its bloc closes.
     await tester.pump();
     expect(bloc.isClosed, isTrue);
 
-    dataSource.endCallGate!.complete();
+    dataSource.leaveGate!.complete();
     await tester.pump(Duration.zero);
     expect(events.ended.map((Call c) => c.sessionId), <String?>['session_1']);
+    expect(dataSource.endCallCount, 0);
   });
 
-  testWidgets('a failed endCall after the screen closed still reaches '
-      "onError with the SDK's code (the owner: report everything)", (
+  testWidgets('an endCall that would fail is never sent after the screen '
+      'closed: no onError, and the end is still announced', (
     WidgetTester tester,
   ) async {
     final OngoingCallBloc bloc = await showJoined(tester);
-    final CometChatException sdkError = CometChatException(
-      'ERR_CALL_ENDED',
-      'The call has already ended.',
-      'Call already ended',
-    );
-    dataSource.endCallGate = Completer<void>();
+    dataSource.leaveGate = Completer<void>();
     dataSource.endCallError = CallOperationsException(
       message: 'Call already ended',
       code: 'ERR_CALL_ENDED',
-      originalException: sdkError,
+      originalException: CometChatException(
+        'ERR_CALL_ENDED',
+        'The call has already ended.',
+        'Call already ended',
+      ),
     );
 
     bloc.add(const EndCallButtonPressed());
@@ -220,14 +219,15 @@ void main() {
     await tester.pump();
     expect(bloc.isClosed, isTrue);
 
-    dataSource.endCallGate!.complete();
+    dataSource.leaveGate!.complete();
     await tester.pump(Duration.zero);
 
-    expect(errors.single, same(sdkError));
-    expect(events.ended, isEmpty);
+    expect(dataSource.endCallCount, 0);
+    expect(errors, isEmpty);
+    expect(events.ended.map((Call c) => c.sessionId), <String?>['session_1']);
   });
 
-  test('two End taps: one leave, one endCall, no false error', () async {
+  test('two End taps: one leave, no endCall, no false error', () async {
     final OngoingCallBloc bloc = buildBloc();
     await joined(bloc);
 
@@ -235,12 +235,13 @@ void main() {
     bloc.add(const EndCallButtonPressed());
     await pumpEventQueue();
 
-    expect(dataSource.endCallCount, 1);
+    expect(dataSource.endCallCount, 0);
     expect(dataSource.endSessionCount, 1);
+    expect(events.ended, hasLength(1));
     expect(errors, isEmpty);
   });
 
-  test('the peer-left rule and an End tap: one endCall', () async {
+  test('the peer-left rule and an End tap: one leave, no endCall', () async {
     final OngoingCallBloc bloc = buildBloc();
     await joined(bloc);
     bloc.add(
@@ -255,30 +256,30 @@ void main() {
     bloc.add(const EndCallButtonPressed());
     await pumpEventQueue();
 
-    expect(dataSource.endCallCount, 1);
+    expect(dataSource.endCallCount, 0);
     expect(dataSource.endSessionCount, 1);
   });
 
   test('the end goes out as a call request a logout waits for', () async {
     final OngoingCallBloc bloc = buildBloc();
     await joined(bloc);
-    dataSource.endCallGate = Completer<void>();
+    dataSource.leaveGate = Completer<void>();
 
     bloc.add(const EndCallButtonPressed());
     await pumpEventQueue();
     expect(ActiveCallTracker.callRequestsInFlight, hasLength(1));
 
-    dataSource.endCallGate!.complete();
+    dataSource.leaveGate!.complete();
     await pumpEventQueue();
     expect(ActiveCallTracker.callRequestsInFlight, isEmpty);
   });
 
-  test('a logout that began while endCall was on its way owns the call: a '
-      'failure is only logged', () async {
+  test('a logout that began while the leave was on its way owns the call: '
+      'nothing reaches onError', () async {
     final OngoingCallBloc bloc = buildBloc();
     await joined(bloc);
-    dataSource.endCallGate = Completer<void>();
-    dataSource.endCallError = const CallOperationsException(
+    dataSource.leaveGate = Completer<void>();
+    dataSource.endSessionError = const CallOperationsException(
       message: 'logged out',
       code: 'ERR_NOT_LOGGED_IN',
     );
@@ -286,25 +287,25 @@ void main() {
     bloc.add(const EndCallButtonPressed());
     await pumpEventQueue();
     CallsLifecycle.tearDownLocalCalls();
-    dataSource.endCallGate!.complete();
+    dataSource.leaveGate!.complete();
     await pumpEventQueue();
 
     expect(errors, isEmpty);
   });
 
   test(
-    'the state: ending at once, then ended when the server confirms',
+    'the state: ending at once, then ended once the leave is done',
     () async {
       final OngoingCallBloc bloc = buildBloc();
       await joined(bloc);
-      dataSource.endCallGate = Completer<void>();
+      dataSource.leaveGate = Completer<void>();
 
       bloc.add(const EndCallButtonPressed());
       await pumpEventQueue();
       expect(bloc.state.status, OngoingCallStatus.ending);
       expect(bloc.state.isCallEndedByMe, isTrue);
 
-      dataSource.endCallGate!.complete();
+      dataSource.leaveGate!.complete();
       await pumpEventQueue();
       expect(bloc.state.status, OngoingCallStatus.ended);
     },

@@ -18,6 +18,7 @@ export 'src/clean_architecture/clean_architecture.dart'
     hide GetMessagesUseCase, GetMessagesParams;
 
 // Export translations (not duplicated in clean architecture)
+export 'l10n/cometchat_localize.dart';
 export 'l10n/translations.dart';
 export 'l10n/translations_ar.dart';
 export 'l10n/translations_de.dart';

@@ -146,10 +146,13 @@ class CallScreenOverlay {
       builder: (BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(),
-        localizationsDelegates: Translations.localizationsDelegates,
+        // CometChatLocalize's delegate, not the Translations one: it serves the
+        // strings the app registered with registerTranslations, so an
+        // override reaches the call screen too.
+        localizationsDelegates: CometChatLocalize.localizationsDelegates,
         // The app's language: without these the overlay's own MaterialApp
         // resolved to en_US whatever the app's locale was.
-        supportedLocales: Translations.supportedLocales,
+        supportedLocales: CometChatLocalize.supportedLocales,
         locale: Localizations.maybeLocaleOf(context),
         // English for a language the UI Kit does not ship. Flutter's own
         // resolution falls back to the first supported locale, which is
@@ -173,15 +176,20 @@ class CallScreenOverlay {
     rejectRingingAsBusy(sessionId: sessionId);
   }
 
-  /// The call screen's locale for the app's [locale]: the UI Kit's
-  /// translation in that language (by language code), or English.
+  /// The call screen's locale for the app's [locale]: [locale] itself when the
+  /// UI Kit ships its language, or English.
+  ///
+  /// The full locale, not just its language: a translation registered for a
+  /// regional locale (en_GB) is looked up by that exact locale, and the app's
+  /// own screens already use it, so the call screen would otherwise show the
+  /// built-in strings where the rest of the app shows the override.
   static Locale _callScreenLocale(
     Locale? locale,
     Iterable<Locale> supportedLocales,
   ) {
     if (locale != null) {
       for (final Locale supported in supportedLocales) {
-        if (supported.languageCode == locale.languageCode) return supported;
+        if (supported.languageCode == locale.languageCode) return locale;
       }
     }
     return const Locale('en');

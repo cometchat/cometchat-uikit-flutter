@@ -270,6 +270,9 @@ class TranslationsDe extends Translations {
   String get calling => 'Ich rufe an...';
 
   @override
+  String get ringing => 'Klingelt...';
+
+  @override
   String get add => 'Hinzufügen';
 
   @override

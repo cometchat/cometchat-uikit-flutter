@@ -1,3 +1,40 @@
+# v6.3.0
+
+## New
+
+- Added `CometChatLocalize`, the localization entry point.
+- Added `CometChatLocalizations`, the non-deprecated name of the strings type (the same runtime type as `Translations`).
+- Added push-based call ringing on Android and iOS. Incoming calls ring on the push ringer's ring screen on Android and through CallKit on iOS, whether the app is in the foreground, in the background or killed. Connect a push ringer such as `cometchat_voip` by implementing `CometChatCallPushBridge` and setting it on `UIKitSettingsBuilder.callPushBridge`, and the UI Kit joins answered calls on its own call screen.
+- Added `CometChatIncomingCallTheme`, which provides the UI Kit theme's light and dark colours for the push ringer's ring screen. Pass `CometChatIncomingCallTheme.of(context)` to the push ringer so the ring screen matches the app's theme.
+- Added call waiting for 1-on-1 calls. A call that arrives during a 1-on-1 call now rings instead of being rejected as busy, and answering it ends the current call before joining the new one. A third incoming call still receives a busy response.
+
+## Enhancements
+
+- Moved calling to the Calls SDK 5.1. Starting, answering, declining and ending calls now use the Calls SDK instead of the Chat SDK's calling APIs, which are deprecated.
+- Improved call status on the caller's side. The outgoing call screen detects the answer when the callee joins, and a decline or busy response from the call's push, without polling for status.
+- Added a "Ringing..." label to the outgoing call screen once the callee's device is ringing, available as the `ringing` translation.
+- Added a notice with a Settings shortcut when an incoming call cannot be answered because microphone or camera permission was denied and the app does not handle call errors itself.
+
+## Fixes
+
+- Fixed the ongoing call screen ignoring custom translations registered with `CometChatLocalize.registerTranslations`. The screen now shows the app's registered strings.
+- Fixed long callee names on the outgoing call screen wrapping over several lines. The name now shows on one line and ends with an ellipsis.
+- Fixed Attach → Audio, Attach → Document, opening received files, saving files and sharing messages doing nothing on iOS in apps that adopt the UIScene lifecycle, which iOS 27 requires.
+- Fixed later calls being rejected as busy after a call whose end was never received.
+- Fixed audio meetings being handled as 1-on-1 calls, and the meeting End button not always closing the call screen.
+- Fixed calls connecting to the default hosts instead of the app's configured client and admin hosts on dedicated deployments.
+
+## Deprecations
+
+- `Translations` is deprecated in favour of `CometChatLocalize` (and `CometChatLocalizations` to name the type).
+- Deprecated `CometChatIncomingCall`, `IncomingCallOverlay` and `CometChatIncomingCallStyle`. On Android and iOS, incoming calls ring on the push ringer's screen through `UIKitSettings.callPushBridge`, and these components are used on web only.
+
+## Breaking Changes
+
+- Changed incoming calls on Android and iOS to ring through push only. The UI Kit no longer shows its own incoming call screen on these platforms, so set `UIKitSettingsBuilder.callPushBridge` with a push ringer such as `cometchat_voip`, or incoming calls will not ring. Web behavior is unchanged.
+- Removed the re-export of the Chat SDK's deprecated `CallListener` and `CallListener2` from `cometchat_chat_uikit` and `cometchat_calls_uikit`. Apps that still use them must import them from `cometchat_sdk` directly, for example `import 'package:cometchat_sdk/cometchat_sdk.dart' show CallListener;`.
+- Required Android apps to declare the Calls SDK's ongoing call service, which the Calls SDK 5.1 no longer declares itself. Add `<service android:name="com.cometchatcalls.cometchatcalls_plugin.services.OngoingCallService" android:exported="false" android:foregroundServiceType="mediaPlayback|microphone|camera" />` inside `<application>` in `AndroidManifest.xml`.
+
 # v6.2.1
 
 ## New

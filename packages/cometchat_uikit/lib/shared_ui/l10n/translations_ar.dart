@@ -266,6 +266,9 @@ class TranslationsAr extends Translations {
   String get calling => 'جاري الاتصال...';
 
   @override
+  String get ringing => 'يرن...';
+
+  @override
   String get add => 'إضافة';
 
   @override

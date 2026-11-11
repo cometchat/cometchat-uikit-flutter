@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _toggles = ComponentToggles.instance;
   late CometChatColorPalette _colorPalette;
 
-  // Notification services — platform-specific (mobile only)
+  // Push transport on Android (mobile only). On iOS chat pushes come over
   // UI event listener for mention tap → open chat navigation
   final String _uiListenerId =
       'home_screen_ui_${DateTime.now().millisecondsSinceEpoch}';

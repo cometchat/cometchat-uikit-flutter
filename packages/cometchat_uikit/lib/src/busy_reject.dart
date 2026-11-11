@@ -8,6 +8,7 @@ import '../shared_ui/src/constants/ui_kit_constants.dart'
 import '../shared_ui/src/logging/cometchat_log.dart';
 import 'active_call_tracker.dart';
 import 'incoming_ringtone.dart';
+import 'push_ringing.dart';
 
 /// Answers an incoming call with busy, as the UI Kit does when one arrives
 /// while this device is in a call or another one rings.
@@ -21,6 +22,19 @@ import 'incoming_ringtone.dart';
 Future<void> rejectAsBusy(Call call) async {
   final sessionId = call.sessionId;
   if (sessionId == null || sessionId.isEmpty) return;
+  // Ringing v2: the push ringer rings it on its own screen. Stopped now,
+  // without a word to CometChat; the busy status goes out below, after the
+  // same wait as before.
+  final push = PushRinging.bridge;
+  if (push != null) {
+    unawaited(
+      push
+          .dismissRinging(sessionId, answered: false)
+          .catchError(
+            (Object e) => ccLog('busy: stopping the ring of $sessionId: $e'),
+          ),
+    );
+  }
   await Future<void>.delayed(ActiveCallTracker.busyRejectDelay);
   final result = await CallOperationsServiceLocator.instance.rejectCallUseCase
       .call(sessionId, CallStatusConstants.busy);

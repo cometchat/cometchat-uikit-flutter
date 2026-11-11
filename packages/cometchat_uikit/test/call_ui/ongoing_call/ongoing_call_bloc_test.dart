@@ -164,7 +164,8 @@ void main() {
 
   group('EndCallButtonPressed', () {
     blocTest<OngoingCallBloc, OngoingCallState>(
-      'defaultCalling leaves the session first, then ends the call',
+      'defaultCalling only leaves the session (no endCall) and announces '
+      'the end',
       build: buildBloc,
       act: (OngoingCallBloc bloc) async {
         await joined(bloc);
@@ -172,11 +173,11 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (OngoingCallBloc bloc) {
-        // Order matters: the peer should only be told the call ended once the
-        // local RTC session is down.
+        // Ringing v2 ends a call by leaving it: nothing goes to the server,
+        // and the peer ends the call on their side.
         expect(
           dataSource.calls.where((String c) => c.startsWith('end')),
-          <String>['endSession', 'endCall:session_1'],
+          <String>['endSession'],
         );
         expect(bloc.state.isCallEndedByMe, isTrue);
         expect(bloc.state.status, OngoingCallStatus.ended);
@@ -201,7 +202,8 @@ void main() {
     );
 
     blocTest<OngoingCallBloc, OngoingCallState>(
-      'a failing endCall still ends the call locally and reports the reason',
+      'an endCall that would fail is never reached: the call ends with no '
+      'error',
       build: () {
         dataSource.endCallError = const CallOperationsException(
           message: 'Call already ended',
@@ -214,14 +216,15 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (OngoingCallBloc bloc) {
-        expect(bloc.state.status, OngoingCallStatus.error);
-        expect(bloc.state.errorMessage, 'Call already ended');
-        expect(events.ended, isEmpty);
+        expect(dataSource.endCallCount, 0);
+        expect(bloc.state.status, OngoingCallStatus.ended);
+        expect(bloc.state.errorMessage, isNull);
+        expect(events.ended, hasLength(1));
       },
     );
 
     blocTest<OngoingCallBloc, OngoingCallState>(
-      'a failing quiet endSession does not stop the server-side endCall',
+      'a failing quiet leave still ends the call, with no endCall',
       build: () {
         dataSource.endSessionError = const CallOperationsException(
           message: 'Session already gone',
@@ -234,45 +237,24 @@ void main() {
       },
       wait: const Duration(milliseconds: 50),
       verify: (OngoingCallBloc bloc) {
-        // The peer still has to be told, even when the local teardown failed.
-        expect(dataSource.endCallCount, 1);
+        // The end is still announced, even when the local teardown failed.
+        expect(dataSource.endCallCount, 0);
         expect(bloc.state.status, OngoingCallStatus.ended);
+        expect(events.ended, hasLength(1));
       },
     );
 
-    test('a failing endCall reports through errorCallback', () async {
+    test('hang-up sends no endCall, so errorCallback hears nothing even '
+        'when one would fail', () async {
       final List<Exception> errors = <Exception>[];
-      dataSource.endCallError = const CallOperationsException(
-        message: 'Call already ended',
-      );
-      final OngoingCallBloc bloc = buildBloc(onError: errors.add);
-      addTearDown(bloc.close);
-      await joined(bloc);
-
-      bloc.add(const EndCallButtonPressed());
-      // Match on this teardown's message rather than on any error state.
-      await bloc.stream.firstWhere(
-        (OngoingCallState s) => s.errorMessage == 'Call already ended',
-      );
-
-      final CometChatException error = errors.single as CometChatException;
-      expect(error.code, 'ERR');
-      expect(error.message, 'Call already ended');
-      expect(error.details, 'Call already ended');
-    });
-
-    test('a failing endCall after hang-up hands errorCallback the SDK\'s own '
-        'exception, code kept (round 1b)', () async {
-      final List<Exception> errors = <Exception>[];
-      final CometChatException sdkError = CometChatException(
-        'ERR_CALL_ENDED',
-        'The call has already ended.',
-        'Call already ended',
-      );
       dataSource.endCallError = CallOperationsException(
         message: 'Call already ended',
         code: 'ERR_CALL_ENDED',
-        originalException: sdkError,
+        originalException: CometChatException(
+          'ERR_CALL_ENDED',
+          'The call has already ended.',
+          'Call already ended',
+        ),
       );
       final OngoingCallBloc bloc = buildBloc(onError: errors.add);
       addTearDown(bloc.close);
@@ -280,10 +262,11 @@ void main() {
 
       bloc.add(const EndCallButtonPressed());
       await bloc.stream.firstWhere(
-        (OngoingCallState s) => s.errorMessage == 'Call already ended',
+        (OngoingCallState s) => s.status == OngoingCallStatus.ended,
       );
 
-      expect(errors.single, same(sdkError));
+      expect(dataSource.endCallCount, 0);
+      expect(errors, isEmpty);
     });
 
     test('a failing endSession hands errorCallback the Calls SDK\'s code '
@@ -391,7 +374,8 @@ void main() {
       },
       wait: const Duration(milliseconds: 60),
       verify: (_) {
-        expect(dataSource.endCallCount, 1);
+        // One leave, and no endCall (ringing v2).
+        expect(dataSource.endCallCount, 0);
         expect(dataSource.endSessionCount, 1);
       },
     );
@@ -475,9 +459,8 @@ void main() {
       expect(find.text('messages'), findsOneWidget);
     });
 
-    testWidgets('a failing endCall still pops the call screen', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('an endCall that would fail is never reached: the call '
+        'screen pops, with no error', (WidgetTester tester) async {
       dataSource.endCallError = const CallOperationsException(
         message: 'Call already ended',
       );
@@ -490,7 +473,8 @@ void main() {
       bloc.add(const EndCallButtonPressed());
       await tester.pumpAndSettle();
 
-      expect(bloc.state.status, OngoingCallStatus.error);
+      expect(dataSource.endCallCount, 0);
+      expect(bloc.state.status, OngoingCallStatus.ended);
       expect(find.text('call'), findsNothing);
     });
 

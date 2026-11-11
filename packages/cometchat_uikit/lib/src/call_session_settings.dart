@@ -32,6 +32,10 @@ import 'package:cometchat_calls_sdk/cometchat_calls_sdk.dart'
 ///   audio mode on Android only and routes call audio to the loudspeaker,
 ///   so on iOS a voice call starts on the loudspeaker. A host's builder
 ///   keeps the audio mode the host chose.
+/// * Every 1-on-1 call is a peer call (`setPeerCall(true)`, Calls SDK 5.1):
+///   when one side leaves, the session ends for both, which is how a call
+///   ends since ringing v2 (a hang-up only leaves the session), and the
+///   remote peer's connectivity is watched.
 abstract final class CallSessionSettings {
   /// The settings for a 1-on-1 call of the given type: [hostBuilder] with
   /// the call's type applied on top ([CallTypeSessionSettingsBuilder]), or
@@ -56,6 +60,7 @@ final class KitCallSessionSettingsBuilder extends SessionSettingsBuilder {
   /// The kit's settings for a voice call or, with [isVideo], a video call.
   KitCallSessionSettingsBuilder({required this.isVideo}) {
     setLayout(LayoutType.tile);
+    setPeerCall(true);
     if (isVideo) {
       setType(SessionType.video);
       setAudioMode(AudioMode.speaker);
@@ -83,7 +88,8 @@ final class KitCallSessionSettingsBuilder extends SessionSettingsBuilder {
 /// Only [build] does anything: it reads what the host's builder holds, sets
 /// the call's type on it (for a voice call also the paused camera and the
 /// hidden video toggle and camera switch, which iOS needs: see
-/// [CallSessionSettings]), builds, and puts those four back as they were,
+/// [CallSessionSettings]) and, unless [peerCall] is false, marks it a peer
+/// call, builds, and puts those five back as they were,
 /// even when a setter or the build throws, so a builder the host reuses
 /// never carries a voice call's settings into its next video call. The
 /// plugin's builder keeps its fields private and has no copy, so setting and
@@ -93,7 +99,11 @@ final class KitCallSessionSettingsBuilder extends SessionSettingsBuilder {
 /// fields, not the host's. Configure the host's builder.
 final class CallTypeSessionSettingsBuilder extends SessionSettingsBuilder {
   /// [host] with the type of a voice call, or with [isVideo] a video call.
-  CallTypeSessionSettingsBuilder(this.host, {required this.isVideo});
+  CallTypeSessionSettingsBuilder(
+    this.host, {
+    required this.isVideo,
+    this.peerCall = true,
+  });
 
   /// The host's builder.
   final SessionSettingsBuilder host;
@@ -101,10 +111,16 @@ final class CallTypeSessionSettingsBuilder extends SessionSettingsBuilder {
   /// Whether the call is a video call.
   final bool isVideo;
 
+  /// Whether to mark the session a peer call, which ends it for everyone when
+  /// one participant leaves: true for a 1-on-1 call, false for a meeting,
+  /// whose session goes on for those who stay.
+  final bool peerCall;
+
   @override
   SessionSettings build() {
     final SessionSettings before = host.build();
     try {
+      if (peerCall) host.setPeerCall(true);
       if (isVideo) {
         host.setType(SessionType.video);
       } else {
@@ -120,7 +136,8 @@ final class CallTypeSessionSettingsBuilder extends SessionSettingsBuilder {
           .setType(before.type)
           .startVideoPaused(before.startVideoPaused)
           .hideSwitchCameraButton(before.hideSwitchCameraButton)
-          .hideToggleVideoButton(before.hideToggleVideoButton);
+          .hideToggleVideoButton(before.hideToggleVideoButton)
+          .setPeerCall(before.isPeerCall);
     }
   }
 }

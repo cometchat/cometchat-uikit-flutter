@@ -10,6 +10,7 @@ import '../../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../shared/list_base.dart';
 import '../conversations_builder_protocol.dart';
 import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../src/call_activity_listener.dart';
 import '../../../../src/chat_sdk_listeners.dart';
 
 /// BLoC for managing conversations list
@@ -462,16 +463,26 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       ),
     );
 
-    ChatSdkListeners.addCallListener(
-      _callListenerKey,
-      _ConversationCallListener(
-        onIncomingCallReceivedCallback: _handleIncomingCallReceived,
-        onOutgoingCallAcceptedCallback: _handleOutgoingCallAccepted,
-        onOutgoingCallRejectedCallback: _handleOutgoingCallRejected,
-        onIncomingCallCancelledCallback: _handleIncomingCallCancelled,
-        onCallEndedMessageReceivedCallback: _handleCallEndedMessageReceived,
-      ),
-    );
+    // Call messages. Ringing v2: the chat SDK's call listener (deprecated) is
+    // registered on web only, where calls still ring through the chat SDK.
+    // On Android and iOS the Calls SDK says when a call starts or stops
+    // ringing, on either side, and that call's row is updated, as Android's
+    // UI Kit does. This device's own call actions also arrive through the
+    // UI Kit's call events.
+    if (!kIsWeb) {
+      CallActivityListener.add(_callListenerKey, _handleCallActivity);
+    } else {
+      ChatSdkListeners.addCallListener(
+        _callListenerKey,
+        _ConversationCallListener(
+          onIncomingCallReceivedCallback: _handleIncomingCallReceived,
+          onOutgoingCallAcceptedCallback: _handleOutgoingCallAccepted,
+          onOutgoingCallRejectedCallback: _handleOutgoingCallRejected,
+          onIncomingCallCancelledCallback: _handleIncomingCallCancelled,
+          onCallEndedMessageReceivedCallback: _handleCallEndedMessageReceived,
+        ),
+      );
+    }
 
     CometChat.addConnectionListener(
       _connectionListenerKey,
@@ -1121,9 +1132,22 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     if (existingIndex == null || existingIndex >= items.length) return;
 
     final existing = items[existingIndex];
+    // Merge every field the event carries, not just the unread count and last
+    // message: dropping `conversationWith` kept a refreshed Group's new
+    // metadata from ever reaching the list. `copyWith` keeps the existing
+    // value for any nullable field the payload leaves null (`lastMessage`,
+    // `tags`, `lastReadMessageId`, `latestMessageId`, `updatedAt`), and the
+    // non-nullable counters are taken as supplied (same rule as Android).
+    // Pin state is left to the pin path.
     final merged = existing.copyWith(
+      conversationWith: updatedConversation.conversationWith,
+      lastMessage: updatedConversation.lastMessage,
+      tags: updatedConversation.tags,
       unreadMessageCount: updatedConversation.unreadMessageCount,
-      lastMessage: updatedConversation.lastMessage ?? existing.lastMessage,
+      unreadMentionsCount: updatedConversation.unreadMentionsCount,
+      lastReadMessageId: updatedConversation.lastReadMessageId,
+      latestMessageId: updatedConversation.latestMessageId,
+      updatedAt: updatedConversation.updatedAt,
     );
     updateItem(existingIndex, merged);
   }
@@ -1705,6 +1729,13 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     _refreshSingleConversation(call);
   }
 
+  /// A call that started or stopped ringing, on either side, from the Calls
+  /// SDK (ringing v2, Android and iOS).
+  void _handleCallActivity(Call call) {
+    if (isClosed || !_updateOnCallActivities) return;
+    _refreshSingleConversation(call);
+  }
+
   /// A call this device placed, accepted, declined or ended (the UI Kit's
   /// call events), as Android's conversations view model hears them.
   void _handleCCCall(Call call) {
@@ -2116,7 +2147,11 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       CometChat.removeUserListener(_userListenerKey);
     }
     CometChat.removeGroupListener(_groupListenerKey);
-    ChatSdkListeners.removeCallListener(_callListenerKey);
+    if (kIsWeb) {
+      ChatSdkListeners.removeCallListener(_callListenerKey);
+    } else {
+      CallActivityListener.remove(_callListenerKey);
+    }
     CometChat.removeConnectionListener(_connectionListenerKey);
     CometChat.removeConversationListener(_conversationListenerKey);
 
@@ -2514,6 +2549,8 @@ class _ConversationGroupListener with GroupListener {
 }
 
 /// Call listener for call events
+// Web only (ringing v1).
+// ignore: deprecated_member_use
 class _ConversationCallListener with CallListener {
   final void Function(Call) onIncomingCallReceivedCallback;
   final void Function(Call) onOutgoingCallAcceptedCallback;

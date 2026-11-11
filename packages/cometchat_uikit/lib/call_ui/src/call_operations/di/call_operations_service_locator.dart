@@ -29,6 +29,7 @@ class CallOperationsServiceLocator {
   late InitiateDirectCallUseCase _initiateCallUseCase;
   late AcceptCallUseCase _acceptCallUseCase;
   late RejectCallUseCase _rejectCallUseCase;
+  // ignore: deprecated_member_use_from_same_package
   late EndCallUseCase _endCallUseCase;
   late GenerateCallTokenUseCase _generateCallTokenUseCase;
   late StartSessionUseCase _startSessionUseCase;
@@ -49,6 +50,7 @@ class CallOperationsServiceLocator {
     _initiateCallUseCase = InitiateDirectCallUseCase(_repository);
     _acceptCallUseCase = AcceptCallUseCase(_repository);
     _rejectCallUseCase = RejectCallUseCase(_repository);
+    // ignore: deprecated_member_use_from_same_package
     _endCallUseCase = EndCallUseCase(_repository);
     _generateCallTokenUseCase = GenerateCallTokenUseCase(_repository);
     _startSessionUseCase = StartSessionUseCase(_repository);
@@ -76,6 +78,11 @@ class CallOperationsServiceLocator {
     return _rejectCallUseCase;
   }
 
+  @Deprecated(
+    'Use endSessionUseCase instead: a joined call is left, not ended with '
+    'the Chat SDK. The Chat SDK\'s calling APIs are deprecated (ringing v2).',
+  )
+  // ignore: deprecated_member_use_from_same_package
   EndCallUseCase get endCallUseCase {
     _ensureInitialized();
     return _endCallUseCase;

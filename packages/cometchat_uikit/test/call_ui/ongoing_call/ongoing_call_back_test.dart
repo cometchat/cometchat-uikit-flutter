@@ -3,8 +3,8 @@
 /// adapted to the back gesture; there is no End button on "Connecting...").
 ///
 /// While the call still connects, back cancels it as End would: the join is
-/// given up, a 1-on-1 call is ended on the server (the user ended it), the
-/// screen closes; a join that lands later starts nothing. "Connecting" lasts
+/// given up, a 1-on-1 call's end is announced (ccCallEnded; ringing v2 sends
+/// no endCall, 0df8214ef), the screen closes; a join that lands later starts nothing. "Connecting" lasts
 /// until the native side reports the join, not only until the call view is
 /// back (round 4 review, correctness 8: on the iPad's slow view mount back
 /// did nothing for up to 30 s). Once the call is up, back does nothing, on
@@ -45,6 +45,7 @@ void main() {
 
   final CallEventService service = CallEventService.instance;
   late FakeCallOperationsDataSource dataSource;
+  late CallEventRecorder events;
 
   /// Holds the join on its way: the screen stays on "Connecting...". Made
   /// in the test's body (its fake-time zone): a completer made in setUp
@@ -56,10 +57,12 @@ void main() {
     dataSource = FakeCallOperationsDataSource();
     CallOperationsServiceLocator.instance.setup(dataSource: dataSource);
     await installCallJoinDefaults();
+    events = CallEventRecorder('ongoing_call_back_test');
     service.activeCall = buildCall();
   });
 
   tearDown(() async {
+    events.dispose();
     CallScreenOverlay.dismiss();
     removeCallJoinDefaults();
     service.activeCall = null;
@@ -115,17 +118,18 @@ void main() {
   }
 
   group('back while the call is connecting cancels it', () {
-    testWidgets('a 1-on-1 call: the screen closes, endCall goes out (the '
-        "user ended it), the record is released, the app's chat stays", (
-      WidgetTester tester,
-    ) async {
+    testWidgets('a 1-on-1 call: the screen closes, its end is announced with '
+        "no endCall (the user ended it), the record is released, the app's "
+        'chat stays', (WidgetTester tester) async {
       await mountChat(tester);
       await showConnecting(tester);
 
       await pressBack(tester);
 
       expect(CallScreenOverlay.isShowing, isFalse);
-      expect(dataSource.endCallCount, 1);
+      // Ringing v2: ended by leaving, no endCall; the end is announced.
+      expect(dataSource.endCallCount, 0);
+      expect(events.ended, hasLength(1));
       expect(service.activeCall, isNull);
       expect(ActiveCallTracker.hasActiveCall, isFalse);
       expect(find.text('chat-route'), findsOneWidget);
@@ -170,7 +174,9 @@ void main() {
       await pressBack(tester);
 
       expect(CallScreenOverlay.isShowing, isFalse);
-      expect(dataSource.endCallCount, 1);
+      // Ringing v2: ended by leaving, no endCall; the end is announced.
+      expect(dataSource.endCallCount, 0);
+      expect(events.ended, hasLength(1));
       expect(find.text('chat'), findsOneWidget);
     });
   });
@@ -190,7 +196,9 @@ void main() {
 
     expect(CallScreenOverlay.isShowing, isFalse);
     expect(dataSource.endSessionCount, 1);
-    expect(dataSource.endCallCount, 1);
+    // Ringing v2: ended by leaving, no endCall; the end is announced.
+    expect(dataSource.endCallCount, 0);
+    expect(events.ended, hasLength(1));
     expect(find.text('chat-route'), findsOneWidget);
   });
 
@@ -264,7 +272,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CometChatOngoingCall), findsNothing);
-    expect(dataSource.endCallCount, 1);
+    // Ringing v2: ended by leaving, no endCall; the end is announced.
+    expect(dataSource.endCallCount, 0);
+    expect(events.ended, hasLength(1));
     expect(find.text('chat'), findsOneWidget);
   });
 
@@ -318,7 +328,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CometChatOngoingCall), findsNothing);
-    expect(dataSource.endCallCount, 1);
+    // Ringing v2: ended by leaving, no endCall; the end is announced.
+    expect(dataSource.endCallCount, 0);
+    expect(events.ended, hasLength(1));
     expect(find.text('chat'), findsOneWidget);
   });
 

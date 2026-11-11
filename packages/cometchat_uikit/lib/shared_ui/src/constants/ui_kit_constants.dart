@@ -371,7 +371,7 @@ class SetSourceConstant {
 
   /// Semantic version of the UIKit package.
   /// Must be kept in sync with pubspec.yaml version field.
-  static const String version = "6.0.5";
+  static const String version = "6.3.0";
 }
 
 class ErrorConstants {

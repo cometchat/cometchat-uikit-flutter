@@ -1,6 +1,6 @@
 name: cometchat_chat_uikit
 description: CometChat's Flutter UI Kit offers custom UI components for streamlined text and chat features in your app, designed with developers in mind to minimize development effort.
-version: 6.2.1
+version: 6.3.0
 homepage: https://www.cometchat.com/
 repository: https://github.com/cometchat/cometchat-uikit-flutter
 issue_tracker: https://github.com/cometchat/cometchat-uikit-flutter/issues
@@ -30,7 +30,10 @@ dependencies:
   path_provider: ^2.1.2
   webview_flutter: ^4.13.0
   url_launcher: ^6.3.2
-  cometchat_sdk: ^5.0.9
+  # Floor at 5.1.1, the release ringing v2 is built against: it deprecates
+  # the Chat SDK calling APIs the kit no longer uses, and fixes its Android
+  # build on Flutter 3.44 and later.
+  cometchat_sdk: ^5.1.1
   cometchat_cards: ^1.0.1
   video_player: ^2.10.1
   http: ^1.4.0
@@ -42,7 +45,7 @@ dependencies:
   # Held at 3.x deliberately: cached_network_image 4.0.0 requires Dart
   # ^3.12.0, above this package's 3.10.8 floor.
   cached_network_image: ^3.4.1
-  cometchat_calls_sdk: ^5.0.10
+  cometchat_calls_sdk: ^5.1.0
   # Ceiling held below 13 deliberately. Admitting 13.x does not merely permit
   # it, it lets pub choose it, and permission_handler 13.0.1 pulls
   # permission_handler_android 14.0.0, whose build.gradle.kts uses a top-level

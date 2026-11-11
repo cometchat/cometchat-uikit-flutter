@@ -11,6 +11,8 @@ import '../../../../src/call_errors.dart';
 import '../../../../src/call_permission_check.dart';
 import '../../../../src/calling_configuration_resolver.dart';
 import '../../../../src/calls_lifecycle.dart';
+import '../../../../src/call_prepare_settings.dart';
+import '../../../../src/call_session_settings.dart';
 import '../../../../src/calls_sdk_session.dart';
 import '../../../../src/meeting_session_settings.dart';
 import '../../../../src/outgoing_call_launcher.dart';
@@ -19,15 +21,26 @@ import '../../../../src/outgoing_call_launcher.dart';
 ///
 /// This BLoC handles:
 /// - Voice and video call initiation for users (direct call) and groups (meeting)
-/// - SDK listener callbacks for call events (rejected, ended)
 /// - Button disabled state management during call workflow
 ///
-/// Uses [CometChatCallEventListener] mixin for UI Kit events (ccCallRejected, ccCallEnded)
-/// Uses [CallListener] mixin for SDK events (onOutgoingCallRejected, onCallEndedMessageReceived)
+/// A call to a user is placed with the Calls SDK (ringing v2, through
+/// `CometChatUIKitCalls.initiateCall`). The buttons come back once
+/// the call they placed is over on this device: its record is released
+/// (declined, cancelled, unanswered, ended), or a UI Kit event says so
+/// ([ccCallRejected], [ccCallEnded]).
+///
+/// Since ringing v2 the bloc no longer registers with the chat SDK's call
+/// listener, whose calling APIs are deprecated: [onOutgoingCallRejected] and
+/// [onCallEndedMessageReceived] are kept for compatibility, and are not
+/// called by the UI Kit.
 ///
 /// Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7
 class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
-    with CometChatCallEventListener, CallListener {
+    with
+        CometChatCallEventListener,
+        // Kept so the public API stays as it was until 7.0.0; not registered.
+        // ignore: deprecated_member_use
+        CallListener {
   /// User receiver for direct calls
   final User? user;
 
@@ -84,6 +97,7 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
     on<InitiateVideoCall>(_onInitiateVideoCall);
     on<CallRejected>(_onCallRejected);
     on<CallEnded>(_onCallEnded);
+    on<_PlacedCallReleased>(_onPlacedCallReleased);
 
     // Add SDK listeners
     _addListeners();
@@ -115,16 +129,23 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
     result.onSuccess((user) => _loggedInUser = user);
   }
 
-  /// Add SDK and event listeners
+  /// The records of calls let go of on this device: see
+  /// [ActiveCallTracker.releasedSessions].
+  StreamSubscription<String>? _released;
+
+  /// Add the UI Kit's call event listeners
   void _addListeners() {
-    CometChat.addCallListener(_listenerId, this);
     CometChatCallEvents.addCallEventsListener(_listenerId, this);
+    _released = ActiveCallTracker.releasedSessions.listen((sessionId) {
+      if (!isClosed) add(_PlacedCallReleased(sessionId));
+    });
   }
 
-  /// Remove SDK and event listeners
+  /// Remove the UI Kit's call event listeners
   void _removeListeners() {
-    CometChat.removeCallListener(_listenerId);
     CometChatCallEvents.removeCallEventsListener(_listenerId);
+    unawaited(_released?.cancel());
+    _released = null;
   }
 
   // ============================================================
@@ -148,12 +169,22 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
   // ============================================================
 
   /// Called when an outgoing call is rejected by the receiver
+  @Deprecated(
+    'No longer called: the UI Kit does not listen to the chat SDK\'s call '
+    'events, which are deprecated (ringing v2). The buttons come back once '
+    'the placed call is over, by themselves.',
+  )
   @override
   void onOutgoingCallRejected(Call call) {
     add(CallRejected(call));
   }
 
   /// Called when a call ended message is received
+  @Deprecated(
+    'No longer called: the UI Kit does not listen to the chat SDK\'s call '
+    'events, which are deprecated (ringing v2). The buttons come back once '
+    'the placed call is over, by themselves.',
+  )
   @override
   void onCallEndedMessageReceived(Call call) {
     add(CallEnded(call));
@@ -184,7 +215,7 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
     CallRejected event,
     Emitter<CallButtonsState> emit,
   ) async {
-    _placedCallOver(event.call, emit);
+    _placedCallOver(event.call.sessionId, emit);
   }
 
   /// Handle call ended event - re-enable buttons
@@ -192,15 +223,24 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
     CallEnded event,
     Emitter<CallButtonsState> emit,
   ) async {
-    _placedCallOver(event.call, emit);
+    _placedCallOver(event.call.sessionId, emit);
+  }
+
+  /// A call's record was released on this device: if it is the call these
+  /// buttons placed, it is over.
+  Future<void> _onPlacedCallReleased(
+    _PlacedCallReleased event,
+    Emitter<CallButtonsState> emit,
+  ) async {
+    _placedCallOver(event.sessionId, emit);
   }
 
   /// Session of the call (or meeting) these buttons placed last, while it
   /// is not known to be over.
   String? _placedSessionId;
 
-  /// A call was rejected or ended: if it is the one these buttons placed,
-  /// they come back with no call in progress.
+  /// A call ([sessionId]) was rejected, ended or released: if it is the one
+  /// these buttons placed, they come back with no call in progress.
   ///
   /// Every other call is ignored, and so is any call while one is being
   /// placed (its own is not announced yet). The events are broadcast, and
@@ -208,10 +248,10 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
   /// a placement: a host that closed its bloc on that (master_app's card
   /// action) then dropped the call without a word. Placing re-enables the
   /// buttons itself, however it ends.
-  void _placedCallOver(Call call, Emitter<CallButtonsState> emit) {
+  void _placedCallOver(String? sessionId, Emitter<CallButtonsState> emit) {
     if (_placing) return;
     final placed = _placedSessionId;
-    if (placed == null || placed.isEmpty || call.sessionId != placed) return;
+    if (placed == null || placed.isEmpty || sessionId != placed) return;
     _placedSessionId = null;
     emit(
       state.copyWith(
@@ -602,6 +642,17 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
       receiverUid: _receiverId,
       receiverType: ReceiverTypeConstants.user,
       type: callType,
+    )..receiver = user;
+
+    // Placed with the Calls SDK (ringing v2), which prepares this device's
+    // session with these settings: they are frozen by that prepare, so the
+    // join once the callee answers uses them too.
+    CallPrepareSettings.attach(
+      call,
+      CallSessionSettings.forCall(
+        isVideo: !isAudioOnly,
+        hostBuilder: hostSessionSettingsBuilder,
+      ).build(),
     );
 
     // Initiate call via use case. Tracked, so a logout that starts meanwhile
@@ -704,4 +755,16 @@ class CallButtonsBloc extends Bloc<CallButtonsEvent, CallButtonsState>
     _removeListeners();
     return super.close();
   }
+}
+
+/// A call's record was released on this device: see
+/// `CallButtonsBloc._onPlacedCallReleased`. Private, so no public event is
+/// added for it.
+final class _PlacedCallReleased extends CallButtonsEvent {
+  const _PlacedCallReleased(this.sessionId);
+
+  final String sessionId;
+
+  @override
+  List<Object?> get props => [sessionId];
 }

@@ -23,8 +23,16 @@ abstract interface class CallsSdkGateway {
   /// Calls plugin 5.0.4 turns this back to false on logout; 5.0.8 keeps it.
   bool get isInitialized;
 
-  /// `CometChatCalls.init` with [appId] and [region].
-  Future<void> init(String appId, String region);
+  /// `CometChatCalls.init` with [appId] and [region], and the host
+  /// overrides of a staging or dedicated app (bare hosts; null for the
+  /// default).
+  Future<void> init(
+    String appId,
+    String region, {
+    String? clientHost,
+    String? adminHost,
+    String? callsHost,
+  });
 
   /// `CometChatCalls.initFromSettings`: the Calls SDK reads
   /// `cometchat-settings.json` itself and records the "ai-agent" source.
@@ -59,12 +67,21 @@ final class DefaultCallsSdkGateway implements CallsSdkGateway {
   bool get isInitialized => CometChatCalls.isInitialized;
 
   @override
-  Future<void> init(String appId, String region) {
+  Future<void> init(
+    String appId,
+    String region, {
+    String? clientHost,
+    String? adminHost,
+    String? callsHost,
+  }) {
     final completer = Completer<void>();
     final settings =
         (CallAppSettingBuilder()
               ..appId = appId
-              ..region = region)
+              ..region = region
+              ..clientHost = clientHost
+              ..adminHost = adminHost
+              ..callsHost = callsHost)
             .build();
     CometChatCalls.init(
       settings,

@@ -5,6 +5,11 @@ import '../../../shared_ui/src/logging/cometchat_log.dart';
 import '../../../src/active_call_tracker.dart';
 import '../../../src/call_errors.dart';
 
+@Deprecated(
+  'Since ringing v2, incoming calls ring on the push ringer\'s own screen '
+  '(cometchat_voip, through UIKitSettings.callPushBridge) on Android and '
+  'iOS. The UI Kit shows this overlay on web only.',
+)
 class IncomingCallOverlay {
   /// The banner on screen. Only ever an entry that was inserted, so
   /// [dismiss] can always remove it.

@@ -66,7 +66,8 @@ example.
 
 As of 6.1.0, ten API elements carry `@Deprecated`; the baseline marks each with
 a `[deprecated]` flag, and the 6.1.0 CHANGELOG explains them. They are scheduled
-for removal in 7.0.0 and not before.
+for removal in 7.0.0 and not before. 6.3.0 deprecates `Translations` in favour
+of `CometChatLocalize`; the 6.3.0 CHANGELOG explains the migration.
 
 ## Dependencies
 

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../../../cometchat_calls_uikit.dart';
 import '../../../../../cometchat_chat_uikit.dart';
+import '../../../../../src/call_prepare_settings.dart';
 import 'start_session_deadline.dart';
 
 /// Implementation of [CallOperationsDataSource] using CometChat SDK.
@@ -15,6 +16,9 @@ class CallOperationsDataSourceImpl implements CallOperationsDataSource {
     final completer = Completer<Call>();
     CometChatUIKitCalls.initiateCall(
       call,
+      // The settings the call components placed it with, if any: the
+      // Calls SDK prepares the session with them (ringing v2).
+      sessionSettings: CallPrepareSettings.of(call),
       onSuccess: (Call returnedCall) => completer.complete(returnedCall),
       onError: (CometChatException e) => completer.completeError(
         CallOperationsException(
@@ -30,7 +34,7 @@ class CallOperationsDataSourceImpl implements CallOperationsDataSource {
   @override
   Future<Call> acceptCall(String sessionId) async {
     final completer = Completer<Call>();
-    CometChat.acceptCall(
+    CometChatUIKitCalls.acceptCall(
       sessionId,
       onSuccess: (Call acceptedCall) => completer.complete(acceptedCall),
       onError: (CometChatException e) => completer.completeError(
@@ -65,6 +69,7 @@ class CallOperationsDataSourceImpl implements CallOperationsDataSource {
   @override
   Future<Call> endCall(String sessionId) async {
     final completer = Completer<Call>();
+    // ignore: deprecated_member_use
     CometChat.endCall(
       sessionId,
       onSuccess: (Call call) => completer.complete(call),

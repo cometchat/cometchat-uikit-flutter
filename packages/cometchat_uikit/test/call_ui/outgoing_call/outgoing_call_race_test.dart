@@ -3,9 +3,11 @@
 ///
 /// The owner's rules:
 ///  * End wins: once End was tapped or the timer fired, an accept for this
-///    call is not joined, and a best-effort endCall lets the callee go.
-///  * Every failed cancel or `unanswered` reject sends that endCall too, and
-///    still reaches onError with the SDK's code (report everything).
+///    call is not joined. Ringing v2 sends no endCall to let the callee go:
+///    hang-up only leaves the session, and a callee who answered meanwhile
+///    ends the call themselves.
+///  * Every failed cancel or `unanswered` reject still reaches onError with
+///    the SDK's code (report everything), with no endCall after it.
 ///  * The screen closes on the cancel's answer or after 10 s at most; the
 ///    request carries on, and what it comes to is still handled.
 ///
@@ -109,7 +111,7 @@ void main() {
       !CallNavigationContext.navigatorKey.currentState!.canPop();
 
   testWidgets('P2-E04: End, then the accept while the cancel is in flight: '
-      'not joined, the callee is freed, and the screen closes once when the '
+      'not joined, no endCall goes out, and the screen closes once when the '
       'cancel is answered', (WidgetTester tester) async {
     await ring(tester);
     final Completer<void> server = Completer<void>();
@@ -122,7 +124,12 @@ void main() {
 
     expect(CallScreenOverlay.isShowing, isFalse);
     expect(PermissionChannelStub.requested, isEmpty, reason: 'nothing joins');
-    expect(count('endCall:session_1'), 1);
+    expect(
+      count('endCall:session_1'),
+      0,
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
     expect(find.byType(CometChatOutgoingCall), findsOneWidget);
 
     server.complete();
@@ -133,10 +140,8 @@ void main() {
     expect(errors, isEmpty);
   });
 
-  testWidgets('P2-E04: the cancel fails because the callee won: the callee '
-      'is freed once, and onError hears the SDK code', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('P2-E04: the cancel fails because the callee won: no endCall '
+      'goes out, and onError hears the SDK code', (WidgetTester tester) async {
     await ring(tester);
     final Completer<void> server = Completer<void>();
     dataSource
@@ -155,13 +160,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(CallScreenOverlay.isShowing, isFalse);
-    expect(count('endCall:session_1'), 1);
+    expect(
+      count('endCall:session_1'),
+      0,
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
     expect(errors.single, same(_alreadyAccepted));
     expect(onlyTheChatLeft(), isTrue);
     expect(CallEventService.instance.activeCall, isNull);
   });
 
-  testWidgets('a failed cancel frees the callee even when no accept arrives', (
+  testWidgets('a failed cancel sends no endCall when no accept arrives', (
     WidgetTester tester,
   ) async {
     await ring(tester);
@@ -174,10 +184,12 @@ void main() {
     _screenBloc().add(const CancelCall());
     await tester.pumpAndSettle();
 
-    expect(dataSource.calls, <String>[
-      'rejectCall:session_1:cancelled',
-      'endCall:session_1',
-    ]);
+    expect(
+      dataSource.calls,
+      <String>['rejectCall:session_1:cancelled'],
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
     expect(errors.single, same(_alreadyAccepted));
     expect(onlyTheChatLeft(), isTrue);
   });
@@ -211,7 +223,7 @@ void main() {
   });
 
   testWidgets('a cancel that fails after the 10 s close still reaches '
-      'onError and frees the callee (owner: report everything)', (
+      'onError, with no endCall (owner: report everything)', (
     WidgetTester tester,
   ) async {
     await ring(tester);
@@ -234,7 +246,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(errors.single, same(_alreadyAccepted));
-    expect(count('endCall:session_1'), 1);
+    expect(
+      count('endCall:session_1'),
+      0,
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
   });
 
   testWidgets('an accept after the 10 s close is not joined either', (
@@ -260,14 +277,19 @@ void main() {
     await tester.pump();
 
     expect(CallScreenOverlay.isShowing, isFalse);
-    expect(count('endCall:session_1'), 1);
+    expect(
+      count('endCall:session_1'),
+      0,
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
 
     server.complete();
     await tester.pumpAndSettle();
   });
 
-  testWidgets('the no-answer timeout, then the accept: not joined, the '
-      'callee is freed', (WidgetTester tester) async {
+  testWidgets('the no-answer timeout, then the accept: not joined, and no '
+      'endCall goes out', (WidgetTester tester) async {
     await ring(tester);
     final Completer<void> server = Completer<void>();
     dataSource.rejectGate = server;
@@ -278,7 +300,12 @@ void main() {
     await tester.pump();
 
     expect(CallScreenOverlay.isShowing, isFalse);
-    expect(count('endCall:session_1'), 1);
+    expect(
+      count('endCall:session_1'),
+      0,
+      reason:
+          'ringing v2: hang-up only leaves; the callee ends the call themselves',
+    );
 
     server.complete();
     await tester.pumpAndSettle();

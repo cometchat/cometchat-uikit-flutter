@@ -97,6 +97,7 @@ class _FakeRequest extends Fake implements GroupMembersRequest {
 
   @override
   Future<List<GroupMember>> fetchNext({
+    GroupMemberFetchListener? listener,
     required Function(List<GroupMember> groupMemberList)? onSuccess,
     required Function(CometChatException excep)? onError,
   }) async {

@@ -267,6 +267,9 @@ class TranslationsTr extends Translations {
   String get calling => 'Aranıyor...';
 
   @override
+  String get ringing => 'Çalıyor...';
+
+  @override
   String get add => 'Ekle';
 
   @override

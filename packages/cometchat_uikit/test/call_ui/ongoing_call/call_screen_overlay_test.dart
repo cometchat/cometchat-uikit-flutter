@@ -25,10 +25,25 @@ import 'package:cometchat_chat_uikit/call_ui/src/incoming_call/cometchat_display
 import 'package:cometchat_chat_uikit/call_ui/src/ongoing_call/call_screen_overlay.dart';
 import 'package:cometchat_chat_uikit/call_ui/src/utils/call_extension_constants.dart';
 import 'package:cometchat_chat_uikit/call_ui/src/utils/call_state_service.dart';
+import 'package:cometchat_chat_uikit/shared_ui/l10n/cometchat_localize.dart';
 import 'package:cometchat_chat_uikit/shared_ui/l10n/translations.dart';
+import 'package:cometchat_chat_uikit/shared_ui/l10n/translations_de.dart';
+import 'package:cometchat_chat_uikit/shared_ui/l10n/translations_en_GB.dart';
 import 'package:cometchat_chat_uikit/src/active_call_tracker.dart';
 
 import '../helpers/call_bloc_harness.dart';
+
+/// German with one string overridden, as an integrator would register it.
+class _ConnectingDe extends TranslationsDe {
+  @override
+  String get connecting => 'Wird verbunden';
+}
+
+/// British English with one string overridden: registered for en_GB, not en.
+class _ConnectingEnGb extends TranslationsEnGb {
+  @override
+  String get connecting => 'Ringing through';
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -291,6 +306,72 @@ void main() {
 
     // German, not the en_US the overlay's own MaterialApp fell back to.
     expect(find.text('Verbindung wird hergestellt...'), findsOneWidget);
+    expect(find.text('Connecting...'), findsNothing);
+
+    CallScreenOverlay.dismiss();
+    await tester.pump();
+    join.complete(const SizedBox());
+  });
+
+  testWidgets('ENG-39510: strings registered with '
+      'CometChatLocalize.registerTranslations reach the call screen', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(CometChatLocalize.resetToDefault);
+    CometChatLocalize.registerTranslations(_ConnectingDe());
+    final Completer<Widget> join = Completer<Widget>();
+    dataSource.onStartSession = (_) => join.future;
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: CallNavigationContext.navigatorKey,
+        locale: const Locale('de'),
+        localizationsDelegates: CometChatLocalize.localizationsDelegates,
+        supportedLocales: CometChatLocalize.supportedLocales,
+        home: const Scaffold(body: Text('messages')),
+      ),
+    );
+
+    CallScreenOverlay.show(
+      sessionId: 'session_1',
+      sessionSettingsBuilder: SessionSettingsBuilder(),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // The overlay's own MaterialApp serves the override, not the built-in
+    // German it used to fall back to.
+    expect(find.text('Wird verbunden'), findsOneWidget);
+    expect(find.text('Verbindung wird hergestellt...'), findsNothing);
+
+    CallScreenOverlay.dismiss();
+    await tester.pump();
+    join.complete(const SizedBox());
+  });
+
+  testWidgets('ENG-39510: strings registered for a regional locale reach the '
+      'call screen of an app in that locale', (WidgetTester tester) async {
+    addTearDown(CometChatLocalize.resetToDefault);
+    CometChatLocalize.registerTranslations(_ConnectingEnGb());
+    final Completer<Widget> join = Completer<Widget>();
+    dataSource.onStartSession = (_) => join.future;
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: CallNavigationContext.navigatorKey,
+        locale: const Locale('en', 'GB'),
+        localizationsDelegates: CometChatLocalize.localizationsDelegates,
+        supportedLocales: const <Locale>[Locale('en', 'GB')],
+        home: const Scaffold(body: Text('messages')),
+      ),
+    );
+
+    CallScreenOverlay.show(
+      sessionId: 'session_1',
+      sessionSettingsBuilder: SessionSettingsBuilder(),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Ringing through'), findsOneWidget);
     expect(find.text('Connecting...'), findsNothing);
 
     CallScreenOverlay.dismiss();

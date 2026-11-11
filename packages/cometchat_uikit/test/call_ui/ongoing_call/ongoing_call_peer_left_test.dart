@@ -140,7 +140,8 @@ void main() {
       verify: (bloc) {
         expect(bloc.endCallPresses, 1);
         expect(dataSource.endSessionCount, 1);
-        expect(dataSource.endCallCount, 1);
+        // Ringing v2: the call is left, with no endCall.
+        expect(dataSource.endCallCount, 0);
       },
     );
 
@@ -220,7 +221,9 @@ void main() {
       wait: const Duration(milliseconds: 50),
       verify: (bloc) {
         expect(bloc.endCallPresses, 1);
-        expect(dataSource.endCallCount, 1);
+        expect(dataSource.endSessionCount, 1);
+        // Ringing v2: the call is left, with no endCall.
+        expect(dataSource.endCallCount, 0);
       },
     );
 
@@ -295,7 +298,9 @@ void main() {
       wait: const Duration(milliseconds: 50),
       verify: (bloc) {
         expect(bloc.endCallPresses, 1);
-        expect(dataSource.endCallCount, 1);
+        expect(dataSource.endSessionCount, 1);
+        // Ringing v2: the call is left, with no endCall.
+        expect(dataSource.endCallCount, 0);
       },
     );
 
@@ -337,7 +342,8 @@ void main() {
       verify: (bloc) {
         expect(bloc.endCallPresses, 1);
         expect(dataSource.endSessionCount, 1);
-        expect(dataSource.endCallCount, 1);
+        // Ringing v2: the call is left, with no endCall.
+        expect(dataSource.endCallCount, 0);
       },
     );
 
@@ -356,7 +362,9 @@ void main() {
       verify: (bloc) {
         // The one press is the local hangup; the empty list adds no second.
         expect(bloc.endCallPresses, 1);
-        expect(dataSource.endCallCount, 1);
+        expect(dataSource.endSessionCount, 1);
+        // Ringing v2: the call is left, with no endCall.
+        expect(dataSource.endCallCount, 0);
       },
     );
   });
