@@ -470,7 +470,7 @@ extension BubbleUIBuilder on MessageUtils {
     }
     CometChatMessageBubbleStyleData? messageBubbleStyleData;
     switch (key) {
-      case MessageCategoryConstants.agentic + MessageTypeConstants.assistant:
+      case const (MessageCategoryConstants.agentic + MessageTypeConstants.assistant):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: incomingMessageBubbleStyle
                   ?.aiAssistantBubbleStyle?.backgroundColor ??
@@ -485,8 +485,8 @@ extension BubbleUIBuilder on MessageUtils {
               ?.aiAssistantBubbleStyle?.messageBubbleBackgroundImage,
         );
         break;
-      case MessageCategoryConstants.streamMessage +
-          MessageTypeConstants.runStarted:
+      case const (MessageCategoryConstants.streamMessage +
+          MessageTypeConstants.runStarted):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: incomingMessageBubbleStyle
                   ?.aiAssistantBubbleStyle?.backgroundColor ??
@@ -500,7 +500,7 @@ extension BubbleUIBuilder on MessageUtils {
               ?.aiAssistantBubbleStyle?.messageBubbleBackgroundImage,
         );
         break;
-      case MessageCategoryConstants.message + MessageTypeConstants.text:
+      case const (MessageCategoryConstants.message + MessageTypeConstants.text):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.textBubbleStyle?.backgroundColor
@@ -547,7 +547,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.textBubbleStyle?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.message + MessageTypeConstants.image:
+      case const (MessageCategoryConstants.message + MessageTypeConstants.image):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.imageBubbleStyle?.backgroundColor
@@ -594,7 +594,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.imageBubbleStyle?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.message + MessageTypeConstants.file:
+      case const (MessageCategoryConstants.message + MessageTypeConstants.file):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.fileBubbleStyle?.backgroundColor
@@ -641,7 +641,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.fileBubbleStyle?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.message + MessageTypeConstants.video:
+      case const (MessageCategoryConstants.message + MessageTypeConstants.video):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.videoBubbleStyle?.backgroundColor
@@ -688,7 +688,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.videoBubbleStyle?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.message + MessageTypeConstants.audio:
+      case const (MessageCategoryConstants.message + MessageTypeConstants.audio):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.audioBubbleStyle?.backgroundColor
@@ -735,7 +735,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.audioBubbleStyle?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.custom + ExtensionType.extensionPoll:
+      case const (MessageCategoryConstants.custom + ExtensionType.extensionPoll):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle?.pollsBubbleStyle?.backgroundColor
@@ -777,7 +777,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.pollsBubbleStyle?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.custom + ExtensionType.document:
+      case const (MessageCategoryConstants.custom + ExtensionType.document):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle
@@ -825,7 +825,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.custom + ExtensionType.whiteboard:
+      case const (MessageCategoryConstants.custom + ExtensionType.whiteboard):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
           backgroundColor: isSent
               ? outgoingMessageBubbleStyle
@@ -873,7 +873,7 @@ extension BubbleUIBuilder on MessageUtils {
                   ?.threadedMessageIndicatorTextStyle,
         );
         break;
-      case MessageCategoryConstants.custom + ExtensionType.sticker:
+      case const (MessageCategoryConstants.custom + ExtensionType.sticker):
         messageBubbleStyleData = CometChatMessageBubbleStyleData(
             backgroundColor: (isSent ? outgoingMessageBubbleStyle?.stickerBubbleStyle?.backgroundColor : incomingMessageBubbleStyle?.stickerBubbleStyle?.backgroundColor) ??
                 ((message.quotedMessage != null)
@@ -915,7 +915,7 @@ extension BubbleUIBuilder on MessageUtils {
                 ? outgoingMessageBubbleStyle?.stickerBubbleStyle?.threadedMessageIndicatorTextStyle
                 : incomingMessageBubbleStyle?.stickerBubbleStyle?.threadedMessageIndicatorTextStyle);
         break;
-      case MessageCategoryConstants.custom + MessageTypeConstants.meeting:
+      case const (MessageCategoryConstants.custom + MessageTypeConstants.meeting):
         CustomMessage msg = message as CustomMessage;
         String? callType;
         if (msg.customData != null &&

@@ -11,16 +11,13 @@ let package = Package(
   products: [
     .library(name: "cometchat-chat-uikit", targets: ["cometchat_chat_uikit"])
   ],
-  dependencies: [
-    // Supplied by the Flutter tool when it generates the app's SPM workspace.
-    .package(name: "FlutterFramework", path: "../FlutterFramework")
-  ],
+  // FlutterFramework is intentionally not declared: the Flutter tool only
+  // generates it from Flutter 3.41, and declaring it breaks SPM builds on
+  // Flutter 3.24-3.40.
+  dependencies: [],
   targets: [
     .target(
-      name: "cometchat_chat_uikit",
-      dependencies: [
-        .product(name: "FlutterFramework", package: "FlutterFramework")
-      ]
+      name: "cometchat_chat_uikit"
     )
   ]
 )

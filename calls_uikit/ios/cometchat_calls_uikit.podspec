@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'cometchat_calls_uikit'
-  s.version          = '5.0.16'
+  s.version          = '5.1.0'
   s.summary          = 'Flutter plugin featuring custom audio and video call widgets. Integrate seamlessly with Cometchat Chat UI Kit or use independently for streamlined development.'
   s.description      = <<-DESC
 A new Flutter plugin project.
@@ -13,7 +13,9 @@ A new Flutter plugin project.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'CometChat' => 'help@cometchat.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  # Sources live under the Swift Package Manager layout so the plugin builds
+  # under both CocoaPods and SPM.
+  s.source_files = 'cometchat_calls_uikit/Sources/cometchat_calls_uikit/**/*.swift'
   s.dependency 'Flutter'
   s.platform = :ios, '12.0'
 

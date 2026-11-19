@@ -1,3 +1,19 @@
+# 5.3.0
+
+## New
+- None
+
+## Enhancements
+- Extended Swift Package Manager support to Flutter 3.38 and later (previously Flutter 3.44 or later). On Flutter 3.38 to 3.40, also add a `video_player_avfoundation: 2.9.7` dependency override.
+- Updated `cometchat_sdk` to version `4.1.5` and `cometchat_uikit_shared` to version `5.3.0`, which removes the Git LFS requirement for Swift Package Manager builds.
+
+## Fixes
+- Fixed build failures on Flutter versions earlier than 3.44, caused by the poll composer using `ReorderableListView.onReorderItem` (introduced in 5.2.18).
+- Fixed Android build failures in apps that use Android Gradle Plugin 9, the default from Flutter 3.44, by raising `compileSdk` to 34.
+
+## Breaking Changes
+- Raised the minimum Flutter version from 2.5.0 to 3.38.0. **Apps must use Flutter 3.38 or later to update to this version.**
+
 # 5.2.18
 
 ## New

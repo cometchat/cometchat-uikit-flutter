@@ -170,7 +170,15 @@ class _CometChatCreatePollState extends State<CometChatCreatePoll> {
                               ReorderableListView(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                onReorderItem: _onReorder,
+                                // onReorderItem would be preferred but only exists from
+                                // Flutter 3.44; onReorder works on every supported version.
+                                // ignore: deprecated_member_use
+                                onReorder: (oldIndex, newIndex) {
+                                  // onReorder reports newIndex before the dragged item is
+                                  // removed; shift it so _onReorder gets the final index.
+                                  if (oldIndex < newIndex) newIndex -= 1;
+                                  _onReorder(oldIndex, newIndex);
+                                },
                                 children: List.generate(
                                   _answers.length,
                                   (index) => getTextKey(
@@ -378,8 +386,8 @@ class _CometChatCreatePollState extends State<CometChatCreatePoll> {
     );
   }
 
-  // Receives newIndex already adjusted for the item removed at oldIndex —
-  // ReorderableListView.onReorderItem does that shift itself.
+  // Receives newIndex already adjusted for the item removed at oldIndex
+  // (the onReorder callback above does that shift).
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex >= _answers.length) {

@@ -1,3 +1,18 @@
+## 5.3.0
+
+## New
+- None
+
+## Enhancements
+- Added Swift Package Manager support to the iOS plugin, used by default from Flutter 3.44 and available on Flutter 3.38 to 3.43 with `flutter config --enable-swift-package-manager`. CocoaPods remains supported and works unchanged. On Flutter 3.38 to 3.40, also add a `video_player_avfoundation: 2.9.7` dependency override.
+- Updated `cometchat_sdk` to version `4.1.5`, which removes the Git LFS requirement for Swift Package Manager builds.
+
+## Fixes
+- Fixed build failures on Flutter 3.47 and later, where message rendering failed to compile with `The binary operator + is not supported as a constant pattern`.
+
+## Breaking Changes
+- Raised the minimum Flutter version from 2.5.0 to 3.38.0. **Apps must use Flutter 3.38 or later to update to this version.**
+
 ## 5.2.5
 
 ## New

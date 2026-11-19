@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'cometchat_chat_uikit'
-  s.version          = '5.2.18'
+  s.version          = '5.3.0'
   s.summary          = 'CometChat Flutter UI KIt'
   s.description      = <<-DESC
 CometChat Flutter UI KIt
