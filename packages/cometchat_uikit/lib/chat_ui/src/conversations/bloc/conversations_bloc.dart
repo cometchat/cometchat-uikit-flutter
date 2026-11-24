@@ -5,6 +5,15 @@ import '../domain/domain.dart';
 import '../di/conversations_service_locator.dart';
 import 'conversations_event.dart';
 import 'conversations_state.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_presence.dart';
+import '../../../../shared_ui/src/offline/offline_hub.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/offline_notice.dart';
+import '../../../../shared_ui/src/offline/conversations_offline.dart';
+import '../../../../shared_ui/src/offline/conversations_seam_context.dart';
+import '../data/datasources/conversations_remote_datasource.dart';
+import '../data/repositories/conversations_repository_impl.dart';
 import '../utils/conversation_tier_ordering.dart';
 import '../../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../shared/list_base.dart';
@@ -205,9 +214,11 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     _effectiveRequestBuilder =
         conversationsProtocol?.requestBuilder ?? conversationsRequestBuilder;
     // Register event handlers
-    on<LoadConversations>(_onLoadConversations);
-    on<LoadMoreConversations>(_onLoadMoreConversations);
-    on<RefreshConversations>(_onRefreshConversations);
+    // Reads run inside a list-generation scope (W1 §2.7): once the list is
+    // cleared, an in-flight read's emits and row writes are dropped.
+    on<LoadConversations>(_genScoped(_onLoadConversations));
+    on<LoadMoreConversations>(_genScoped(_onLoadMoreConversations));
+    on<RefreshConversations>(_genScoped(_onRefreshConversations));
     on<DeleteConversation>(_onDeleteConversation);
     on<RemoveConversation>(_onRemoveConversation);
     on<SetActiveConversation>(_onSetActiveConversation);
@@ -234,8 +245,121 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     on<_ListCleared>(_onListCleared);
     on<_ListReplaced>(_onListReplaced);
 
+    // Offline (W1 §2.6–§2.9): hub events and seam tasks run on the event loop.
+    on<_OfflineHubEventReceived>(_onOfflineHubEvent);
+    on<_OfflineSeamTask>(_onOfflineSeamTask);
+
     // Initialize logged in user and register SDK listeners
     _initializeAndRegisterListeners();
+
+    // Offline (W1 §2.6/§2.7): hub subscription, seam host and notice stream.
+    // The hub publishes nothing while offline is off.
+    _wireOffline();
+  }
+
+  // ============================================================
+  // OFFLINE (W1 §2.6–§2.9)
+  // ============================================================
+
+  /// The list generation (§2.7). Bumped on a session end and on a cache
+  /// reset (G8); a read that started under an older generation drops its
+  /// emits and row writes.
+  int _listGen = 0;
+
+  StreamSubscription<OfflineHubEvent>? _offlineHubSub;
+  final StreamController<OfflineNotice> _offlineNoticeController =
+      StreamController<OfflineNotice>.broadcast();
+
+  void _wireOffline() {
+    registerOfflineNotices(this, _offlineNoticeController.stream);
+    registerConversationsSeamHost(this, _ConversationsSeamHost(this));
+    _offlineHubSub = OfflineHub.instance.events.listen((event) {
+      if (isClosed) return;
+      if (event.gen < OfflineHub.instance.gen) return;
+      // Bump now so reads in flight stop writing at once.
+      if (event is SessionEnded || event is CacheReset) _listGen++;
+      add(_OfflineHubEventReceived(event));
+    });
+  }
+
+  /// Runs a read handler in a zone recording the list generation it started
+  /// under; emits and [ListBase] writes from a stale generation are dropped.
+  FutureOr<void> Function(E event, Emitter<ConversationsState> emit)
+  _genScoped<E extends ConversationsEvent>(
+    FutureOr<void> Function(E event, Emitter<ConversationsState> emit) handler,
+  ) {
+    return (E event, Emitter<ConversationsState> emit) {
+      final gen = _listGen;
+      return runZoned(
+        () => handler(event, _GenGuardedEmitter(emit, () => gen != _listGen)),
+        zoneValues: {_kOfflineListGen: gen},
+      );
+    };
+  }
+
+  /// Whether the running code belongs to a read from a stale list generation.
+  bool get _isStaleRead {
+    final gen = Zone.current[_kOfflineListGen];
+    return gen is int && gen != _listGen;
+  }
+
+  @override
+  void replaceAll(List<Conversation> newItems) {
+    if (_isStaleRead) return;
+    super.replaceAll(newItems);
+  }
+
+  @override
+  void addItem(Conversation item) {
+    if (_isStaleRead) return;
+    super.addItem(item);
+  }
+
+  @override
+  void addAllItems(List<Conversation> itemsToAdd) {
+    if (_isStaleRead) return;
+    super.addAllItems(itemsToAdd);
+  }
+
+  @override
+  bool removeItem(Conversation item) {
+    if (_isStaleRead) return false;
+    return super.removeItem(item);
+  }
+
+  @override
+  bool updateItem(int index, Conversation newItem) {
+    if (_isStaleRead) return false;
+    return super.updateItem(index, newItem);
+  }
+
+  ConversationsSeamContext _seamCtx(Emitter<ConversationsState> emit) =>
+      _ConversationsSeamCtx(this, emit, _listGen);
+
+  Future<void> _onOfflineHubEvent(
+    _OfflineHubEventReceived event,
+    Emitter<ConversationsState> emit,
+  ) async {
+    final hubEvent = event.event;
+    // An event queued before a session end but handled after it belongs to
+    // the old user (§2.7): drop it. SessionEnded carries the new gen.
+    if (hubEvent.gen < OfflineHub.instance.gen) return;
+    if (hubEvent is SessionEnded || hubEvent is CacheReset) {
+      // Clear every row before the next frame (§2.7, G8). A cache reset then
+      // reads page one again, once (ConversationsOffline.onHubEvent).
+      clearItems();
+      _conversationIndexMap.clear();
+      _conversationsRequest = null;
+      emit(const ConversationsEmpty());
+    }
+    await ConversationsOffline.instance.onHubEvent(_seamCtx(emit), hubEvent);
+  }
+
+  Future<void> _onOfflineSeamTask(
+    _OfflineSeamTask event,
+    Emitter<ConversationsState> emit,
+  ) async {
+    await event.body(_seamCtx(emit));
   }
 
   /// Conversations per page: the effective builder's limit, else 30. The
@@ -484,13 +608,16 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       );
     }
 
-    CometChat.addConnectionListener(
+    // Through the seam so a test can reach the listener (D-349).
+    ChatSdkListeners.addConnectionListener(
       _connectionListenerKey,
       _ConversationConnectionListener(
         onConnectedCallback: _handleConnected,
         onDisconnectedCallback: _handleDisconnected,
+        onConnectionErrorCallback: OfflinePresence.disconnected,
       ),
     );
+    unawaited(OfflinePresence.sync());
 
     // Pin Conversation: self-echo events for the logged-in user's pins —
     // fired locally on this device's own REST success and via socket from
@@ -568,6 +695,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     LoadConversations event,
     Emitter<ConversationsState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W3). Inert in W1 (returns false).
+    if (OfflineGate.isOn()) {
+      final handled = ConversationsOffline.instance.handleLoad(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     // Silent refresh: keep existing list visible, skip loading shimmer.
     // Triggered explicitly via event.silent (reconnect, background→foreground)
     // OR inferred when conversations are already loaded.
@@ -664,6 +799,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     LoadMoreConversations event,
     Emitter<ConversationsState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W3). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = ConversationsOffline.instance.handleLoadMore(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     if (state is! ConversationsLoaded) return;
 
     final currentState = state as ConversationsLoaded;
@@ -806,6 +949,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     RefreshConversations event,
     Emitter<ConversationsState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W3). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = ConversationsOffline.instance.handleRefresh(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     // Refresh is always silent when data is already loaded
     add(const LoadConversations(silent: true));
   }
@@ -962,6 +1113,16 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     _MessageReceivedUpdate event,
     Emitter<ConversationsState> emit,
   ) {
+    // Offline message-listener seam (W1 §2.9 → W3). Falls through in W1.
+    final host = conversationsSeamHostOf(this);
+    if (OfflineGate.isOn() &&
+        host != null &&
+        ConversationsOffline.instance.handleMessageReceived(
+          host,
+          event.conversation,
+        )) {
+      return;
+    }
     if (state is! ConversationsLoaded) return;
 
     final currentState = state as ConversationsLoaded;
@@ -1032,6 +1193,16 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     _ConversationPinUpdate event,
     Emitter<ConversationsState> emit,
   ) async {
+    // Offline pin seam (W3, BEH-CPIN-09): match by (type, with); an event the
+    // row already reflects is a no-op.
+    if (OfflineGate.isOn() &&
+        ConversationsOffline.instance.handlePinUpdate(
+          _seamCtx(emit),
+          event.conversation,
+          pinned: event.pinned,
+        )) {
+      return;
+    }
     if (state is! ConversationsLoaded) return;
     final currentState = state as ConversationsLoaded;
 
@@ -1353,6 +1524,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     _ConnectionStateUpdate event,
     Emitter<ConversationsState> emit,
   ) {
+    // Offline reconnect seam (W1 §2.9 → W3). Inert in W1; when W3 handles the
+    // ON path there is no kit-side refetch (the SDK sweep is consumed).
+    final host = conversationsSeamHostOf(this);
+    if (OfflineGate.isOn() &&
+        host != null &&
+        ConversationsOffline.instance.handleReconnect(host)) {
+      return;
+    }
     if (event.isConnected) {
       add(const LoadConversations(silent: true));
     }
@@ -1384,6 +1563,8 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
   void _playIncomingMessageSound(BaseMessage message) {
     if (disableSoundForMessages) return;
     if (message.sender?.uid == _loggedInUser?.uid) return;
+    // Offline (W3): a message the reconnect sweep delivers plays no sound.
+    if (ConversationsOffline.isSwept(message) && OfflineGate.isOn()) return;
     if (message is CustomMessage &&
         message.metadata?[UpdateSettingsConstant.incrementUnreadCount] !=
             true) {
@@ -1745,12 +1926,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
 
   /// Handle connected
   void _handleConnected() {
+    OfflinePresence.connected();
     if (isClosed) return;
     add(const _ConnectionStateUpdate(true));
   }
 
   /// Handle disconnected
   void _handleDisconnected() {
+    OfflinePresence.disconnected();
     if (isClosed) return;
     add(const _ConnectionStateUpdate(false));
   }
@@ -2152,7 +2335,7 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
     } else {
       CallActivityListener.remove(_callListenerKey);
     }
-    CometChat.removeConnectionListener(_connectionListenerKey);
+    ChatSdkListeners.removeConnectionListener(_connectionListenerKey);
     CometChat.removeConversationListener(_conversationListenerKey);
 
     // Remove CC UI Event listeners
@@ -2162,6 +2345,10 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState>
       _ccConversationListenerKey,
     );
     CometChatCallEvents.removeCallEventsListener(_ccCallListenerKey);
+
+    // Offline: cancel hub subscriptions and close the notice stream (W1).
+    _offlineHubSub?.cancel();
+    _offlineNoticeController.close();
 
     _isLoadingMore = false;
     return super.close();
@@ -2615,10 +2802,12 @@ class _ConversationCallEventsListener with CometChatCallEventListener {
 class _ConversationConnectionListener with ConnectionListener {
   final void Function() onConnectedCallback;
   final void Function() onDisconnectedCallback;
+  final void Function() onConnectionErrorCallback;
 
   _ConversationConnectionListener({
     required this.onConnectedCallback,
     required this.onDisconnectedCallback,
+    required this.onConnectionErrorCallback,
   });
 
   @override
@@ -2630,6 +2819,12 @@ class _ConversationConnectionListener with ConnectionListener {
   void onDisconnected() {
     onDisconnectedCallback();
   }
+
+  /// A lost network reports `error`, not `disconnected`: the SDK is not
+  /// connected either way, so presence hides (D84 (10)).
+  @override
+  void onConnectionError(CometChatException error) =>
+      onConnectionErrorCallback();
 }
 
 // ============================================================
@@ -2802,4 +2997,160 @@ class _ConversationPinListener with ConversationListener {
   @override
   void onConversationUnpinned(Conversation conversation) =>
       onUnpinnedCallback(conversation);
+}
+
+// ============================================================
+// OFFLINE (W1 §2.7–§2.9) — internal plumbing
+// ============================================================
+
+/// Zone key holding the list generation a read started under.
+const Symbol _kOfflineListGen = #ccOfflineConversationsGen;
+
+/// An [Emitter] that drops emits once its read's list generation is stale.
+class _GenGuardedEmitter<S> implements Emitter<S> {
+  _GenGuardedEmitter(this._inner, this._stale);
+
+  final Emitter<S> _inner;
+  final bool Function() _stale;
+
+  @override
+  bool get isDone => _inner.isDone;
+
+  @override
+  void call(S state) {
+    if (_stale()) return;
+    _inner(state);
+  }
+
+  @override
+  Future<void> onEach<T>(
+    Stream<T> stream, {
+    required void Function(T data) onData,
+    void Function(Object error, StackTrace stackTrace)? onError,
+  }) => _inner.onEach<T>(
+    stream,
+    onData: (data) {
+      if (!_stale()) onData(data);
+    },
+    onError: onError,
+  );
+
+  @override
+  Future<void> forEach<T>(
+    Stream<T> stream, {
+    required S Function(T data) onData,
+    S Function(Object error, StackTrace stackTrace)? onError,
+  }) => _inner.onEach<T>(
+    stream,
+    onData: (data) => call(onData(data)),
+    onError: onError == null ? null : (e, st) => call(onError(e, st)),
+  );
+}
+
+/// A hub event delivered on the bloc's event loop.
+class _OfflineHubEventReceived extends ConversationsEvent {
+  const _OfflineHubEventReceived(this.event);
+  final OfflineHubEvent event;
+  @override
+  List<Object> get props => [event];
+}
+
+/// A seam task queued through [ConversationsSeamHost.run].
+class _OfflineSeamTask extends ConversationsEvent {
+  const _OfflineSeamTask(this.body);
+  final FutureOr<void> Function(ConversationsSeamContext ctx) body;
+  @override
+  List<Object> get props => [body];
+}
+
+class _ConversationsSeamHost implements ConversationsSeamHost {
+  _ConversationsSeamHost(this._bloc);
+  final ConversationsBloc _bloc;
+
+  @override
+  void run(FutureOr<void> Function(ConversationsSeamContext ctx) body) {
+    if (_bloc.isClosed) return;
+    _bloc.add(_OfflineSeamTask(body));
+  }
+
+  @override
+  bool get isClosed => _bloc.isClosed;
+}
+
+class _ConversationsSeamCtx implements ConversationsSeamContext {
+  _ConversationsSeamCtx(this._bloc, this._emit, this.opGen);
+
+  final ConversationsBloc _bloc;
+  final Emitter<ConversationsState> _emit;
+
+  @override
+  final int opGen;
+
+  @override
+  int get listGen => _bloc._listGen;
+
+  @override
+  bool get isStale => opGen != _bloc._listGen;
+
+  @override
+  bool get isClosed => _bloc.isClosed;
+
+  @override
+  Object get owner => _bloc;
+
+  @override
+  ConversationsState get state => _bloc.state;
+
+  @override
+  void emit(ConversationsState state) {
+    if (isStale || _emit.isDone || _bloc.isClosed) return;
+    _emit(state);
+  }
+
+  @override
+  void replaceRows(List<Conversation> rows) {
+    if (isStale || _bloc.isClosed) return;
+    _bloc.replaceAll(rows);
+  }
+
+  @override
+  List<Conversation> get rows => _bloc.items;
+
+  @override
+  void add(ConversationsEvent event) {
+    if (!_bloc.isClosed) _bloc.add(event);
+  }
+
+  @override
+  void postNotice(OfflineNotice notice) {
+    if (!_bloc._offlineNoticeController.isClosed) {
+      _bloc._offlineNoticeController.add(notice);
+    }
+  }
+
+  @override
+  User? get loggedInUser => _bloc._loggedInUser;
+
+  @override
+  Map<String, int> get conversationIndexMap => _bloc._conversationIndexMap;
+
+  @override
+  ConversationsRequest? get conversationsRequest => _bloc._conversationsRequest;
+
+  @override
+  set conversationsRequest(ConversationsRequest? request) =>
+      _bloc._conversationsRequest = request;
+
+  @override
+  ConversationsRequestBuilder? get requestBuilder =>
+      _bloc._effectiveRequestBuilder;
+
+  @override
+  int get pageSize => _bloc._pageSize;
+
+  @override
+  ConversationsRemoteDataSource? get remoteDataSource {
+    final repo = _bloc.getConversationsUseCase?.repository;
+    return repo is ConversationsRepositoryImpl ? repo.remoteDataSource : null;
+  }
 }

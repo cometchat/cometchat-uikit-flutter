@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
+import 'package:cometchat_chat_uikit/shared_ui/src/offline/offline_gate.dart';
+
+import 'banned_members_offline.dart';
 
 /// Banned Members screen — lists banned group members with unban option.
 class BannedMembersScreen extends StatefulWidget {
@@ -31,6 +34,15 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
   late BannedGroupMembersRequest _request;
   late final String _groupListenerId;
   late final String _uiGroupListenerId;
+  late final String _connectionListenerId;
+
+  /// Whether offline support was on when the screen opened; only then is the
+  /// reconnect reload registered.
+  bool _offlineReconnect = false;
+
+  /// Offline-on page reads: one in flight at a time, and a reconnect during
+  /// one queues a reload for when it finishes.
+  final BannedPageQueue _pageQueue = BannedPageQueue();
 
   @override
   void initState() {
@@ -38,6 +50,14 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
     final ts = DateTime.now().millisecondsSinceEpoch.toString();
     _groupListenerId = '${ts}_banned_sdk';
     _uiGroupListenerId = '${ts}_banned_ui';
+    _connectionListenerId = '${ts}_banned_connection';
+    if (OfflineGate.isOn()) {
+      _offlineReconnect = true;
+      CometChat.addConnectionListener(
+        _connectionListenerId,
+        _BannedConnectionListener(onConnectedCallback: _onReconnected),
+      );
+    }
     CometChat.addGroupListener(_groupListenerId, this);
     CometChatGroupEvents.addGroupsListener(_uiGroupListenerId, this);
     _request =
@@ -58,6 +78,9 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
   void dispose() {
     CometChat.removeGroupListener(_groupListenerId);
     CometChatGroupEvents.removeGroupsListener(_uiGroupListenerId);
+    if (_offlineReconnect) {
+      CometChat.removeConnectionListener(_connectionListenerId);
+    }
     super.dispose();
   }
 
@@ -73,6 +96,10 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
   }
 
   void _loadBannedMembers() {
+    if (OfflineGate.isOn()) {
+      _loadPageTwoPhase(BannedMembersPage());
+      return;
+    }
     _request.fetchNext(
       onSuccess: (List<GroupMember> members) {
         if (!mounted) return;
@@ -91,6 +118,43 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
         });
       },
     );
+  }
+
+  // ── Offline on (W6) ──────────────────────────────────────────────
+
+  /// Reads one page with the two-phase listener: the cached page paints at
+  /// once and the server page replaces it by uid (see [BannedMembersPage]).
+  void _loadPageTwoPhase(BannedMembersPage page) {
+    if (!_pageQueue.tryStart()) return;
+    bannedMembersFetchStream(_request).listen((phase) {
+      if (!mounted) return;
+      setState(() {
+        final next = page.apply(phase, (
+          rows: List<GroupMember>.of(_bannedMembers),
+          hasMore: _hasMore,
+          hasError: _hasError,
+          isLoading: _isLoading,
+        ));
+        _bannedMembers
+          ..clear()
+          ..addAll(next.rows);
+        _hasMore = next.hasMore;
+        _hasError = next.hasError;
+        _isLoading = next.isLoading;
+      });
+    }, onDone: () {
+      if (_pageQueue.finish()) _onReconnected();
+    });
+  }
+
+  /// The connection is back: re-read the first page once, two-phase, keeping
+  /// the rows on screen until the server page replaces them. While a page is
+  /// in flight the reload is queued and runs when that page finishes.
+  void _onReconnected() {
+    if (!mounted || !OfflineGate.isOn() || !_pageQueue.reconnect()) return;
+    _request =
+        BannedGroupMembersRequestBuilder(guid: widget.group.guid).build();
+    _loadPageTwoPhase(BannedMembersPage(reload: true));
   }
 
   // ── SDK Listeners ────────────────────────────────────────────────
@@ -377,4 +441,13 @@ class _BannedMembersScreenState extends State<BannedMembersScreen>
       ),
     );
   }
+}
+
+class _BannedConnectionListener with ConnectionListener {
+  _BannedConnectionListener({required this.onConnectedCallback});
+
+  final void Function() onConnectedCallback;
+
+  @override
+  void onConnected() => onConnectedCallback();
 }

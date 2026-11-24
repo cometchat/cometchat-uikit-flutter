@@ -1,3 +1,29 @@
+# v6.4.0
+
+## New
+
+- Added offline support. With offline enabled in the Chat SDK, the UI Kit shows cached chats, conversations and the other cached screens while the device is offline. Messages sent offline are queued and sent when the connection returns, messages that fail to send offer Retry and Delete, and an attachment tray that was not sent is restored when the chat is opened again. Pass an `OfflineConfig` through `UIKitSettingsBuilder.offlineConfig` (or `CometChatUIKit.initFromSettings(offlineConfig:)`) to enable it. Without one, offline support is off and the UI Kit behaves as in 6.3.0, apart from the changes listed under Enhancements.
+- With offline enabled, rows saved on the device stay on screen while the device is offline, with no error. A list that has nothing saved shows "Connect to load …" while offline (or the error view you pass), `onError` fires once, and the list loads again once when the connection returns; a search with no saved match shows "Connect to search" and loads again when the connection returns. Reopening a chat shows its newest messages with no gaps, and scrolling through a chat while offline does not retry the server.
+- With offline enabled, a page of the conversation list that could not load while offline loads once when the connection returns.
+- With offline enabled, the media viewer (including Download), `CometChatImageBubble`, `CometChatVideoBubble` and the media in search results use the copy saved on the device, so saved media opens while offline.
+- Added `CometChatMessageSendState` (`sending`, `sent`, `failed`) and `sendStateOf`, which returns the send state of a message.
+- Added the `ccMessageSendStateChanged` and `ccOfflineCacheReset` events to `CometChatMessageEvents` and `CometChatMessageEventListener`.
+- Added `hideOfflineNotices` to `CometChatConversations` and `CometChatMessageList`, to hide the notices these lists show while offline.
+- Added `failedIconColor` and `notSentTextStyle` to `CometChatMessageListStyle`, for styling messages that were not sent.
+- Added `AttachmentTile.notSaved`, which marks an attachment whose file could not be kept and must be added again, and `isEmpty`, `restore` and `detach` to `AttachmentTrayController`.
+- Added 22 strings to `Translations` and `CometChatLocalizations`, translated for every built-in language: `messageNotSentYet`, `messageNotSentTapToRetry`, `unsentMessageRemoved`, `messagesNotSent`, `unsentMessagesLost`, `unsentMessagesMaybeLost`, `queueFull`, `fileTooLargeOffline`, `connectToLoadMore`, `connectToSearch`, `connectToSearchSubtitle`, `connectToLoadChats`, `connectToLoadUsers`, `connectToLoadGroups`, `connectToLoadMembers`, `connectToLoadMessages`, `connectToLoadReactions`, `connectToLoadNotifications`, `mediaAvailableWhenOnline`, `jumpToLatest`, `sendingTryAgain` and `fileNotSaved`.
+- Added `connectToSearch` to `SearchState`.
+
+## Enhancements
+
+- Pinning, unpinning, saving or unsaving your own message now updates the message as soon as the action succeeds.
+
+## Breaking Changes
+
+- The UI Kit now requires Chat SDK (`cometchat_sdk`) 5.1.2 or later. Since 5.1.2, pinning, unpinning, saving or unsaving a message, and pinning or unpinning a conversation, no longer fire the matching listener event on the device that made the change; the UI Kit updates from the action's success callback instead. **If your app updates its own UI from these listener events for the current device's actions, move that update into the success callback.**
+- Apps that `implements Translations` or `CometChatLocalizations` must add the 22 new strings listed under New. Apps that `extends` either type are unaffected, because the new strings have English defaults.
+- When editing a message fails, the message now goes back to its original text with no failed mark, and `CometChatMessageEvents.ccMessageSent` is no longer fired with `MessageStatus.error` for the failed edit. This applies whether or not offline is enabled.
+
 # v6.3.0
 
 ## New

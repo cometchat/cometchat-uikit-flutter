@@ -81,6 +81,10 @@ class CometChatMessageListStyle
     this.emptyChatGreetingTitleTextStyle,
     this.emptyChatGreetingSubtitleTextColor,
     this.emptyChatGreetingSubtitleTextStyle,
+    this.failedRowTint,
+    this.failedIconColor,
+    this.notSentTextStyle,
+    this.mediaPlaceholderStyle,
   });
 
   ///[backgroundColor] defines the background color of the message list
@@ -155,6 +159,22 @@ class CometChatMessageListStyle
   ///[emptyChatGreetingSubtitleTextStyle] is a parameter used to set the text style for the Empty Chat Greeting Subtitle
   final TextStyle? emptyChatGreetingSubtitleTextStyle;
 
+  ///[failedRowTint] offline (W1 §2.10): background tint of a failed/unsent
+  ///message row. Null falls back to today's error token.
+  final Color? failedRowTint;
+
+  ///[failedIconColor] offline: colour of the failed-send icon. Null falls back
+  ///to today's error token.
+  final Color? failedIconColor;
+
+  ///[notSentTextStyle] offline: text style of the "Not sent yet" / "Not sent.
+  ///Tap to retry" status line. Null falls back to today's wait/error token.
+  final TextStyle? notSentTextStyle;
+
+  ///[mediaPlaceholderStyle] offline: text style of the "Available when online"
+  ///media placeholder. Null falls back to today's token.
+  final TextStyle? mediaPlaceholderStyle;
+
   /// Copy with some properties replaced
   @override
   CometChatMessageListStyle copyWith({
@@ -185,6 +205,10 @@ class CometChatMessageListStyle
     TextStyle? emptyChatGreetingTitleTextStyle,
     Color? emptyChatGreetingSubtitleTextColor,
     TextStyle? emptyChatGreetingSubtitleTextStyle,
+    Color? failedRowTint,
+    Color? failedIconColor,
+    TextStyle? notSentTextStyle,
+    TextStyle? mediaPlaceholderStyle,
   }) {
     return CometChatMessageListStyle(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -227,6 +251,11 @@ class CometChatMessageListStyle
       emptyChatGreetingSubtitleTextStyle:
           emptyChatGreetingSubtitleTextStyle ??
           this.emptyChatGreetingSubtitleTextStyle,
+      failedRowTint: failedRowTint ?? this.failedRowTint,
+      failedIconColor: failedIconColor ?? this.failedIconColor,
+      notSentTextStyle: notSentTextStyle ?? this.notSentTextStyle,
+      mediaPlaceholderStyle:
+          mediaPlaceholderStyle ?? this.mediaPlaceholderStyle,
     );
   }
 
@@ -260,6 +289,10 @@ class CometChatMessageListStyle
           other.emptyChatGreetingSubtitleTextColor,
       emptyChatGreetingSubtitleTextStyle:
           other.emptyChatGreetingSubtitleTextStyle,
+      failedRowTint: other.failedRowTint,
+      failedIconColor: other.failedIconColor,
+      notSentTextStyle: other.notSentTextStyle,
+      mediaPlaceholderStyle: other.mediaPlaceholderStyle,
     );
   }
 
@@ -358,6 +391,18 @@ class CometChatMessageListStyle
       emptyChatGreetingSubtitleTextStyle: TextStyle.lerp(
         emptyChatGreetingSubtitleTextStyle,
         other.emptyChatGreetingSubtitleTextStyle,
+        t,
+      ),
+      failedRowTint: Color.lerp(failedRowTint, other.failedRowTint, t),
+      failedIconColor: Color.lerp(failedIconColor, other.failedIconColor, t),
+      notSentTextStyle: TextStyle.lerp(
+        notSentTextStyle,
+        other.notSentTextStyle,
+        t,
+      ),
+      mediaPlaceholderStyle: TextStyle.lerp(
+        mediaPlaceholderStyle,
+        other.mediaPlaceholderStyle,
         t,
       ),
     );

@@ -55,6 +55,7 @@ class FakeRequest extends Fake implements ReactionsRequest {
   Future<List<Reaction>> fetchPrevious({
     required Function(List<Reaction> message)? onSuccess,
     required Function(CometChatException excep)? onError,
+    ReactionFetchListener? listener,
   }) async {
     final answer = script[calls < script.length ? calls : script.length - 1];
     calls++;

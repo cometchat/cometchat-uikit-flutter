@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../shared_ui/cometchat_uikit_shared.dart';
+import '../../../../shared_ui/src/offline/offline_group_removal.dart';
+import '../../../../shared_ui/src/offline/offline_presence.dart';
 import '../di/message_header_service_locator.dart';
 import '../domain/usecases/get_user_usecase.dart';
 import '../domain/usecases/get_group_usecase.dart';
@@ -107,6 +109,27 @@ class MessageHeaderBloc extends Bloc<MessageHeaderEvent, MessageHeaderState> {
     if (!disableSDKListeners) {
       _registerSDKListeners();
     }
+
+    // Offline (W5, G7/B2): a self kick, ban or leave found by the reconnect
+    // sweep reaches no group listener; route it into the live handlers. Only
+    // the offline hub feeds this, so with offline off it never fires.
+    _sweptRemovalSub = SweptSelfRemoval.listen(
+      () => state.loggedInUser?.uid ?? CometChatUIKit.loggedInUser?.uid,
+      _handleSweptSelfRemoval,
+    );
+  }
+
+  StreamSubscription<Object?>? _sweptRemovalSub;
+
+  void _handleSweptSelfRemoval(SweptSelfRemoval r) {
+    switch (r.kind) {
+      case SweptSelfRemoval.kicked:
+        _handleGroupMemberKicked(r.action, r.removedUser, r.by, r.group);
+      case SweptSelfRemoval.banned:
+        _handleGroupMemberBanned(r.action, r.removedUser, r.by, r.group);
+      case SweptSelfRemoval.left:
+        _handleGroupMemberLeft(r.action, r.removedUser, r.group);
+    }
   }
 
   /// Register all CometChat SDK listeners
@@ -148,8 +171,12 @@ class MessageHeaderBloc extends Bloc<MessageHeaderEvent, MessageHeaderState> {
     // Connection listener
     CometChat.addConnectionListener(
       _connectionListenerKey,
-      _MessageHeaderConnectionListener(onConnectedCallback: _handleConnected),
+      _MessageHeaderConnectionListener(
+        onConnectedCallback: _handleConnected,
+        onDisconnectedCallback: OfflinePresence.disconnected,
+      ),
     );
+    unawaited(OfflinePresence.sync());
 
     // CC UI Event listeners
     _registerCCEventListeners();
@@ -581,6 +608,7 @@ class MessageHeaderBloc extends Bloc<MessageHeaderEvent, MessageHeaderState> {
   }
 
   void _handleConnected() {
+    OfflinePresence.connected();
     if (!isClosed) {
       if (state.user != null) {
         add(const RefreshUser());
@@ -659,6 +687,8 @@ class MessageHeaderBloc extends Bloc<MessageHeaderEvent, MessageHeaderState> {
 
   @override
   Future<void> close() {
+    _sweptRemovalSub?.cancel();
+
     // Remove SDK listeners
     CometChat.removeMessageListener(_messageListenerKey);
     CometChat.removeUserListener(_userListenerKey);
@@ -806,12 +836,21 @@ class _MessageHeaderGroupListener with GroupListener {
 /// Connection listener
 class _MessageHeaderConnectionListener with ConnectionListener {
   final void Function() onConnectedCallback;
+  final void Function() onDisconnectedCallback;
 
-  _MessageHeaderConnectionListener({required this.onConnectedCallback});
+  _MessageHeaderConnectionListener({
+    required this.onConnectedCallback,
+    required this.onDisconnectedCallback,
+  });
 
   @override
   void onConnected() {
     onConnectedCallback();
+  }
+
+  @override
+  void onDisconnected() {
+    onDisconnectedCallback();
   }
 }
 

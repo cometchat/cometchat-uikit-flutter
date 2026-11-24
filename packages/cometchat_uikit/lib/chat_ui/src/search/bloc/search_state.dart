@@ -40,6 +40,14 @@ class SearchState extends Equatable {
 
   final String? errorMessage;
 
+  /// True when a search could not reach the server and has no rows to show
+  /// while offline support is on: the results show an offline state rather
+  /// than an error. With a search keyword it reads "Connect to search"
+  /// (D84 (7)); with only filters it is a plain list, "Connect to load chats"
+  /// or "Connect to load messages" (D84 (3)).
+  /// Always false with offline support off.
+  final bool connectToSearch;
+
   const SearchState({
     this.searchText = '',
     this.selectedFilters = const {},
@@ -54,6 +62,7 @@ class SearchState extends Equatable {
     this.showConversations = true,
     this.showMessages = true,
     this.errorMessage,
+    this.connectToSearch = false,
   });
 
   @override
@@ -71,6 +80,7 @@ class SearchState extends Equatable {
     showConversations,
     showMessages,
     errorMessage,
+    connectToSearch,
   ];
 
   SearchState copyWith({
@@ -88,6 +98,7 @@ class SearchState extends Equatable {
     bool? showMessages,
     String? errorMessage,
     bool clearError = false,
+    bool? connectToSearch,
   }) {
     return SearchState(
       searchText: searchText ?? this.searchText,
@@ -103,6 +114,7 @@ class SearchState extends Equatable {
       showConversations: showConversations ?? this.showConversations,
       showMessages: showMessages ?? this.showMessages,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      connectToSearch: connectToSearch ?? this.connectToSearch,
     );
   }
 

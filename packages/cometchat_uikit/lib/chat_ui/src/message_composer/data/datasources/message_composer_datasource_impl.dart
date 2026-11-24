@@ -2,11 +2,20 @@ import 'dart:async';
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
 import 'message_composer_datasource.dart';
 import '../../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../../shared_ui/src/offline/offline_send.dart';
 
 /// Implementation of MessageComposerDataSource using CometChat SDK
 class MessageComposerDataSourceImpl implements MessageComposerDataSource {
   @override
   Future<TextMessage> sendTextMessage(TextMessage message) async {
+    // Offline send seam (W1 §2.9 → W4). Falls through in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.tryComposerSend<TextMessage>(
+        message,
+      );
+      if (handled != null) return handled;
+    }
     final completer = Completer<TextMessage>();
 
     unawaited(
@@ -32,6 +41,13 @@ class MessageComposerDataSourceImpl implements MessageComposerDataSource {
 
   @override
   Future<MediaMessage> sendMediaMessage(MediaMessage message) async {
+    // Offline send seam (W1 §2.9 → W4). Falls through in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.tryComposerSend<MediaMessage>(
+        message,
+      );
+      if (handled != null) return handled;
+    }
     final completer = Completer<MediaMessage>();
 
     // Pass raw filesystem path — file:// prefix breaks MultipartFile.fromFile()
@@ -66,6 +82,13 @@ class MessageComposerDataSourceImpl implements MessageComposerDataSource {
 
   @override
   Future<CustomMessage> sendCustomMessage(CustomMessage message) async {
+    // Offline send seam (W1 §2.9 → W4). Falls through in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.tryComposerSend<CustomMessage>(
+        message,
+      );
+      if (handled != null) return handled;
+    }
     final completer = Completer<CustomMessage>();
 
     unawaited(

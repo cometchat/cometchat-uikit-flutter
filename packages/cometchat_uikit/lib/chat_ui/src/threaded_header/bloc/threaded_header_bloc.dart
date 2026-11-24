@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../../../shared_ui/src/clean_architecture/core/constants/enums.dart'
     as core_enums;
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/thread_reply_count_offline.dart';
 import 'threaded_header_event.dart';
 import 'threaded_header_state.dart';
 
@@ -29,6 +35,11 @@ class ThreadedHeaderBloc
   // Parent message ID for filtering incoming messages
   int? _parentMessageId;
 
+  // Offline on only (W7): own replies counted while they wait to send, and
+  // the subscriptions that feed them. Null / unused with offline off.
+  final ThreadReplyLedger _replyLedger = ThreadReplyLedger();
+  StreamSubscription<Object>? _offlineHubSub;
+
   /// Creates a ThreadedHeaderBloc.
   ThreadedHeaderBloc() : super(const ThreadedHeaderState()) {
     // Register event handlers
@@ -36,6 +47,7 @@ class ThreadedHeaderBloc
     on<IncrementReplyCount>(_onIncrementReplyCount);
     on<UpdateParentMessage>(_onUpdateParentMessage);
     on<UpdateThreadSubscription>(_onUpdateThreadSubscription);
+    on<_OfflineReplyCountEvent>(_onOfflineReplyCount);
 
     // Generate unique listener keys using timestamp
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -79,6 +91,8 @@ class ThreadedHeaderBloc
 
     // Register SDK listeners
     _registerSDKListeners();
+    _replyLedger.clear();
+    if (OfflineGate.isOn()) _watchOfflineReplyCount();
 
     // Emit loaded state with initial data. The subscription state IS the
     // message object's flag (stateless redesign — threadSubscribed rides
@@ -115,6 +129,38 @@ class ThreadedHeaderBloc
     Emitter<ThreadedHeaderState> emit,
   ) {
     emit(state.copyWith(replyCount: state.replyCount + 1));
+  }
+
+  /// Offline on (W7): applies a hub event or an own `sent` reply to the reply
+  /// count (PR #23 §3.9, BEH-MUT-10).
+  void _onOfflineReplyCount(
+    _OfflineReplyCountEvent event,
+    Emitter<ThreadedHeaderState> emit,
+  ) {
+    final parentId = _parentMessageId;
+    if (parentId == null) return;
+    final source = event.source;
+    int? next;
+    if (source is OfflineHubEvent) {
+      if (source.gen < OfflineHub.instance.gen) return;
+      next = ThreadReplyCountOffline.headerCountAfter(
+        parentMessageId: parentId,
+        current: state.replyCount,
+        ledger: _replyLedger,
+        event: source,
+      );
+    } else if (source is BaseMessage) {
+      if (_replyLedger.claimSent(source)) next = state.replyCount + 1;
+    }
+    if (next != null && next != state.replyCount) {
+      emit(state.copyWith(replyCount: next));
+    }
+  }
+
+  void _watchOfflineReplyCount() {
+    _offlineHubSub ??= OfflineHub.instance.events.listen((event) {
+      if (!isClosed) add(_OfflineReplyCountEvent(event));
+    });
   }
 
   /// Update the parent message (for edit/delete)
@@ -233,6 +279,13 @@ class ThreadedHeaderBloc
   ) {
     if (isClosed) return;
     if (status == core_enums.MessageStatus.sent) {
+      if (_offlineHubSub != null) {
+        // Offline on (W7): only this thread's replies, each counted once.
+        if (message.parentMessageId == _parentMessageId) {
+          add(_OfflineReplyCountEvent(message));
+        }
+        return;
+      }
       add(const IncrementReplyCount());
     }
   }
@@ -265,8 +318,20 @@ class ThreadedHeaderBloc
     CometChat.removeMessageListener(_messageListenerKey);
     CometChatMessageEvents.removeMessagesListener(_uiMessageListenerKey);
     CometChatGroupEvents.removeGroupsListener(_uiGroupListenerKey);
+    _offlineHubSub?.cancel();
     return super.close();
   }
+}
+
+/// Offline on (W7): a hub event or an own `sent` reply, applied to the reply
+/// count.
+class _OfflineReplyCountEvent extends ThreadedHeaderEvent {
+  const _OfflineReplyCountEvent(this.source);
+
+  final Object source;
+
+  @override
+  List<Object?> get props => [source];
 }
 
 // ============================================================

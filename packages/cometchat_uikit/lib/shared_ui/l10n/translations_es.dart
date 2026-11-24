@@ -1618,4 +1618,79 @@ class TranslationsEs extends Translations {
 
   @override
   String messageFrom(String sender) => 'Mensaje de $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Aún no enviado";
+
+  @override
+  String get messageNotSentTapToRetry => "No enviado. Toca para reintentar";
+
+  @override
+  String get unsentMessageRemoved => "Mensaje no enviado eliminado";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Es posible que algunos mensajes no enviados no se hayan enviado";
+
+  @override
+  String get queueFull => "Demasiados mensajes pendientes de envío";
+
+  @override
+  String get fileTooLargeOffline =>
+      "Archivo demasiado grande para enviarlo sin conexión";
+
+  @override
+  String get connectToLoadMore => "Conéctate para cargar más";
+
+  @override
+  String get connectToSearch => "Conéctate para buscar";
+
+  @override
+  String get connectToSearchSubtitle =>
+      "La búsqueda necesita una conexión a internet.";
+
+  @override
+  String get connectToLoadUsers => "Conéctate para cargar usuarios";
+
+  @override
+  String get connectToLoadGroups => "Conéctate para cargar grupos";
+
+  @override
+  String get connectToLoadMembers => "Conéctate para cargar miembros";
+
+  @override
+  String get connectToLoadChats => "Conéctate para cargar chats";
+
+  @override
+  String get connectToLoadMessages => "Conéctate para cargar mensajes";
+
+  @override
+  String get connectToLoadReactions => "Conéctate para cargar reacciones";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Conéctate para cargar notificaciones";
+
+  @override
+  String get mediaAvailableWhenOnline => "Disponible con conexión";
+
+  @override
+  String get jumpToLatest => "Ir a lo más reciente";
+
+  @override
+  String get sendingTryAgain => "Enviando… inténtalo de nuevo en un momento";
+
+  @override
+  String get fileNotSaved => "Archivo no guardado. Vuelve a añadirlo";
+
+  @override
+  String messagesNotSent(int n) =>
+      n == 1 ? "1 mensaje no se envió" : "$n mensajes no se enviaron";
+
+  @override
+  String unsentMessagesLost(int n) => n == 1
+      ? "No se pudo recuperar 1 mensaje no enviado"
+      : "No se pudieron recuperar $n mensajes no enviados";
 }

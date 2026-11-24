@@ -1,5 +1,10 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import "../../../../clean_architecture.dart";
+import '../../../../../offline/offline_hub_event.dart';
+import '../../../../../offline/offline_media.dart';
 import 'video_player.dart';
 
 ///[CometChatVideoBubble] creates a widget that gives video bubble
@@ -101,6 +106,36 @@ class _CometChatVideoBubbleState extends State<CometChatVideoBubble> {
   Brightness _cachedBrightness = Brightness.light; // Cache platform brightness
   bool _themeInitialized = false;
 
+  /// Offline support was on when this bubble was built (read once).
+  late final bool _offlineOn = OfflineMedia.enabled;
+
+  /// Offline on: the copy of [CometChatVideoBubble.videoUrl] saved on the
+  /// phone, found through the SDK's cache (BEH-MEDIA-18). Always null with
+  /// offline off.
+  String? _offlinePath;
+  StreamSubscription<OfflineHubEvent>? _mediaReady;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_offlineOn) return;
+    _resolveOffline();
+    _mediaReady = OfflineMedia.listenMediaReady(_resolveOffline);
+  }
+
+  Future<void> _resolveOffline() async {
+    final url = widget.videoUrl;
+    final path = await OfflineMedia.resolveUrl(url);
+    if (!mounted || url != widget.videoUrl || path == _offlinePath) return;
+    setState(() => _offlinePath = path);
+  }
+
+  @override
+  void dispose() {
+    _mediaReady?.cancel();
+    super.dispose();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -144,6 +179,25 @@ class _CometChatVideoBubbleState extends State<CometChatVideoBubble> {
     if (widget.spacing != oldWidget.spacing && widget.spacing != null) {
       spacing = widget.spacing!;
     }
+    if (_offlineOn && widget.videoUrl != oldWidget.videoUrl) {
+      _offlinePath = null;
+      _resolveOffline();
+    }
+  }
+
+  /// Offline on: the poster when the thumbnail link fails (an expired link
+  /// kept in the offline store) — the video's first frame, from the copy
+  /// saved on the phone when there is one. Offline off: blank, as before.
+  Widget _posterFailed() {
+    final source = _offlinePath ?? widget.videoUrl;
+    if (!_offlineOn || source == null || source.isEmpty) {
+      return const SizedBox();
+    }
+    return CometChatVideoFirstFrame(
+      key: ValueKey('cc_video_bubble_frame_$source'),
+      source: source,
+      fallback: const SizedBox(),
+    );
   }
 
   Widget _getImageWidget(String imageUrl, int retries) {
@@ -173,7 +227,7 @@ class _CometChatVideoBubbleState extends State<CometChatVideoBubble> {
       errorBuilder:
           (BuildContext context, Object exception, StackTrace? stackTrace) {
             if (retries > 2) {
-              return const SizedBox();
+              return _posterFailed();
             }
             return _getImageWidget(imageUrl, retries + 1);
           },
@@ -190,8 +244,13 @@ class _CometChatVideoBubbleState extends State<CometChatVideoBubble> {
 
             String? videoUrl;
             bool playFromFile = FileUtils.isLocalFileAvailable(localPath ?? '');
+            // Offline on: the copy saved on the phone (BEH-MEDIA-18).
+            final offlinePath = _offlinePath;
             if (playFromFile) {
               videoUrl = localPath;
+            } else if (offlinePath != null && !kIsWeb) {
+              videoUrl = offlinePath;
+              playFromFile = true;
             } else {
               videoUrl = widget.videoUrl;
             }

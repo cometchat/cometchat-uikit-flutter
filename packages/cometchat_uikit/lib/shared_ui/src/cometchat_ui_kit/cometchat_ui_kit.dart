@@ -14,6 +14,9 @@ import '../constants/ui_kit_constants.dart' as chat_ui_kit_constants;
 import '../logging/cometchat_log.dart';
 import '../clean_architecture/data/models/interactive_message/card_message.dart'
     as legacy_card;
+import '../offline/offline_gate.dart';
+import '../offline/offline_hub.dart';
+import '../offline/offline_send.dart';
 
 class CometChatUIKit {
   static UIKitSettings? authenticationSettings;
@@ -89,17 +92,22 @@ class CometChatUIKit {
     // bypassed. It only acts when enableCalls is on. Idempotent.
     CallsLifecycle.attachLoginListener();
 
-    AppSettings appSettings =
-        (AppSettingsBuilder()
-              ..subscriptionType =
-                  authenticationSettings?.subscriptionType ??
-                  CometChatSubscriptionType.allUsers
-              ..region = authenticationSettings?.region
-              ..autoEstablishSocketConnection =
-                  authenticationSettings?.autoEstablishSocketConnection ?? true
-              ..adminHost = authenticationSettings?.adminHost
-              ..clientHost = authenticationSettings?.clientHost)
-            .build();
+    final AppSettingsBuilder appSettingsBuilder = AppSettingsBuilder()
+      ..subscriptionType =
+          authenticationSettings?.subscriptionType ??
+          CometChatSubscriptionType.allUsers
+      ..region = authenticationSettings?.region
+      ..autoEstablishSocketConnection =
+          authenticationSettings?.autoEstablishSocketConnection ?? true
+      ..adminHost = authenticationSettings?.adminHost
+      ..clientHost = authenticationSettings?.clientHost;
+    // Offline pass-through (W1 §2.10, G14). Called only when a config was
+    // given, so with offline absent the AppSettings are identical to today.
+    final offlineConfig = authenticationSettings?.offlineConfig;
+    if (offlineConfig != null) {
+      appSettingsBuilder.setOfflineConfig(offlineConfig);
+    }
+    AppSettings appSettings = appSettingsBuilder.build();
 
     // The chat SDK calls onSuccess without awaiting it. Keep what it starts,
     // so this future completes only once the host's onSuccess has run.
@@ -137,11 +145,20 @@ class CometChatUIKit {
     String successMessage,
     Function(String successMessage)? onSuccess,
   ) async {
+    // Register the offline listener hub once, after the SDK init resolves
+    // (W1 §2.6, PR #23 §3.5). Idempotent and inert while offline is off, so
+    // the OFF path is unchanged; it survives logout and is never unregistered.
+    OfflineHub.instance.start();
+    OfflineSend.instance.start();
+
     Future<void>? callsReady;
     try {
       final User? user = await getLoggedInUser();
       if (user != null) {
         CometChatUIKit.loggedInUser = user;
+        // Relaunch with a restored session fires no loginSuccess: seed the
+        // offline hub so a later logout can end the session (W1 §2.7).
+        OfflineHub.instance.seedSession(user.uid);
         callsReady = _initiateAfterLogin(user);
       } else {
         if (CallsLifecycle.isStarted) {
@@ -193,10 +210,14 @@ class CometChatUIKit {
   ///     - cometchat-settings.json
   /// ```
   ///
+  ///
+  /// [offlineConfig] turns on offline support for a settings-file init, as
+  /// `UIKitSettings.offlineConfig` does for [init]; absent, offline is off.
   /// @nodoc
   static Future<void> initFromSettings({
     Function(String successMessage)? onSuccess,
     Function(CometChatException e)? onError,
+    OfflineConfig? offlineConfig,
   }) async {
     try {
       // 1. Read cometchat-settings.json to extract UIKit-level config
@@ -265,7 +286,8 @@ class CometChatUIKit {
         ..autoEstablishSocketConnection = autoEstablishSocketConnection
         ..adminHost = adminHost
         ..clientHost = clientHost
-        ..enableCalls = enableCalling;
+        ..enableCalls = enableCalling
+        ..offlineConfig = offlineConfig;
 
       final uiKitSettings = builder.build();
 
@@ -655,6 +677,9 @@ class CometChatUIKit {
       ccLog('CometChatUIKit.logout: stopping calls failed: $e');
     }
     CometChatUIKit.loggedInUser = null;
+    // Offline session end (W1 §2.7): bumps the hub `gen` and clears every list
+    // before the next frame. Internally gated; a no-op while offline is off.
+    OfflineHub.instance.onKitLogout();
     _runHostCallback(
       () => onSuccess?.call(message),
       'user logout was successful: $message, but unable to execute custom '
@@ -698,6 +723,15 @@ class CometChatUIKit {
     dynamic Function(CustomMessage)? onSuccess,
     dynamic Function(CometChatException)? onError,
   }) async {
+    // Offline send seam (W1 §2.9 → W4). Falls through in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.trySend<CustomMessage>(
+        message,
+        onSuccess: onSuccess,
+        onError: onError,
+      );
+      if (handled != null) return handled;
+    }
     if (message.parentMessageId == -1) {
       message.parentMessageId = 0;
     }
@@ -773,6 +807,15 @@ class CometChatUIKit {
     dynamic Function(TextMessage)? onSuccess,
     dynamic Function(CometChatException)? onError,
   }) async {
+    // Offline send seam (W1 §2.9 → W4). Falls through in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.trySend<TextMessage>(
+        message,
+        onSuccess: onSuccess,
+        onError: onError,
+      );
+      if (handled != null) return handled;
+    }
     if (message.parentMessageId == -1) {
       message.parentMessageId = 0;
     }
@@ -848,6 +891,16 @@ class CometChatUIKit {
     dynamic Function(CometChatException)? onError,
     bool replacePathForIOS = true,
   }) async {
+    // Offline send seam (W1 §2.9 → W4). Falls through in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.trySend<MediaMessage>(
+        message,
+        onSuccess: onSuccess,
+        onError: onError,
+        replacePathForIOS: replacePathForIOS,
+      );
+      if (handled != null) return handled;
+    }
     if (message.parentMessageId == -1) {
       message.parentMessageId = 0;
     }

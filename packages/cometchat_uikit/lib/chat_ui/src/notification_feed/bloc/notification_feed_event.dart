@@ -21,7 +21,15 @@ class LoadMoreFeedItems extends NotificationFeedEvent {
 
 /// Pull-to-refresh the feed.
 class RefreshFeed extends NotificationFeedEvent {
-  const RefreshFeed();
+  /// Creates the event. [silent] marks the kit's own reconnect refresh: with
+  /// offline on, its failure over items shown does not reach `onError`.
+  const RefreshFeed({this.silent = false});
+
+  /// True for the reconnect refresh, false for pull-to-refresh.
+  final bool silent;
+
+  @override
+  List<Object?> get props => [silent];
 }
 
 /// Switch the active category filter.

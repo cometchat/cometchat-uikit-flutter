@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../shared_ui/src/offline/contract_ids.dart';
+import '../../../../shared_ui/src/offline/offline_send.dart'
+    show kRetryMessageOptionId;
 
 /// Style class for [CometChatMessageActionOverlay]
 @immutable
@@ -205,6 +208,8 @@ class _CometChatMessageActionOverlayState
   /// list's positions, so the page reads the same however a host reorders
   /// or injects options.
   static const List<String> _primaryActionOrder = [
+    // Offline (W4): Retry leads an unsent row's menu (offered only there).
+    kRetryMessageOptionId,
     MessageOptionConstants.replyMessage,
     MessageOptionConstants.replyInThreadMessage,
     MessageOptionConstants.threadSubscription,
@@ -622,6 +627,26 @@ class _CometChatMessageActionOverlayState
     }
     final pageActions = _showMoreActions ? _quickActions : _listActions;
 
+    // State-contract id for the row menu (TEST-PLAN §3.3); never announced.
+    return contractNode(
+      identifier: ContractIds.messageOptions,
+      child: _buildOptionsCard(
+        pageActions,
+        colorPalette,
+        spacing,
+        typography,
+        overlayStyle,
+      ),
+    );
+  }
+
+  Widget _buildOptionsCard(
+    List<ActionItem> pageActions,
+    CometChatColorPalette colorPalette,
+    CometChatSpacing spacing,
+    CometChatTypography typography,
+    CometChatMessageActionOverlayStyle overlayStyle,
+  ) {
     return Container(
       constraints: kIsWeb
           ? const BoxConstraints(maxWidth: 280, maxHeight: 600)

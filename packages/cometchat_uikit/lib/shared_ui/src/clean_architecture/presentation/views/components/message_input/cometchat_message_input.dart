@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import "../../../../clean_architecture.dart";
+import "../../../../../offline/contract_ids.dart";
 
 ///[CometChatMessageInput] is a component that provides a skeleton layout for contents of [CometChatMessageComposer] like TextField, auxiliary options, primary button view and attachment options.
 ///
@@ -260,8 +261,15 @@ class _CometChatMessageInputState extends State<CometChatMessageInput> {
     typography = CometChatThemeHelper.getTypography(context);
   }
 
+  // State-contract id for the composer input (TEST-PLAN §3.3, W4); carries
+  // no text and is never announced.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => contractNode(
+    identifier: ContractIds.composerInput,
+    child: _buildInput(context),
+  );
+
+  Widget _buildInput(BuildContext context) {
     final isDoubleLine = widget.layout == CometChatComposerLayout.doubleLine;
     return Container(
       height: widget.height,

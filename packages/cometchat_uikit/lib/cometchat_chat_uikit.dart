@@ -133,6 +133,9 @@ export 'chat_ui/src/message_information/message_information.dart';
 // (deprecated) imports them from cometchat_sdk itself.
 export 'package:cometchat_sdk/cometchat_sdk.dart'
     hide CardMessage, CallListener, CallListener2;
+// Offline (W1 §2.2, G14): the payload of ccMessageSendStateChanged.
+export 'shared_ui/src/offline/message_send_state.dart'
+    show CometChatMessageSendState, sendStateOf;
 
 /// Ai features
 

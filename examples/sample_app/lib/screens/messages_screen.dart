@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
 import '../utils/component_toggles.dart';
+import '../utils/swept_group_removal.dart';
 import 'thread_screen.dart';
 import 'group_info_screen.dart';
 import 'user_info_screen.dart';
@@ -86,6 +87,17 @@ class _MessagesScreenState extends State<MessagesScreen>
       CometChat.addGroupListener('${_listenerId}_msg_group', this);
       CometChatGroupEvents.addGroupsListener(
           '${_listenerId}_msg_group_ui', this);
+      // Offline: a removal missed while away arrives only with the reconnect
+      // catch-up; route it into the same handlers as the live event.
+      CometChat.addSyncListener(
+        '${_listenerId}_msg_sync',
+        SweptGroupRemovalListener(
+          loggedInUid: () => CometChatUIKit.loggedInUser?.uid,
+          onKicked: onGroupMemberKicked,
+          onBanned: onGroupMemberBanned,
+          onLeft: _onSweptSelfLeft,
+        ),
+      );
     }
   }
 
@@ -98,6 +110,7 @@ class _MessagesScreenState extends State<MessagesScreen>
     if (_group != null) {
       CometChat.removeGroupListener('${_listenerId}_msg_group');
       CometChatGroupEvents.removeGroupsListener('${_listenerId}_msg_group_ui');
+      CometChat.removeSyncListener('${_listenerId}_msg_sync');
     }
     super.dispose();
   }
@@ -168,6 +181,15 @@ class _MessagesScreenState extends State<MessagesScreen>
         _group = bannedFrom;
         setState(() {});
       }
+    }
+  }
+
+  // The logged-in user left this group from another device while away: they
+  // are no longer a member, so the composer goes, as for a kick or ban.
+  void _onSweptSelfLeft(
+      cc.Action action, User leftUser, User by, Group leftGroup) {
+    if (mounted && _group != null && leftGroup.guid == _group!.guid) {
+      setState(() => _kickedOrBanned = true);
     }
   }
 

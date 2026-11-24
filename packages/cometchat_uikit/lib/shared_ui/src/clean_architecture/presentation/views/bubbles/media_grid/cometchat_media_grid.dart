@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../clean_architecture.dart';
+import '../../../../core/utils/platform_utils/platform_image_utils.dart'
+    as platform_image;
+import '../../../../../offline/offline_hub_event.dart';
+import '../../../../../offline/offline_media.dart';
 
 /// Shared corner radius for every "card" inside a multi-attachment bubble —
 /// grid cells (images/videos), audio rows, and file cards. Kept as one
@@ -82,31 +88,40 @@ class CometChatMediaGrid extends StatelessWidget {
         style: style,
       );
     } else {
-      thumb = Image.network(
-        a.fileUrl,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        // CanvasKit needs CORS to fetch pixels; fall back to an <img> element
-        // when the CDN response lacks the headers (fixes gif/image cells on
-        // web going blank).
-        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-        // Legacy-look holder until the first frame decodes, and on failure —
-        // same art as the single-attachment CometChatImageBubble. frameBuilder
-        // (not loadingBuilder) so the slow-network waiting phase before any
-        // HTTP chunk arrives is covered too — loadingBuilder gets null
-        // progress there and would paint a blank cell.
-        frameBuilder: (context, child, frame, wasSync) {
-          if (wasSync || frame != null) return child;
-          return CometChatMediaPlaceholder(
-            backgroundColor: style?.placeholderColor,
-            loading: true,
-          );
-        },
-        // A failed image load is a "no preview" case — show the doc-slash
-        // glyph (matching the mismatch tile), not the plain image placeholder.
-        errorBuilder: (_, _, _) => CometChatMediaPlaceholder(
-          backgroundColor: style?.placeholderColor,
-          unsupported: true,
+      // Offline (W5, G9): the device copy first; a URL that cannot load while
+      // offline is on shows "Available when online" (offlineError). With
+      // offline off this is exactly today's Image.network.
+      thumb = OfflineMediaImage(
+        attachment: a,
+        placeholderColor: style?.placeholderColor,
+        network: (context, offlineError) => Image.network(
+          a.fileUrl,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          // CanvasKit needs CORS to fetch pixels; fall back to an <img> element
+          // when the CDN response lacks the headers (fixes gif/image cells on
+          // web going blank).
+          webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+          // Legacy-look holder until the first frame decodes, and on failure —
+          // same art as the single-attachment CometChatImageBubble. frameBuilder
+          // (not loadingBuilder) so the slow-network waiting phase before any
+          // HTTP chunk arrives is covered too — loadingBuilder gets null
+          // progress there and would paint a blank cell.
+          frameBuilder: (context, child, frame, wasSync) {
+            if (wasSync || frame != null) return child;
+            return CometChatMediaPlaceholder(
+              backgroundColor: style?.placeholderColor,
+              loading: true,
+            );
+          },
+          // A failed image load is a "no preview" case — show the doc-slash
+          // glyph (matching the mismatch tile), not the plain image placeholder.
+          errorBuilder: (_, _, _) =>
+              offlineError ??
+              CometChatMediaPlaceholder(
+                backgroundColor: style?.placeholderColor,
+                unsupported: true,
+              ),
         ),
       );
     }
@@ -254,8 +269,31 @@ class _TripleGridState extends State<_TripleGrid> {
     final url = isVideo
         ? ((grid.thumbs.isNotEmpty ? grid.thumbs[0] : null) ?? '')
         : a.fileUrl;
+    // Offline on: an image hero is measured from the copy saved on the phone
+    // when there is one, before any network fetch (BEH-MEDIA-18).
+    if (!isVideo && OfflineMedia.enabled) {
+      final known = OfflineMedia.localPathOf(a, offlineOn: true);
+      if (known != null) {
+        _probeHero(platform_image.fileImageProvider(known));
+        return;
+      }
+      OfflineMedia.resolve(a).then((path) {
+        if (!mounted) return;
+        if (path != null) {
+          _probeHero(platform_image.fileImageProvider(path));
+        } else if (url.isNotEmpty) {
+          _probeHero(NetworkImage(url));
+        }
+      });
+      return;
+    }
     if (url.isEmpty) return;
-    final stream = NetworkImage(url).resolve(const ImageConfiguration());
+    _probeHero(NetworkImage(url));
+  }
+
+  /// Reads the hero's width / height from [image].
+  void _probeHero(ImageProvider image) {
+    final stream = image.resolve(const ImageConfiguration());
     final listener = ImageStreamListener((info, _) {
       if (!mounted) return;
       setState(() => _heroAspect = info.image.width / info.image.height);
@@ -375,6 +413,56 @@ class _VideoCell extends StatefulWidget {
 class _VideoCellState extends State<_VideoCell> {
   bool _unsupported = false;
 
+  // Offline (W5, G9): like an image cell, the device copy first, then the
+  // URL, then "Available when online" when the URL cannot load. Re-resolved
+  // on the hub's MediaReady. With offline off none of this runs.
+  late final bool _offlineOn = OfflineMedia.enabled;
+  String? _localPath;
+  bool _localFailed = false;
+  bool _unavailable = false;
+  StreamSubscription<OfflineHubEvent>? _mediaReady;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_offlineOn) return;
+    _startResolve();
+    _mediaReady = OfflineMedia.listenMediaReady(_resolve);
+  }
+
+  @override
+  void didUpdateWidget(_VideoCell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_offlineOn && !identical(oldWidget.attachment, widget.attachment)) {
+      _localFailed = false;
+      _unavailable = false;
+      _startResolve();
+    }
+  }
+
+  void _startResolve() {
+    _localPath = OfflineMedia.localPathOf(widget.attachment, offlineOn: true);
+    if (_localPath == null) _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final path = await OfflineMedia.resolve(widget.attachment);
+    if (!mounted || path == null || (path == _localPath && !_localFailed)) {
+      return;
+    }
+    setState(() {
+      _localPath = path;
+      _localFailed = false;
+      _unavailable = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _mediaReady?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final a = widget.attachment;
@@ -387,9 +475,17 @@ class _VideoCellState extends State<_VideoCell> {
       );
     }
 
+    if (_offlineOn && _unavailable) {
+      return OfflineMediaPlaceholder(
+        attachment: a,
+        backgroundColor: style?.placeholderColor,
+      );
+    }
+
     // Server thumbnail when present; otherwise extract the video's first frame
     // client-side (the server's thumbnail generation fails for some formats,
-    // e.g. iPhone .mov), falling to the doc-slash glyph when even that fails.
+    // e.g. iPhone .mov), falling to the doc-slash glyph when even that fails
+    // (offline on: to "Available when online").
     Widget firstFrame() => CometChatVideoFirstFrame(
       key: ValueKey('cc_grid_video_frame_${a.fileUrl}'),
       source: a.fileUrl,
@@ -397,12 +493,35 @@ class _VideoCellState extends State<_VideoCell> {
         backgroundColor: style?.placeholderColor,
       ),
       onFailed: () {
-        if (mounted) setState(() => _unsupported = true);
+        if (!mounted) return;
+        // A late failure of the URL frame after the device copy took over.
+        if (_offlineOn && _localPath != null && !_localFailed) return;
+        setState(() {
+          if (_offlineOn) {
+            _unavailable = true;
+          } else {
+            _unsupported = true;
+          }
+        });
       },
     );
 
+    final local = _localFailed ? null : _localPath;
     final vthumb = widget.thumbUrl;
-    final poster = (vthumb != null && vthumb.isNotEmpty)
+    final poster = local != null
+        ? CometChatVideoFirstFrame(
+            key: ValueKey('cc_grid_video_local_$local'),
+            source: local,
+            fallback: CometChatMediaPlaceholder(
+              backgroundColor: style?.placeholderColor,
+            ),
+            onFailed: () {
+              if (mounted && _localPath == local) {
+                setState(() => _localFailed = true);
+              }
+            },
+          )
+        : (vthumb != null && vthumb.isNotEmpty)
         ? Image.network(
             vthumb,
             fit: BoxFit.cover,
@@ -438,7 +557,7 @@ class _VideoCellState extends State<_VideoCell> {
           Positioned(
             left: 4,
             bottom: 4,
-            child: _VideoDurationChip(url: a.fileUrl, style: style),
+            child: _VideoDurationChip(url: local ?? a.fileUrl, style: style),
           ),
       ],
     );

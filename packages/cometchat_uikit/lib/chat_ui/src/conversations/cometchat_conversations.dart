@@ -1,8 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
 import '../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
+import '../../../shared_ui/src/offline/conversations_offline.dart';
+import '../../../shared_ui/src/offline/offline_hub.dart';
+import '../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../shared_ui/src/offline/offline_notice.dart';
 
 ///[CometChatConversations] is a component that shows all conversations involving the logged in user with the help of [CometChatListBase] and [CometChatListItem]
 ///By default, for each conversation that will be listed, the name of the user or group the logged in user is having conversation with will be displayed in the title of every list item,
@@ -115,7 +121,13 @@ class CometChatConversations extends StatefulWidget {
     this.searchContentPadding,
     this.listItemStyle,
     this.controllerTag,
+    this.hideOfflineNotices = false,
   });
+
+  ///[hideOfflineNotices] when true, suppresses the transient offline notices
+  ///this list would otherwise show. Defaults to false. Additive public API
+  ///(W1 §2.8, G14).
+  final bool hideOfflineNotices;
 
   ///[routeObserver] Optional RouteObserver to detect when this widget is not visible.
   ///When provided, the widget will freeze rebuilds during keyboard animation
@@ -519,10 +531,76 @@ class _CometChatConversationsState extends State<CometChatConversations>
       _isExternalBloc = false;
     }
 
+    OfflineListErrors.listen(conversationsBloc, _onKeptRowsError);
     // Load conversations
     conversationsBloc.add(const LoadConversations());
 
+    // Offline (W1 §2.8): show this list's notices and take the hub's queued
+    // ones — unless notices are hidden, in which case this list takes nothing.
+    // Nothing emits in W1; W3/W4/W5 drive it. A test double bloc has no
+    // registered stream and is skipped.
+    if (!widget.hideOfflineNotices) {
+      _offlineNoticeSub = offlineNoticesOf(
+        conversationsBloc,
+      )?.listen(_showOfflineNotice);
+      // The hub hands queued notices to a new sink synchronously, and a
+      // snackbar cannot be shown before initState returns: attach after the
+      // first frame, and only while still mounted.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _attachedNoticeSink || widget.hideOfflineNotices) {
+          return;
+        }
+        OfflineHub.instance.attachNoticeSink(_showOfflineNotice);
+        _attachedNoticeSink = true;
+      });
+    }
+
     super.initState();
+  }
+
+  StreamSubscription<OfflineNotice>? _offlineNoticeSub;
+  bool _attachedNoticeSink = false;
+
+  /// A real server error over cached rows that stay on screen, on a load the user or
+  /// app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error);
+
+  void _showOfflineNotice(OfflineNotice notice) {
+    if (!mounted || widget.hideOfflineNotices) return;
+    final t = cc.Translations.of(context);
+    final String text;
+    String? copyText;
+    switch (notice) {
+      case QueueFull():
+        text = t.queueFull;
+      case FileTooLargeOffline():
+        text = t.fileTooLargeOffline;
+      case SendingTryAgain():
+        text = t.sendingTryAgain;
+      case UnsentRemoved(copyText: final c):
+        text = t.unsentMessageRemoved;
+        copyText = c;
+      case MessagesNotSent(count: final n):
+        text = t.messagesNotSent(n);
+      case UnsentLost(count: final n):
+        text = t.unsentMessagesLost(n);
+      case UnsentMaybeLost():
+        text = t.unsentMessagesMaybeLost;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 2),
+        action: (copyText != null && copyText.isNotEmpty)
+            ? SnackBarAction(
+                label: t.copy,
+                onPressed: () =>
+                    Clipboard.setData(ClipboardData(text: copyText!)),
+              )
+            : null,
+      ),
+    );
   }
 
   /// Initialize service locator if not already initialized
@@ -540,6 +618,11 @@ class _CometChatConversationsState extends State<CometChatConversations>
     // Unsubscribe from route observer
     if (widget.routeObserver != null) {
       widget.routeObserver!.unsubscribe(this);
+    }
+    _offlineNoticeSub?.cancel();
+    OfflineListErrors.cancel(conversationsBloc, _onKeptRowsError);
+    if (_attachedNoticeSink) {
+      OfflineHub.instance.detachNoticeSink(_showOfflineNotice);
     }
     // Only close the bloc if we created it internally
     if (!_isExternalBloc) {
@@ -1035,10 +1118,14 @@ class _CometChatConversationsState extends State<CometChatConversations>
           );
 
     if (updated != null && mounted) {
-      // No local mutation: the SDK facade fans the pin out to
-      // ConversationListener on success, and the bloc both restamps the row
-      // and reorders it around the pinned shelf — one path for this device
-      // and for echoes from the user's other devices.
+      // G11: the row updates from onSuccess. An SDK that also fans the pin
+      // out to ConversationListener has already applied it, which makes this
+      // a no-op; one that does not relies on it.
+      ConversationsOffline.instance.applyOwnPin(
+        conversationsBloc,
+        updated,
+        pinned: pin,
+      );
       CometChatThreadToast.show(
         context,
         pin

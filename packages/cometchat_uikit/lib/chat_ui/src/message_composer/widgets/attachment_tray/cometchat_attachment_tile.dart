@@ -175,7 +175,9 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
     // (native, mobile browsers) there's no hover, so tap surfaces the snackbar.
     if (_hoverCapable && tile.hasError) {
       return Tooltip(
-        message: tile.errorMessage ?? Translations.of(context).uploadFailed,
+        message: tile.notSaved
+            ? Translations.of(context).fileNotSaved
+            : tile.errorMessage ?? Translations.of(context).uploadFailed,
         waitDuration: const Duration(milliseconds: 300),
         // The tray sits at the bottom of the composer; show the bubble above the
         // tile (toward the message area) so it isn't pinned to the screen edge
@@ -535,7 +537,9 @@ class _CometChatAttachmentTileState extends State<CometChatAttachmentTile> {
         );
       case AttachmentTileStatus.rejected:
         return Text(
-          Translations.of(context).uploadFailed,
+          tile.notSaved
+              ? Translations.of(context).fileNotSaved
+              : Translations.of(context).uploadFailed,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: errorStyle,
@@ -845,6 +849,8 @@ class _AudioTileCardState extends State<_AudioTileCard> {
   Widget _errorSubtitle(BuildContext context, CometChatColorPalette colors) {
     final text = tile.status == AttachmentTileStatus.failed
         ? Translations.of(context).tapToRetry
+        : tile.notSaved
+        ? Translations.of(context).fileNotSaved
         : Translations.of(context).uploadFailed;
     return Padding(
       padding: const EdgeInsets.only(top: 2),

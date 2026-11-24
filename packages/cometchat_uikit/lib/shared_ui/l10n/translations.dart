@@ -2514,6 +2514,91 @@ abstract class Translations {
   ///do they inherit the English text rather than break the build.
   String get fileSaved => 'File saved';
 
+  // --- Offline support (W1 §2.10). Concrete English defaults, like [fileSaved]:
+  // locales inherit until they override, rather than breaking the build. An
+  // integrator that `implements Translations` must add them (release-noted).
+  // None of these names an internal mechanism (G15). ---
+
+  ///Status under an own message that is queued/in flight and not yet sent.
+  String get messageNotSentYet => 'Not sent yet';
+
+  ///Status under an own message that failed to send; tapping retries it.
+  String get messageNotSentTapToRetry => 'Not sent. Tap to retry';
+
+  ///Notice shown when a queued message was removed before it could be sent.
+  String get unsentMessageRemoved => 'Unsent message removed';
+
+  ///Notice: [n] own messages weren't sent. Plural-aware.
+  String messagesNotSent(int n) =>
+      n == 1 ? "1 message wasn't sent" : "$n messages weren't sent";
+
+  ///Notice: [n] unsent messages couldn't be recovered after a cache reset.
+  String unsentMessagesLost(int n) => n == 1
+      ? "1 unsent message couldn't be recovered"
+      : "$n unsent messages couldn't be recovered";
+
+  ///Notice: some unsent messages may not have been sent (count unknown).
+  String get unsentMessagesMaybeLost =>
+      'Some unsent messages may not have been sent';
+
+  ///Notice: the offline send queue is full.
+  String get queueFull => 'Too many messages waiting to send';
+
+  ///Notice: a file was too large to queue while offline.
+  String get fileTooLargeOffline => 'File too large to send offline';
+
+  ///Footer shown when older messages can only be loaded once connected.
+  String get connectToLoadMore => 'Connect to load more';
+
+  ///Shown instead of search results when a keyword search needs the server
+  ///and the device is offline.
+  String get connectToSearch => 'Connect to search';
+
+  ///Subtitle under "Connect to search": why an offline search shows
+  ///nothing.
+  String get connectToSearchSubtitle => 'Search needs an internet connection.';
+
+  ///Shown instead of the users list when nothing is cached and the device is
+  ///offline; the list loads again on reconnect.
+  String get connectToLoadUsers => 'Connect to load users';
+
+  ///Shown instead of the groups list when nothing is cached and the device is
+  ///offline; the list loads again on reconnect.
+  String get connectToLoadGroups => 'Connect to load groups';
+
+  ///Shown instead of the group members list when nothing is cached and the
+  ///device is offline; the list loads again on reconnect.
+  String get connectToLoadMembers => 'Connect to load members';
+
+  ///Shown instead of the conversations list when nothing is cached and the
+  ///device is offline; the list loads again on reconnect.
+  String get connectToLoadChats => 'Connect to load chats';
+
+  ///Shown instead of the message list or a thread when nothing is cached and
+  ///the device is offline; the list loads again on reconnect.
+  String get connectToLoadMessages => 'Connect to load messages';
+
+  ///Shown instead of the reactions list when nothing is cached and the
+  ///device is offline; the list loads again on reconnect.
+  String get connectToLoadReactions => 'Connect to load reactions';
+
+  ///Shown instead of the notification feed when nothing is cached and the
+  ///device is offline; the feed loads again on reconnect.
+  String get connectToLoadNotifications => 'Connect to load notifications';
+
+  ///Media placeholder shown for an attachment not yet downloaded while offline.
+  String get mediaAvailableWhenOnline => 'Available when online';
+
+  ///Label of the pill that scrolls the list to the newest message.
+  String get jumpToLatest => 'Jump to latest';
+
+  ///Notice shown when Retry/Delete is tapped on a message still in flight.
+  String get sendingTryAgain => 'Sending… try again in a moment';
+
+  ///Shown on an attachment put back in the tray whose file was not saved on
+  ///the device: it can only be removed, and the user adds the file again.
+  String get fileNotSaved => 'File not saved. Add it again';
+
   ///Title of the media viewer's "no preview" state — shown when an attachment
   ///can't be previewed (image/video render failure, or a file whose actual type
   ///doesn't match the message type it was sent as).

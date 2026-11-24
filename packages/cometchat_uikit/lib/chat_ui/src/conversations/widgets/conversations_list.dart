@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/offline/contract_ids.dart';
+import '../../../../shared_ui/src/offline/conversations_offline.dart';
+import '../../../../shared_ui/src/offline/offline_list_states.dart';
+import '../../../../shared_ui/src/offline/offline_presence.dart';
 
 /// A widget that displays the list of conversations with state handling and pagination.
 ///
@@ -272,6 +276,10 @@ class ConversationsList extends StatelessWidget {
             ),
           );
         }
+        // Offline with nothing shown: onError once (D84 (3)).
+        if (state is ConversationsConnectToLoad && onError != null) {
+          onError!(state.error);
+        }
       },
       builder: (context, state) {
         // Handle error state
@@ -286,6 +294,20 @@ class ConversationsList extends StatelessWidget {
             colorPalette: colorPalette,
             spacing: spacing,
             typography: typography,
+          );
+        }
+
+        // Offline with nothing cached: the app's error view if it passed one
+        // (D84 (3)). hideError hides the error view, not this state.
+        if (state is ConversationsConnectToLoad) {
+          return OfflineListStates.view(
+            context,
+            Translations.of(context).connectToLoadChats,
+            appErrorView: errorStateView != null && hideError != true
+                ? Center(child: errorStateView!(context))
+                : null,
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
           );
         }
 
@@ -353,11 +375,18 @@ class ConversationsList extends StatelessWidget {
         final conversation = conversations[index];
         final conversationId = conversation.conversationId ?? '';
 
-        // Wrap each item with ValueListenableBuilder for typing indicators
-        // This ensures only this item rebuilds when its typing status changes
-        return ValueListenableBuilder<List<TypingIndicator>>(
-          valueListenable: conversationsBloc.getTypingNotifier(conversationId),
-          builder: (context, typingIndicators, child) {
+        // Rebuild only this item when its typing status changes, or when
+        // presence hides or shows again (ENG-41552 A).
+        final typingNotifier = conversationsBloc.getTypingNotifier(
+          conversationId,
+        );
+        return ListenableBuilder(
+          listenable: Listenable.merge([
+            typingNotifier,
+            OfflinePresence.listenable,
+          ]),
+          builder: (context, child) {
+            final typingIndicators = typingNotifier.value;
             final item = _buildListItem(
               context,
               conversation,
@@ -365,10 +394,15 @@ class ConversationsList extends StatelessWidget {
               typingIndicators,
               isLastRow: index == conversations.length - 1,
             );
-            if (itemWrapperBuilder != null) {
-              return itemWrapperBuilder!(context, conversation, item);
-            }
-            return item;
+            // State-contract identifier (TEST-PLAN §3.3); never message text.
+            // Built only with offline on (ENG-41552 K).
+            return lazyContractNode(
+              identifier: () =>
+                  ConversationsOffline.conversationRowId(conversation, index),
+              child: itemWrapperBuilder != null
+                  ? itemWrapperBuilder!(context, conversation, item)
+                  : item,
+            );
           },
         );
       },
@@ -437,7 +471,10 @@ class ConversationsList extends StatelessWidget {
       onSelectionToggle: () => _handleSelectionToggle(conversation),
       isSelected: isSelected,
       selectionMode: selectionMode ?? SelectionMode.none,
-      hideUserStatus: !(usersStatusVisibility ?? true),
+      // With offline on, no presence while the SDK is not connected
+      // (ENG-41552 A); offline off, OfflinePresence.hidden is always false.
+      hideUserStatus:
+          !(usersStatusVisibility ?? true) || OfflinePresence.hidden,
       hideGroupType: !(groupTypeVisibility ?? true),
       hideReceipts: !(receiptsVisibility ?? true),
       hideThreadIndicator: shouldHideThreadIndicator,

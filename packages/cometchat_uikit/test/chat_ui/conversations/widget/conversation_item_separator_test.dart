@@ -473,6 +473,57 @@ void main() {
     });
   });
 
+  group('ConversationsList state-contract identifier', () {
+    tearDown(() => CometChat.debugSetOfflineEnabledOverride(null));
+
+    Future<bool> rowNodes(WidgetTester tester, {required bool offline}) async {
+      CometChat.debugSetOfflineEnabledOverride(offline);
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          _wrap(
+            SizedBox(
+              height: 600,
+              child: ConversationsList(
+                key: UniqueKey(),
+                conversationsBloc: _loadedBloc(_three()),
+                style: const CometChatConversationsStyle(),
+                statusStyle: const CometChatStatusIndicatorStyle(),
+                typingStyle: const CometChatTypingIndicatorStyle(),
+                receiptStyle: CometChatMessageReceiptStyle(),
+                datesStyle: const CometChatDateStyle(),
+                colorPalette: _palette,
+                spacing: CometChatSpacing(),
+                typography: const CometChatTypography(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+      expect(find.text('Alice'), findsOneWidget);
+      return find
+          .byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                (w.properties.identifier?.startsWith('cc-conversation-row') ??
+                    false),
+          )
+          .evaluate()
+          .isNotEmpty;
+    }
+
+    testWidgets('with offline off a conversation row has no extra Semantics '
+        'node', (tester) async {
+      expect(await rowNodes(tester, offline: false), isFalse);
+    });
+
+    testWidgets('with offline on a conversation row carries its identifier', (
+      tester,
+    ) async {
+      expect(await rowNodes(tester, offline: true), isTrue);
+    });
+  });
+
   group('CometChatConversationsStyle.itemStyle', () {
     testWidgets('reaches every row through CometChatConversations', (
       tester,

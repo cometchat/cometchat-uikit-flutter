@@ -1544,4 +1544,72 @@ class TranslationsKo extends Translations {
 
   @override
   String messageFrom(String sender) => '$sender님의 메시지';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "아직 전송되지 않음";
+
+  @override
+  String get messageNotSentTapToRetry => "전송되지 않았습니다. 탭하여 다시 시도";
+
+  @override
+  String get unsentMessageRemoved => "전송되지 않은 메시지가 삭제되었습니다";
+
+  @override
+  String get unsentMessagesMaybeLost => "일부 전송되지 않은 메시지가 전송되지 않았을 수 있습니다";
+
+  @override
+  String get queueFull => "전송 대기 중인 메시지가 너무 많습니다";
+
+  @override
+  String get fileTooLargeOffline => "파일이 너무 커서 오프라인으로 보낼 수 없습니다";
+
+  @override
+  String get connectToLoadMore => "연결하여 더 불러오기";
+
+  @override
+  String get connectToSearch => "연결하여 검색하기";
+
+  @override
+  String get connectToSearchSubtitle => "검색하려면 인터넷 연결이 필요합니다.";
+
+  @override
+  String get connectToLoadUsers => "연결하여 사용자 불러오기";
+
+  @override
+  String get connectToLoadGroups => "연결하여 그룹 불러오기";
+
+  @override
+  String get connectToLoadMembers => "연결하여 멤버 불러오기";
+
+  @override
+  String get connectToLoadChats => "연결하여 채팅 불러오기";
+
+  @override
+  String get connectToLoadMessages => "연결하여 메시지 불러오기";
+
+  @override
+  String get connectToLoadReactions => "연결하여 리액션 불러오기";
+
+  @override
+  String get connectToLoadNotifications => "연결하여 알림 불러오기";
+
+  @override
+  String get mediaAvailableWhenOnline => "온라인일 때 사용 가능";
+
+  @override
+  String get jumpToLatest => "최신으로 이동";
+
+  @override
+  String get sendingTryAgain => "전송 중… 잠시 후 다시 시도하세요";
+
+  @override
+  String get fileNotSaved => "파일이 저장되지 않았습니다. 다시 추가하세요";
+
+  @override
+  String messagesNotSent(int n) => "메시지 $n개가 전송되지 않았습니다";
+
+  @override
+  String unsentMessagesLost(int n) => "전송되지 않은 메시지 $n개를 복구할 수 없습니다";
 }

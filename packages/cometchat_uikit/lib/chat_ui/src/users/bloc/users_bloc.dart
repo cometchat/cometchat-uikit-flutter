@@ -7,6 +7,15 @@ import 'users_event.dart';
 import 'users_state.dart';
 import '../../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../shared/list_base.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../../shared_ui/src/offline/offline_list_reset.dart';
+import '../../../../shared_ui/src/offline/offline_presence.dart';
+import '../../../../shared_ui/src/offline/two_phase.dart';
+import '../data/datasources/users_remote_datasource.dart';
+import 'users_offline.dart';
+import '../../../../src/chat_sdk_listeners.dart';
 
 /// BLoC for managing users list
 ///
@@ -33,6 +42,32 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
 
   // Current search keyword
   String? _currentSearchKeyword;
+
+  /// The read version (ENG-41552 F). Every first-page read (load, refresh,
+  /// search) and every keyword change bumps it; a read that finishes under
+  /// an older version, a load-more included, drops its result, so only the
+  /// current keyword's rows reach the state.
+  int _readVersion = 0;
+
+  /// Load-mores started, so a stale one knows whether a newer one owns the
+  /// loading flag.
+  int _loadMoreSeq = 0;
+
+  /// The read to run once on reconnect: set when a first page ended in the
+  /// offline state (D84 (3), (7)), cleared by any newer first-page read or
+  /// keyword change.
+  UsersEvent? _reloadOnConnect;
+
+  /// A load-more a newer read made stale drops its page. Unless a newer
+  /// load-more is running, it also clears the loading flag and footer it set.
+  void _dropStaleLoadMore(int seq, Emitter<UsersState> emit) {
+    if (seq != _loadMoreSeq) return;
+    _isLoadingMore = false;
+    final s = state;
+    if (s is UsersLoaded && s.isLoadingMore) {
+      emit(s.copyWith(isLoadingMore: false));
+    }
+  }
 
   // Search debounce timer for preventing excessive API calls
   Timer? _searchDebounceTimer;
@@ -133,8 +168,49 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     on<_ExecuteSearch>(_onExecuteSearch);
     on<_RestoreOriginalUsers>(_onRestoreOriginalUsers);
 
+    // Session end and cache reset (G8): offline on only.
+    on<_OfflineListReset>(_onOfflineListReset);
+    on<_CacheResetReload>(
+      (event, emit) => _onLoadUsers(
+        LoadUsers(searchKeyword: event.keyword),
+        emit,
+        quiet: true,
+      ),
+    );
+    _offlineResetSub = OfflineListReset.listen(
+      isClosed: () => isClosed,
+      onReset: (event) {
+        // Bump now so reads in flight stop writing at once.
+        _readVersion++;
+        add(_OfflineListReset(event));
+      },
+    );
+
     // Initialize and register SDK listeners
     _initializeAndRegisterListeners();
+  }
+
+  StreamSubscription<OfflineHubEvent>? _offlineResetSub;
+
+  /// Session end or cache reset (G8): clears the rows, the index map and the
+  /// SDK request before the next frame. A session end leaves the list empty
+  /// until it is next asked to load; a cache reset reloads once from page
+  /// one, quietly over rows (D84 (5)).
+  void _onOfflineListReset(_OfflineListReset event, Emitter<UsersState> emit) {
+    final hubEvent = event.event;
+    if (OfflineListReset.isStale(hubEvent)) return;
+    final reload = hubEvent is CacheReset;
+    // A debounced search typed by the user who left must not run.
+    if (!reload) _searchDebounceTimer?.cancel();
+    _isLoadingMore = false;
+    _reloadOnConnect = null;
+    _originalUsers = null;
+    getUsersUseCase.resetRequest();
+    clearItems();
+    _userIndexMap.clear();
+    _mapNeedsRebuild = true;
+    emit(const UsersEmpty());
+    if (reload) add(_CacheResetReload(_currentSearchKeyword));
   }
 
   // ============================================================
@@ -142,6 +218,10 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
   // ============================================================
 
   bool _mapNeedsRebuild = true;
+
+  /// Set by the offline-on path just before it replaces the list with a
+  /// server page, so the view redraws rows whose count did not change.
+  bool _markNextReplace = false;
 
   void _rebuildIndexMap() {
     _userIndexMap.clear();
@@ -189,6 +269,10 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
   @override
   void onListReplaced(List<User> previousList, List<User> newList) {
     _mapNeedsRebuild = true;
+    if (_markNextReplace) {
+      _markNextReplace = false;
+      UsersOffline.markServerReplace(newList);
+    }
     // Don't set hasMore here — let the caller (_onLoadUsers / _onLoadMoreUsers)
     // control hasMore based on the actual page size, not total list length.
     if (!isClosed) {
@@ -217,6 +301,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
 
     if (!disableSDKListeners) {
       _registerSDKListeners();
+      unawaited(OfflinePresence.sync());
     }
   }
 
@@ -231,11 +316,13 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
       );
     }
 
-    CometChat.addConnectionListener(
+    // Through the seam so a test can reach the listener (D83).
+    ChatSdkListeners.addConnectionListener(
       _connectionListenerKey,
       _UsersConnectionListener(
         onConnectedCallback: _handleConnected,
         onDisconnectedCallback: _handleDisconnected,
+        onConnectionErrorCallback: OfflinePresence.disconnected,
       ),
     );
 
@@ -267,11 +354,13 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
   }
 
   void _handleConnected() {
+    OfflinePresence.connected();
     if (isClosed) return;
     add(const _ConnectionStateUpdate(isConnected: true));
   }
 
   void _handleDisconnected() {
+    OfflinePresence.disconnected();
     if (isClosed) return;
     add(const _ConnectionStateUpdate(isConnected: false));
   }
@@ -290,7 +379,13 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
   // EVENT HANDLERS
   // ============================================================
 
-  Future<void> _onLoadUsers(LoadUsers event, Emitter<UsersState> emit) async {
+  /// [quiet] marks the kit's own cache-reset reload: a real error over the
+  /// cached rows it shows does not reach `onError` (D84 (5)).
+  Future<void> _onLoadUsers(
+    LoadUsers event,
+    Emitter<UsersState> emit, {
+    bool quiet = false,
+  }) async {
     // Silent refresh: keep existing list visible, skip loading shimmer.
     final isSilentRefresh = event.silent || state is UsersLoaded;
 
@@ -300,6 +395,8 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
 
     _isLoadingMore = false;
     _currentSearchKeyword = event.searchKeyword;
+    final version = ++_readVersion;
+    _reloadOnConnect = null;
 
     // Reset the SDK request cursor for a fresh load
     getUsersUseCase.resetRequest();
@@ -311,11 +408,29 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
       }
     }
 
+    final offlineSource = OfflineGate.isOn()
+        ? UsersOffline.twoPhaseSourceFor(getUsersUseCase)
+        : null;
+    if (offlineSource != null) {
+      await _loadFirstPageTwoPhase(
+        offlineSource,
+        emit,
+        keyword: event.searchKeyword,
+        isSilentRefresh: isSilentRefresh,
+        isSearch: false,
+        version: version,
+        quiet: quiet,
+      );
+      return;
+    }
+
     final result = await getUsersUseCase(
       limit: _pageSize,
       searchKeyword: event.searchKeyword,
       usersRequestBuilder: usersRequestBuilder,
     );
+
+    if (version != _readVersion) return;
 
     if (result is Success<List<User>>) {
       final users = result.data;
@@ -356,12 +471,28 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
 
     _isLoadingMore = true;
     emit(currentState.copyWith(isLoadingMore: true));
+    final version = _readVersion;
+    final seq = ++_loadMoreSeq;
+
+    final offlineSource = OfflineGate.isOn()
+        ? UsersOffline.twoPhaseSourceFor(getUsersUseCase)
+        : null;
+    if (offlineSource != null) {
+      await _loadMoreTwoPhase(offlineSource, emit, version: version, seq: seq);
+      return;
+    }
 
     final result = await getUsersUseCase(
       limit: _pageSize,
       searchKeyword: _currentSearchKeyword,
       usersRequestBuilder: usersRequestBuilder,
     );
+
+    // A newer read owns the list now.
+    if (version != _readVersion) {
+      _dropStaleLoadMore(seq, emit);
+      return;
+    }
 
     _isLoadingMore = false;
 
@@ -399,6 +530,184 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     }
   }
 
+  // ============================================================
+  // OFFLINE-ON READS (W6). Reached only when OfflineGate.isOn() was true
+  // for this operation and the kit's own data source is in use.
+  // ============================================================
+
+  void _seedStatusNotifiers(List<User> users) {
+    for (final user in users) {
+      _statusNotifiers.putIfAbsent(
+        user.uid,
+        () => ValueNotifier<String>(user.status ?? 'offline'),
+      );
+    }
+  }
+
+  String _offlineFailureMessage(CometChatException e) =>
+      'Failed to load users: ${e.message ?? 'Failed to fetch users'}';
+
+  /// A first page (load, refresh, reconnect, search) read in two phases: the
+  /// cached page paints at once, the server page then replaces it by uid.
+  /// A silent reload over rows already shown skips the cached page, so the
+  /// rows swap once. An error after a cached page keeps the rows; only a real
+  /// error on a load the user or app started reaches `onError` (D84 (2),
+  /// (5)). With nothing shown, offline is the offline state ("Connect to load
+  /// users", or "Connect to search" under a filter), which loads again once
+  /// on reconnect; any other error is the error view, as today (D84 (3),
+  /// (4), (7)). A read that a newer one replaced ([version]) stops at once.
+  Future<void> _loadFirstPageTwoPhase(
+    UsersRemoteDataSourceImpl source,
+    Emitter<UsersState> emit, {
+    required String? keyword,
+    required bool isSilentRefresh,
+    required bool isSearch,
+    required int version,
+    bool quiet = false,
+  }) async {
+    final current = state;
+    final rowsShown = current is UsersLoaded && current.users.isNotEmpty;
+    var cachedShown = false;
+    final pages = UsersOffline.readNextPage(
+      source,
+      limit: _pageSize,
+      searchKeyword: keyword,
+      usersRequestBuilder: usersRequestBuilder,
+    );
+    await for (final phase in pages) {
+      if (isClosed || version != _readVersion) return;
+      switch (phase) {
+        case Cached<User>(:final rows):
+          if (rowsShown || rows.isEmpty) break;
+          _seedStatusNotifiers(rows);
+          cachedShown = true;
+          replaceAll(rows);
+        case Server<User>(:final rows):
+          if (rows.isEmpty) {
+            if (cachedShown) {
+              replaceAll(const <User>[]);
+            } else if (isSearch || !isSilentRefresh) {
+              emit(const UsersEmpty());
+            }
+            break;
+          }
+          _seedStatusNotifiers(rows);
+          _markNextReplace = true;
+          replaceAll(rows);
+          if (!isSearch && state is UsersLoaded) {
+            emit((state as UsersLoaded).copyWith(hasMore: true));
+          }
+        case PhaseError<User>(:final error):
+          final offline = UsersOffline.isConnectivityError(error);
+          if (cachedShown) {
+            // The cached rows stay. Offline, nothing more (D84 (2)); a real
+            // error reaches onError when the user or app started the load
+            // (D84 (5)).
+            if (!offline && !isSilentRefresh && !quiet) {
+              OfflineListErrors.report(this, error);
+            }
+            break;
+          }
+          if (isSilentRefresh && rowsShown) break;
+          if (offline && (isSearch || !isSilentRefresh)) {
+            // Nothing shown: the offline state, which loads again once on
+            // reconnect (D84 (3), (7), (8)).
+            _reloadOnConnect = isSearch && keyword != null
+                ? _ExecuteSearch(keyword)
+                : LoadUsers(searchKeyword: keyword);
+            emit(
+              UsersOffline.hasServerOnlyFilter(keyword, usersRequestBuilder)
+                  ? const UsersConnectToSearch()
+                  : UsersConnectToLoad(error),
+            );
+            break;
+          }
+          if (isSearch) {
+            emit(
+              UsersError(
+                message: _offlineFailureMessage(error),
+                previousUsers: _originalUsers,
+              ),
+            );
+          } else if (!isSilentRefresh) {
+            emit(UsersError(message: _offlineFailureMessage(error)));
+          }
+      }
+    }
+  }
+
+  /// The next page read in two phases. The cached page is appended at once
+  /// (rows already listed are skipped), and the server page then replaces it
+  /// by uid. Only an empty server page ends paging. An error keeps every row;
+  /// paging stays open only if a cached page was shown (more may be cached),
+  /// and a reconnect reload reopens it otherwise.
+  Future<void> _loadMoreTwoPhase(
+    UsersRemoteDataSourceImpl source,
+    Emitter<UsersState> emit, {
+    required int version,
+    required int seq,
+  }) async {
+    final provisional = <String>{};
+    final pages = UsersOffline.readNextPage(
+      source,
+      limit: _pageSize,
+      searchKeyword: _currentSearchKeyword,
+      usersRequestBuilder: usersRequestBuilder,
+    );
+    await for (final phase in pages) {
+      if (isClosed) return;
+      if (version != _readVersion) {
+        _dropStaleLoadMore(seq, emit);
+        return;
+      }
+      switch (phase) {
+        case Cached<User>(:final rows):
+          final merged = UsersOffline.appendCached(items, rows, provisional);
+          if (provisional.isEmpty) break;
+          _seedStatusNotifiers(rows);
+          replaceAll(merged);
+        case Server<User>(:final rows):
+          _isLoadingMore = false;
+          if (rows.isEmpty) {
+            if (provisional.isNotEmpty) {
+              _markNextReplace = true;
+              replaceAll(UsersOffline.replacePage(items, provisional, rows));
+            }
+            if (state is UsersLoaded) {
+              emit(
+                (state as UsersLoaded).copyWith(
+                  hasMore: false,
+                  isLoadingMore: false,
+                ),
+              );
+            }
+            break;
+          }
+          _seedStatusNotifiers(rows);
+          _markNextReplace = true;
+          replaceAll(UsersOffline.replacePage(items, provisional, rows));
+          if (state is UsersLoaded) {
+            emit(
+              (state as UsersLoaded).copyWith(
+                hasMore: true,
+                isLoadingMore: false,
+              ),
+            );
+          }
+        case PhaseError<User>():
+          _isLoadingMore = false;
+          if (state is UsersLoaded) {
+            emit(
+              (state as UsersLoaded).copyWith(
+                hasMore: provisional.isNotEmpty,
+                isLoadingMore: false,
+              ),
+            );
+          }
+      }
+    }
+  }
+
   Future<void> _onRefreshUsers(
     RefreshUsers event,
     Emitter<UsersState> emit,
@@ -420,6 +729,9 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     _searchDebounceTimer?.cancel();
 
     final keyword = event.keyword.trim();
+    // The keyword changed: a read for the previous one is stale now.
+    _readVersion++;
+    _reloadOnConnect = null;
 
     // If search is cleared, restore original list immediately (no debounce needed)
     if (keyword.isEmpty) {
@@ -459,6 +771,10 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     Emitter<UsersState> emit,
   ) async {
     _currentSearchKeyword = event.keyword;
+    final version = ++_readVersion;
+    _reloadOnConnect = null;
+    // A load-more of the previous list drops its page; paging restarts here.
+    _isLoadingMore = false;
 
     // Reset the SDK request cursor for a new search
     getUsersUseCase.resetRequest();
@@ -466,13 +782,28 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     // Emit loading state while searching
     emit(const UsersLoading());
 
+    final offlineSource = OfflineGate.isOn()
+        ? UsersOffline.twoPhaseSourceFor(getUsersUseCase)
+        : null;
+    if (offlineSource != null) {
+      await _loadFirstPageTwoPhase(
+        offlineSource,
+        emit,
+        keyword: event.keyword,
+        isSilentRefresh: false,
+        isSearch: true,
+        version: version,
+      );
+      return;
+    }
+
     final result = await getUsersUseCase(
       limit: _pageSize,
       searchKeyword: event.keyword,
       usersRequestBuilder: usersRequestBuilder,
     );
 
-    if (isClosed) return;
+    if (isClosed || version != _readVersion) return;
 
     if (result is Success<List<User>>) {
       final users = result.data;
@@ -582,8 +913,15 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
     _ConnectionStateUpdate event,
     Emitter<UsersState> emit,
   ) {
+    final reload = _reloadOnConnect;
     if (event.isConnected && state is UsersLoaded) {
       add(const RefreshUsers());
+    } else if (event.isConnected &&
+        reload != null &&
+        (state is UsersConnectToLoad || state is UsersConnectToSearch)) {
+      // The offline state: the failed read runs again, once (D84 (8)).
+      _reloadOnConnect = null;
+      add(reload);
     }
   }
 
@@ -630,9 +968,10 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> with ListBase<User> {
   Future<void> close() {
     // Cancel search debounce timer
     _searchDebounceTimer?.cancel();
+    _offlineResetSub?.cancel();
 
     CometChat.removeUserListener(_userListenerKey);
-    CometChat.removeConnectionListener(_connectionListenerKey);
+    ChatSdkListeners.removeConnectionListener(_connectionListenerKey);
     CometChatUserEvents.removeUsersListener(_ccUserListenerKey);
 
     // Dispose all status notifiers
@@ -714,6 +1053,26 @@ class _RestoreOriginalUsers extends UsersEvent {
   List<Object> get props => [users];
 }
 
+/// A current-gen session end or cache reset from the offline hub (G8).
+class _OfflineListReset extends UsersEvent {
+  const _OfflineListReset(this.event);
+
+  final OfflineHubEvent event;
+
+  @override
+  List<Object?> get props => [event];
+}
+
+/// The one reload after a cache reset (G8), kit-started.
+class _CacheResetReload extends UsersEvent {
+  const _CacheResetReload(this.keyword);
+
+  final String? keyword;
+
+  @override
+  List<Object?> get props => [keyword];
+}
+
 // ============================================================
 // SDK LISTENERS
 // ============================================================
@@ -737,10 +1096,12 @@ class _UsersUserListener with UserListener {
 class _UsersConnectionListener with ConnectionListener {
   final void Function() onConnectedCallback;
   final void Function() onDisconnectedCallback;
+  final void Function() onConnectionErrorCallback;
 
   _UsersConnectionListener({
     required this.onConnectedCallback,
     required this.onDisconnectedCallback,
+    required this.onConnectionErrorCallback,
   });
 
   @override
@@ -748,6 +1109,12 @@ class _UsersConnectionListener with ConnectionListener {
 
   @override
   void onDisconnected() => onDisconnectedCallback();
+
+  /// A lost network reports `error`, not `disconnected`: the SDK is not
+  /// connected either way, so presence hides (D84 (10)).
+  @override
+  void onConnectionError(CometChatException error) =>
+      onConnectionErrorCallback();
 }
 
 class _UsersCCEventListener with CometChatUserEventListener {

@@ -5,6 +5,13 @@ import 'package:sample_app/app_credentials.dart';
 import 'package:sample_app/utils/call_debug_switches.dart';
 import 'package:sample_app/utils/call_error_snackbar.dart';
 
+/// The offline configuration for every UI Kit init in this app: offline on,
+/// with an encrypted offline cache, always (D86, D92). The app has no setting
+/// that turns either off. The UI Kit itself keeps offline off unless an app
+/// sets this.
+OfflineConfig appOfflineConfig() =>
+    const OfflineConfig(enabled: true, encryption: true);
+
 /// The [UIKitSettings] for every `CometChatUIKit.init` in this app, built
 /// from the current [AppCredentials].
 ///
@@ -20,7 +27,8 @@ UIKitSettings buildAppUIKitSettings() {
     ..appId = AppCredentials.appId
     ..authKey = AppCredentials.authKey
     ..adminHost = AppCredentials.adminHost
-    ..clientHost = AppCredentials.clientHost;
+    ..clientHost = AppCredentials.clientHost
+    ..offlineConfig = appOfflineConfig();
 
   // Calls SDK — all platforms (including web with beta). The UI Kit starts
   // call handling itself on init and login, and every call component reads

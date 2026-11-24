@@ -16,12 +16,33 @@ import '../../../../core/utils/platform_utils/web_video.dart' as web_video;
 import '../../../../../logging/cometchat_log.dart';
 import '../../../../core/utils/platform_utils/web_download.dart'
     as web_download;
+import '../../../../../offline/offline_media.dart';
 
 bool _isRemote(String url) =>
     url.startsWith('http://') ||
     url.startsWith('https://') ||
     // Web object URLs over staged bytes load through the network path too.
     url.startsWith('blob:');
+
+/// Whether [a] belongs to a sent message — an http(s) link, or an empty link
+/// while an own send is still queued — rather than a composer-tray file staged
+/// on disk or in a `blob:` URL, which the viewer shows straight from
+/// `fileUrl`. Only message media looks up the copy saved on the phone
+/// (BEH-MEDIA-18).
+bool _isMessageMedia(Attachment a) {
+  final url = a.fileUrl;
+  return url.isEmpty || url.startsWith('http://') || url.startsWith('https://');
+}
+
+/// The offline "Available when online" state for [a], in the viewer's dark
+/// colours.
+Widget _offlineUnavailable(BuildContext context, Attachment a) => Theme(
+  data: Theme.of(context).copyWith(colorScheme: const ColorScheme.dark()),
+  child: OfflineMediaPlaceholder(
+    attachment: a,
+    backgroundColor: Colors.transparent,
+  ),
+);
 
 /// A player controller for [url] — network for http(s), local file otherwise
 /// (null on web for local paths, which don't exist there).
@@ -130,14 +151,24 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
     if (_downloading) return;
     final a = widget.mediaItems[_index];
     final url = a.fileUrl;
-    if (url.isEmpty) return;
+    // Offline on: a queued own send has no link yet, only the copy saved on
+    // the phone (null with offline off, so an empty link returns as before).
+    if (url.isEmpty && OfflineMedia.localPathOf(a) == null) return;
     setState(() => _downloading = true);
     bool saved = false;
     Object? failure;
     try {
+      // The copy saved on the phone, so a cached file saves offline too
+      // (BEH-MEDIA-18). Never looked up with offline off or for a tray file.
+      final local = OfflineMedia.enabled && _isMessageMedia(a)
+          ? await OfflineMedia.resolve(a)
+          : null;
       if (kIsWeb) {
         // The browser owns the rest — there's no result to report back.
-        web_download.triggerBrowserDownload(url, a.fileName);
+        final source = OfflineMedia.webDownloadSource(url, local);
+        if (source.isNotEmpty) {
+          web_download.triggerBrowserDownload(source, a.fileName);
+        }
       } else {
         // false = user cancelled the picker OR the write failed. Cancel is the
         // common case, so a false result stays silent (no false-alarm error).
@@ -145,6 +176,7 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
           url,
           a.fileName,
           a.fileMimeType,
+          localPath: local,
         );
       }
     } catch (e) {
@@ -260,14 +292,14 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
                 // download action is threaded into every page.
                 if (AttachmentUtils.isVideo(a)) {
                   return _VideoPage(
-                    url: a.fileUrl,
+                    attachment: a,
                     onDownload: _downloadCurrent,
                     downloading: _downloading,
                   );
                 }
                 if (AttachmentUtils.isImage(a)) {
                   return _ImagePage(
-                    url: a.fileUrl,
+                    attachment: a,
                     onDownload: _downloadCurrent,
                     downloading: _downloading,
                   );
@@ -289,22 +321,44 @@ class _CometChatMediaViewerState extends State<CometChatMediaViewer> {
   }
 }
 
-/// Zoomable image page.
+/// Zoomable image page. A message's image renders through [OfflineMediaImage]
+/// — the copy saved on the phone, else the link (BEH-MEDIA-18); a tray file
+/// renders straight from its staged path or blob, as before.
 class _ImagePage extends StatelessWidget {
   const _ImagePage({
-    required this.url,
+    required this.attachment,
     required this.onDownload,
     required this.downloading,
   });
-  final String url;
+  final Attachment attachment;
   final VoidCallback onDownload;
   final bool downloading;
 
   @override
   Widget build(BuildContext context) {
-    Widget noPreview() =>
-        _UnsupportedView(onDownload: onDownload, downloading: downloading);
-    final Widget image = _isRemote(url)
+    final Widget image = _isMessageMedia(attachment)
+        ? OfflineMediaImage(
+            attachment: attachment,
+            fit: BoxFit.contain,
+            network: _network,
+          )
+        : _network(context, null);
+    return InteractiveViewer(
+      minScale: 1,
+      maxScale: 4,
+      child: Center(child: image),
+    );
+  }
+
+  /// Today's image from `fileUrl`. A load failure shows [offlineError] (the
+  /// offline "Available when online" state) when given, else "No preview
+  /// available".
+  Widget _network(BuildContext context, Widget? offlineError) {
+    final url = attachment.fileUrl;
+    Widget failed(BuildContext context) => offlineError != null
+        ? _offlineUnavailable(context, attachment)
+        : _UnsupportedView(onDownload: onDownload, downloading: downloading);
+    return _isRemote(url)
         ? Image.network(
             url,
             fit: BoxFit.contain,
@@ -325,30 +379,25 @@ class _ImagePage extends StatelessWidget {
                 child: CircularProgressIndicator(color: Colors.white),
               );
             },
-            errorBuilder: (context, error, stackTrace) => noPreview(),
+            errorBuilder: (context, error, stackTrace) => failed(context),
           )
         // Local path — a staged (not yet uploaded) file previewed from the tray.
         : platform_image.buildFileImage(
             url,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => noPreview(),
+            errorBuilder: (context, error, stackTrace) => failed(context),
           );
-    return InteractiveViewer(
-      minScale: 1,
-      maxScale: 4,
-      child: Center(child: image),
-    );
   }
 }
 
 /// Inline video page (tap to play / pause).
 class _VideoPage extends StatefulWidget {
   const _VideoPage({
-    required this.url,
+    required this.attachment,
     required this.onDownload,
     required this.downloading,
   });
-  final String url;
+  final Attachment attachment;
   final VoidCallback onDownload;
   final bool downloading;
 
@@ -378,15 +427,47 @@ class _VideoPageState extends State<_VideoPage> {
   /// native, where `video_player` is used instead.
   Widget? _webVideo;
 
+  /// Offline on and a message's video: a failure to play the link shows the
+  /// offline "Available when online" state instead of "No preview available".
+  bool _offline = false;
+
+  /// Whether the player runs on the copy saved on the phone.
+  bool _fromLocal = false;
+
   @override
   void initState() {
     super.initState();
+    final a = widget.attachment;
+    if (!OfflineMedia.enabled || !_isMessageMedia(a)) {
+      _start(a.fileUrl);
+      return;
+    }
+    // Offline on: play the copy saved on the phone when there is one, else
+    // the link (BEH-MEDIA-18).
+    _offline = true;
+    final known = OfflineMedia.localPathOf(a, offlineOn: true);
+    if (known != null) {
+      _fromLocal = true;
+      _start(known);
+      return;
+    }
+    OfflineMedia.resolve(a).then((path) {
+      if (!mounted) return;
+      setState(() {
+        _fromLocal = path != null;
+        _start(path ?? a.fileUrl);
+      });
+    });
+  }
+
+  /// Builds the player for [source]: a link, or a path on the phone.
+  void _start(String source) {
     // Web: use a native <video> element (video_player's web plugin can't load
     // cross-origin CDN videos). It carries its own controls.
-    _webVideo = web_video.buildWebVideoPlayer(widget.url);
+    _webVideo = web_video.buildWebVideoPlayer(source);
     if (_webVideo != null) return;
 
-    final c = _controllerFor(widget.url);
+    final c = _controllerFor(source);
     if (c == null) {
       _error = true;
       return;
@@ -464,6 +545,9 @@ class _VideoPageState extends State<_VideoPage> {
   Widget build(BuildContext context) {
     if (_webVideo != null) return Center(child: _webVideo);
     if (_error) {
+      if (_offline && !_fromLocal) {
+        return _offlineUnavailable(context, widget.attachment);
+      }
       return _UnsupportedView(
         onDownload: widget.onDownload,
         downloading: widget.downloading,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../clean_architecture.dart';
 import '../../../../../logging/cometchat_log.dart';
+import '../../../../../offline/offline_media.dart';
+import '../../../../../offline/offline_hub_event.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform_file;
 import '../../../../core/utils/platform_utils/web_download.dart'
@@ -240,6 +244,7 @@ class _FileCard extends StatefulWidget {
 class _FileCardState extends State<_FileCard> {
   bool _busy = false;
   String? _localPath;
+  StreamSubscription<OfflineHubEvent>? _mediaReady;
 
   Attachment get a => widget.attachment;
   bool get _sent => widget.alignment == BubbleAlignment.right;
@@ -253,11 +258,25 @@ class _FileCardState extends State<_FileCard> {
   void initState() {
     super.initState();
     _restoreDownloaded();
+    _mediaReady = OfflineMedia.listenMediaReady(_restoreDownloaded);
+  }
+
+  @override
+  void dispose() {
+    _mediaReady?.cancel();
+    super.dispose();
   }
 
   /// Restores an earlier download so the card hides the ↓ right away.
   Future<void> _restoreDownloaded() async {
     if (kIsWeb) return;
+    // Offline (W5, G9): the SDK's cached copy opens without a download. Null
+    // with offline off.
+    final cached = OfflineMedia.enabled ? await OfflineMedia.resolve(a) : null;
+    if (cached != null) {
+      if (mounted) setState(() => _localPath = cached);
+      return;
+    }
     final p = await platform_file.getDownloadedFilePath(
       a.fileName,
       fileUrl: a.fileUrl,

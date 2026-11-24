@@ -11,17 +11,17 @@
 #  for what that obliges you to do.
 #
 #  package        : cometchat_chat_uikit
-#  version        : 6.3.0
+#  version        : 6.4.0
 #  dart sdk floor : 3.10.8
-#  api elements   : 20792
+#  api elements   : 21263
 #  deprecated     : 77
-#  entry points   : 728
+#  entry points   : 729
 #
 # --- entry points ------------------------------------------------------------
 #
 #  Declared barrels:
 #    106  cometchat_calls_uikit.dart
-#   1028  cometchat_chat_uikit.dart
+#   1030  cometchat_chat_uikit.dart
 #      1  cometchat_chat_uikit_web.dart
 #    521  shared_ui/cometchat_uikit_shared.dart
 #      3  shared_ui/l10n/cometchat_localize.dart
@@ -45,7 +45,7 @@
 #      1  shared_ui/l10n/translations_tr.dart
 #      2  shared_ui/l10n/translations_zh.dart
 #
-#  …and 704 further file-level entry points. `lib/` has no top-level
+#  …and 705 further file-level entry points. `lib/` has no top-level
 #  `src/` directory, so pub treats every file under it as importable and the
 #  whole tree is public whether or not a barrel names it. Narrowing that is
 #  a breaking change, so it is tracked, not silently fixed.
@@ -107,7 +107,7 @@
 [ctor] AppException.new({required String message, String? code, dynamic originalException}) : AppException
 [ctor] AssetConstants.new(Brightness brightness) : AssetConstants
 [ctor] AttachmentStageException.new(String message, [Object? cause]) : AttachmentStageException
-[ctor] AttachmentTile.new({required String fileId, required String name, required String mimeType, required int size, int loaded, AttachmentTileStatus status, String? thumbUrl, Attachment? attachment, int? durationMillis, String? errorMessage}) : AttachmentTile
+[ctor] AttachmentTile.new({required String fileId, required String name, required String mimeType, required int size, int loaded, AttachmentTileStatus status, String? thumbUrl, Attachment? attachment, int? durationMillis, String? errorMessage, bool notSaved}) : AttachmentTile
 [ctor] AttachmentTrayController.new({String? receiverId, String? receiverType}) : AttachmentTrayController
 [ctor] AttributedText.new({required int start, required int end, String? underlyingText, TextStyle? style, dynamic Function(String)? onTap, EdgeInsetsGeometry? padding, Color? backgroundColor, double? borderRadius, Border? border, bool isBlockElement}) : AttributedText
 [ctor] AudioBubbleConstants.new() : AudioBubbleConstants
@@ -260,7 +260,7 @@
 [ctor] CometChatConversationListItem.new({Key? key, required Conversation conversation, required dynamic Function(Conversation) onItemClick, dynamic Function(Conversation)? onItemLongClick, void Function()? onSelectionToggle, bool isSelected, SelectionMode selectionMode, bool hideUserStatus, bool hideGroupType, bool hideReceipts, bool hideThreadIndicator, List<TypingIndicator> typingIndicators, bool hideSeparator, List<CometChatTextFormatter>? textFormatters, DateTimeFormatterCallback? dateTimeFormatterCallback, CometChatConversationListItemStyle? style, ListItemStyle? listItemStyle, CometChatAvatarStyle? avatarStyle, CometChatStatusIndicatorStyle? statusIndicatorStyle, CometChatMessageReceiptStyle? receiptStyle, CometChatDateStyle? dateStyle, CometChatBadgeStyle? badgeStyle, CometChatTypingIndicatorStyle? typingIndicatorStyle, double? avatarHeight, double? avatarWidth, EdgeInsetsGeometry? avatarPadding, EdgeInsetsGeometry? avatarMargin, double? statusIndicatorHeight, double? statusIndicatorWidth, BorderRadiusGeometry? statusIndicatorBorderRadius, String Function(Conversation)? datePattern, EdgeInsets? datePadding, double? dateHeight, double? dateWidth, bool? dateBackgroundIsTransparent, EdgeInsetsGeometry? badgePadding, double? badgeWidth, double? badgeHeight, String? typingIndicatorText, Widget? Function(Conversation, TypingIndicator?)? leadingView, Widget? Function(Conversation, TypingIndicator?)? titleView, Widget? Function(Conversation, TypingIndicator?)? subtitleView, Widget? Function(Conversation, TypingIndicator?)? trailingView, CometChatColorPalette? colorPalette, CometChatSpacing? spacing, CometChatTypography? typography, Widget? privateGroupIcon, Widget? protectedGroupIcon, Color? privateGroupIconBackground, Color? protectedGroupIconBackground, Widget? readIcon, Widget? deliveredIcon, Widget? sentIcon}) : CometChatConversationListItem
 [ctor] CometChatConversationListItemStyle.fromTheme(BuildContext context, {CometChatColorPalette? colorPalette, CometChatTypography? typography, CometChatSpacing? spacing}) : CometChatConversationListItemStyle
 [ctor] CometChatConversationListItemStyle.new({Color? backgroundColor, Color? selectedBackgroundColor, Color? titleTextColor, TextStyle? titleTextStyle, Color? subtitleTextColor, TextStyle? subtitleTextStyle, Color? messageTypeIconTint, double? checkBoxStrokeWidth, BorderRadius? checkBoxBorderRadius, Color? checkBoxStrokeColor, Color? checkBoxBackgroundColor, Color? checkBoxCheckedBackgroundColor, Color? checkBoxSelectIconTint, CometChatAvatarStyle? avatarStyle, CometChatStatusIndicatorStyle? statusIndicatorStyle, CometChatDateStyle? dateStyle, CometChatBadgeStyle? badgeStyle, CometChatMessageReceiptStyle? receiptStyle, CometChatTypingIndicatorStyle? typingIndicatorStyle, Color? privateGroupIconBackground, Color? protectedGroupIconBackground, Widget? checkBoxSelectIcon, Color? separatorColor, double? separatorHeight}) : CometChatConversationListItemStyle
-[ctor] CometChatConversations.new({Key? key, ConversationsBuilderProtocol? conversationsProtocol, Widget? Function(BuildContext, Conversation)? subtitleView, Widget Function(Conversation)? listItemView, CometChatConversationsStyle conversationsStyle, ScrollController? scrollController, Widget? backButton, bool showBackButton, SelectionMode? selectionMode, dynamic Function(List<Conversation>?)? onSelection, String? title, ConversationsRequestBuilder? conversationsRequestBuilder, bool? hideError, Widget Function(BuildContext)? emptyStateView, Widget Function(BuildContext)? errorStateView, Widget? Function(Conversation)? trailingView, List<Widget>? appBarOptions, bool? usersStatusVisibility, bool? receiptsVisibility, Widget? protectedGroupIcon, Widget? privateGroupIcon, Widget? readIcon, Widget? deliveredIcon, Widget? sentIcon, ActivateSelection? activateSelection, String Function(Conversation)? datePattern, String? typingIndicatorText, void Function()? onBack, dynamic Function(Conversation)? onItemTap, dynamic Function(Conversation)? onItemLongPress, bool? hideAppbar, List<CometChatTextFormatter>? textFormatters, String? mentionAllLabel, String? mentionAllLabelId, EdgeInsets? datePadding, double? dateHeight, bool? dateBackgroundIsTransparent, double? dateWidth, double? badgeWidth, double? badgeHeight, EdgeInsetsGeometry? badgePadding, double? statusIndicatorWidth, double? statusIndicatorHeight, BorderRadiusGeometry? statusIndicatorBorderRadius, EdgeInsetsGeometry? avatarMargin, EdgeInsetsGeometry? avatarPadding, double? avatarWidth, double? avatarHeight, bool? deleteConversationOptionVisibility, bool? pinConversationOptionVisibility, bool? groupTypeVisibility, List<CometChatOption>? Function(Conversation, ConversationsBloc, BuildContext)? setOptions, List<CometChatOption>? Function(Conversation, ConversationsBloc, BuildContext)? addOptions, Widget Function(BuildContext)? loadingStateView, Widget? Function(BuildContext, Conversation)? leadingView, Widget? Function(BuildContext, Conversation)? titleView, dynamic Function(List<Conversation>)? onLoad, void Function()? onEmpty, dynamic Function(Exception)? onError, String? customSoundForMessages, bool? disableSoundForMessages, Widget? submitIcon, DateTimeFormatterCallback? dateTimeFormatterCallback, ConversationsBloc? conversationsBloc, RouteObserver<ModalRoute<void>>? routeObserver, bool? hideSearch, bool searchReadOnly, void Function()? onSearchTap, Widget? searchBoxIcon, EdgeInsetsGeometry? searchPadding, EdgeInsetsGeometry? searchContentPadding, ListItemStyle? listItemStyle, String? controllerTag}) : CometChatConversations
+[ctor] CometChatConversations.new({Key? key, ConversationsBuilderProtocol? conversationsProtocol, Widget? Function(BuildContext, Conversation)? subtitleView, Widget Function(Conversation)? listItemView, CometChatConversationsStyle conversationsStyle, ScrollController? scrollController, Widget? backButton, bool showBackButton, SelectionMode? selectionMode, dynamic Function(List<Conversation>?)? onSelection, String? title, ConversationsRequestBuilder? conversationsRequestBuilder, bool? hideError, Widget Function(BuildContext)? emptyStateView, Widget Function(BuildContext)? errorStateView, Widget? Function(Conversation)? trailingView, List<Widget>? appBarOptions, bool? usersStatusVisibility, bool? receiptsVisibility, Widget? protectedGroupIcon, Widget? privateGroupIcon, Widget? readIcon, Widget? deliveredIcon, Widget? sentIcon, ActivateSelection? activateSelection, String Function(Conversation)? datePattern, String? typingIndicatorText, void Function()? onBack, dynamic Function(Conversation)? onItemTap, dynamic Function(Conversation)? onItemLongPress, bool? hideAppbar, List<CometChatTextFormatter>? textFormatters, String? mentionAllLabel, String? mentionAllLabelId, EdgeInsets? datePadding, double? dateHeight, bool? dateBackgroundIsTransparent, double? dateWidth, double? badgeWidth, double? badgeHeight, EdgeInsetsGeometry? badgePadding, double? statusIndicatorWidth, double? statusIndicatorHeight, BorderRadiusGeometry? statusIndicatorBorderRadius, EdgeInsetsGeometry? avatarMargin, EdgeInsetsGeometry? avatarPadding, double? avatarWidth, double? avatarHeight, bool? deleteConversationOptionVisibility, bool? pinConversationOptionVisibility, bool? groupTypeVisibility, List<CometChatOption>? Function(Conversation, ConversationsBloc, BuildContext)? setOptions, List<CometChatOption>? Function(Conversation, ConversationsBloc, BuildContext)? addOptions, Widget Function(BuildContext)? loadingStateView, Widget? Function(BuildContext, Conversation)? leadingView, Widget? Function(BuildContext, Conversation)? titleView, dynamic Function(List<Conversation>)? onLoad, void Function()? onEmpty, dynamic Function(Exception)? onError, String? customSoundForMessages, bool? disableSoundForMessages, Widget? submitIcon, DateTimeFormatterCallback? dateTimeFormatterCallback, ConversationsBloc? conversationsBloc, RouteObserver<ModalRoute<void>>? routeObserver, bool? hideSearch, bool searchReadOnly, void Function()? onSearchTap, Widget? searchBoxIcon, EdgeInsetsGeometry? searchPadding, EdgeInsetsGeometry? searchContentPadding, ListItemStyle? listItemStyle, String? controllerTag, bool hideOfflineNotices}) : CometChatConversations
 [ctor] CometChatConversationsStyle.new({Color? backgroundColor, Border? border, BorderRadiusGeometry? borderRadius, Color? backIconColor, TextStyle? titleTextStyle, Color? titleTextColor, TextStyle? emptyStateTextStyle, Color? emptyStateTextColor, TextStyle? errorStateTextStyle, Color? errorStateTextColor, TextStyle? emptyStateSubTitleTextStyle, Color? emptyStateSubTitleTextColor, TextStyle? errorStateSubTitleTextStyle, Color? errorStateSubTitleTextColor, TextStyle? itemTitleTextStyle, Color? itemTitleTextColor, TextStyle? itemSubtitleTextStyle, Color? itemSubtitleTextColor, Color? messageTypeIconColor, Color? separatorColor, double? separatorHeight, CometChatTypingIndicatorStyle? typingIndicatorStyle, CometChatAvatarStyle? avatarStyle, CometChatStatusIndicatorStyle? statusIndicatorStyle, CometChatBadgeStyle? badgeStyle, CometChatMessageReceiptStyle? receiptStyle, CometChatMentionsStyle? mentionsStyle, CometChatDateStyle? dateStyle, CometChatConfirmDialogStyle? deleteConversationDialogStyle, Color? privateGroupIconBackground, Color? protectedGroupIconBackground, Color? checkBoxBackgroundColor, BorderSide? checkBoxBorder, BorderRadiusGeometry? checkBoxBorderRadius, Color? checkBoxCheckedBackgroundColor, Color? listItemSelectedBackgroundColor, Color? checkboxSelectedIconColor, Color? submitIconColor, Color? searchIconColor, Color? searchBackgroundColor, BorderSide? searchBorder, BorderRadius? searchBorderRadius, TextStyle? searchPlaceHolderTextStyle, Color? searchPlaceHolderTextColor, CometChatConversationListItemStyle? itemStyle}) : CometChatConversationsStyle
 [ctor] CometChatCreatePoll.new({Key? key, String? title, String? user, String? group, BaseMessage? quotedMessage, Group? groupObject, User? userObject, int defaultAnswers}) : CometChatCreatePoll
 [ctor] CometChatDate.new({Key? key, DateTime? date, DateTimePattern? pattern, CometChatDateStyle style, String? customDateString, double? height, EdgeInsetsGeometry? padding, double? width, bool? isTransparentBackground, DateTimeFormatterCallback? dateTimeFormatterCallback}) : CometChatDate
@@ -334,10 +334,10 @@
 [ctor] CometChatMessageInformationStyle.new({TextStyle? titleTextStyle, Color? titleTextColor, Color? backgroundColor, BoxBorder? border, BorderRadiusGeometry? borderRadius, TextStyle? nameTextStyle, TextStyle? readTextStyle, TextStyle? readDateTextStyle, TextStyle? deliveredTextStyle, TextStyle? deliveredDateTextStyle, Color? deliveredDateTextColor, Color? deliveredTextColor, Color? nameTextColor, Color? readDateTextColor, Color? readTextColor, CometChatAvatarStyle? avatarStyle, Color? backgroundHighLightColor, CometChatMessageReceiptStyle? messageReceiptStyle}) : CometChatMessageInformationStyle
 [ctor] CometChatMessageInput.new({Key? key, String? text, String? placeholderText, dynamic Function(String)? onChange, CometChatMessageInputStyle? style, int? maxLine, Widget? secondaryButtonView, Widget? auxiliaryButtonView, Widget? primaryButtonView, AuxiliaryButtonsAlignment? auxiliaryButtonsAlignment, TextEditingController? textEditingController, FocusNode? focusNode, bool? hideBottomView, EdgeInsetsGeometry? padding, EdgeInsetsGeometry? margin, double? height, double? width, bool showCodeBlockIndicator, Color? codeBlockIndicatorColor, String? codeBlockContent, void Function(KeyboardInsertedContent)? onContentInserted, Future<bool> Function()? onPasteImage, void Function()? onTap, CometChatComposerLayout layout, bool Function(String, TextSelection)? onEnterPressed}) : CometChatMessageInput
 [ctor] CometChatMessageInputStyle.new({TextStyle? textStyle, Color? textColor, TextStyle? placeholderTextStyle, Color? placeholderColor, Color? dividerTint, double? dividerHeight, Color? backgroundColor, BoxBorder? border, BorderRadiusGeometry? borderRadius, Color? filledColor}) : CometChatMessageInputStyle
-[ctor] CometChatMessageList.new({Key? key, User? user, Group? group, MessageListBloc? messageListBloc, MessagesRequestBuilder? messagesRequestBuilder, List<CometChatMessageTemplate>? templates, List<CometChatMessageTemplate>? addTemplate, int? parentMessageId, bool withParent, bool hideDeletedMessages, bool disableSoundForMessages, bool disableReceipts, bool hideReplies, Widget? Function(BuildContext, {Group? group, int? parentMessageId, User? user})? headerView, Widget? Function(BuildContext, {Group? group, int? parentMessageId, User? user})? footerView, Widget Function(BuildContext)? loadingStateView, Widget Function(BuildContext)? emptyStateView, Widget Function(BuildContext)? errorStateView, Widget Function(BuildContext)? emptyChatGreetingView, CometChatMessageListStyle? style, ScrollController? scrollController, ChatAlignment alignment, dynamic Function(Exception)? onError, dynamic Function(List<BaseMessage>)? onLoad, void Function()? onEmpty, dynamic Function(CometChatMessageListControllerProtocol)? stateCallBack, String? customSoundForMessages, String? customSoundForMessagePackage, Widget? readIcon, Widget? deliveredIcon, Widget? sentIcon, Widget? waitIcon, bool? avatarVisibility, bool enableMultipleAttachments, bool? hideTimestamp, String Function(BaseMessage)? datePattern, String Function(DateTime)? dateSeparatorPattern, CometChatDateStyle? dateSeparatorStyle, bool? hideDateSeparator, bool? hideStickyDate, void Function(BaseMessage, BuildContext, {CometChatMessageTemplate? template})? onThreadRepliesClick, bool? hideThreadView, bool? receiptsVisibility, bool? disableReactions, Widget? addReactionIcon, dynamic Function(BaseMessage)? addMoreReactionTap, List<String>? favoriteReactions, dynamic Function(String?, BaseMessage)? onReactionClick, dynamic Function(String?, BaseMessage)? onReactionLongPress, dynamic Function(String?, BaseMessage?)? onReactionListItemClick, ReactionsRequestBuilder? reactionsRequestBuilder, List<CometChatTextFormatter>? textFormatters, AdditionalConfigurations? additionalConfigurations, EdgeInsetsGeometry? padding, EdgeInsetsGeometry? margin, double? width, double? height, bool? hideCopyMessageOption, bool? hideDeleteMessageOption, bool? hideEditMessageOption, bool? hideGroupActionMessages, bool? hideMessageInfoOption, bool? hideMessagePrivatelyOption, bool? hideReactionOption, bool? hideReplyInThreadOption, bool? hideThreadSubscriptionOption, bool? hidePinMessageOption, bool? hideUnpinMessageOption, bool? hideSaveMessageOption, bool? hideUnsaveMessageOption, bool? hideReplyOption, bool? hideTranslateMessageOption, bool? hideShareMessageOption, bool? hideModerationView, bool? enableConversationStarters, bool? enableSmartReplies, int? smartRepliesDelayDuration, List<String>? smartRepliesKeywords, List<String>? suggestedMessages, bool? hideSuggestedMessages, String? errorStateText, DateTimeFormatterCallback? dateTimeFormatterCallback, bool enableSwipeToReply, int? goToMessageId, CometChatMessageListController? controller, bool showMarkAsUnreadOption, bool startFromUnreadMessages, bool hideFlagOption, String Function(String)? flagReasonLocalizer, bool hideFlagRemarkField, bool loadLastAgentConversation, bool? disableMentions, String? mentionAllLabel, String? mentionAllLabelId, String? emptyStateText}) : CometChatMessageList
+[ctor] CometChatMessageList.new({Key? key, User? user, Group? group, MessageListBloc? messageListBloc, MessagesRequestBuilder? messagesRequestBuilder, List<CometChatMessageTemplate>? templates, List<CometChatMessageTemplate>? addTemplate, int? parentMessageId, bool withParent, bool hideDeletedMessages, bool disableSoundForMessages, bool disableReceipts, bool hideReplies, Widget? Function(BuildContext, {Group? group, int? parentMessageId, User? user})? headerView, Widget? Function(BuildContext, {Group? group, int? parentMessageId, User? user})? footerView, Widget Function(BuildContext)? loadingStateView, Widget Function(BuildContext)? emptyStateView, Widget Function(BuildContext)? errorStateView, Widget Function(BuildContext)? emptyChatGreetingView, CometChatMessageListStyle? style, ScrollController? scrollController, ChatAlignment alignment, dynamic Function(Exception)? onError, dynamic Function(List<BaseMessage>)? onLoad, void Function()? onEmpty, dynamic Function(CometChatMessageListControllerProtocol)? stateCallBack, String? customSoundForMessages, String? customSoundForMessagePackage, Widget? readIcon, Widget? deliveredIcon, Widget? sentIcon, Widget? waitIcon, bool? avatarVisibility, bool enableMultipleAttachments, bool? hideTimestamp, String Function(BaseMessage)? datePattern, String Function(DateTime)? dateSeparatorPattern, CometChatDateStyle? dateSeparatorStyle, bool? hideDateSeparator, bool? hideStickyDate, void Function(BaseMessage, BuildContext, {CometChatMessageTemplate? template})? onThreadRepliesClick, bool? hideThreadView, bool? receiptsVisibility, bool? disableReactions, Widget? addReactionIcon, dynamic Function(BaseMessage)? addMoreReactionTap, List<String>? favoriteReactions, dynamic Function(String?, BaseMessage)? onReactionClick, dynamic Function(String?, BaseMessage)? onReactionLongPress, dynamic Function(String?, BaseMessage?)? onReactionListItemClick, ReactionsRequestBuilder? reactionsRequestBuilder, List<CometChatTextFormatter>? textFormatters, AdditionalConfigurations? additionalConfigurations, EdgeInsetsGeometry? padding, EdgeInsetsGeometry? margin, double? width, double? height, bool? hideCopyMessageOption, bool? hideDeleteMessageOption, bool? hideEditMessageOption, bool? hideGroupActionMessages, bool? hideMessageInfoOption, bool? hideMessagePrivatelyOption, bool? hideReactionOption, bool? hideReplyInThreadOption, bool? hideThreadSubscriptionOption, bool? hidePinMessageOption, bool? hideUnpinMessageOption, bool? hideSaveMessageOption, bool? hideUnsaveMessageOption, bool? hideReplyOption, bool? hideTranslateMessageOption, bool? hideShareMessageOption, bool? hideModerationView, bool? enableConversationStarters, bool? enableSmartReplies, int? smartRepliesDelayDuration, List<String>? smartRepliesKeywords, List<String>? suggestedMessages, bool? hideSuggestedMessages, String? errorStateText, DateTimeFormatterCallback? dateTimeFormatterCallback, bool enableSwipeToReply, int? goToMessageId, CometChatMessageListController? controller, bool showMarkAsUnreadOption, bool startFromUnreadMessages, bool hideFlagOption, String Function(String)? flagReasonLocalizer, bool hideFlagRemarkField, bool loadLastAgentConversation, bool? disableMentions, String? mentionAllLabel, String? mentionAllLabelId, String? emptyStateText, bool hideOfflineNotices}) : CometChatMessageList
 [ctor] CometChatMessageListController.new() : CometChatMessageListController
 [ctor] CometChatMessageListControllerProtocol.new() : CometChatMessageListControllerProtocol
-[ctor] CometChatMessageListStyle.new({BoxBorder? border, BorderRadiusGeometry? borderRadius, Color? backgroundColor, CometChatAvatarStyle? avatarStyle, TextStyle? emptyStateTextStyle, Color? emptyStateTextColor, TextStyle? emptyStateSubtitleStyle, Color? emptyStateSubtitleColor, TextStyle? errorStateTextStyle, Color? errorStateTextColor, TextStyle? errorStateSubtitleStyle, Color? errorStateSubtitleColor, CometChatIncomingMessageBubbleStyle? incomingMessageBubbleStyle, CometChatOutgoingMessageBubbleStyle? outgoingMessageBubbleStyle, CometChatMessageInformationStyle? messageInformationStyle, CometChatMessageOptionSheetStyle? messageOptionSheetStyle, CometChatMentionsStyle? mentionsStyle, CometChatActionBubbleStyle? actionBubbleStyle, CometChatReactionListStyle? reactionListStyle, CometChatReactionsStyle? reactionsStyle, Color? emptyChatGreetingTitleTextColor, TextStyle? emptyChatGreetingTitleTextStyle, Color? emptyChatGreetingSubtitleTextColor, TextStyle? emptyChatGreetingSubtitleTextStyle}) : CometChatMessageListStyle
+[ctor] CometChatMessageListStyle.new({BoxBorder? border, BorderRadiusGeometry? borderRadius, Color? backgroundColor, CometChatAvatarStyle? avatarStyle, TextStyle? emptyStateTextStyle, Color? emptyStateTextColor, TextStyle? emptyStateSubtitleStyle, Color? emptyStateSubtitleColor, TextStyle? errorStateTextStyle, Color? errorStateTextColor, TextStyle? errorStateSubtitleStyle, Color? errorStateSubtitleColor, CometChatIncomingMessageBubbleStyle? incomingMessageBubbleStyle, CometChatOutgoingMessageBubbleStyle? outgoingMessageBubbleStyle, CometChatMessageInformationStyle? messageInformationStyle, CometChatMessageOptionSheetStyle? messageOptionSheetStyle, CometChatMentionsStyle? mentionsStyle, CometChatActionBubbleStyle? actionBubbleStyle, CometChatReactionListStyle? reactionListStyle, CometChatReactionsStyle? reactionsStyle, Color? emptyChatGreetingTitleTextColor, TextStyle? emptyChatGreetingTitleTextStyle, Color? emptyChatGreetingSubtitleTextColor, TextStyle? emptyChatGreetingSubtitleTextStyle, Color? failedRowTint, Color? failedIconColor, TextStyle? notSentTextStyle, TextStyle? mediaPlaceholderStyle}) : CometChatMessageListStyle
 [ctor] CometChatMessageOption.new({required String id, required String title, Widget? icon, dynamic Function(BaseMessage, CometChatMessageListControllerProtocol)? onItemClick, CometChatMessageOptionSheetStyle? messageOptionSheetStyle}) : CometChatMessageOption
 [ctor] CometChatMessageOptionSheetStyle.new({Color? backgroundColor, Border? border, BorderRadiusGeometry? borderRadius, TextStyle? titleTextStyle, Color? titleColor, Color? iconColor}) : CometChatMessageOptionSheetStyle
 [ctor] CometChatMessagePreview.new({Key? key, required String messagePreviewTitle, required String messagePreviewSubtitle, Icon? messagePreviewCloseButtonIcon, CometChatMessagePreviewStyle? messagePreviewStyle, dynamic Function()? onCloseClick, bool hideCloseButton, BaseMessage? message, String? stickerUrl, Widget? subtitleWidget}) : CometChatMessagePreview
@@ -852,7 +852,7 @@
 [ctor] RefreshCallLogs.new() : RefreshCallLogs
 [ctor] RefreshConversations.new() : RefreshConversations
 [ctor] RefreshCurrentSearch.new() : RefreshCurrentSearch
-[ctor] RefreshFeed.new() : RefreshFeed
+[ctor] RefreshFeed.new({bool silent}) : RefreshFeed
 [ctor] RefreshGroup.new() : RefreshGroup
 [ctor] RefreshGroupMembers.new() : RefreshGroupMembers
 [ctor] RefreshGroups.new() : RefreshGroups
@@ -903,7 +903,7 @@
 [ctor] SearchGroups.new(String keyword) : SearchGroups
 [ctor] SearchMessagesParams.new({required String conversationId, required String query}) : SearchMessagesParams
 [ctor] SearchMessagesUseCase.new({required MessageRepository repository}) : SearchMessagesUseCase
-[ctor] SearchState.new({String searchText, Set<String> selectedFilters, List<SearchFilter> visibleFilters, SearchStatus conversationsStatus, List<Conversation> conversations, bool hasMoreConversations, SearchStatus messagesStatus, List<BaseMessage> messages, bool hasMoreMessages, SearchScope scope, bool showConversations, bool showMessages, String? errorMessage}) : SearchState
+[ctor] SearchState.new({String searchText, Set<String> selectedFilters, List<SearchFilter> visibleFilters, SearchStatus conversationsStatus, List<Conversation> conversations, bool hasMoreConversations, SearchStatus messagesStatus, List<BaseMessage> messages, bool hasMoreMessages, SearchScope scope, bool showConversations, bool showMessages, String? errorMessage, bool connectToSearch}) : SearchState
 [ctor] SearchTextChanged.new(String text) : SearchTextChanged
 [ctor] SearchUsers.new(String keyword) : SearchUsers
 [ctor] SectionSeparator.new({Key? key, double height, required String text, Color? dividerColor, TextStyle? textStyle}) : SectionSeparator
@@ -1363,6 +1363,7 @@
 [fld] AttachmentTile.loaded : int [get/set]
 [fld] AttachmentTile.mimeType : String [get]
 [fld] AttachmentTile.name : String [get]
+[fld] AttachmentTile.notSaved : bool [get/set]
 [fld] AttachmentTile.percent : int [get]
 [fld] AttachmentTile.size : int [get]
 [fld] AttachmentTile.status : AttachmentTileStatus [get/set]
@@ -1381,8 +1382,10 @@
 [fld] AttachmentTrayController.doneAttachments : List<Attachment> [get]
 [fld] AttachmentTrayController.errorTiles : List<AttachmentTile> [get]
 [fld] AttachmentTrayController.hasErrors : bool [get]
+[fld] AttachmentTrayController.isEmpty : bool [get]
 [fld] AttachmentTrayController.maxFileCount : int [get]
 [fld] AttachmentTrayController.maxFileSize : int [get]
+[fld] AttachmentTrayController.parentMessageId : int? [get/set]
 [fld] AttachmentTrayController.receiverId : String? [get/set]
 [fld] AttachmentTrayController.receiverType : String? [get/set]
 [fld] AttachmentTrayController.remainingSlots : int [get]
@@ -2434,6 +2437,7 @@
 [fld] CometChatConversations.groupTypeVisibility : bool? [get]
 [fld] CometChatConversations.hideAppbar : bool? [get]
 [fld] CometChatConversations.hideError : bool? [get]
+[fld] CometChatConversations.hideOfflineNotices : bool [get]
 [fld] CometChatConversations.hideSearch : bool? [get]
 [fld] CometChatConversations.leadingView : Widget? Function(BuildContext, Conversation)? [get]
 [fld] CometChatConversations.listItemStyle : ListItemStyle? [get]
@@ -3630,6 +3634,7 @@
 [fld] CometChatMessageList.hideMessageInfoOption : bool? [get]
 [fld] CometChatMessageList.hideMessagePrivatelyOption : bool? [get]
 [fld] CometChatMessageList.hideModerationView : bool? [get]
+[fld] CometChatMessageList.hideOfflineNotices : bool [get]
 [fld] CometChatMessageList.hidePinMessageOption : bool? [get]
 [fld] CometChatMessageList.hideReactionOption : bool? [get]
 [fld] CometChatMessageList.hideReplies : bool [get]
@@ -3697,10 +3702,14 @@
 [fld] CometChatMessageListStyle.errorStateSubtitleStyle : TextStyle? [get]
 [fld] CometChatMessageListStyle.errorStateTextColor : Color? [get]
 [fld] CometChatMessageListStyle.errorStateTextStyle : TextStyle? [get]
+[fld] CometChatMessageListStyle.failedIconColor : Color? [get]
+[fld] CometChatMessageListStyle.failedRowTint : Color? [get]
 [fld] CometChatMessageListStyle.incomingMessageBubbleStyle : CometChatIncomingMessageBubbleStyle? [get]
+[fld] CometChatMessageListStyle.mediaPlaceholderStyle : TextStyle? [get]
 [fld] CometChatMessageListStyle.mentionsStyle : CometChatMentionsStyle? [get]
 [fld] CometChatMessageListStyle.messageInformationStyle : CometChatMessageInformationStyle? [get]
 [fld] CometChatMessageListStyle.messageOptionSheetStyle : CometChatMessageOptionSheetStyle? [get]
+[fld] CometChatMessageListStyle.notSentTextStyle : TextStyle? [get]
 [fld] CometChatMessageListStyle.outgoingMessageBubbleStyle : CometChatOutgoingMessageBubbleStyle? [get]
 [fld] CometChatMessageListStyle.reactionListStyle : CometChatReactionListStyle? [get]
 [fld] CometChatMessageListStyle.reactionsStyle : CometChatReactionsStyle? [get]
@@ -3738,6 +3747,10 @@
 [fld] CometChatMessageReceiptStyle.readIconColor : Color? [get]
 [fld] CometChatMessageReceiptStyle.sentIconColor : Color? [get]
 [fld] CometChatMessageReceiptStyle.waitIconColor : Color? [get]
+[fld] CometChatMessageSendState.failed : CometChatMessageSendState [get] [static]
+[fld] CometChatMessageSendState.sending : CometChatMessageSendState [get] [static]
+[fld] CometChatMessageSendState.sent : CometChatMessageSendState [get] [static]
+[fld] CometChatMessageSendState.values : List<CometChatMessageSendState> [get] [static]
 [fld] CometChatMessageTemplate.bottomView : Widget? Function(BaseMessage, BuildContext, BubbleAlignment)? [get/set]
 [fld] CometChatMessageTemplate.bubbleView : Widget? Function(BaseMessage, BuildContext, BubbleAlignment)? [get/set]
 [fld] CometChatMessageTemplate.category : String [get/set]
@@ -6286,6 +6299,7 @@
 [fld] RefreshConversations.props : List<Object?> [get]
 [fld] RefreshCurrentSearch.props : List<Object?> [get]
 [fld] RefreshFeed.props : List<Object?> [get]
+[fld] RefreshFeed.silent : bool [get]
 [fld] RefreshGroup.props : List<Object?> [get]
 [fld] RefreshGroupMembers.props : List<Object?> [get]
 [fld] RefreshGroups.props : List<Object?> [get]
@@ -6447,6 +6461,7 @@
 [fld] SearchState.allError : bool [get]
 [fld] SearchState.allLoading : bool [get]
 [fld] SearchState.bothActive : bool [get]
+[fld] SearchState.connectToSearch : bool [get]
 [fld] SearchState.conversations : List<Conversation> [get]
 [fld] SearchState.conversationsStatus : SearchStatus [get]
 [fld] SearchState.errorMessage : String? [get]
@@ -6881,6 +6896,16 @@
 [fld] Translations.confirmLeaveGroup : String [get]
 [fld] Translations.confirmTransferOwnership : String [get]
 [fld] Translations.confirmUnblockContact : String [get]
+[fld] Translations.connectToLoadChats : String [get]
+[fld] Translations.connectToLoadGroups : String [get]
+[fld] Translations.connectToLoadMembers : String [get]
+[fld] Translations.connectToLoadMessages : String [get]
+[fld] Translations.connectToLoadMore : String [get]
+[fld] Translations.connectToLoadNotifications : String [get]
+[fld] Translations.connectToLoadReactions : String [get]
+[fld] Translations.connectToLoadUsers : String [get]
+[fld] Translations.connectToSearch : String [get]
+[fld] Translations.connectToSearchSubtitle : String [get]
 [fld] Translations.connecting : String [get]
 [fld] Translations.continueText : String [get]
 [fld] Translations.conversationPinnedToast : String [get]
@@ -6948,7 +6973,9 @@
 [fld] Translations.file : String [get]
 [fld] Translations.fileListShowLess : String [get]
 [fld] Translations.fileListShowMore : String [get]
+[fld] Translations.fileNotSaved : String [get]
 [fld] Translations.fileSaved : String [get]
+[fld] Translations.fileTooLargeOffline : String [get]
 [fld] Translations.fileTypeNotSupportedForPreview : String [get]
 [fld] Translations.flags : String [get]
 [fld] Translations.foodDrink : String [get]
@@ -6994,6 +7021,7 @@
 [fld] Translations.join : String [get]
 [fld] Translations.joined : String [get]
 [fld] Translations.jump : String [get]
+[fld] Translations.jumpToLatest : String [get]
 [fld] Translations.kick : String [get]
 [fld] Translations.kicked : String [get]
 [fld] Translations.lastActiveAt : String [get]
@@ -7016,6 +7044,7 @@
 [fld] Translations.makeOrReceiveCalls : String [get]
 [fld] Translations.markAsUnread : String [get]
 [fld] Translations.maxSelectionLimitIs : String [get]
+[fld] Translations.mediaAvailableWhenOnline : String [get]
 [fld] Translations.mediaMessage : String [get]
 [fld] Translations.meeting : String [get]
 [fld] Translations.meetingCannotBeScheduled : String [get]
@@ -7033,6 +7062,8 @@
 [fld] Translations.messageIsDeleted : String [get]
 [fld] Translations.messageListOptionGetReplyNotifications : String [get]
 [fld] Translations.messageListOptionStopReplyNotifications : String [get]
+[fld] Translations.messageNotSentTapToRetry : String [get]
+[fld] Translations.messageNotSentYet : String [get]
 [fld] Translations.messagePinnedToast : String [get]
 [fld] Translations.messagePrivately : String [get]
 [fld] Translations.messageReported : String [get]
@@ -7148,6 +7179,7 @@
 [fld] Translations.protectedGroup : String [get]
 [fld] Translations.public : String [get]
 [fld] Translations.question : String [get]
+[fld] Translations.queueFull : String [get]
 [fld] Translations.reacted : String [get]
 [fld] Translations.read : String [get]
 [fld] Translations.reason : String [get]
@@ -7201,6 +7233,7 @@
 [fld] Translations.sendMessage : String [get]
 [fld] Translations.sendMessageInPrivate : String [get]
 [fld] Translations.sendMessagePrivately : String [get]
+[fld] Translations.sendingTryAgain : String [get]
 [fld] Translations.sent : String [get]
 [fld] Translations.setTheAnswers : String [get]
 [fld] Translations.settings : String [get]
@@ -7276,6 +7309,8 @@
 [fld] Translations.unsaveConfirmMessage : String [get]
 [fld] Translations.unsaveConfirmTitle : String [get]
 [fld] Translations.unsaveMessageOption : String [get]
+[fld] Translations.unsentMessageRemoved : String [get]
+[fld] Translations.unsentMessagesMaybeLost : String [get]
 [fld] Translations.unsupportedMessageType : String [get]
 [fld] Translations.uploadFailed : String [get]
 [fld] Translations.userInfo : String [get]
@@ -7409,6 +7444,16 @@
 [fld] TranslationsAr.confirmLeaveGroup : String [get]
 [fld] TranslationsAr.confirmTransferOwnership : String [get]
 [fld] TranslationsAr.confirmUnblockContact : String [get]
+[fld] TranslationsAr.connectToLoadChats : String [get]
+[fld] TranslationsAr.connectToLoadGroups : String [get]
+[fld] TranslationsAr.connectToLoadMembers : String [get]
+[fld] TranslationsAr.connectToLoadMessages : String [get]
+[fld] TranslationsAr.connectToLoadMore : String [get]
+[fld] TranslationsAr.connectToLoadNotifications : String [get]
+[fld] TranslationsAr.connectToLoadReactions : String [get]
+[fld] TranslationsAr.connectToLoadUsers : String [get]
+[fld] TranslationsAr.connectToSearch : String [get]
+[fld] TranslationsAr.connectToSearchSubtitle : String [get]
 [fld] TranslationsAr.connecting : String [get]
 [fld] TranslationsAr.continueText : String [get]
 [fld] TranslationsAr.conversationPinnedToast : String [get]
@@ -7476,7 +7521,9 @@
 [fld] TranslationsAr.file : String [get]
 [fld] TranslationsAr.fileListShowLess : String [get]
 [fld] TranslationsAr.fileListShowMore : String [get]
+[fld] TranslationsAr.fileNotSaved : String [get]
 [fld] TranslationsAr.fileSaved : String [get]
+[fld] TranslationsAr.fileTooLargeOffline : String [get]
 [fld] TranslationsAr.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsAr.flags : String [get]
 [fld] TranslationsAr.foodDrink : String [get]
@@ -7522,6 +7569,7 @@
 [fld] TranslationsAr.join : String [get]
 [fld] TranslationsAr.joined : String [get]
 [fld] TranslationsAr.jump : String [get]
+[fld] TranslationsAr.jumpToLatest : String [get]
 [fld] TranslationsAr.kick : String [get]
 [fld] TranslationsAr.kicked : String [get]
 [fld] TranslationsAr.lastActiveAt : String [get]
@@ -7544,6 +7592,7 @@
 [fld] TranslationsAr.makeOrReceiveCalls : String [get]
 [fld] TranslationsAr.markAsUnread : String [get]
 [fld] TranslationsAr.maxSelectionLimitIs : String [get]
+[fld] TranslationsAr.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsAr.mediaMessage : String [get]
 [fld] TranslationsAr.meeting : String [get]
 [fld] TranslationsAr.meetingCannotBeScheduled : String [get]
@@ -7561,6 +7610,8 @@
 [fld] TranslationsAr.messageIsDeleted : String [get]
 [fld] TranslationsAr.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsAr.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsAr.messageNotSentTapToRetry : String [get]
+[fld] TranslationsAr.messageNotSentYet : String [get]
 [fld] TranslationsAr.messagePinnedToast : String [get]
 [fld] TranslationsAr.messagePrivately : String [get]
 [fld] TranslationsAr.messageReported : String [get]
@@ -7676,6 +7727,7 @@
 [fld] TranslationsAr.protectedGroup : String [get]
 [fld] TranslationsAr.public : String [get]
 [fld] TranslationsAr.question : String [get]
+[fld] TranslationsAr.queueFull : String [get]
 [fld] TranslationsAr.reacted : String [get]
 [fld] TranslationsAr.read : String [get]
 [fld] TranslationsAr.reason : String [get]
@@ -7729,6 +7781,7 @@
 [fld] TranslationsAr.sendMessage : String [get]
 [fld] TranslationsAr.sendMessageInPrivate : String [get]
 [fld] TranslationsAr.sendMessagePrivately : String [get]
+[fld] TranslationsAr.sendingTryAgain : String [get]
 [fld] TranslationsAr.sent : String [get]
 [fld] TranslationsAr.setTheAnswers : String [get]
 [fld] TranslationsAr.settings : String [get]
@@ -7804,6 +7857,8 @@
 [fld] TranslationsAr.unsaveConfirmMessage : String [get]
 [fld] TranslationsAr.unsaveConfirmTitle : String [get]
 [fld] TranslationsAr.unsaveMessageOption : String [get]
+[fld] TranslationsAr.unsentMessageRemoved : String [get]
+[fld] TranslationsAr.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsAr.unsupportedMessageType : String [get]
 [fld] TranslationsAr.uploadFailed : String [get]
 [fld] TranslationsAr.userInfo : String [get]
@@ -7937,6 +7992,16 @@
 [fld] TranslationsDe.confirmLeaveGroup : String [get]
 [fld] TranslationsDe.confirmTransferOwnership : String [get]
 [fld] TranslationsDe.confirmUnblockContact : String [get]
+[fld] TranslationsDe.connectToLoadChats : String [get]
+[fld] TranslationsDe.connectToLoadGroups : String [get]
+[fld] TranslationsDe.connectToLoadMembers : String [get]
+[fld] TranslationsDe.connectToLoadMessages : String [get]
+[fld] TranslationsDe.connectToLoadMore : String [get]
+[fld] TranslationsDe.connectToLoadNotifications : String [get]
+[fld] TranslationsDe.connectToLoadReactions : String [get]
+[fld] TranslationsDe.connectToLoadUsers : String [get]
+[fld] TranslationsDe.connectToSearch : String [get]
+[fld] TranslationsDe.connectToSearchSubtitle : String [get]
 [fld] TranslationsDe.connecting : String [get]
 [fld] TranslationsDe.continueText : String [get]
 [fld] TranslationsDe.conversationPinnedToast : String [get]
@@ -8004,7 +8069,9 @@
 [fld] TranslationsDe.file : String [get]
 [fld] TranslationsDe.fileListShowLess : String [get]
 [fld] TranslationsDe.fileListShowMore : String [get]
+[fld] TranslationsDe.fileNotSaved : String [get]
 [fld] TranslationsDe.fileSaved : String [get]
+[fld] TranslationsDe.fileTooLargeOffline : String [get]
 [fld] TranslationsDe.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsDe.flags : String [get]
 [fld] TranslationsDe.foodDrink : String [get]
@@ -8050,6 +8117,7 @@
 [fld] TranslationsDe.join : String [get]
 [fld] TranslationsDe.joined : String [get]
 [fld] TranslationsDe.jump : String [get]
+[fld] TranslationsDe.jumpToLatest : String [get]
 [fld] TranslationsDe.kick : String [get]
 [fld] TranslationsDe.kicked : String [get]
 [fld] TranslationsDe.lastActiveAt : String [get]
@@ -8072,6 +8140,7 @@
 [fld] TranslationsDe.makeOrReceiveCalls : String [get]
 [fld] TranslationsDe.markAsUnread : String [get]
 [fld] TranslationsDe.maxSelectionLimitIs : String [get]
+[fld] TranslationsDe.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsDe.mediaMessage : String [get]
 [fld] TranslationsDe.meeting : String [get]
 [fld] TranslationsDe.meetingCannotBeScheduled : String [get]
@@ -8089,6 +8158,8 @@
 [fld] TranslationsDe.messageIsDeleted : String [get]
 [fld] TranslationsDe.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsDe.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsDe.messageNotSentTapToRetry : String [get]
+[fld] TranslationsDe.messageNotSentYet : String [get]
 [fld] TranslationsDe.messagePinnedToast : String [get]
 [fld] TranslationsDe.messagePrivately : String [get]
 [fld] TranslationsDe.messageReported : String [get]
@@ -8204,6 +8275,7 @@
 [fld] TranslationsDe.protectedGroup : String [get]
 [fld] TranslationsDe.public : String [get]
 [fld] TranslationsDe.question : String [get]
+[fld] TranslationsDe.queueFull : String [get]
 [fld] TranslationsDe.reacted : String [get]
 [fld] TranslationsDe.read : String [get]
 [fld] TranslationsDe.reason : String [get]
@@ -8257,6 +8329,7 @@
 [fld] TranslationsDe.sendMessage : String [get]
 [fld] TranslationsDe.sendMessageInPrivate : String [get]
 [fld] TranslationsDe.sendMessagePrivately : String [get]
+[fld] TranslationsDe.sendingTryAgain : String [get]
 [fld] TranslationsDe.sent : String [get]
 [fld] TranslationsDe.setTheAnswers : String [get]
 [fld] TranslationsDe.settings : String [get]
@@ -8332,6 +8405,8 @@
 [fld] TranslationsDe.unsaveConfirmMessage : String [get]
 [fld] TranslationsDe.unsaveConfirmTitle : String [get]
 [fld] TranslationsDe.unsaveMessageOption : String [get]
+[fld] TranslationsDe.unsentMessageRemoved : String [get]
+[fld] TranslationsDe.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsDe.unsupportedMessageType : String [get]
 [fld] TranslationsDe.uploadFailed : String [get]
 [fld] TranslationsDe.userInfo : String [get]
@@ -8465,6 +8540,16 @@
 [fld] TranslationsEn.confirmLeaveGroup : String [get]
 [fld] TranslationsEn.confirmTransferOwnership : String [get]
 [fld] TranslationsEn.confirmUnblockContact : String [get]
+[fld] TranslationsEn.connectToLoadChats : String [get]
+[fld] TranslationsEn.connectToLoadGroups : String [get]
+[fld] TranslationsEn.connectToLoadMembers : String [get]
+[fld] TranslationsEn.connectToLoadMessages : String [get]
+[fld] TranslationsEn.connectToLoadMore : String [get]
+[fld] TranslationsEn.connectToLoadNotifications : String [get]
+[fld] TranslationsEn.connectToLoadReactions : String [get]
+[fld] TranslationsEn.connectToLoadUsers : String [get]
+[fld] TranslationsEn.connectToSearch : String [get]
+[fld] TranslationsEn.connectToSearchSubtitle : String [get]
 [fld] TranslationsEn.connecting : String [get]
 [fld] TranslationsEn.continueText : String [get]
 [fld] TranslationsEn.conversationPinnedToast : String [get]
@@ -8532,7 +8617,9 @@
 [fld] TranslationsEn.file : String [get]
 [fld] TranslationsEn.fileListShowLess : String [get]
 [fld] TranslationsEn.fileListShowMore : String [get]
+[fld] TranslationsEn.fileNotSaved : String [get]
 [fld] TranslationsEn.fileSaved : String [get]
+[fld] TranslationsEn.fileTooLargeOffline : String [get]
 [fld] TranslationsEn.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsEn.flags : String [get]
 [fld] TranslationsEn.foodDrink : String [get]
@@ -8578,6 +8665,7 @@
 [fld] TranslationsEn.join : String [get]
 [fld] TranslationsEn.joined : String [get]
 [fld] TranslationsEn.jump : String [get]
+[fld] TranslationsEn.jumpToLatest : String [get]
 [fld] TranslationsEn.kick : String [get]
 [fld] TranslationsEn.kicked : String [get]
 [fld] TranslationsEn.lastActiveAt : String [get]
@@ -8600,6 +8688,7 @@
 [fld] TranslationsEn.makeOrReceiveCalls : String [get]
 [fld] TranslationsEn.markAsUnread : String [get]
 [fld] TranslationsEn.maxSelectionLimitIs : String [get]
+[fld] TranslationsEn.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsEn.mediaMessage : String [get]
 [fld] TranslationsEn.meeting : String [get]
 [fld] TranslationsEn.meetingCannotBeScheduled : String [get]
@@ -8617,6 +8706,8 @@
 [fld] TranslationsEn.messageIsDeleted : String [get]
 [fld] TranslationsEn.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsEn.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsEn.messageNotSentTapToRetry : String [get]
+[fld] TranslationsEn.messageNotSentYet : String [get]
 [fld] TranslationsEn.messagePinnedToast : String [get]
 [fld] TranslationsEn.messagePrivately : String [get]
 [fld] TranslationsEn.messageReported : String [get]
@@ -8732,6 +8823,7 @@
 [fld] TranslationsEn.protectedGroup : String [get]
 [fld] TranslationsEn.public : String [get]
 [fld] TranslationsEn.question : String [get]
+[fld] TranslationsEn.queueFull : String [get]
 [fld] TranslationsEn.reacted : String [get]
 [fld] TranslationsEn.read : String [get]
 [fld] TranslationsEn.reason : String [get]
@@ -8785,6 +8877,7 @@
 [fld] TranslationsEn.sendMessage : String [get]
 [fld] TranslationsEn.sendMessageInPrivate : String [get]
 [fld] TranslationsEn.sendMessagePrivately : String [get]
+[fld] TranslationsEn.sendingTryAgain : String [get]
 [fld] TranslationsEn.sent : String [get]
 [fld] TranslationsEn.setTheAnswers : String [get]
 [fld] TranslationsEn.settings : String [get]
@@ -8860,6 +8953,8 @@
 [fld] TranslationsEn.unsaveConfirmMessage : String [get]
 [fld] TranslationsEn.unsaveConfirmTitle : String [get]
 [fld] TranslationsEn.unsaveMessageOption : String [get]
+[fld] TranslationsEn.unsentMessageRemoved : String [get]
+[fld] TranslationsEn.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsEn.unsupportedMessageType : String [get]
 [fld] TranslationsEn.uploadFailed : String [get]
 [fld] TranslationsEn.userInfo : String [get]
@@ -8993,6 +9088,16 @@
 [fld] TranslationsEnGb.confirmLeaveGroup : String [get]
 [fld] TranslationsEnGb.confirmTransferOwnership : String [get]
 [fld] TranslationsEnGb.confirmUnblockContact : String [get]
+[fld] TranslationsEnGb.connectToLoadChats : String [get]
+[fld] TranslationsEnGb.connectToLoadGroups : String [get]
+[fld] TranslationsEnGb.connectToLoadMembers : String [get]
+[fld] TranslationsEnGb.connectToLoadMessages : String [get]
+[fld] TranslationsEnGb.connectToLoadMore : String [get]
+[fld] TranslationsEnGb.connectToLoadNotifications : String [get]
+[fld] TranslationsEnGb.connectToLoadReactions : String [get]
+[fld] TranslationsEnGb.connectToLoadUsers : String [get]
+[fld] TranslationsEnGb.connectToSearch : String [get]
+[fld] TranslationsEnGb.connectToSearchSubtitle : String [get]
 [fld] TranslationsEnGb.connecting : String [get]
 [fld] TranslationsEnGb.continueText : String [get]
 [fld] TranslationsEnGb.conversationPinnedToast : String [get]
@@ -9060,7 +9165,9 @@
 [fld] TranslationsEnGb.file : String [get]
 [fld] TranslationsEnGb.fileListShowLess : String [get]
 [fld] TranslationsEnGb.fileListShowMore : String [get]
+[fld] TranslationsEnGb.fileNotSaved : String [get]
 [fld] TranslationsEnGb.fileSaved : String [get]
+[fld] TranslationsEnGb.fileTooLargeOffline : String [get]
 [fld] TranslationsEnGb.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsEnGb.flags : String [get]
 [fld] TranslationsEnGb.foodDrink : String [get]
@@ -9106,6 +9213,7 @@
 [fld] TranslationsEnGb.join : String [get]
 [fld] TranslationsEnGb.joined : String [get]
 [fld] TranslationsEnGb.jump : String [get]
+[fld] TranslationsEnGb.jumpToLatest : String [get]
 [fld] TranslationsEnGb.kick : String [get]
 [fld] TranslationsEnGb.kicked : String [get]
 [fld] TranslationsEnGb.lastActiveAt : String [get]
@@ -9128,6 +9236,7 @@
 [fld] TranslationsEnGb.makeOrReceiveCalls : String [get]
 [fld] TranslationsEnGb.markAsUnread : String [get]
 [fld] TranslationsEnGb.maxSelectionLimitIs : String [get]
+[fld] TranslationsEnGb.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsEnGb.mediaMessage : String [get]
 [fld] TranslationsEnGb.meeting : String [get]
 [fld] TranslationsEnGb.meetingCannotBeScheduled : String [get]
@@ -9145,6 +9254,8 @@
 [fld] TranslationsEnGb.messageIsDeleted : String [get]
 [fld] TranslationsEnGb.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsEnGb.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsEnGb.messageNotSentTapToRetry : String [get]
+[fld] TranslationsEnGb.messageNotSentYet : String [get]
 [fld] TranslationsEnGb.messagePinnedToast : String [get]
 [fld] TranslationsEnGb.messagePrivately : String [get]
 [fld] TranslationsEnGb.messageReported : String [get]
@@ -9260,6 +9371,7 @@
 [fld] TranslationsEnGb.protectedGroup : String [get]
 [fld] TranslationsEnGb.public : String [get]
 [fld] TranslationsEnGb.question : String [get]
+[fld] TranslationsEnGb.queueFull : String [get]
 [fld] TranslationsEnGb.reacted : String [get]
 [fld] TranslationsEnGb.read : String [get]
 [fld] TranslationsEnGb.reason : String [get]
@@ -9313,6 +9425,7 @@
 [fld] TranslationsEnGb.sendMessage : String [get]
 [fld] TranslationsEnGb.sendMessageInPrivate : String [get]
 [fld] TranslationsEnGb.sendMessagePrivately : String [get]
+[fld] TranslationsEnGb.sendingTryAgain : String [get]
 [fld] TranslationsEnGb.sent : String [get]
 [fld] TranslationsEnGb.setTheAnswers : String [get]
 [fld] TranslationsEnGb.settings : String [get]
@@ -9388,6 +9501,8 @@
 [fld] TranslationsEnGb.unsaveConfirmMessage : String [get]
 [fld] TranslationsEnGb.unsaveConfirmTitle : String [get]
 [fld] TranslationsEnGb.unsaveMessageOption : String [get]
+[fld] TranslationsEnGb.unsentMessageRemoved : String [get]
+[fld] TranslationsEnGb.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsEnGb.unsupportedMessageType : String [get]
 [fld] TranslationsEnGb.uploadFailed : String [get]
 [fld] TranslationsEnGb.userInfo : String [get]
@@ -9521,6 +9636,16 @@
 [fld] TranslationsEs.confirmLeaveGroup : String [get]
 [fld] TranslationsEs.confirmTransferOwnership : String [get]
 [fld] TranslationsEs.confirmUnblockContact : String [get]
+[fld] TranslationsEs.connectToLoadChats : String [get]
+[fld] TranslationsEs.connectToLoadGroups : String [get]
+[fld] TranslationsEs.connectToLoadMembers : String [get]
+[fld] TranslationsEs.connectToLoadMessages : String [get]
+[fld] TranslationsEs.connectToLoadMore : String [get]
+[fld] TranslationsEs.connectToLoadNotifications : String [get]
+[fld] TranslationsEs.connectToLoadReactions : String [get]
+[fld] TranslationsEs.connectToLoadUsers : String [get]
+[fld] TranslationsEs.connectToSearch : String [get]
+[fld] TranslationsEs.connectToSearchSubtitle : String [get]
 [fld] TranslationsEs.connecting : String [get]
 [fld] TranslationsEs.continueText : String [get]
 [fld] TranslationsEs.conversationPinnedToast : String [get]
@@ -9588,7 +9713,9 @@
 [fld] TranslationsEs.file : String [get]
 [fld] TranslationsEs.fileListShowLess : String [get]
 [fld] TranslationsEs.fileListShowMore : String [get]
+[fld] TranslationsEs.fileNotSaved : String [get]
 [fld] TranslationsEs.fileSaved : String [get]
+[fld] TranslationsEs.fileTooLargeOffline : String [get]
 [fld] TranslationsEs.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsEs.flags : String [get]
 [fld] TranslationsEs.foodDrink : String [get]
@@ -9634,6 +9761,7 @@
 [fld] TranslationsEs.join : String [get]
 [fld] TranslationsEs.joined : String [get]
 [fld] TranslationsEs.jump : String [get]
+[fld] TranslationsEs.jumpToLatest : String [get]
 [fld] TranslationsEs.kick : String [get]
 [fld] TranslationsEs.kicked : String [get]
 [fld] TranslationsEs.lastActiveAt : String [get]
@@ -9656,6 +9784,7 @@
 [fld] TranslationsEs.makeOrReceiveCalls : String [get]
 [fld] TranslationsEs.markAsUnread : String [get]
 [fld] TranslationsEs.maxSelectionLimitIs : String [get]
+[fld] TranslationsEs.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsEs.mediaMessage : String [get]
 [fld] TranslationsEs.meeting : String [get]
 [fld] TranslationsEs.meetingCannotBeScheduled : String [get]
@@ -9673,6 +9802,8 @@
 [fld] TranslationsEs.messageIsDeleted : String [get]
 [fld] TranslationsEs.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsEs.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsEs.messageNotSentTapToRetry : String [get]
+[fld] TranslationsEs.messageNotSentYet : String [get]
 [fld] TranslationsEs.messagePinnedToast : String [get]
 [fld] TranslationsEs.messagePrivately : String [get]
 [fld] TranslationsEs.messageReported : String [get]
@@ -9788,6 +9919,7 @@
 [fld] TranslationsEs.protectedGroup : String [get]
 [fld] TranslationsEs.public : String [get]
 [fld] TranslationsEs.question : String [get]
+[fld] TranslationsEs.queueFull : String [get]
 [fld] TranslationsEs.reacted : String [get]
 [fld] TranslationsEs.read : String [get]
 [fld] TranslationsEs.reason : String [get]
@@ -9841,6 +9973,7 @@
 [fld] TranslationsEs.sendMessage : String [get]
 [fld] TranslationsEs.sendMessageInPrivate : String [get]
 [fld] TranslationsEs.sendMessagePrivately : String [get]
+[fld] TranslationsEs.sendingTryAgain : String [get]
 [fld] TranslationsEs.sent : String [get]
 [fld] TranslationsEs.setTheAnswers : String [get]
 [fld] TranslationsEs.settings : String [get]
@@ -9916,6 +10049,8 @@
 [fld] TranslationsEs.unsaveConfirmMessage : String [get]
 [fld] TranslationsEs.unsaveConfirmTitle : String [get]
 [fld] TranslationsEs.unsaveMessageOption : String [get]
+[fld] TranslationsEs.unsentMessageRemoved : String [get]
+[fld] TranslationsEs.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsEs.unsupportedMessageType : String [get]
 [fld] TranslationsEs.uploadFailed : String [get]
 [fld] TranslationsEs.userInfo : String [get]
@@ -10049,6 +10184,16 @@
 [fld] TranslationsFr.confirmLeaveGroup : String [get]
 [fld] TranslationsFr.confirmTransferOwnership : String [get]
 [fld] TranslationsFr.confirmUnblockContact : String [get]
+[fld] TranslationsFr.connectToLoadChats : String [get]
+[fld] TranslationsFr.connectToLoadGroups : String [get]
+[fld] TranslationsFr.connectToLoadMembers : String [get]
+[fld] TranslationsFr.connectToLoadMessages : String [get]
+[fld] TranslationsFr.connectToLoadMore : String [get]
+[fld] TranslationsFr.connectToLoadNotifications : String [get]
+[fld] TranslationsFr.connectToLoadReactions : String [get]
+[fld] TranslationsFr.connectToLoadUsers : String [get]
+[fld] TranslationsFr.connectToSearch : String [get]
+[fld] TranslationsFr.connectToSearchSubtitle : String [get]
 [fld] TranslationsFr.connecting : String [get]
 [fld] TranslationsFr.continueText : String [get]
 [fld] TranslationsFr.conversationPinnedToast : String [get]
@@ -10116,7 +10261,9 @@
 [fld] TranslationsFr.file : String [get]
 [fld] TranslationsFr.fileListShowLess : String [get]
 [fld] TranslationsFr.fileListShowMore : String [get]
+[fld] TranslationsFr.fileNotSaved : String [get]
 [fld] TranslationsFr.fileSaved : String [get]
+[fld] TranslationsFr.fileTooLargeOffline : String [get]
 [fld] TranslationsFr.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsFr.flags : String [get]
 [fld] TranslationsFr.foodDrink : String [get]
@@ -10162,6 +10309,7 @@
 [fld] TranslationsFr.join : String [get]
 [fld] TranslationsFr.joined : String [get]
 [fld] TranslationsFr.jump : String [get]
+[fld] TranslationsFr.jumpToLatest : String [get]
 [fld] TranslationsFr.kick : String [get]
 [fld] TranslationsFr.kicked : String [get]
 [fld] TranslationsFr.lastActiveAt : String [get]
@@ -10184,6 +10332,7 @@
 [fld] TranslationsFr.makeOrReceiveCalls : String [get]
 [fld] TranslationsFr.markAsUnread : String [get]
 [fld] TranslationsFr.maxSelectionLimitIs : String [get]
+[fld] TranslationsFr.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsFr.mediaMessage : String [get]
 [fld] TranslationsFr.meeting : String [get]
 [fld] TranslationsFr.meetingCannotBeScheduled : String [get]
@@ -10201,6 +10350,8 @@
 [fld] TranslationsFr.messageIsDeleted : String [get]
 [fld] TranslationsFr.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsFr.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsFr.messageNotSentTapToRetry : String [get]
+[fld] TranslationsFr.messageNotSentYet : String [get]
 [fld] TranslationsFr.messagePinnedToast : String [get]
 [fld] TranslationsFr.messagePrivately : String [get]
 [fld] TranslationsFr.messageReported : String [get]
@@ -10316,6 +10467,7 @@
 [fld] TranslationsFr.protectedGroup : String [get]
 [fld] TranslationsFr.public : String [get]
 [fld] TranslationsFr.question : String [get]
+[fld] TranslationsFr.queueFull : String [get]
 [fld] TranslationsFr.reacted : String [get]
 [fld] TranslationsFr.read : String [get]
 [fld] TranslationsFr.reason : String [get]
@@ -10369,6 +10521,7 @@
 [fld] TranslationsFr.sendMessage : String [get]
 [fld] TranslationsFr.sendMessageInPrivate : String [get]
 [fld] TranslationsFr.sendMessagePrivately : String [get]
+[fld] TranslationsFr.sendingTryAgain : String [get]
 [fld] TranslationsFr.sent : String [get]
 [fld] TranslationsFr.setTheAnswers : String [get]
 [fld] TranslationsFr.settings : String [get]
@@ -10444,6 +10597,8 @@
 [fld] TranslationsFr.unsaveConfirmMessage : String [get]
 [fld] TranslationsFr.unsaveConfirmTitle : String [get]
 [fld] TranslationsFr.unsaveMessageOption : String [get]
+[fld] TranslationsFr.unsentMessageRemoved : String [get]
+[fld] TranslationsFr.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsFr.unsupportedMessageType : String [get]
 [fld] TranslationsFr.uploadFailed : String [get]
 [fld] TranslationsFr.userInfo : String [get]
@@ -10577,6 +10732,16 @@
 [fld] TranslationsHi.confirmLeaveGroup : String [get]
 [fld] TranslationsHi.confirmTransferOwnership : String [get]
 [fld] TranslationsHi.confirmUnblockContact : String [get]
+[fld] TranslationsHi.connectToLoadChats : String [get]
+[fld] TranslationsHi.connectToLoadGroups : String [get]
+[fld] TranslationsHi.connectToLoadMembers : String [get]
+[fld] TranslationsHi.connectToLoadMessages : String [get]
+[fld] TranslationsHi.connectToLoadMore : String [get]
+[fld] TranslationsHi.connectToLoadNotifications : String [get]
+[fld] TranslationsHi.connectToLoadReactions : String [get]
+[fld] TranslationsHi.connectToLoadUsers : String [get]
+[fld] TranslationsHi.connectToSearch : String [get]
+[fld] TranslationsHi.connectToSearchSubtitle : String [get]
 [fld] TranslationsHi.connecting : String [get]
 [fld] TranslationsHi.continueText : String [get]
 [fld] TranslationsHi.conversationPinnedToast : String [get]
@@ -10644,7 +10809,9 @@
 [fld] TranslationsHi.file : String [get]
 [fld] TranslationsHi.fileListShowLess : String [get]
 [fld] TranslationsHi.fileListShowMore : String [get]
+[fld] TranslationsHi.fileNotSaved : String [get]
 [fld] TranslationsHi.fileSaved : String [get]
+[fld] TranslationsHi.fileTooLargeOffline : String [get]
 [fld] TranslationsHi.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsHi.flags : String [get]
 [fld] TranslationsHi.foodDrink : String [get]
@@ -10690,6 +10857,7 @@
 [fld] TranslationsHi.join : String [get]
 [fld] TranslationsHi.joined : String [get]
 [fld] TranslationsHi.jump : String [get]
+[fld] TranslationsHi.jumpToLatest : String [get]
 [fld] TranslationsHi.kick : String [get]
 [fld] TranslationsHi.kicked : String [get]
 [fld] TranslationsHi.lastActiveAt : String [get]
@@ -10712,6 +10880,7 @@
 [fld] TranslationsHi.makeOrReceiveCalls : String [get]
 [fld] TranslationsHi.markAsUnread : String [get]
 [fld] TranslationsHi.maxSelectionLimitIs : String [get]
+[fld] TranslationsHi.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsHi.mediaMessage : String [get]
 [fld] TranslationsHi.meeting : String [get]
 [fld] TranslationsHi.meetingCannotBeScheduled : String [get]
@@ -10729,6 +10898,8 @@
 [fld] TranslationsHi.messageIsDeleted : String [get]
 [fld] TranslationsHi.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsHi.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsHi.messageNotSentTapToRetry : String [get]
+[fld] TranslationsHi.messageNotSentYet : String [get]
 [fld] TranslationsHi.messagePinnedToast : String [get]
 [fld] TranslationsHi.messagePrivately : String [get]
 [fld] TranslationsHi.messageReported : String [get]
@@ -10844,6 +11015,7 @@
 [fld] TranslationsHi.protectedGroup : String [get]
 [fld] TranslationsHi.public : String [get]
 [fld] TranslationsHi.question : String [get]
+[fld] TranslationsHi.queueFull : String [get]
 [fld] TranslationsHi.reacted : String [get]
 [fld] TranslationsHi.read : String [get]
 [fld] TranslationsHi.reason : String [get]
@@ -10897,6 +11069,7 @@
 [fld] TranslationsHi.sendMessage : String [get]
 [fld] TranslationsHi.sendMessageInPrivate : String [get]
 [fld] TranslationsHi.sendMessagePrivately : String [get]
+[fld] TranslationsHi.sendingTryAgain : String [get]
 [fld] TranslationsHi.sent : String [get]
 [fld] TranslationsHi.setTheAnswers : String [get]
 [fld] TranslationsHi.settings : String [get]
@@ -10972,6 +11145,8 @@
 [fld] TranslationsHi.unsaveConfirmMessage : String [get]
 [fld] TranslationsHi.unsaveConfirmTitle : String [get]
 [fld] TranslationsHi.unsaveMessageOption : String [get]
+[fld] TranslationsHi.unsentMessageRemoved : String [get]
+[fld] TranslationsHi.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsHi.unsupportedMessageType : String [get]
 [fld] TranslationsHi.uploadFailed : String [get]
 [fld] TranslationsHi.userInfo : String [get]
@@ -11105,6 +11280,16 @@
 [fld] TranslationsHu.confirmLeaveGroup : String [get]
 [fld] TranslationsHu.confirmTransferOwnership : String [get]
 [fld] TranslationsHu.confirmUnblockContact : String [get]
+[fld] TranslationsHu.connectToLoadChats : String [get]
+[fld] TranslationsHu.connectToLoadGroups : String [get]
+[fld] TranslationsHu.connectToLoadMembers : String [get]
+[fld] TranslationsHu.connectToLoadMessages : String [get]
+[fld] TranslationsHu.connectToLoadMore : String [get]
+[fld] TranslationsHu.connectToLoadNotifications : String [get]
+[fld] TranslationsHu.connectToLoadReactions : String [get]
+[fld] TranslationsHu.connectToLoadUsers : String [get]
+[fld] TranslationsHu.connectToSearch : String [get]
+[fld] TranslationsHu.connectToSearchSubtitle : String [get]
 [fld] TranslationsHu.connecting : String [get]
 [fld] TranslationsHu.continueText : String [get]
 [fld] TranslationsHu.conversationPinnedToast : String [get]
@@ -11172,7 +11357,9 @@
 [fld] TranslationsHu.file : String [get]
 [fld] TranslationsHu.fileListShowLess : String [get]
 [fld] TranslationsHu.fileListShowMore : String [get]
+[fld] TranslationsHu.fileNotSaved : String [get]
 [fld] TranslationsHu.fileSaved : String [get]
+[fld] TranslationsHu.fileTooLargeOffline : String [get]
 [fld] TranslationsHu.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsHu.flags : String [get]
 [fld] TranslationsHu.foodDrink : String [get]
@@ -11218,6 +11405,7 @@
 [fld] TranslationsHu.join : String [get]
 [fld] TranslationsHu.joined : String [get]
 [fld] TranslationsHu.jump : String [get]
+[fld] TranslationsHu.jumpToLatest : String [get]
 [fld] TranslationsHu.kick : String [get]
 [fld] TranslationsHu.kicked : String [get]
 [fld] TranslationsHu.lastActiveAt : String [get]
@@ -11240,6 +11428,7 @@
 [fld] TranslationsHu.makeOrReceiveCalls : String [get]
 [fld] TranslationsHu.markAsUnread : String [get]
 [fld] TranslationsHu.maxSelectionLimitIs : String [get]
+[fld] TranslationsHu.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsHu.mediaMessage : String [get]
 [fld] TranslationsHu.meeting : String [get]
 [fld] TranslationsHu.meetingCannotBeScheduled : String [get]
@@ -11257,6 +11446,8 @@
 [fld] TranslationsHu.messageIsDeleted : String [get]
 [fld] TranslationsHu.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsHu.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsHu.messageNotSentTapToRetry : String [get]
+[fld] TranslationsHu.messageNotSentYet : String [get]
 [fld] TranslationsHu.messagePinnedToast : String [get]
 [fld] TranslationsHu.messagePrivately : String [get]
 [fld] TranslationsHu.messageReported : String [get]
@@ -11372,6 +11563,7 @@
 [fld] TranslationsHu.protectedGroup : String [get]
 [fld] TranslationsHu.public : String [get]
 [fld] TranslationsHu.question : String [get]
+[fld] TranslationsHu.queueFull : String [get]
 [fld] TranslationsHu.reacted : String [get]
 [fld] TranslationsHu.read : String [get]
 [fld] TranslationsHu.reason : String [get]
@@ -11425,6 +11617,7 @@
 [fld] TranslationsHu.sendMessage : String [get]
 [fld] TranslationsHu.sendMessageInPrivate : String [get]
 [fld] TranslationsHu.sendMessagePrivately : String [get]
+[fld] TranslationsHu.sendingTryAgain : String [get]
 [fld] TranslationsHu.sent : String [get]
 [fld] TranslationsHu.setTheAnswers : String [get]
 [fld] TranslationsHu.settings : String [get]
@@ -11500,6 +11693,8 @@
 [fld] TranslationsHu.unsaveConfirmMessage : String [get]
 [fld] TranslationsHu.unsaveConfirmTitle : String [get]
 [fld] TranslationsHu.unsaveMessageOption : String [get]
+[fld] TranslationsHu.unsentMessageRemoved : String [get]
+[fld] TranslationsHu.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsHu.unsupportedMessageType : String [get]
 [fld] TranslationsHu.uploadFailed : String [get]
 [fld] TranslationsHu.userInfo : String [get]
@@ -11633,6 +11828,16 @@
 [fld] TranslationsJa.confirmLeaveGroup : String [get]
 [fld] TranslationsJa.confirmTransferOwnership : String [get]
 [fld] TranslationsJa.confirmUnblockContact : String [get]
+[fld] TranslationsJa.connectToLoadChats : String [get]
+[fld] TranslationsJa.connectToLoadGroups : String [get]
+[fld] TranslationsJa.connectToLoadMembers : String [get]
+[fld] TranslationsJa.connectToLoadMessages : String [get]
+[fld] TranslationsJa.connectToLoadMore : String [get]
+[fld] TranslationsJa.connectToLoadNotifications : String [get]
+[fld] TranslationsJa.connectToLoadReactions : String [get]
+[fld] TranslationsJa.connectToLoadUsers : String [get]
+[fld] TranslationsJa.connectToSearch : String [get]
+[fld] TranslationsJa.connectToSearchSubtitle : String [get]
 [fld] TranslationsJa.connecting : String [get]
 [fld] TranslationsJa.continueText : String [get]
 [fld] TranslationsJa.conversationPinnedToast : String [get]
@@ -11700,7 +11905,9 @@
 [fld] TranslationsJa.file : String [get]
 [fld] TranslationsJa.fileListShowLess : String [get]
 [fld] TranslationsJa.fileListShowMore : String [get]
+[fld] TranslationsJa.fileNotSaved : String [get]
 [fld] TranslationsJa.fileSaved : String [get]
+[fld] TranslationsJa.fileTooLargeOffline : String [get]
 [fld] TranslationsJa.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsJa.flags : String [get]
 [fld] TranslationsJa.foodDrink : String [get]
@@ -11746,6 +11953,7 @@
 [fld] TranslationsJa.join : String [get]
 [fld] TranslationsJa.joined : String [get]
 [fld] TranslationsJa.jump : String [get]
+[fld] TranslationsJa.jumpToLatest : String [get]
 [fld] TranslationsJa.kick : String [get]
 [fld] TranslationsJa.kicked : String [get]
 [fld] TranslationsJa.lastActiveAt : String [get]
@@ -11768,6 +11976,7 @@
 [fld] TranslationsJa.makeOrReceiveCalls : String [get]
 [fld] TranslationsJa.markAsUnread : String [get]
 [fld] TranslationsJa.maxSelectionLimitIs : String [get]
+[fld] TranslationsJa.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsJa.mediaMessage : String [get]
 [fld] TranslationsJa.meeting : String [get]
 [fld] TranslationsJa.meetingCannotBeScheduled : String [get]
@@ -11785,6 +11994,8 @@
 [fld] TranslationsJa.messageIsDeleted : String [get]
 [fld] TranslationsJa.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsJa.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsJa.messageNotSentTapToRetry : String [get]
+[fld] TranslationsJa.messageNotSentYet : String [get]
 [fld] TranslationsJa.messagePinnedToast : String [get]
 [fld] TranslationsJa.messagePrivately : String [get]
 [fld] TranslationsJa.messageReported : String [get]
@@ -11900,6 +12111,7 @@
 [fld] TranslationsJa.protectedGroup : String [get]
 [fld] TranslationsJa.public : String [get]
 [fld] TranslationsJa.question : String [get]
+[fld] TranslationsJa.queueFull : String [get]
 [fld] TranslationsJa.reacted : String [get]
 [fld] TranslationsJa.read : String [get]
 [fld] TranslationsJa.reason : String [get]
@@ -11953,6 +12165,7 @@
 [fld] TranslationsJa.sendMessage : String [get]
 [fld] TranslationsJa.sendMessageInPrivate : String [get]
 [fld] TranslationsJa.sendMessagePrivately : String [get]
+[fld] TranslationsJa.sendingTryAgain : String [get]
 [fld] TranslationsJa.sent : String [get]
 [fld] TranslationsJa.setTheAnswers : String [get]
 [fld] TranslationsJa.settings : String [get]
@@ -12028,6 +12241,8 @@
 [fld] TranslationsJa.unsaveConfirmMessage : String [get]
 [fld] TranslationsJa.unsaveConfirmTitle : String [get]
 [fld] TranslationsJa.unsaveMessageOption : String [get]
+[fld] TranslationsJa.unsentMessageRemoved : String [get]
+[fld] TranslationsJa.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsJa.unsupportedMessageType : String [get]
 [fld] TranslationsJa.uploadFailed : String [get]
 [fld] TranslationsJa.userInfo : String [get]
@@ -12161,6 +12376,16 @@
 [fld] TranslationsKo.confirmLeaveGroup : String [get]
 [fld] TranslationsKo.confirmTransferOwnership : String [get]
 [fld] TranslationsKo.confirmUnblockContact : String [get]
+[fld] TranslationsKo.connectToLoadChats : String [get]
+[fld] TranslationsKo.connectToLoadGroups : String [get]
+[fld] TranslationsKo.connectToLoadMembers : String [get]
+[fld] TranslationsKo.connectToLoadMessages : String [get]
+[fld] TranslationsKo.connectToLoadMore : String [get]
+[fld] TranslationsKo.connectToLoadNotifications : String [get]
+[fld] TranslationsKo.connectToLoadReactions : String [get]
+[fld] TranslationsKo.connectToLoadUsers : String [get]
+[fld] TranslationsKo.connectToSearch : String [get]
+[fld] TranslationsKo.connectToSearchSubtitle : String [get]
 [fld] TranslationsKo.connecting : String [get]
 [fld] TranslationsKo.continueText : String [get]
 [fld] TranslationsKo.conversationPinnedToast : String [get]
@@ -12228,7 +12453,9 @@
 [fld] TranslationsKo.file : String [get]
 [fld] TranslationsKo.fileListShowLess : String [get]
 [fld] TranslationsKo.fileListShowMore : String [get]
+[fld] TranslationsKo.fileNotSaved : String [get]
 [fld] TranslationsKo.fileSaved : String [get]
+[fld] TranslationsKo.fileTooLargeOffline : String [get]
 [fld] TranslationsKo.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsKo.flags : String [get]
 [fld] TranslationsKo.foodDrink : String [get]
@@ -12274,6 +12501,7 @@
 [fld] TranslationsKo.join : String [get]
 [fld] TranslationsKo.joined : String [get]
 [fld] TranslationsKo.jump : String [get]
+[fld] TranslationsKo.jumpToLatest : String [get]
 [fld] TranslationsKo.kick : String [get]
 [fld] TranslationsKo.kicked : String [get]
 [fld] TranslationsKo.lastActiveAt : String [get]
@@ -12296,6 +12524,7 @@
 [fld] TranslationsKo.makeOrReceiveCalls : String [get]
 [fld] TranslationsKo.markAsUnread : String [get]
 [fld] TranslationsKo.maxSelectionLimitIs : String [get]
+[fld] TranslationsKo.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsKo.mediaMessage : String [get]
 [fld] TranslationsKo.meeting : String [get]
 [fld] TranslationsKo.meetingCannotBeScheduled : String [get]
@@ -12313,6 +12542,8 @@
 [fld] TranslationsKo.messageIsDeleted : String [get]
 [fld] TranslationsKo.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsKo.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsKo.messageNotSentTapToRetry : String [get]
+[fld] TranslationsKo.messageNotSentYet : String [get]
 [fld] TranslationsKo.messagePinnedToast : String [get]
 [fld] TranslationsKo.messagePrivately : String [get]
 [fld] TranslationsKo.messageReported : String [get]
@@ -12428,6 +12659,7 @@
 [fld] TranslationsKo.protectedGroup : String [get]
 [fld] TranslationsKo.public : String [get]
 [fld] TranslationsKo.question : String [get]
+[fld] TranslationsKo.queueFull : String [get]
 [fld] TranslationsKo.reacted : String [get]
 [fld] TranslationsKo.read : String [get]
 [fld] TranslationsKo.reason : String [get]
@@ -12481,6 +12713,7 @@
 [fld] TranslationsKo.sendMessage : String [get]
 [fld] TranslationsKo.sendMessageInPrivate : String [get]
 [fld] TranslationsKo.sendMessagePrivately : String [get]
+[fld] TranslationsKo.sendingTryAgain : String [get]
 [fld] TranslationsKo.sent : String [get]
 [fld] TranslationsKo.setTheAnswers : String [get]
 [fld] TranslationsKo.settings : String [get]
@@ -12556,6 +12789,8 @@
 [fld] TranslationsKo.unsaveConfirmMessage : String [get]
 [fld] TranslationsKo.unsaveConfirmTitle : String [get]
 [fld] TranslationsKo.unsaveMessageOption : String [get]
+[fld] TranslationsKo.unsentMessageRemoved : String [get]
+[fld] TranslationsKo.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsKo.unsupportedMessageType : String [get]
 [fld] TranslationsKo.uploadFailed : String [get]
 [fld] TranslationsKo.userInfo : String [get]
@@ -12689,6 +12924,16 @@
 [fld] TranslationsLt.confirmLeaveGroup : String [get]
 [fld] TranslationsLt.confirmTransferOwnership : String [get]
 [fld] TranslationsLt.confirmUnblockContact : String [get]
+[fld] TranslationsLt.connectToLoadChats : String [get]
+[fld] TranslationsLt.connectToLoadGroups : String [get]
+[fld] TranslationsLt.connectToLoadMembers : String [get]
+[fld] TranslationsLt.connectToLoadMessages : String [get]
+[fld] TranslationsLt.connectToLoadMore : String [get]
+[fld] TranslationsLt.connectToLoadNotifications : String [get]
+[fld] TranslationsLt.connectToLoadReactions : String [get]
+[fld] TranslationsLt.connectToLoadUsers : String [get]
+[fld] TranslationsLt.connectToSearch : String [get]
+[fld] TranslationsLt.connectToSearchSubtitle : String [get]
 [fld] TranslationsLt.connecting : String [get]
 [fld] TranslationsLt.continueText : String [get]
 [fld] TranslationsLt.conversationPinnedToast : String [get]
@@ -12756,7 +13001,9 @@
 [fld] TranslationsLt.file : String [get]
 [fld] TranslationsLt.fileListShowLess : String [get]
 [fld] TranslationsLt.fileListShowMore : String [get]
+[fld] TranslationsLt.fileNotSaved : String [get]
 [fld] TranslationsLt.fileSaved : String [get]
+[fld] TranslationsLt.fileTooLargeOffline : String [get]
 [fld] TranslationsLt.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsLt.flags : String [get]
 [fld] TranslationsLt.foodDrink : String [get]
@@ -12802,6 +13049,7 @@
 [fld] TranslationsLt.join : String [get]
 [fld] TranslationsLt.joined : String [get]
 [fld] TranslationsLt.jump : String [get]
+[fld] TranslationsLt.jumpToLatest : String [get]
 [fld] TranslationsLt.kick : String [get]
 [fld] TranslationsLt.kicked : String [get]
 [fld] TranslationsLt.lastActiveAt : String [get]
@@ -12824,6 +13072,7 @@
 [fld] TranslationsLt.makeOrReceiveCalls : String [get]
 [fld] TranslationsLt.markAsUnread : String [get]
 [fld] TranslationsLt.maxSelectionLimitIs : String [get]
+[fld] TranslationsLt.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsLt.mediaMessage : String [get]
 [fld] TranslationsLt.meeting : String [get]
 [fld] TranslationsLt.meetingCannotBeScheduled : String [get]
@@ -12841,6 +13090,8 @@
 [fld] TranslationsLt.messageIsDeleted : String [get]
 [fld] TranslationsLt.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsLt.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsLt.messageNotSentTapToRetry : String [get]
+[fld] TranslationsLt.messageNotSentYet : String [get]
 [fld] TranslationsLt.messagePinnedToast : String [get]
 [fld] TranslationsLt.messagePrivately : String [get]
 [fld] TranslationsLt.messageReported : String [get]
@@ -12956,6 +13207,7 @@
 [fld] TranslationsLt.protectedGroup : String [get]
 [fld] TranslationsLt.public : String [get]
 [fld] TranslationsLt.question : String [get]
+[fld] TranslationsLt.queueFull : String [get]
 [fld] TranslationsLt.reacted : String [get]
 [fld] TranslationsLt.read : String [get]
 [fld] TranslationsLt.reason : String [get]
@@ -13009,6 +13261,7 @@
 [fld] TranslationsLt.sendMessage : String [get]
 [fld] TranslationsLt.sendMessageInPrivate : String [get]
 [fld] TranslationsLt.sendMessagePrivately : String [get]
+[fld] TranslationsLt.sendingTryAgain : String [get]
 [fld] TranslationsLt.sent : String [get]
 [fld] TranslationsLt.setTheAnswers : String [get]
 [fld] TranslationsLt.settings : String [get]
@@ -13084,6 +13337,8 @@
 [fld] TranslationsLt.unsaveConfirmMessage : String [get]
 [fld] TranslationsLt.unsaveConfirmTitle : String [get]
 [fld] TranslationsLt.unsaveMessageOption : String [get]
+[fld] TranslationsLt.unsentMessageRemoved : String [get]
+[fld] TranslationsLt.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsLt.unsupportedMessageType : String [get]
 [fld] TranslationsLt.uploadFailed : String [get]
 [fld] TranslationsLt.userInfo : String [get]
@@ -13217,6 +13472,16 @@
 [fld] TranslationsMs.confirmLeaveGroup : String [get]
 [fld] TranslationsMs.confirmTransferOwnership : String [get]
 [fld] TranslationsMs.confirmUnblockContact : String [get]
+[fld] TranslationsMs.connectToLoadChats : String [get]
+[fld] TranslationsMs.connectToLoadGroups : String [get]
+[fld] TranslationsMs.connectToLoadMembers : String [get]
+[fld] TranslationsMs.connectToLoadMessages : String [get]
+[fld] TranslationsMs.connectToLoadMore : String [get]
+[fld] TranslationsMs.connectToLoadNotifications : String [get]
+[fld] TranslationsMs.connectToLoadReactions : String [get]
+[fld] TranslationsMs.connectToLoadUsers : String [get]
+[fld] TranslationsMs.connectToSearch : String [get]
+[fld] TranslationsMs.connectToSearchSubtitle : String [get]
 [fld] TranslationsMs.connecting : String [get]
 [fld] TranslationsMs.continueText : String [get]
 [fld] TranslationsMs.conversationPinnedToast : String [get]
@@ -13284,7 +13549,9 @@
 [fld] TranslationsMs.file : String [get]
 [fld] TranslationsMs.fileListShowLess : String [get]
 [fld] TranslationsMs.fileListShowMore : String [get]
+[fld] TranslationsMs.fileNotSaved : String [get]
 [fld] TranslationsMs.fileSaved : String [get]
+[fld] TranslationsMs.fileTooLargeOffline : String [get]
 [fld] TranslationsMs.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsMs.flags : String [get]
 [fld] TranslationsMs.foodDrink : String [get]
@@ -13330,6 +13597,7 @@
 [fld] TranslationsMs.join : String [get]
 [fld] TranslationsMs.joined : String [get]
 [fld] TranslationsMs.jump : String [get]
+[fld] TranslationsMs.jumpToLatest : String [get]
 [fld] TranslationsMs.kick : String [get]
 [fld] TranslationsMs.kicked : String [get]
 [fld] TranslationsMs.lastActiveAt : String [get]
@@ -13352,6 +13620,7 @@
 [fld] TranslationsMs.makeOrReceiveCalls : String [get]
 [fld] TranslationsMs.markAsUnread : String [get]
 [fld] TranslationsMs.maxSelectionLimitIs : String [get]
+[fld] TranslationsMs.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsMs.mediaMessage : String [get]
 [fld] TranslationsMs.meeting : String [get]
 [fld] TranslationsMs.meetingCannotBeScheduled : String [get]
@@ -13369,6 +13638,8 @@
 [fld] TranslationsMs.messageIsDeleted : String [get]
 [fld] TranslationsMs.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsMs.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsMs.messageNotSentTapToRetry : String [get]
+[fld] TranslationsMs.messageNotSentYet : String [get]
 [fld] TranslationsMs.messagePinnedToast : String [get]
 [fld] TranslationsMs.messagePrivately : String [get]
 [fld] TranslationsMs.messageReported : String [get]
@@ -13484,6 +13755,7 @@
 [fld] TranslationsMs.protectedGroup : String [get]
 [fld] TranslationsMs.public : String [get]
 [fld] TranslationsMs.question : String [get]
+[fld] TranslationsMs.queueFull : String [get]
 [fld] TranslationsMs.reacted : String [get]
 [fld] TranslationsMs.read : String [get]
 [fld] TranslationsMs.reason : String [get]
@@ -13537,6 +13809,7 @@
 [fld] TranslationsMs.sendMessage : String [get]
 [fld] TranslationsMs.sendMessageInPrivate : String [get]
 [fld] TranslationsMs.sendMessagePrivately : String [get]
+[fld] TranslationsMs.sendingTryAgain : String [get]
 [fld] TranslationsMs.sent : String [get]
 [fld] TranslationsMs.setTheAnswers : String [get]
 [fld] TranslationsMs.settings : String [get]
@@ -13612,6 +13885,8 @@
 [fld] TranslationsMs.unsaveConfirmMessage : String [get]
 [fld] TranslationsMs.unsaveConfirmTitle : String [get]
 [fld] TranslationsMs.unsaveMessageOption : String [get]
+[fld] TranslationsMs.unsentMessageRemoved : String [get]
+[fld] TranslationsMs.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsMs.unsupportedMessageType : String [get]
 [fld] TranslationsMs.uploadFailed : String [get]
 [fld] TranslationsMs.userInfo : String [get]
@@ -13745,6 +14020,16 @@
 [fld] TranslationsNl.confirmLeaveGroup : String [get]
 [fld] TranslationsNl.confirmTransferOwnership : String [get]
 [fld] TranslationsNl.confirmUnblockContact : String [get]
+[fld] TranslationsNl.connectToLoadChats : String [get]
+[fld] TranslationsNl.connectToLoadGroups : String [get]
+[fld] TranslationsNl.connectToLoadMembers : String [get]
+[fld] TranslationsNl.connectToLoadMessages : String [get]
+[fld] TranslationsNl.connectToLoadMore : String [get]
+[fld] TranslationsNl.connectToLoadNotifications : String [get]
+[fld] TranslationsNl.connectToLoadReactions : String [get]
+[fld] TranslationsNl.connectToLoadUsers : String [get]
+[fld] TranslationsNl.connectToSearch : String [get]
+[fld] TranslationsNl.connectToSearchSubtitle : String [get]
 [fld] TranslationsNl.connecting : String [get]
 [fld] TranslationsNl.continueText : String [get]
 [fld] TranslationsNl.conversationPinnedToast : String [get]
@@ -13812,7 +14097,9 @@
 [fld] TranslationsNl.file : String [get]
 [fld] TranslationsNl.fileListShowLess : String [get]
 [fld] TranslationsNl.fileListShowMore : String [get]
+[fld] TranslationsNl.fileNotSaved : String [get]
 [fld] TranslationsNl.fileSaved : String [get]
+[fld] TranslationsNl.fileTooLargeOffline : String [get]
 [fld] TranslationsNl.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsNl.flags : String [get]
 [fld] TranslationsNl.foodDrink : String [get]
@@ -13858,6 +14145,7 @@
 [fld] TranslationsNl.join : String [get]
 [fld] TranslationsNl.joined : String [get]
 [fld] TranslationsNl.jump : String [get]
+[fld] TranslationsNl.jumpToLatest : String [get]
 [fld] TranslationsNl.kick : String [get]
 [fld] TranslationsNl.kicked : String [get]
 [fld] TranslationsNl.lastActiveAt : String [get]
@@ -13880,6 +14168,7 @@
 [fld] TranslationsNl.makeOrReceiveCalls : String [get]
 [fld] TranslationsNl.markAsUnread : String [get]
 [fld] TranslationsNl.maxSelectionLimitIs : String [get]
+[fld] TranslationsNl.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsNl.mediaMessage : String [get]
 [fld] TranslationsNl.meeting : String [get]
 [fld] TranslationsNl.meetingCannotBeScheduled : String [get]
@@ -13897,6 +14186,8 @@
 [fld] TranslationsNl.messageIsDeleted : String [get]
 [fld] TranslationsNl.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsNl.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsNl.messageNotSentTapToRetry : String [get]
+[fld] TranslationsNl.messageNotSentYet : String [get]
 [fld] TranslationsNl.messagePinnedToast : String [get]
 [fld] TranslationsNl.messagePrivately : String [get]
 [fld] TranslationsNl.messageReported : String [get]
@@ -14012,6 +14303,7 @@
 [fld] TranslationsNl.protectedGroup : String [get]
 [fld] TranslationsNl.public : String [get]
 [fld] TranslationsNl.question : String [get]
+[fld] TranslationsNl.queueFull : String [get]
 [fld] TranslationsNl.reacted : String [get]
 [fld] TranslationsNl.read : String [get]
 [fld] TranslationsNl.reason : String [get]
@@ -14065,6 +14357,7 @@
 [fld] TranslationsNl.sendMessage : String [get]
 [fld] TranslationsNl.sendMessageInPrivate : String [get]
 [fld] TranslationsNl.sendMessagePrivately : String [get]
+[fld] TranslationsNl.sendingTryAgain : String [get]
 [fld] TranslationsNl.sent : String [get]
 [fld] TranslationsNl.setTheAnswers : String [get]
 [fld] TranslationsNl.settings : String [get]
@@ -14140,6 +14433,8 @@
 [fld] TranslationsNl.unsaveConfirmMessage : String [get]
 [fld] TranslationsNl.unsaveConfirmTitle : String [get]
 [fld] TranslationsNl.unsaveMessageOption : String [get]
+[fld] TranslationsNl.unsentMessageRemoved : String [get]
+[fld] TranslationsNl.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsNl.unsupportedMessageType : String [get]
 [fld] TranslationsNl.uploadFailed : String [get]
 [fld] TranslationsNl.userInfo : String [get]
@@ -14273,6 +14568,16 @@
 [fld] TranslationsPt.confirmLeaveGroup : String [get]
 [fld] TranslationsPt.confirmTransferOwnership : String [get]
 [fld] TranslationsPt.confirmUnblockContact : String [get]
+[fld] TranslationsPt.connectToLoadChats : String [get]
+[fld] TranslationsPt.connectToLoadGroups : String [get]
+[fld] TranslationsPt.connectToLoadMembers : String [get]
+[fld] TranslationsPt.connectToLoadMessages : String [get]
+[fld] TranslationsPt.connectToLoadMore : String [get]
+[fld] TranslationsPt.connectToLoadNotifications : String [get]
+[fld] TranslationsPt.connectToLoadReactions : String [get]
+[fld] TranslationsPt.connectToLoadUsers : String [get]
+[fld] TranslationsPt.connectToSearch : String [get]
+[fld] TranslationsPt.connectToSearchSubtitle : String [get]
 [fld] TranslationsPt.connecting : String [get]
 [fld] TranslationsPt.continueText : String [get]
 [fld] TranslationsPt.conversationPinnedToast : String [get]
@@ -14340,7 +14645,9 @@
 [fld] TranslationsPt.file : String [get]
 [fld] TranslationsPt.fileListShowLess : String [get]
 [fld] TranslationsPt.fileListShowMore : String [get]
+[fld] TranslationsPt.fileNotSaved : String [get]
 [fld] TranslationsPt.fileSaved : String [get]
+[fld] TranslationsPt.fileTooLargeOffline : String [get]
 [fld] TranslationsPt.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsPt.flags : String [get]
 [fld] TranslationsPt.foodDrink : String [get]
@@ -14386,6 +14693,7 @@
 [fld] TranslationsPt.join : String [get]
 [fld] TranslationsPt.joined : String [get]
 [fld] TranslationsPt.jump : String [get]
+[fld] TranslationsPt.jumpToLatest : String [get]
 [fld] TranslationsPt.kick : String [get]
 [fld] TranslationsPt.kicked : String [get]
 [fld] TranslationsPt.lastActiveAt : String [get]
@@ -14408,6 +14716,7 @@
 [fld] TranslationsPt.makeOrReceiveCalls : String [get]
 [fld] TranslationsPt.markAsUnread : String [get]
 [fld] TranslationsPt.maxSelectionLimitIs : String [get]
+[fld] TranslationsPt.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsPt.mediaMessage : String [get]
 [fld] TranslationsPt.meeting : String [get]
 [fld] TranslationsPt.meetingCannotBeScheduled : String [get]
@@ -14425,6 +14734,8 @@
 [fld] TranslationsPt.messageIsDeleted : String [get]
 [fld] TranslationsPt.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsPt.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsPt.messageNotSentTapToRetry : String [get]
+[fld] TranslationsPt.messageNotSentYet : String [get]
 [fld] TranslationsPt.messagePinnedToast : String [get]
 [fld] TranslationsPt.messagePrivately : String [get]
 [fld] TranslationsPt.messageReported : String [get]
@@ -14540,6 +14851,7 @@
 [fld] TranslationsPt.protectedGroup : String [get]
 [fld] TranslationsPt.public : String [get]
 [fld] TranslationsPt.question : String [get]
+[fld] TranslationsPt.queueFull : String [get]
 [fld] TranslationsPt.reacted : String [get]
 [fld] TranslationsPt.read : String [get]
 [fld] TranslationsPt.reason : String [get]
@@ -14593,6 +14905,7 @@
 [fld] TranslationsPt.sendMessage : String [get]
 [fld] TranslationsPt.sendMessageInPrivate : String [get]
 [fld] TranslationsPt.sendMessagePrivately : String [get]
+[fld] TranslationsPt.sendingTryAgain : String [get]
 [fld] TranslationsPt.sent : String [get]
 [fld] TranslationsPt.setTheAnswers : String [get]
 [fld] TranslationsPt.settings : String [get]
@@ -14668,6 +14981,8 @@
 [fld] TranslationsPt.unsaveConfirmMessage : String [get]
 [fld] TranslationsPt.unsaveConfirmTitle : String [get]
 [fld] TranslationsPt.unsaveMessageOption : String [get]
+[fld] TranslationsPt.unsentMessageRemoved : String [get]
+[fld] TranslationsPt.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsPt.unsupportedMessageType : String [get]
 [fld] TranslationsPt.uploadFailed : String [get]
 [fld] TranslationsPt.userInfo : String [get]
@@ -14801,6 +15116,16 @@
 [fld] TranslationsRu.confirmLeaveGroup : String [get]
 [fld] TranslationsRu.confirmTransferOwnership : String [get]
 [fld] TranslationsRu.confirmUnblockContact : String [get]
+[fld] TranslationsRu.connectToLoadChats : String [get]
+[fld] TranslationsRu.connectToLoadGroups : String [get]
+[fld] TranslationsRu.connectToLoadMembers : String [get]
+[fld] TranslationsRu.connectToLoadMessages : String [get]
+[fld] TranslationsRu.connectToLoadMore : String [get]
+[fld] TranslationsRu.connectToLoadNotifications : String [get]
+[fld] TranslationsRu.connectToLoadReactions : String [get]
+[fld] TranslationsRu.connectToLoadUsers : String [get]
+[fld] TranslationsRu.connectToSearch : String [get]
+[fld] TranslationsRu.connectToSearchSubtitle : String [get]
 [fld] TranslationsRu.connecting : String [get]
 [fld] TranslationsRu.continueText : String [get]
 [fld] TranslationsRu.conversationPinnedToast : String [get]
@@ -14868,7 +15193,9 @@
 [fld] TranslationsRu.file : String [get]
 [fld] TranslationsRu.fileListShowLess : String [get]
 [fld] TranslationsRu.fileListShowMore : String [get]
+[fld] TranslationsRu.fileNotSaved : String [get]
 [fld] TranslationsRu.fileSaved : String [get]
+[fld] TranslationsRu.fileTooLargeOffline : String [get]
 [fld] TranslationsRu.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsRu.flags : String [get]
 [fld] TranslationsRu.foodDrink : String [get]
@@ -14914,6 +15241,7 @@
 [fld] TranslationsRu.join : String [get]
 [fld] TranslationsRu.joined : String [get]
 [fld] TranslationsRu.jump : String [get]
+[fld] TranslationsRu.jumpToLatest : String [get]
 [fld] TranslationsRu.kick : String [get]
 [fld] TranslationsRu.kicked : String [get]
 [fld] TranslationsRu.lastActiveAt : String [get]
@@ -14936,6 +15264,7 @@
 [fld] TranslationsRu.makeOrReceiveCalls : String [get]
 [fld] TranslationsRu.markAsUnread : String [get]
 [fld] TranslationsRu.maxSelectionLimitIs : String [get]
+[fld] TranslationsRu.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsRu.mediaMessage : String [get]
 [fld] TranslationsRu.meeting : String [get]
 [fld] TranslationsRu.meetingCannotBeScheduled : String [get]
@@ -14953,6 +15282,8 @@
 [fld] TranslationsRu.messageIsDeleted : String [get]
 [fld] TranslationsRu.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsRu.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsRu.messageNotSentTapToRetry : String [get]
+[fld] TranslationsRu.messageNotSentYet : String [get]
 [fld] TranslationsRu.messagePinnedToast : String [get]
 [fld] TranslationsRu.messagePrivately : String [get]
 [fld] TranslationsRu.messageReported : String [get]
@@ -15068,6 +15399,7 @@
 [fld] TranslationsRu.protectedGroup : String [get]
 [fld] TranslationsRu.public : String [get]
 [fld] TranslationsRu.question : String [get]
+[fld] TranslationsRu.queueFull : String [get]
 [fld] TranslationsRu.reacted : String [get]
 [fld] TranslationsRu.read : String [get]
 [fld] TranslationsRu.reason : String [get]
@@ -15121,6 +15453,7 @@
 [fld] TranslationsRu.sendMessage : String [get]
 [fld] TranslationsRu.sendMessageInPrivate : String [get]
 [fld] TranslationsRu.sendMessagePrivately : String [get]
+[fld] TranslationsRu.sendingTryAgain : String [get]
 [fld] TranslationsRu.sent : String [get]
 [fld] TranslationsRu.setTheAnswers : String [get]
 [fld] TranslationsRu.settings : String [get]
@@ -15196,6 +15529,8 @@
 [fld] TranslationsRu.unsaveConfirmMessage : String [get]
 [fld] TranslationsRu.unsaveConfirmTitle : String [get]
 [fld] TranslationsRu.unsaveMessageOption : String [get]
+[fld] TranslationsRu.unsentMessageRemoved : String [get]
+[fld] TranslationsRu.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsRu.unsupportedMessageType : String [get]
 [fld] TranslationsRu.uploadFailed : String [get]
 [fld] TranslationsRu.userInfo : String [get]
@@ -15329,6 +15664,16 @@
 [fld] TranslationsSv.confirmLeaveGroup : String [get]
 [fld] TranslationsSv.confirmTransferOwnership : String [get]
 [fld] TranslationsSv.confirmUnblockContact : String [get]
+[fld] TranslationsSv.connectToLoadChats : String [get]
+[fld] TranslationsSv.connectToLoadGroups : String [get]
+[fld] TranslationsSv.connectToLoadMembers : String [get]
+[fld] TranslationsSv.connectToLoadMessages : String [get]
+[fld] TranslationsSv.connectToLoadMore : String [get]
+[fld] TranslationsSv.connectToLoadNotifications : String [get]
+[fld] TranslationsSv.connectToLoadReactions : String [get]
+[fld] TranslationsSv.connectToLoadUsers : String [get]
+[fld] TranslationsSv.connectToSearch : String [get]
+[fld] TranslationsSv.connectToSearchSubtitle : String [get]
 [fld] TranslationsSv.connecting : String [get]
 [fld] TranslationsSv.continueText : String [get]
 [fld] TranslationsSv.conversationPinnedToast : String [get]
@@ -15396,7 +15741,9 @@
 [fld] TranslationsSv.file : String [get]
 [fld] TranslationsSv.fileListShowLess : String [get]
 [fld] TranslationsSv.fileListShowMore : String [get]
+[fld] TranslationsSv.fileNotSaved : String [get]
 [fld] TranslationsSv.fileSaved : String [get]
+[fld] TranslationsSv.fileTooLargeOffline : String [get]
 [fld] TranslationsSv.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsSv.flags : String [get]
 [fld] TranslationsSv.foodDrink : String [get]
@@ -15442,6 +15789,7 @@
 [fld] TranslationsSv.join : String [get]
 [fld] TranslationsSv.joined : String [get]
 [fld] TranslationsSv.jump : String [get]
+[fld] TranslationsSv.jumpToLatest : String [get]
 [fld] TranslationsSv.kick : String [get]
 [fld] TranslationsSv.kicked : String [get]
 [fld] TranslationsSv.lastActiveAt : String [get]
@@ -15464,6 +15812,7 @@
 [fld] TranslationsSv.makeOrReceiveCalls : String [get]
 [fld] TranslationsSv.markAsUnread : String [get]
 [fld] TranslationsSv.maxSelectionLimitIs : String [get]
+[fld] TranslationsSv.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsSv.mediaMessage : String [get]
 [fld] TranslationsSv.meeting : String [get]
 [fld] TranslationsSv.meetingCannotBeScheduled : String [get]
@@ -15481,6 +15830,8 @@
 [fld] TranslationsSv.messageIsDeleted : String [get]
 [fld] TranslationsSv.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsSv.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsSv.messageNotSentTapToRetry : String [get]
+[fld] TranslationsSv.messageNotSentYet : String [get]
 [fld] TranslationsSv.messagePinnedToast : String [get]
 [fld] TranslationsSv.messagePrivately : String [get]
 [fld] TranslationsSv.messageReported : String [get]
@@ -15596,6 +15947,7 @@
 [fld] TranslationsSv.protectedGroup : String [get]
 [fld] TranslationsSv.public : String [get]
 [fld] TranslationsSv.question : String [get]
+[fld] TranslationsSv.queueFull : String [get]
 [fld] TranslationsSv.reacted : String [get]
 [fld] TranslationsSv.read : String [get]
 [fld] TranslationsSv.reason : String [get]
@@ -15649,6 +16001,7 @@
 [fld] TranslationsSv.sendMessage : String [get]
 [fld] TranslationsSv.sendMessageInPrivate : String [get]
 [fld] TranslationsSv.sendMessagePrivately : String [get]
+[fld] TranslationsSv.sendingTryAgain : String [get]
 [fld] TranslationsSv.sent : String [get]
 [fld] TranslationsSv.setTheAnswers : String [get]
 [fld] TranslationsSv.settings : String [get]
@@ -15724,6 +16077,8 @@
 [fld] TranslationsSv.unsaveConfirmMessage : String [get]
 [fld] TranslationsSv.unsaveConfirmTitle : String [get]
 [fld] TranslationsSv.unsaveMessageOption : String [get]
+[fld] TranslationsSv.unsentMessageRemoved : String [get]
+[fld] TranslationsSv.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsSv.unsupportedMessageType : String [get]
 [fld] TranslationsSv.uploadFailed : String [get]
 [fld] TranslationsSv.userInfo : String [get]
@@ -15857,6 +16212,16 @@
 [fld] TranslationsTr.confirmLeaveGroup : String [get]
 [fld] TranslationsTr.confirmTransferOwnership : String [get]
 [fld] TranslationsTr.confirmUnblockContact : String [get]
+[fld] TranslationsTr.connectToLoadChats : String [get]
+[fld] TranslationsTr.connectToLoadGroups : String [get]
+[fld] TranslationsTr.connectToLoadMembers : String [get]
+[fld] TranslationsTr.connectToLoadMessages : String [get]
+[fld] TranslationsTr.connectToLoadMore : String [get]
+[fld] TranslationsTr.connectToLoadNotifications : String [get]
+[fld] TranslationsTr.connectToLoadReactions : String [get]
+[fld] TranslationsTr.connectToLoadUsers : String [get]
+[fld] TranslationsTr.connectToSearch : String [get]
+[fld] TranslationsTr.connectToSearchSubtitle : String [get]
 [fld] TranslationsTr.connecting : String [get]
 [fld] TranslationsTr.continueText : String [get]
 [fld] TranslationsTr.conversationPinnedToast : String [get]
@@ -15924,7 +16289,9 @@
 [fld] TranslationsTr.file : String [get]
 [fld] TranslationsTr.fileListShowLess : String [get]
 [fld] TranslationsTr.fileListShowMore : String [get]
+[fld] TranslationsTr.fileNotSaved : String [get]
 [fld] TranslationsTr.fileSaved : String [get]
+[fld] TranslationsTr.fileTooLargeOffline : String [get]
 [fld] TranslationsTr.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsTr.flags : String [get]
 [fld] TranslationsTr.foodDrink : String [get]
@@ -15970,6 +16337,7 @@
 [fld] TranslationsTr.join : String [get]
 [fld] TranslationsTr.joined : String [get]
 [fld] TranslationsTr.jump : String [get]
+[fld] TranslationsTr.jumpToLatest : String [get]
 [fld] TranslationsTr.kick : String [get]
 [fld] TranslationsTr.kicked : String [get]
 [fld] TranslationsTr.lastActiveAt : String [get]
@@ -15992,6 +16360,7 @@
 [fld] TranslationsTr.makeOrReceiveCalls : String [get]
 [fld] TranslationsTr.markAsUnread : String [get]
 [fld] TranslationsTr.maxSelectionLimitIs : String [get]
+[fld] TranslationsTr.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsTr.mediaMessage : String [get]
 [fld] TranslationsTr.meeting : String [get]
 [fld] TranslationsTr.meetingCannotBeScheduled : String [get]
@@ -16009,6 +16378,8 @@
 [fld] TranslationsTr.messageIsDeleted : String [get]
 [fld] TranslationsTr.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsTr.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsTr.messageNotSentTapToRetry : String [get]
+[fld] TranslationsTr.messageNotSentYet : String [get]
 [fld] TranslationsTr.messagePinnedToast : String [get]
 [fld] TranslationsTr.messagePrivately : String [get]
 [fld] TranslationsTr.messageReported : String [get]
@@ -16124,6 +16495,7 @@
 [fld] TranslationsTr.protectedGroup : String [get]
 [fld] TranslationsTr.public : String [get]
 [fld] TranslationsTr.question : String [get]
+[fld] TranslationsTr.queueFull : String [get]
 [fld] TranslationsTr.reacted : String [get]
 [fld] TranslationsTr.read : String [get]
 [fld] TranslationsTr.reason : String [get]
@@ -16177,6 +16549,7 @@
 [fld] TranslationsTr.sendMessage : String [get]
 [fld] TranslationsTr.sendMessageInPrivate : String [get]
 [fld] TranslationsTr.sendMessagePrivately : String [get]
+[fld] TranslationsTr.sendingTryAgain : String [get]
 [fld] TranslationsTr.sent : String [get]
 [fld] TranslationsTr.setTheAnswers : String [get]
 [fld] TranslationsTr.settings : String [get]
@@ -16252,6 +16625,8 @@
 [fld] TranslationsTr.unsaveConfirmMessage : String [get]
 [fld] TranslationsTr.unsaveConfirmTitle : String [get]
 [fld] TranslationsTr.unsaveMessageOption : String [get]
+[fld] TranslationsTr.unsentMessageRemoved : String [get]
+[fld] TranslationsTr.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsTr.unsupportedMessageType : String [get]
 [fld] TranslationsTr.uploadFailed : String [get]
 [fld] TranslationsTr.userInfo : String [get]
@@ -16385,6 +16760,16 @@
 [fld] TranslationsZh.confirmLeaveGroup : String [get]
 [fld] TranslationsZh.confirmTransferOwnership : String [get]
 [fld] TranslationsZh.confirmUnblockContact : String [get]
+[fld] TranslationsZh.connectToLoadChats : String [get]
+[fld] TranslationsZh.connectToLoadGroups : String [get]
+[fld] TranslationsZh.connectToLoadMembers : String [get]
+[fld] TranslationsZh.connectToLoadMessages : String [get]
+[fld] TranslationsZh.connectToLoadMore : String [get]
+[fld] TranslationsZh.connectToLoadNotifications : String [get]
+[fld] TranslationsZh.connectToLoadReactions : String [get]
+[fld] TranslationsZh.connectToLoadUsers : String [get]
+[fld] TranslationsZh.connectToSearch : String [get]
+[fld] TranslationsZh.connectToSearchSubtitle : String [get]
 [fld] TranslationsZh.connecting : String [get]
 [fld] TranslationsZh.continueText : String [get]
 [fld] TranslationsZh.conversationPinnedToast : String [get]
@@ -16452,7 +16837,9 @@
 [fld] TranslationsZh.file : String [get]
 [fld] TranslationsZh.fileListShowLess : String [get]
 [fld] TranslationsZh.fileListShowMore : String [get]
+[fld] TranslationsZh.fileNotSaved : String [get]
 [fld] TranslationsZh.fileSaved : String [get]
+[fld] TranslationsZh.fileTooLargeOffline : String [get]
 [fld] TranslationsZh.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsZh.flags : String [get]
 [fld] TranslationsZh.foodDrink : String [get]
@@ -16498,6 +16885,7 @@
 [fld] TranslationsZh.join : String [get]
 [fld] TranslationsZh.joined : String [get]
 [fld] TranslationsZh.jump : String [get]
+[fld] TranslationsZh.jumpToLatest : String [get]
 [fld] TranslationsZh.kick : String [get]
 [fld] TranslationsZh.kicked : String [get]
 [fld] TranslationsZh.lastActiveAt : String [get]
@@ -16520,6 +16908,7 @@
 [fld] TranslationsZh.makeOrReceiveCalls : String [get]
 [fld] TranslationsZh.markAsUnread : String [get]
 [fld] TranslationsZh.maxSelectionLimitIs : String [get]
+[fld] TranslationsZh.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsZh.mediaMessage : String [get]
 [fld] TranslationsZh.meeting : String [get]
 [fld] TranslationsZh.meetingCannotBeScheduled : String [get]
@@ -16537,6 +16926,8 @@
 [fld] TranslationsZh.messageIsDeleted : String [get]
 [fld] TranslationsZh.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsZh.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsZh.messageNotSentTapToRetry : String [get]
+[fld] TranslationsZh.messageNotSentYet : String [get]
 [fld] TranslationsZh.messagePinnedToast : String [get]
 [fld] TranslationsZh.messagePrivately : String [get]
 [fld] TranslationsZh.messageReported : String [get]
@@ -16652,6 +17043,7 @@
 [fld] TranslationsZh.protectedGroup : String [get]
 [fld] TranslationsZh.public : String [get]
 [fld] TranslationsZh.question : String [get]
+[fld] TranslationsZh.queueFull : String [get]
 [fld] TranslationsZh.reacted : String [get]
 [fld] TranslationsZh.read : String [get]
 [fld] TranslationsZh.reason : String [get]
@@ -16705,6 +17097,7 @@
 [fld] TranslationsZh.sendMessage : String [get]
 [fld] TranslationsZh.sendMessageInPrivate : String [get]
 [fld] TranslationsZh.sendMessagePrivately : String [get]
+[fld] TranslationsZh.sendingTryAgain : String [get]
 [fld] TranslationsZh.sent : String [get]
 [fld] TranslationsZh.setTheAnswers : String [get]
 [fld] TranslationsZh.settings : String [get]
@@ -16780,6 +17173,8 @@
 [fld] TranslationsZh.unsaveConfirmMessage : String [get]
 [fld] TranslationsZh.unsaveConfirmTitle : String [get]
 [fld] TranslationsZh.unsaveMessageOption : String [get]
+[fld] TranslationsZh.unsentMessageRemoved : String [get]
+[fld] TranslationsZh.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsZh.unsupportedMessageType : String [get]
 [fld] TranslationsZh.uploadFailed : String [get]
 [fld] TranslationsZh.userInfo : String [get]
@@ -16913,6 +17308,16 @@
 [fld] TranslationsZhTw.confirmLeaveGroup : String [get]
 [fld] TranslationsZhTw.confirmTransferOwnership : String [get]
 [fld] TranslationsZhTw.confirmUnblockContact : String [get]
+[fld] TranslationsZhTw.connectToLoadChats : String [get]
+[fld] TranslationsZhTw.connectToLoadGroups : String [get]
+[fld] TranslationsZhTw.connectToLoadMembers : String [get]
+[fld] TranslationsZhTw.connectToLoadMessages : String [get]
+[fld] TranslationsZhTw.connectToLoadMore : String [get]
+[fld] TranslationsZhTw.connectToLoadNotifications : String [get]
+[fld] TranslationsZhTw.connectToLoadReactions : String [get]
+[fld] TranslationsZhTw.connectToLoadUsers : String [get]
+[fld] TranslationsZhTw.connectToSearch : String [get]
+[fld] TranslationsZhTw.connectToSearchSubtitle : String [get]
 [fld] TranslationsZhTw.connecting : String [get]
 [fld] TranslationsZhTw.continueText : String [get]
 [fld] TranslationsZhTw.conversationPinnedToast : String [get]
@@ -16980,7 +17385,9 @@
 [fld] TranslationsZhTw.file : String [get]
 [fld] TranslationsZhTw.fileListShowLess : String [get]
 [fld] TranslationsZhTw.fileListShowMore : String [get]
+[fld] TranslationsZhTw.fileNotSaved : String [get]
 [fld] TranslationsZhTw.fileSaved : String [get]
+[fld] TranslationsZhTw.fileTooLargeOffline : String [get]
 [fld] TranslationsZhTw.fileTypeNotSupportedForPreview : String [get]
 [fld] TranslationsZhTw.flags : String [get]
 [fld] TranslationsZhTw.foodDrink : String [get]
@@ -17026,6 +17433,7 @@
 [fld] TranslationsZhTw.join : String [get]
 [fld] TranslationsZhTw.joined : String [get]
 [fld] TranslationsZhTw.jump : String [get]
+[fld] TranslationsZhTw.jumpToLatest : String [get]
 [fld] TranslationsZhTw.kick : String [get]
 [fld] TranslationsZhTw.kicked : String [get]
 [fld] TranslationsZhTw.lastActiveAt : String [get]
@@ -17048,6 +17456,7 @@
 [fld] TranslationsZhTw.makeOrReceiveCalls : String [get]
 [fld] TranslationsZhTw.markAsUnread : String [get]
 [fld] TranslationsZhTw.maxSelectionLimitIs : String [get]
+[fld] TranslationsZhTw.mediaAvailableWhenOnline : String [get]
 [fld] TranslationsZhTw.mediaMessage : String [get]
 [fld] TranslationsZhTw.meeting : String [get]
 [fld] TranslationsZhTw.meetingCannotBeScheduled : String [get]
@@ -17065,6 +17474,8 @@
 [fld] TranslationsZhTw.messageIsDeleted : String [get]
 [fld] TranslationsZhTw.messageListOptionGetReplyNotifications : String [get]
 [fld] TranslationsZhTw.messageListOptionStopReplyNotifications : String [get]
+[fld] TranslationsZhTw.messageNotSentTapToRetry : String [get]
+[fld] TranslationsZhTw.messageNotSentYet : String [get]
 [fld] TranslationsZhTw.messagePinnedToast : String [get]
 [fld] TranslationsZhTw.messagePrivately : String [get]
 [fld] TranslationsZhTw.messageReported : String [get]
@@ -17180,6 +17591,7 @@
 [fld] TranslationsZhTw.protectedGroup : String [get]
 [fld] TranslationsZhTw.public : String [get]
 [fld] TranslationsZhTw.question : String [get]
+[fld] TranslationsZhTw.queueFull : String [get]
 [fld] TranslationsZhTw.reacted : String [get]
 [fld] TranslationsZhTw.read : String [get]
 [fld] TranslationsZhTw.reason : String [get]
@@ -17233,6 +17645,7 @@
 [fld] TranslationsZhTw.sendMessage : String [get]
 [fld] TranslationsZhTw.sendMessageInPrivate : String [get]
 [fld] TranslationsZhTw.sendMessagePrivately : String [get]
+[fld] TranslationsZhTw.sendingTryAgain : String [get]
 [fld] TranslationsZhTw.sent : String [get]
 [fld] TranslationsZhTw.setTheAnswers : String [get]
 [fld] TranslationsZhTw.settings : String [get]
@@ -17308,6 +17721,8 @@
 [fld] TranslationsZhTw.unsaveConfirmMessage : String [get]
 [fld] TranslationsZhTw.unsaveConfirmTitle : String [get]
 [fld] TranslationsZhTw.unsaveMessageOption : String [get]
+[fld] TranslationsZhTw.unsentMessageRemoved : String [get]
+[fld] TranslationsZhTw.unsentMessagesMaybeLost : String [get]
 [fld] TranslationsZhTw.unsupportedMessageType : String [get]
 [fld] TranslationsZhTw.uploadFailed : String [get]
 [fld] TranslationsZhTw.userInfo : String [get]
@@ -17369,6 +17784,7 @@
 [fld] UIKitSettings.dateTimeFormatterCallback : DateTimeFormatterCallback? [get]
 [fld] UIKitSettings.enableCalls : bool [get]
 [fld] UIKitSettings.enableThreadSubscription : bool [get]
+[fld] UIKitSettings.offlineConfig : OfflineConfig? [get]
 [fld] UIKitSettings.region : String? [get]
 [fld] UIKitSettings.roles : List<String>? [get]
 [fld] UIKitSettings.subscriptionType : String? [get]
@@ -17382,6 +17798,7 @@
 [fld] UIKitSettingsBuilder.dateTimeFormatterCallback : DateTimeFormatterCallback? [get/set]
 [fld] UIKitSettingsBuilder.enableCalls : bool [get/set]
 [fld] UIKitSettingsBuilder.enableThreadSubscription : bool [get/set]
+[fld] UIKitSettingsBuilder.offlineConfig : OfflineConfig? [get/set]
 [fld] UIKitSettingsBuilder.region : String? [get/set]
 [fld] UIKitSettingsBuilder.roles : List<String>? [get/set]
 [fld] UIKitSettingsBuilder.subscriptionType : String? [get/set]
@@ -17582,6 +17999,7 @@
 [func] lookupTranslations(Locale locale) : Translations [static]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/l10n/translations.dart, shared_ui/src/clean_architecture/clean_architecture.dart
 [func] scaledDimension(BuildContext context, double size, {double maxFactor}) : double [static]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/core/core.dart, shared_ui/src/clean_architecture/core/utils/text_scale_utils.dart, shared_ui/src/clean_architecture/core/utils/utils.dart
 [func] scaledMaxLines(BuildContext context, {int base, int scaled, double threshold}) : int [static]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/core/core.dart, shared_ui/src/clean_architecture/core/utils/text_scale_utils.dart, shared_ui/src/clean_architecture/core/utils/utils.dart
+[func] sendStateOf(BaseMessage m) : CometChatMessageSendState [static]  @ cometchat_chat_uikit.dart, shared_ui/src/offline/message_send_state.dart
 [func] showCometChatAiOptionSheet({required BuildContext context, required List<CometChatMessageComposerAction> actionItems, User? user, Group? group, CometChatColorPalette? colorPalette, CometChatTypography? typography, CometChatSpacing? spacing, CometChatAiOptionSheetStyle? style, AIOptionsStyle? aiOptionStyle}) : Future<CometChatMessageComposerAction?>? [static]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/views/ai_option_sheet/cometchat_ai_option_sheet.dart
 [func] showCometChatAttachmentOptionSheet({required BuildContext context, required List<ActionItem> actionItems, required CometChatColorPalette colorPalette, CometChatAttachmentOptionSheetStyle? style}) : Future<ActionItem?>? [static]  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/presentation/views/misc/action_sheet/cometchat_action_sheet.dart
 [func] showCometChatCreatePoll({required BuildContext context, required CometChatColorPalette colorPalette, required CometChatSpacing spacing, String? uid, String? guid, String? title, BaseMessage? quotedMessage, Group? groupObject, User? userObject}) : Future<String?> [static]  @ chat_ui/src/extensions/extension.dart, chat_ui/src/extensions/polls/cometchat_create_poll.dart, cometchat_chat_uikit.dart
@@ -17647,6 +18065,8 @@
 [meth] AttachmentTrayController.buildBatchMessages({required String receiverUid, required String receiverType, User? sender}) : List<MediaMessage>
 [meth] AttachmentTrayController.cancelOrRemove(String fileId) : Future<void>
 [meth] AttachmentTrayController.clear() : Future<void>
+[meth] AttachmentTrayController.detach() : void
+[meth] AttachmentTrayController.restore(UploadFileRequest request) : bool
 [meth] AttachmentTrayController.retry(String fileId) : Future<void>
 [meth] AttachmentTrayController.setCaption(String value) : void
 [meth] AttachmentTrayController.stage(List<UploadFile> files) : Future<void>
@@ -18171,9 +18591,11 @@
 [meth] CometChatMessageEventListener.ccMessagePinned(BaseMessage message) : void
 [meth] CometChatMessageEventListener.ccMessageRead(BaseMessage message) : void
 [meth] CometChatMessageEventListener.ccMessageSaved(BaseMessage message) : void
+[meth] CometChatMessageEventListener.ccMessageSendStateChanged(BaseMessage message, CometChatMessageSendState state, MessageFailureReason? reason) : void
 [meth] CometChatMessageEventListener.ccMessageSent(BaseMessage message, MessageStatus messageStatus) : void
 [meth] CometChatMessageEventListener.ccMessageUnpinned(BaseMessage message) : void
 [meth] CometChatMessageEventListener.ccMessageUnsaved(BaseMessage message) : void
+[meth] CometChatMessageEventListener.ccOfflineCacheReset(OfflineCacheResetReason reason, int? pendingMessagesLost) : void
 [meth] CometChatMessageEventListener.ccReplyToMessage(BaseMessage message) : void
 [meth] CometChatMessageEventListener.ccThreadSubscriptionChanged(int parentMessageId, bool subscribed) : void
 [meth] CometChatMessageEventListener.onCardMessageReceived(CardMessage cardMessage) : void
@@ -18204,9 +18626,11 @@
 [meth] CometChatMessageEvents.ccMessagePinned(BaseMessage message) : void [static]
 [meth] CometChatMessageEvents.ccMessageRead(BaseMessage message) : void [static]
 [meth] CometChatMessageEvents.ccMessageSaved(BaseMessage message) : void [static]
+[meth] CometChatMessageEvents.ccMessageSendStateChanged(BaseMessage message, CometChatMessageSendState state, MessageFailureReason? reason) : void [static]
 [meth] CometChatMessageEvents.ccMessageSent(BaseMessage message, MessageStatus messageStatus) : void [static]
 [meth] CometChatMessageEvents.ccMessageUnpinned(BaseMessage message) : void [static]
 [meth] CometChatMessageEvents.ccMessageUnsaved(BaseMessage message) : void [static]
+[meth] CometChatMessageEvents.ccOfflineCacheReset(OfflineCacheResetReason reason, int? pendingMessagesLost) : void [static]
 [meth] CometChatMessageEvents.ccReplyToMessage(BaseMessage message) : void [static]
 [meth] CometChatMessageEvents.ccThreadSubscriptionChanged(int parentMessageId, bool subscribed) : void [static]
 [meth] CometChatMessageEvents.onCardMessageReceived(CardMessage message) : void [static]
@@ -18467,7 +18891,7 @@
 [meth] CometChatUIKit.getConversationUpdateSettings() : void [static]
 [meth] CometChatUIKit.getLoggedInUser({dynamic Function(User)? onSuccess, dynamic Function(CometChatException)? onError}) : Future<User?> [static]
 [meth] CometChatUIKit.init({required UIKitSettings uiKitSettings, dynamic Function(String)? onSuccess, dynamic Function(CometChatException)? onError}) : Future<void> [static]
-[meth] CometChatUIKit.initFromSettings({dynamic Function(String)? onSuccess, dynamic Function(CometChatException)? onError}) : Future<void> [static]
+[meth] CometChatUIKit.initFromSettings({dynamic Function(String)? onSuccess, dynamic Function(CometChatException)? onError, OfflineConfig? offlineConfig}) : Future<void> [static]
 [meth] CometChatUIKit.login(String uid, {dynamic Function(User)? onSuccess, dynamic Function(CometChatException)? onError}) : Future<User?> [static]
 [meth] CometChatUIKit.loginWithAuthToken(String authToken, {dynamic Function(User)? onSuccess, dynamic Function(CometChatException)? onError}) : Future<User?> [static]
 [meth] CometChatUIKit.logout({dynamic Function(String)? onSuccess, dynamic Function(CometChatException)? onError}) : Future<void> [static]
@@ -18822,6 +19246,7 @@
 [meth] GroupMembersRemoteDataSource.reset() : void
 [meth] GroupMembersRemoteDataSource.updateMemberScope({required String guid, required String uid, required String scope}) : Future<void>
 [meth] GroupMembersRemoteDataSourceImpl.banGroupMember({required String guid, required String uid}) : Future<void>
+[meth] GroupMembersRemoteDataSourceImpl.fetchNextTwoPhase({required String guid, int limit, String? searchKeyword, GroupMembersRequestBuilder? groupMembersRequestBuilder, required GroupMemberFetchListener listener}) : void
 [meth] GroupMembersRemoteDataSourceImpl.getConversation(String guid) : Future<Conversation?>
 [meth] GroupMembersRemoteDataSourceImpl.getGroupMembers({required String guid, int limit, String? searchKeyword}) : Future<List<GroupMember>>
 [meth] GroupMembersRemoteDataSourceImpl.getLoggedInUser() : Future<User?>
@@ -18901,6 +19326,7 @@
 [meth] GroupsRemoteDataSource.joinGroup({required String guid, required String groupType, String? password}) : Future<Group>
 [meth] GroupsRemoteDataSource.leaveGroup(String guid) : Future<void>
 [meth] GroupsRemoteDataSource.resetRequest() : void
+[meth] GroupsRemoteDataSourceImpl.fetchNextTwoPhase({int limit, String? searchKeyword, bool? joinedOnly, GroupsRequestBuilder? groupsRequestBuilder, required GroupFetchListener listener}) : void
 [meth] GroupsRemoteDataSourceImpl.getGroupById(String guid) : Future<Group>
 [meth] GroupsRemoteDataSourceImpl.getGroups({int limit, String? searchKeyword, bool? joinedOnly}) : Future<List<Group>>
 [meth] GroupsRemoteDataSourceImpl.getLoggedInUser() : Future<User?>
@@ -19022,9 +19448,11 @@
 [meth] MessageComposerBloc.ccMessagePinned(BaseMessage message) : void
 [meth] MessageComposerBloc.ccMessageRead(BaseMessage message) : void
 [meth] MessageComposerBloc.ccMessageSaved(BaseMessage message) : void
+[meth] MessageComposerBloc.ccMessageSendStateChanged(BaseMessage message, CometChatMessageSendState state, MessageFailureReason? reason) : void
 [meth] MessageComposerBloc.ccMessageSent(BaseMessage message, MessageStatus messageStatus) : void
 [meth] MessageComposerBloc.ccMessageUnpinned(BaseMessage message) : void
 [meth] MessageComposerBloc.ccMessageUnsaved(BaseMessage message) : void
+[meth] MessageComposerBloc.ccOfflineCacheReset(OfflineCacheResetReason reason, int? pendingMessagesLost) : void
 [meth] MessageComposerBloc.ccReplyToMessage(BaseMessage message) : void
 [meth] MessageComposerBloc.ccStreamCompleted(bool isCompleted) : void
 [meth] MessageComposerBloc.ccStreamInProgress(bool isInProgress) : void
@@ -19384,9 +19812,11 @@
 [meth] ReactionListBloc.ccMessagePinned(BaseMessage message) : void
 [meth] ReactionListBloc.ccMessageRead(BaseMessage message) : void
 [meth] ReactionListBloc.ccMessageSaved(BaseMessage message) : void
+[meth] ReactionListBloc.ccMessageSendStateChanged(BaseMessage message, CometChatMessageSendState state, MessageFailureReason? reason) : void
 [meth] ReactionListBloc.ccMessageSent(BaseMessage message, MessageStatus messageStatus) : void
 [meth] ReactionListBloc.ccMessageUnpinned(BaseMessage message) : void
 [meth] ReactionListBloc.ccMessageUnsaved(BaseMessage message) : void
+[meth] ReactionListBloc.ccOfflineCacheReset(OfflineCacheResetReason reason, int? pendingMessagesLost) : void
 [meth] ReactionListBloc.ccReplyToMessage(BaseMessage message) : void
 [meth] ReactionListBloc.ccThreadSubscriptionChanged(int parentMessageId, bool subscribed) : void
 [meth] ReactionListBloc.onCardMessageReceived(CardMessage cardMessage) : void
@@ -19483,7 +19913,7 @@
 [meth] SchedulerUtils.parseAvailabilityTime(String raw) : Duration [static]
 [meth] SchedulerUtils.parseICS(String icsContent, String timeZone) : Map<String, Map<String, dynamic>> [static]
 [meth] SearchMessagesUseCase.call(Params params) : Future<Result<T>>
-[meth] SearchState.copyWith({String? searchText, Set<String>? selectedFilters, List<SearchFilter>? visibleFilters, SearchStatus? conversationsStatus, List<Conversation>? conversations, bool? hasMoreConversations, SearchStatus? messagesStatus, List<BaseMessage>? messages, bool? hasMoreMessages, SearchScope? scope, bool? showConversations, bool? showMessages, String? errorMessage, bool clearError}) : SearchState
+[meth] SearchState.copyWith({String? searchText, Set<String>? selectedFilters, List<SearchFilter>? visibleFilters, SearchStatus? conversationsStatus, List<Conversation>? conversations, bool? hasMoreConversations, SearchStatus? messagesStatus, List<BaseMessage>? messages, bool? hasMoreMessages, SearchScope? scope, bool? showConversations, bool? showMessages, String? errorMessage, bool clearError, bool? connectToSearch}) : SearchState
 [meth] SearchState.shouldShowNoResults() : bool
 [meth] SeekAudioUseCase.call(int audioId, Duration position) : Future<Result<void>>
 [meth] SegmentComposerController.applyFormat(FormatType format, {ComposerSegment? targetSegment}) : void
@@ -19551,124 +19981,164 @@
 [meth] TimeStampGeneration.validateEntry(DateTime dateTime) : bool
 [meth] Translations.conversationPinLimitReachedToast(int limit) : String
 [meth] Translations.messageFrom(String sender) : String
+[meth] Translations.messagesNotSent(int n) : String
 [meth] Translations.of(BuildContext context) : Translations [static]
 [meth] Translations.pinLimitReachedToast(int limit) : String
 [meth] Translations.saveLimitReachedToast(int limit) : String
 [meth] Translations.suggestionListWithItems(int count) : String
+[meth] Translations.unsentMessagesLost(int n) : String
 [meth] TranslationsAr.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsAr.messageFrom(String sender) : String
+[meth] TranslationsAr.messagesNotSent(int n) : String
 [meth] TranslationsAr.of(BuildContext context) : Translations [static]
 [meth] TranslationsAr.pinLimitReachedToast(int limit) : String
 [meth] TranslationsAr.saveLimitReachedToast(int limit) : String
 [meth] TranslationsAr.suggestionListWithItems(int count) : String
+[meth] TranslationsAr.unsentMessagesLost(int n) : String
 [meth] TranslationsDe.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsDe.messageFrom(String sender) : String
+[meth] TranslationsDe.messagesNotSent(int n) : String
 [meth] TranslationsDe.of(BuildContext context) : Translations [static]
 [meth] TranslationsDe.pinLimitReachedToast(int limit) : String
 [meth] TranslationsDe.saveLimitReachedToast(int limit) : String
 [meth] TranslationsDe.suggestionListWithItems(int count) : String
+[meth] TranslationsDe.unsentMessagesLost(int n) : String
 [meth] TranslationsEn.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsEn.messageFrom(String sender) : String
+[meth] TranslationsEn.messagesNotSent(int n) : String
 [meth] TranslationsEn.of(BuildContext context) : Translations [static]
 [meth] TranslationsEn.pinLimitReachedToast(int limit) : String
 [meth] TranslationsEn.saveLimitReachedToast(int limit) : String
 [meth] TranslationsEn.suggestionListWithItems(int count) : String
+[meth] TranslationsEn.unsentMessagesLost(int n) : String
 [meth] TranslationsEnGb.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsEnGb.messageFrom(String sender) : String
+[meth] TranslationsEnGb.messagesNotSent(int n) : String
 [meth] TranslationsEnGb.of(BuildContext context) : Translations [static]
 [meth] TranslationsEnGb.pinLimitReachedToast(int limit) : String
 [meth] TranslationsEnGb.saveLimitReachedToast(int limit) : String
 [meth] TranslationsEnGb.suggestionListWithItems(int count) : String
+[meth] TranslationsEnGb.unsentMessagesLost(int n) : String
 [meth] TranslationsEs.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsEs.messageFrom(String sender) : String
+[meth] TranslationsEs.messagesNotSent(int n) : String
 [meth] TranslationsEs.of(BuildContext context) : Translations [static]
 [meth] TranslationsEs.pinLimitReachedToast(int limit) : String
 [meth] TranslationsEs.saveLimitReachedToast(int limit) : String
 [meth] TranslationsEs.suggestionListWithItems(int count) : String
+[meth] TranslationsEs.unsentMessagesLost(int n) : String
 [meth] TranslationsFr.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsFr.messageFrom(String sender) : String
+[meth] TranslationsFr.messagesNotSent(int n) : String
 [meth] TranslationsFr.of(BuildContext context) : Translations [static]
 [meth] TranslationsFr.pinLimitReachedToast(int limit) : String
 [meth] TranslationsFr.saveLimitReachedToast(int limit) : String
 [meth] TranslationsFr.suggestionListWithItems(int count) : String
+[meth] TranslationsFr.unsentMessagesLost(int n) : String
 [meth] TranslationsHi.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsHi.messageFrom(String sender) : String
+[meth] TranslationsHi.messagesNotSent(int n) : String
 [meth] TranslationsHi.of(BuildContext context) : Translations [static]
 [meth] TranslationsHi.pinLimitReachedToast(int limit) : String
 [meth] TranslationsHi.saveLimitReachedToast(int limit) : String
 [meth] TranslationsHi.suggestionListWithItems(int count) : String
+[meth] TranslationsHi.unsentMessagesLost(int n) : String
 [meth] TranslationsHu.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsHu.messageFrom(String sender) : String
+[meth] TranslationsHu.messagesNotSent(int n) : String
 [meth] TranslationsHu.of(BuildContext context) : Translations [static]
 [meth] TranslationsHu.pinLimitReachedToast(int limit) : String
 [meth] TranslationsHu.saveLimitReachedToast(int limit) : String
 [meth] TranslationsHu.suggestionListWithItems(int count) : String
+[meth] TranslationsHu.unsentMessagesLost(int n) : String
 [meth] TranslationsJa.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsJa.messageFrom(String sender) : String
+[meth] TranslationsJa.messagesNotSent(int n) : String
 [meth] TranslationsJa.of(BuildContext context) : Translations [static]
 [meth] TranslationsJa.pinLimitReachedToast(int limit) : String
 [meth] TranslationsJa.saveLimitReachedToast(int limit) : String
 [meth] TranslationsJa.suggestionListWithItems(int count) : String
+[meth] TranslationsJa.unsentMessagesLost(int n) : String
 [meth] TranslationsKo.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsKo.messageFrom(String sender) : String
+[meth] TranslationsKo.messagesNotSent(int n) : String
 [meth] TranslationsKo.of(BuildContext context) : Translations [static]
 [meth] TranslationsKo.pinLimitReachedToast(int limit) : String
 [meth] TranslationsKo.saveLimitReachedToast(int limit) : String
 [meth] TranslationsKo.suggestionListWithItems(int count) : String
+[meth] TranslationsKo.unsentMessagesLost(int n) : String
 [meth] TranslationsLt.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsLt.messageFrom(String sender) : String
+[meth] TranslationsLt.messagesNotSent(int n) : String
 [meth] TranslationsLt.of(BuildContext context) : Translations [static]
 [meth] TranslationsLt.pinLimitReachedToast(int limit) : String
 [meth] TranslationsLt.saveLimitReachedToast(int limit) : String
 [meth] TranslationsLt.suggestionListWithItems(int count) : String
+[meth] TranslationsLt.unsentMessagesLost(int n) : String
 [meth] TranslationsMs.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsMs.messageFrom(String sender) : String
+[meth] TranslationsMs.messagesNotSent(int n) : String
 [meth] TranslationsMs.of(BuildContext context) : Translations [static]
 [meth] TranslationsMs.pinLimitReachedToast(int limit) : String
 [meth] TranslationsMs.saveLimitReachedToast(int limit) : String
 [meth] TranslationsMs.suggestionListWithItems(int count) : String
+[meth] TranslationsMs.unsentMessagesLost(int n) : String
 [meth] TranslationsNl.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsNl.messageFrom(String sender) : String
+[meth] TranslationsNl.messagesNotSent(int n) : String
 [meth] TranslationsNl.of(BuildContext context) : Translations [static]
 [meth] TranslationsNl.pinLimitReachedToast(int limit) : String
 [meth] TranslationsNl.saveLimitReachedToast(int limit) : String
 [meth] TranslationsNl.suggestionListWithItems(int count) : String
+[meth] TranslationsNl.unsentMessagesLost(int n) : String
 [meth] TranslationsPt.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsPt.messageFrom(String sender) : String
+[meth] TranslationsPt.messagesNotSent(int n) : String
 [meth] TranslationsPt.of(BuildContext context) : Translations [static]
 [meth] TranslationsPt.pinLimitReachedToast(int limit) : String
 [meth] TranslationsPt.saveLimitReachedToast(int limit) : String
 [meth] TranslationsPt.suggestionListWithItems(int count) : String
+[meth] TranslationsPt.unsentMessagesLost(int n) : String
 [meth] TranslationsRu.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsRu.messageFrom(String sender) : String
+[meth] TranslationsRu.messagesNotSent(int n) : String
 [meth] TranslationsRu.of(BuildContext context) : Translations [static]
 [meth] TranslationsRu.pinLimitReachedToast(int limit) : String
 [meth] TranslationsRu.saveLimitReachedToast(int limit) : String
 [meth] TranslationsRu.suggestionListWithItems(int count) : String
+[meth] TranslationsRu.unsentMessagesLost(int n) : String
 [meth] TranslationsSv.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsSv.messageFrom(String sender) : String
+[meth] TranslationsSv.messagesNotSent(int n) : String
 [meth] TranslationsSv.of(BuildContext context) : Translations [static]
 [meth] TranslationsSv.pinLimitReachedToast(int limit) : String
 [meth] TranslationsSv.saveLimitReachedToast(int limit) : String
 [meth] TranslationsSv.suggestionListWithItems(int count) : String
+[meth] TranslationsSv.unsentMessagesLost(int n) : String
 [meth] TranslationsTr.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsTr.messageFrom(String sender) : String
+[meth] TranslationsTr.messagesNotSent(int n) : String
 [meth] TranslationsTr.of(BuildContext context) : Translations [static]
 [meth] TranslationsTr.pinLimitReachedToast(int limit) : String
 [meth] TranslationsTr.saveLimitReachedToast(int limit) : String
 [meth] TranslationsTr.suggestionListWithItems(int count) : String
+[meth] TranslationsTr.unsentMessagesLost(int n) : String
 [meth] TranslationsZh.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsZh.messageFrom(String sender) : String
+[meth] TranslationsZh.messagesNotSent(int n) : String
 [meth] TranslationsZh.of(BuildContext context) : Translations [static]
 [meth] TranslationsZh.pinLimitReachedToast(int limit) : String
 [meth] TranslationsZh.saveLimitReachedToast(int limit) : String
 [meth] TranslationsZh.suggestionListWithItems(int count) : String
+[meth] TranslationsZh.unsentMessagesLost(int n) : String
 [meth] TranslationsZhTw.conversationPinLimitReachedToast(int limit) : String
 [meth] TranslationsZhTw.messageFrom(String sender) : String
+[meth] TranslationsZhTw.messagesNotSent(int n) : String
 [meth] TranslationsZhTw.of(BuildContext context) : Translations [static]
 [meth] TranslationsZhTw.pinLimitReachedToast(int limit) : String
 [meth] TranslationsZhTw.saveLimitReachedToast(int limit) : String
 [meth] TranslationsZhTw.suggestionListWithItems(int count) : String
+[meth] TranslationsZhTw.unsentMessagesLost(int n) : String
 [meth] UICallLogsBuilder.getRequest() : T2
 [meth] UICallLogsBuilder.getSearchRequest(String val) : T2
 [meth] UIConversationsBuilder.getRequest() : T2
@@ -20043,6 +20513,7 @@
 [type] CometChatMessagePreview : StatelessWidget, Widget, DiagnosticableTree, Object, Diagnosticable  @ chat_ui/src/message_composer/cometchat_message_preview.dart, cometchat_chat_uikit.dart
 [type] CometChatMessagePreviewStyle : ThemeExtension<CometChatMessagePreviewStyle>, Object  @ chat_ui/src/message_composer/cometchat_message_preview.dart, cometchat_chat_uikit.dart
 [type] CometChatMessageReceiptStyle : ThemeExtension<CometChatMessageReceiptStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/presentation/views/misc/receipt/cometchat_receipt_style.dart
+[type] CometChatMessageSendState : Enum, Object  @ cometchat_chat_uikit.dart, shared_ui/src/offline/message_send_state.dart
 [type] CometChatMessageTemplate : Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/clean_architecture/clean_architecture.dart, shared_ui/src/clean_architecture/data/data.dart, shared_ui/src/clean_architecture/data/models/cometchat_message_template.dart, shared_ui/src/clean_architecture/data/models/models.dart
 [type] CometChatMessageTranslationBubbleStyle : ThemeExtension<CometChatMessageTranslationBubbleStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/models/extension_bubble_styles/cometchat_message_translation_bubble_style.dart
 [type] CometChatModerationStyle : ThemeExtension<CometChatModerationStyle>, Object  @ cometchat_chat_uikit.dart, shared_ui/cometchat_uikit_shared.dart, shared_ui/src/models/extension_bubble_styles/cometchat_moderation_style.dart

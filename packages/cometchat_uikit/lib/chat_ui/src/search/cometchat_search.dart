@@ -5,6 +5,9 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart' as cc;
 import '../conversations/utils/conversation_subtitle_utils.dart';
 import '../../../shared_ui/src/clean_architecture/presentation/views/misc/message_preview_subtitle.dart';
+import '../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../shared_ui/src/offline/offline_list_states.dart';
+import '../../../shared_ui/src/offline/offline_media.dart';
 
 /// Full-screen search widget for conversations and messages.
 ///
@@ -153,9 +156,15 @@ class _CometChatSearchState extends State<CometChatSearch> {
       );
       _isExternalBloc = false;
     }
+    OfflineListErrors.listen(_searchBloc, _onKeptRowsError);
     _textController = TextEditingController();
     _focusNode = FocusNode();
   }
+
+  /// A real server error over cached rows that stay on screen, on a load the user or
+  /// app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error);
 
   @override
   void didChangeDependencies() {
@@ -178,6 +187,7 @@ class _CometChatSearchState extends State<CometChatSearch> {
 
   @override
   void dispose() {
+    OfflineListErrors.cancel(_searchBloc, _onKeptRowsError);
     if (!_isExternalBloc) {
       _searchBloc.close();
     }
@@ -200,12 +210,41 @@ class _CometChatSearchState extends State<CometChatSearch> {
   bool _reportedEmpty = false;
   bool _reportedError = false;
 
+  /// Offline, nothing to show, a keyword set: "Connect to search" (D84 (7)).
+  static bool _isOfflineSearchState(SearchState state) =>
+      state.connectToSearch &&
+      state.searchText.isNotEmpty &&
+      _visibleSectionsEmpty(state);
+
+  /// Offline, nothing to show, only filters set: the plain-list offline
+  /// state (D84 (3)). The bloc trims the keyword, so a blank one is none.
+  static bool _isOfflineListState(SearchState state) =>
+      state.connectToSearch &&
+      state.searchText.isEmpty &&
+      _visibleSectionsEmpty(state);
+
+  /// Nothing to show in the sections on screen. A hidden section can keep
+  /// stale rows: the bloc clears only the visible ones on a new search.
+  static bool _visibleSectionsEmpty(SearchState state) =>
+      (!state.showConversations || state.conversations.isEmpty) &&
+      (!state.showMessages || state.messages.isEmpty);
+
   void _reportSearchState(SearchState state) {
     final conversationsChanged =
         state.conversationsStatus != _lastConversationsStatus;
     final messagesChanged = state.messagesStatus != _lastMessagesStatus;
     _lastConversationsStatus = state.conversationsStatus;
     _lastMessagesStatus = state.messagesStatus;
+    // Offline, server out of reach: neither an error nor "nothing found"
+    // (D84 (7)). Filters without a keyword are a plain list: its offline
+    // state reaches onError once (D84 (3)).
+    if (state.connectToSearch) {
+      if (_isOfflineListState(state) && !_reportedError) {
+        _reportedError = true;
+        widget.onError?.call(Exception(state.errorMessage ?? 'Not connected'));
+      }
+      return;
+    }
 
     if (state.conversationsStatus == SearchStatus.error ||
         state.messagesStatus == SearchStatus.error) {
@@ -439,6 +478,31 @@ class _CometChatSearchState extends State<CometChatSearch> {
         if (state.isInitial) {
           return widget.initialStateView?.call(context) ??
               const SizedBox.shrink();
+        }
+
+        if (_isOfflineListState(state)) {
+          // Filters without a keyword: a plain list (D84 (3)), the app's
+          // error view if it passed one.
+          final t = cc.Translations.of(context);
+          return OfflineListStates.view(
+            context,
+            state.showConversations
+                ? t.connectToLoadChats
+                : t.connectToLoadMessages,
+            appErrorView: widget.errorStateView?.call(context),
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
+          );
+        }
+        if (_isOfflineSearchState(state)) {
+          final t = cc.Translations.of(context);
+          return OfflineListStates.view(
+            context,
+            t.connectToSearch,
+            subtitle: t.connectToSearchSubtitle,
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
+          );
         }
 
         if (state.bothActive && state.allLoading) {
@@ -1071,13 +1135,25 @@ class _CometChatSearchState extends State<CometChatSearch> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        CometChatVideoFirstFrame(
-                          key: ValueKey('cc_search_video_frame_$url'),
-                          source: url,
-                          fallback: const CometChatMediaPlaceholder(
-                            glyphWidth: 28,
+                        // Offline on: the first frame comes from the copy
+                        // saved on the phone when there is one.
+                        if (OfflineMedia.enabled)
+                          // Keyed so a row reused for another result
+                          // starts a new lookup, not the old frame.
+                          _SearchVideoFrame(
+                            key: ValueKey(
+                              'cc_search_offline_frame_${msg.id}_$url',
+                            ),
+                            attachment: first!,
+                          )
+                        else
+                          CometChatVideoFirstFrame(
+                            key: ValueKey('cc_search_video_frame_$url'),
+                            source: url,
+                            fallback: const CometChatMediaPlaceholder(
+                              glyphWidth: 28,
+                            ),
                           ),
-                        ),
                         const Center(
                           child: CircleAvatar(
                             radius: 13,
@@ -1545,6 +1621,49 @@ class _CometChatSearchState extends State<CometChatSearch> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Offline on: a search row's video first frame from the copy saved on the
+/// phone (`localPath`, else the SDK's cache — BEH-MEDIA-18), else from the
+/// link.
+class _SearchVideoFrame extends StatefulWidget {
+  const _SearchVideoFrame({super.key, required this.attachment});
+
+  final Attachment attachment;
+
+  @override
+  State<_SearchVideoFrame> createState() => _SearchVideoFrameState();
+}
+
+class _SearchVideoFrameState extends State<_SearchVideoFrame> {
+  /// The frame's source; null while the SDK's cache is asked, so the link is
+  /// not fetched for a copy that is already on the phone.
+  late String? _source = OfflineMedia.localPathOf(
+    widget.attachment,
+    offlineOn: true,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (_source != null) return;
+    OfflineMedia.resolve(widget.attachment).then((path) {
+      if (!mounted) return;
+      setState(() => _source = path ?? widget.attachment.fileUrl);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const fallback = CometChatMediaPlaceholder(glyphWidth: 28);
+    final source = _source;
+    if (source == null) return fallback;
+    return CometChatVideoFirstFrame(
+      key: ValueKey('cc_search_video_frame_$source'),
+      source: source,
+      fallback: fallback,
     );
   }
 }

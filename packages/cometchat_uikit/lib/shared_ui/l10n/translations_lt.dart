@@ -1598,4 +1598,86 @@ class TranslationsLt extends Translations {
 
   @override
   String messageFrom(String sender) => 'Žinutė nuo $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Dar neišsiųsta";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Neišsiųsta. Bakstelėkite, kad bandytumėte dar kartą";
+
+  @override
+  String get unsentMessageRemoved => "Neišsiųsta žinutė pašalinta";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Kai kurios neišsiųstos žinutės galėjo būti neišsiųstos";
+
+  @override
+  String get queueFull => "Per daug žinučių laukia išsiuntimo";
+
+  @override
+  String get fileTooLargeOffline =>
+      "Failas per didelis, kad būtų išsiųstas neprisijungus";
+
+  @override
+  String get connectToLoadMore => "Prisijunkite, kad įkeltumėte daugiau";
+
+  @override
+  String get connectToSearch => "Prisijunkite, kad galėtumėte ieškoti";
+
+  @override
+  String get connectToSearchSubtitle => "Paieškai reikia interneto ryšio.";
+
+  @override
+  String get connectToLoadUsers => "Prisijunkite, kad įkeltumėte naudotojus";
+
+  @override
+  String get connectToLoadGroups => "Prisijunkite, kad įkeltumėte grupes";
+
+  @override
+  String get connectToLoadMembers => "Prisijunkite, kad įkeltumėte narius";
+
+  @override
+  String get connectToLoadChats => "Prisijunkite, kad įkeltumėte pokalbius";
+
+  @override
+  String get connectToLoadMessages => "Prisijunkite, kad įkeltumėte žinutes";
+
+  @override
+  String get connectToLoadReactions => "Prisijunkite, kad įkeltumėte reakcijas";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Prisijunkite, kad įkeltumėte pranešimus";
+
+  @override
+  String get mediaAvailableWhenOnline => "Pasiekiama prisijungus";
+
+  @override
+  String get jumpToLatest => "Pereiti prie naujausių";
+
+  @override
+  String get sendingTryAgain => "Siunčiama… pabandykite dar kartą po akimirkos";
+
+  @override
+  String get fileNotSaved => "Failas neišsaugotas. Pridėkite jį dar kartą";
+
+  @override
+  String messagesNotSent(int n) => switch ((n % 10, n % 100)) {
+    (1, < 11 || > 19) => "$n žinutė neišsiųsta",
+    (2 || 3 || 4 || 5 || 6 || 7 || 8 || 9, < 11 || > 19) =>
+      "$n žinutės neišsiųstos",
+    _ => "$n žinučių neišsiųsta",
+  };
+
+  @override
+  String unsentMessagesLost(int n) => switch ((n % 10, n % 100)) {
+    (1, < 11 || > 19) => "Nepavyko atkurti $n neišsiųstą žinutę",
+    (2 || 3 || 4 || 5 || 6 || 7 || 8 || 9, < 11 || > 19) =>
+      "Nepavyko atkurti $n neišsiųstas žinutes",
+    _ => "Nepavyko atkurti $n neišsiųstų žinučių",
+  };
 }

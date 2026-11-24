@@ -50,6 +50,7 @@ void main() {
   late List<String> log;
   late FakeChatAuthGateway chat;
   late FakeCallsSdkGateway calls;
+  // ignore: deprecated_member_use
   late Map<String, CallListener> chatCallListeners;
   late Map<String, CometChatCallEventListener> savedBus;
 
@@ -71,6 +72,7 @@ void main() {
 
     savedBus = Map.of(CometChatCallEvents.callEventsListener);
     CometChatCallEvents.callEventsListener.clear();
+    // ignore: deprecated_member_use
     chatCallListeners = <String, CallListener>{};
     CallsLifecycle.addChatCallListener = (id, listener) =>
         chatCallListeners[id] = listener;

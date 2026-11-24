@@ -35,3 +35,6 @@ Widget buildFileImage(
     frameBuilder: frameBuilder,
   );
 }
+
+/// An image provider for a local file path (native).
+ImageProvider fileImageProvider(String filePath) => FileImage(File(filePath));

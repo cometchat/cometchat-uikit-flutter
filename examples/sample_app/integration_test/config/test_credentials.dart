@@ -73,5 +73,22 @@ class TestCredentials {
 
   // ─── REST API base URL ─────────────────────────────────────────────────────
 
-  static String get restBaseUrl => 'https://$appId.api-$region.cometchat.io/v3';
+  /// True when the app under test is a staging app
+  /// (`--dart-define=COMETCHAT_STAGING=true`). REST calls then go to the
+  /// staging host. Defaults to production, as before.
+  static const bool staging = bool.fromEnvironment('COMETCHAT_STAGING');
+
+  /// The offline E2E suite (patrol_test/, ENG-41597) sets this to the host-side
+  /// User B relay (`http://127.0.0.1:<port>`, mapped in with `adb reverse`), so
+  /// User B's REST calls still work while the test has cut the device's
+  /// network. The relay adds the REST host and keys itself. Unset (the
+  /// default), REST calls go straight to the REST host, as before.
+  static const String userBRelayUrl =
+      String.fromEnvironment('E2E_USER_B_RELAY_URL');
+
+  static String get restBaseUrl => userBRelayUrl.isNotEmpty
+      ? userBRelayUrl
+      : staging
+          ? 'https://$appId.api-$region.cometchat.io/v3'
+          : 'https://$appId.api-$region.cometchat.io/v3';
 }

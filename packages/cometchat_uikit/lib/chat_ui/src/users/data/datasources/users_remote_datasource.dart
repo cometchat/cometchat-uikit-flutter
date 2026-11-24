@@ -60,23 +60,11 @@ class UsersRemoteDataSourceImpl implements UsersRemoteDataSource {
     UsersRequestBuilder? usersRequestBuilder,
   }) async {
     try {
-      // Build a new request only if we don't have one yet (first call or after reset)
-      if (_currentRequest == null) {
-        if (usersRequestBuilder != null) {
-          _currentRequest = _buildFromAppBuilder(
-            usersRequestBuilder,
-            searchKeyword: searchKeyword,
-          );
-        } else {
-          final requestBuilder = UsersRequestBuilder()..limit = limit;
-
-          if (searchKeyword != null && searchKeyword.isNotEmpty) {
-            requestBuilder.searchKeyword = searchKeyword;
-          }
-
-          _currentRequest = requestBuilder.build();
-        }
-      }
+      _ensureRequest(
+        limit: limit,
+        searchKeyword: searchKeyword,
+        usersRequestBuilder: usersRequestBuilder,
+      );
 
       final completer = Completer<List<User>>();
 
@@ -113,6 +101,63 @@ class UsersRemoteDataSourceImpl implements UsersRemoteDataSource {
         message: 'Unexpected error while fetching users: ${e.toString()}',
         originalException: e is Exception ? e : null,
       );
+    }
+  }
+
+  /// The offline-on read of the next page (W6): the same request and cursor
+  /// as [getUsers], asked once with the SDK's two-phase [listener], so the
+  /// cached page arrives first and the server page after it (BEH-SNAP-03).
+  /// The kit calls it only while offline support is on.
+  void fetchNextTwoPhase({
+    int limit = 30,
+    String? searchKeyword,
+    UsersRequestBuilder? usersRequestBuilder,
+    required UserFetchListener listener,
+  }) {
+    try {
+      _ensureRequest(
+        limit: limit,
+        searchKeyword: searchKeyword,
+        usersRequestBuilder: usersRequestBuilder,
+      );
+    } on CometChatException catch (e) {
+      listener.onError(e);
+      return;
+    } catch (e) {
+      final message = 'Unexpected error while fetching users: $e';
+      listener.onError(CometChatException('ERR_UNHANDLED', message, message));
+      return;
+    }
+    unawaited(
+      _currentRequest!.fetchNext(
+        onSuccess: null,
+        onError: null,
+        listener: listener,
+      ),
+    );
+  }
+
+  /// Builds a new request only if there is none yet (first call or after
+  /// [resetRequest]); later calls reuse it so the SDK cursor advances.
+  void _ensureRequest({
+    required int limit,
+    String? searchKeyword,
+    UsersRequestBuilder? usersRequestBuilder,
+  }) {
+    if (_currentRequest != null) return;
+    if (usersRequestBuilder != null) {
+      _currentRequest = _buildFromAppBuilder(
+        usersRequestBuilder,
+        searchKeyword: searchKeyword,
+      );
+    } else {
+      final requestBuilder = UsersRequestBuilder()..limit = limit;
+
+      if (searchKeyword != null && searchKeyword.isNotEmpty) {
+        requestBuilder.searchKeyword = searchKeyword;
+      }
+
+      _currentRequest = requestBuilder.build();
     }
   }
 

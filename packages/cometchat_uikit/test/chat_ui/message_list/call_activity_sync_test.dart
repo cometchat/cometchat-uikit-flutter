@@ -251,21 +251,40 @@ void main() {
     skip: kIsWeb ? 'Android and iOS only' : false,
   );
 
-  test(
-    'close() removes the Calls SDK listener',
-    () async {
-      final bloc = _bloc(repo);
-      await _load(bloc);
-      expect(callsSdkListeners, hasLength(1));
-      final listener = callsSdkListeners.values.single;
+  test('offline off: a call activity syncs the newer messages as in 6.3.0 '
+      '(the offline read is not used)', () async {
+    CometChat.debugSetOfflineEnabledOverride(false);
+    addTearDown(() => CometChat.debugSetOfflineEnabledOverride(null));
+    final bloc = _bloc(repo);
+    await _load(bloc);
+    final newer = _call(id: 502, status: 'initiated');
+    when(
+      () => repo.fetchNextMessages(request: any(named: 'request')),
+    ).thenAnswer((_) async => Success([newer]));
 
-      await bloc.close();
+    callsSdkListeners.values.single.onIncomingCallReceived(
+      _pushed(session: 'session_2'),
+    );
+    await _settle();
 
-      expect(callsSdkListeners, isEmpty);
-      listener.onIncomingCallEnded(_pushed(), 'rejected');
-      await _settle();
-      verifyNever(() => repo.fetchNextMessages(request: any(named: 'request')));
-    },
-    skip: kIsWeb ? 'Android and iOS only' : false,
-  );
+    verify(
+      () => repo.fetchNextMessages(request: any(named: 'request')),
+    ).called(1);
+    expect(_calls(bloc).map((c) => c.id), [501, 502]);
+    await bloc.close();
+  }, skip: kIsWeb ? 'Android and iOS only' : false);
+
+  test('close() removes the Calls SDK listener', () async {
+    final bloc = _bloc(repo);
+    await _load(bloc);
+    expect(callsSdkListeners, hasLength(1));
+    final listener = callsSdkListeners.values.single;
+
+    await bloc.close();
+
+    expect(callsSdkListeners, isEmpty);
+    listener.onIncomingCallEnded(_pushed(), 'rejected');
+    await _settle();
+    verifyNever(() => repo.fetchNextMessages(request: any(named: 'request')));
+  }, skip: kIsWeb ? 'Android and iOS only' : false);
 }

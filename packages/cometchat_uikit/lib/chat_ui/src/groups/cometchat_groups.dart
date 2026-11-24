@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
+import '../../../shared_ui/src/offline/offline_list_errors.dart';
+import 'bloc/groups_offline.dart' show GroupsConnectToLoad;
 
 /// [CometChatGroups] is a component that displays a list of groups available in the app
 /// using Clean Architecture with BLoC pattern.
@@ -264,9 +266,15 @@ class _CometChatGroupsState extends State<CometChatGroups>
       _isExternalBloc = false;
     }
 
+    OfflineListErrors.listen(groupsBloc, _onKeptRowsError);
     // Dispatch LoadGroups event on init (Requirement 5.1)
     groupsBloc.add(LoadGroups(searchKeyword: widget.searchKeyword));
   }
+
+  /// A real server error over cached rows that stay on screen, on a load the
+  /// user or app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error);
 
   /// Initialize service locator if not already initialized
   void _initializeServiceLocator() {
@@ -326,6 +334,7 @@ class _CometChatGroupsState extends State<CometChatGroups>
 
   @override
   void dispose() {
+    OfflineListErrors.cancel(groupsBloc, _onKeptRowsError);
     // Only close the bloc if we created it internally
     if (!_isExternalBloc) {
       groupsBloc.close();
@@ -349,6 +358,9 @@ class _CometChatGroupsState extends State<CometChatGroups>
 
     if (state is GroupsError) {
       widget.onError?.call(Exception(state.message));
+    } else if (state is GroupsConnectToLoad) {
+      // Offline with nothing shown: onError once (D84 (3)).
+      widget.onError?.call(state.error);
     } else if (state is GroupsEmpty) {
       widget.onEmpty?.call();
     } else if (state is GroupsLoaded) {

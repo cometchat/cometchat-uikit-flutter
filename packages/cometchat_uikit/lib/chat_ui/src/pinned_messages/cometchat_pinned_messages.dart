@@ -1,7 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
+import '../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../shared_ui/src/offline/offline_list_reset.dart';
+import '../../../shared_ui/src/offline/offline_list_states.dart';
+import '../../../src/chat_sdk_listeners.dart';
+import '../../../shared_ui/src/offline/pinned_messages_offline.dart';
 import 'cometchat_pinned_messages_style.dart';
 
 ///[CometChatPinnedMessages] renders the pinned messages of one conversation
@@ -121,6 +129,20 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
   bool _loading = true;
   bool _failed = false;
 
+  /// Set when the panel failed because the device was offline: it shows the
+  /// offline state and reads again once on reconnect (D84). Offline on only.
+  bool _failedOffline = false;
+
+  /// Whether this panel registered a connection listener (offline on at
+  /// open).
+  bool _listensForConnect = false;
+
+  /// The read generation (G8). Bumped on a session end or cache reset; a
+  /// read started under an older one drops its rows.
+  int _gen = 0;
+
+  StreamSubscription<OfflineHubEvent>? _offlineResetSub;
+
   // Separate delegate listeners: the kit and SDK listener mixins both
   // declare onCardMessageReceived with different CardMessage types, so one
   // class cannot mix in both.
@@ -144,13 +166,51 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
     );
     CometChatMessageEvents.addMessagesListener(_listenerId, _kitEvents);
     CometChat.addMessageListener(_listenerId, _sdkEvents);
+    if (OfflineGate.isOn()) {
+      _listensForConnect = true;
+      ChatSdkListeners.addConnectionListener(
+        _listenerId,
+        _PinnedConnectionListener(_onConnected),
+      );
+    }
+    _offlineResetSub = OfflineListReset.listen(
+      isClosed: () => !mounted,
+      onReset: _onOfflineListReset,
+    );
     _fetchAll();
+  }
+
+  /// Session end or cache reset (G8, offline on only): clears the rows
+  /// before the next frame. A session end leaves the panel empty; a cache
+  /// reset reads it again once (a failure over rows keeps them, no error).
+  void _onOfflineListReset(OfflineHubEvent event) {
+    // Bump first so a read in flight stops writing at once.
+    _gen++;
+    final reload = event is CacheReset;
+    setState(() {
+      _messages.clear();
+      _loading = reload;
+      _failed = false;
+      _failedOffline = false;
+    });
+    if (reload) _fetchAll();
+  }
+
+  /// The error view shown because the device was offline reads again, once.
+  void _onConnected() {
+    if (!mounted || !_failed || !_failedOffline) return;
+    _failedOffline = false;
+    _retry();
   }
 
   @override
   void dispose() {
+    _offlineResetSub?.cancel();
     CometChatMessageEvents.removeMessagesListener(_listenerId);
     CometChat.removeMessageListener(_listenerId);
+    if (_listensForConnect) {
+      ChatSdkListeners.removeConnectionListener(_listenerId);
+    }
     super.dispose();
   }
 
@@ -171,6 +231,31 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
     if (widget.group != null) builder.guid = widget.group!.guid;
     final request = builder.build();
 
+    // A session end or cache reset makes this read stale (G8).
+    final gen = _gen;
+    bool active() => mounted && gen == _gen;
+
+    if (OfflineGate.isOn()) {
+      // Offline on (W7): cached page first, then the server page in its place.
+      return PinnedMessagesOffline.readAll(
+        request,
+        pageSize: _pageSize,
+        isActive: active,
+        onRows:
+            (rows, {required done, required failed, required notConnected}) {
+              if (!active()) return;
+              setState(() {
+                _loading = !done && rows.isEmpty;
+                _failed = failed;
+                _failedOffline = failed && notConnected;
+                _messages
+                  ..clear()
+                  ..addAll(rows);
+              });
+            },
+      );
+    }
+
     final collected = <BaseMessage>[];
     var failed = false;
     while (true) {
@@ -185,7 +270,7 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
       if (page.length < _pageSize) break;
     }
 
-    if (!mounted) return;
+    if (!active()) return;
     setState(() {
       _loading = false;
       _failed = failed && collected.isEmpty;
@@ -490,6 +575,14 @@ class _CometChatPinnedMessagesState extends State<CometChatPinnedMessages> {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
+    if (_failed && _failedOffline) {
+      // Offline with nothing to show (D84 (3)): "Connect to load messages",
+      // no Retry; the panel reads again once on reconnect.
+      return OfflineListStates.view(
+        context,
+        Translations.of(context).connectToLoadMessages,
+      );
+    }
     if (_failed) {
       // The kit's standard error state — illustration, "Oops!", explainer and
       // a Retry button — the same one the conversations, groups and user
@@ -712,4 +805,13 @@ class _PinnedSdkEventsDelegate with MessageListener {
 
   @override
   void onMessageUnsaved(BaseMessage message) => onUpdated(message);
+}
+
+class _PinnedConnectionListener with ConnectionListener {
+  _PinnedConnectionListener(this._onConnected);
+
+  final void Function() _onConnected;
+
+  @override
+  void onConnected() => _onConnected();
 }

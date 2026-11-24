@@ -1609,4 +1609,80 @@ class TranslationsHi extends Translations {
 
   @override
   String messageFrom(String sender) => '$sender का संदेश';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "अभी तक नहीं भेजा गया";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "नहीं भेजा गया। फिर से कोशिश करने के लिए टैप करें";
+
+  @override
+  String get unsentMessageRemoved => "न भेजा गया संदेश हटा दिया गया";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "हो सकता है कि कुछ न भेजे गए संदेश नहीं भेजे गए हों";
+
+  @override
+  String get queueFull => "भेजे जाने के लिए बहुत सारे संदेश इंतज़ार कर रहे हैं";
+
+  @override
+  String get fileTooLargeOffline => "ऑफ़लाइन भेजने के लिए फ़ाइल बहुत बड़ी है";
+
+  @override
+  String get connectToLoadMore => "और लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToSearch => "खोजने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToSearchSubtitle => "खोज के लिए इंटरनेट कनेक्शन आवश्यक है।";
+
+  @override
+  String get connectToLoadUsers => "उपयोगकर्ता लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToLoadGroups => "समूह लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToLoadMembers => "सदस्य लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToLoadChats => "चैट लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToLoadMessages => "संदेश लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToLoadReactions =>
+      "प्रतिक्रियाएँ लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get connectToLoadNotifications =>
+      "सूचनाएँ लोड करने के लिए कनेक्ट करें";
+
+  @override
+  String get mediaAvailableWhenOnline => "ऑनलाइन होने पर उपलब्ध";
+
+  @override
+  String get jumpToLatest => "नवीनतम पर जाएं";
+
+  @override
+  String get sendingTryAgain =>
+      "भेजा जा रहा है… थोड़ी देर में फिर से कोशिश करें";
+
+  @override
+  String get fileNotSaved => "फ़ाइल सहेजी नहीं गई। इसे फिर से जोड़ें";
+
+  @override
+  String messagesNotSent(int n) =>
+      n <= 1 ? "$n संदेश नहीं भेजा गया" : "$n संदेश नहीं भेजे गए";
+
+  @override
+  String unsentMessagesLost(int n) => n <= 1
+      ? "$n न भेजा गया संदेश वापस नहीं लाया जा सका"
+      : "$n न भेजे गए संदेश वापस नहीं लाए जा सके";
 }

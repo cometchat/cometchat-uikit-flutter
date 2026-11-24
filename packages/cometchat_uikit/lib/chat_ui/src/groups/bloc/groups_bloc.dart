@@ -6,6 +6,13 @@ import '../domain/usecases/get_logged_in_user_usecase.dart';
 import '../di/groups_service_locator.dart';
 import '../../../../shared_ui/cometchat_uikit_shared.dart';
 import '../../shared/list_base.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../../shared_ui/src/offline/offline_list_reset.dart';
+import '../../../../shared_ui/src/offline/two_phase.dart';
+import '../data/datasources/groups_remote_datasource.dart';
+import 'groups_offline.dart';
 import 'groups_event.dart';
 import 'groups_state.dart';
 
@@ -45,6 +52,32 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
 
   // Current search keyword
   String? _currentSearchKeyword;
+
+  /// The read version (ENG-41552 F). Every first-page read (load, refresh,
+  /// search) and every keyword change bumps it; a read that finishes under
+  /// an older version, a load-more included, drops its result, so only the
+  /// current keyword's rows reach the state.
+  int _readVersion = 0;
+
+  /// Load-mores started, so a stale one knows whether a newer one owns the
+  /// loading flag.
+  int _loadMoreSeq = 0;
+
+  /// The read to run once on reconnect: set when a first page ended in the
+  /// offline state (D84 (3), (7)), cleared by any newer first-page read or
+  /// keyword change.
+  GroupsEvent? _reloadOnConnect;
+
+  /// A load-more a newer read made stale drops its page. Unless a newer
+  /// load-more is running, it also clears the loading flag and footer it set.
+  void _dropStaleLoadMore(int seq, Emitter<GroupsState> emit) {
+    if (seq != _loadMoreSeq) return;
+    _isLoadingMore = false;
+    final s = state;
+    if (s is GroupsLoaded && s.isLoadingMore) {
+      emit(s.copyWith(isLoadingMore: false));
+    }
+  }
 
   // Search debounce timer for preventing excessive API calls (Requirement 7.3)
   Timer? _searchDebounceTimer;
@@ -130,8 +163,49 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     on<_ExecuteSearch>(_onExecuteSearch);
     on<_RestoreOriginalGroups>(_onRestoreOriginalGroups);
 
+    // Session end and cache reset (G8): offline on only.
+    on<_OfflineListReset>(_onOfflineListReset);
+    on<_CacheResetReload>(
+      (event, emit) => _onLoadGroups(
+        LoadGroups(searchKeyword: event.keyword),
+        emit,
+        quiet: true,
+      ),
+    );
+    _offlineResetSub = OfflineListReset.listen(
+      isClosed: () => isClosed,
+      onReset: (event) {
+        // Bump now so reads in flight stop writing at once.
+        _readVersion++;
+        add(_OfflineListReset(event));
+      },
+    );
+
     // Initialize and register SDK listeners
     _initializeAndRegisterListeners();
+  }
+
+  StreamSubscription<OfflineHubEvent>? _offlineResetSub;
+
+  /// Session end or cache reset (G8): clears the rows, the index map and the
+  /// SDK request before the next frame. A session end leaves the list empty
+  /// until it is next asked to load; a cache reset reloads once from page
+  /// one, quietly over rows (D84 (5)).
+  void _onOfflineListReset(_OfflineListReset event, Emitter<GroupsState> emit) {
+    final hubEvent = event.event;
+    if (OfflineListReset.isStale(hubEvent)) return;
+    final reload = hubEvent is CacheReset;
+    // A debounced search typed by the user who left must not run.
+    if (!reload) _searchDebounceTimer?.cancel();
+    _isLoadingMore = false;
+    _reloadOnConnect = null;
+    _originalGroups = null;
+    getGroupsUseCase.resetRequest();
+    clearItems();
+    _groupIndexMap.clear();
+    _mapNeedsRebuild = true;
+    emit(const GroupsEmpty());
+    if (reload) add(_CacheResetReload(_currentSearchKeyword));
   }
 
   // ============================================================
@@ -139,6 +213,10 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
   // ============================================================
 
   bool _mapNeedsRebuild = true;
+
+  /// Set by the offline-on path just before it replaces the list with a
+  /// server page, so the view redraws rows whose count did not change.
+  bool _markNextReplace = false;
 
   void _rebuildIndexMap() {
     _groupIndexMap.clear();
@@ -215,6 +293,10 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
   @override
   void onListReplaced(List<Group> previousList, List<Group> newList) {
     _mapNeedsRebuild = true;
+    if (_markNextReplace) {
+      _markNextReplace = false;
+      GroupsOffline.markServerReplace(newList);
+    }
     // Don't set hasMore here — let the caller (_onLoadGroups / _onLoadMoreGroups)
     // control hasMore based on the actual page size, not total list length.
     if (!isClosed) {
@@ -579,10 +661,13 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
   // ============================================================
 
   /// Load initial groups
+  /// [quiet] marks the kit's own cache-reset reload: a real error over the
+  /// cached rows it shows does not reach `onError` (D84 (5)).
   Future<void> _onLoadGroups(
     LoadGroups event,
-    Emitter<GroupsState> emit,
-  ) async {
+    Emitter<GroupsState> emit, {
+    bool quiet = false,
+  }) async {
     // Silent refresh: keep existing list visible, skip loading shimmer.
     final isSilentRefresh = event.silent || state is GroupsLoaded;
 
@@ -592,6 +677,8 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
 
     _isLoadingMore = false;
     _currentSearchKeyword = event.searchKeyword;
+    final version = ++_readVersion;
+    _reloadOnConnect = null;
 
     // Reset the SDK request cursor for a fresh load
     getGroupsUseCase.resetRequest();
@@ -603,11 +690,29 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
       }
     }
 
+    final offlineSource = OfflineGate.isOn()
+        ? GroupsOffline.twoPhaseSourceFor(getGroupsUseCase.repository)
+        : null;
+    if (offlineSource != null) {
+      await _loadFirstPageTwoPhase(
+        offlineSource,
+        emit,
+        keyword: event.searchKeyword,
+        isSilentRefresh: isSilentRefresh,
+        isSearch: false,
+        version: version,
+        quiet: quiet,
+      );
+      return;
+    }
+
     final result = await getGroupsUseCase(
       limit: _pageSize,
       searchKeyword: event.searchKeyword,
       groupsRequestBuilder: groupsRequestBuilder,
     );
+
+    if (version != _readVersion) return;
 
     if (result is Success<List<Group>>) {
       final groups = result.data;
@@ -642,12 +747,28 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
 
     _isLoadingMore = true;
     emit(currentState.copyWith(isLoadingMore: true));
+    final version = _readVersion;
+    final seq = ++_loadMoreSeq;
+
+    final offlineSource = OfflineGate.isOn()
+        ? GroupsOffline.twoPhaseSourceFor(loadMoreGroupsUseCase.repository)
+        : null;
+    if (offlineSource != null) {
+      await _loadMoreTwoPhase(offlineSource, emit, version: version, seq: seq);
+      return;
+    }
 
     final result = await loadMoreGroupsUseCase(
       limit: _pageSize,
       searchKeyword: _currentSearchKeyword,
       currentGroups: currentState.groups,
     );
+
+    // A newer read owns the list now.
+    if (version != _readVersion) {
+      _dropStaleLoadMore(seq, emit);
+      return;
+    }
 
     _isLoadingMore = false;
 
@@ -680,6 +801,158 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     }
   }
 
+  // ============================================================
+  // OFFLINE-ON READS (W6). Reached only when OfflineGate.isOn() was true
+  // for this operation and the kit's own data source is in use.
+  // ============================================================
+
+  String _offlineFailureMessage(CometChatException e) =>
+      'Failed to load groups: ${e.message ?? 'Failed to fetch groups'}';
+
+  /// A first page (load, refresh, reconnect, search) read in two phases: the
+  /// cached page paints at once, the server page then replaces it by guid.
+  /// A silent reload over rows already shown skips the cached page, so the
+  /// rows swap once. An error after a cached page keeps the rows; only a real
+  /// error on a load the user or app started reaches `onError` (D84 (2),
+  /// (5)). With nothing shown, offline is the offline state ("Connect to load
+  /// groups", or "Connect to search" under a keyword), which loads again once
+  /// on reconnect; any other error is the error view, as today (D84 (3),
+  /// (4), (7)). A read that a newer one replaced ([version]) stops at once.
+  Future<void> _loadFirstPageTwoPhase(
+    GroupsRemoteDataSourceImpl source,
+    Emitter<GroupsState> emit, {
+    required String? keyword,
+    required bool isSilentRefresh,
+    required bool isSearch,
+    required int version,
+    bool quiet = false,
+  }) async {
+    final current = state;
+    final rowsShown = current is GroupsLoaded && current.groups.isNotEmpty;
+    var cachedShown = false;
+    final pages = GroupsOffline.readNextPage(
+      source,
+      limit: _pageSize,
+      searchKeyword: keyword,
+      groupsRequestBuilder: groupsRequestBuilder,
+    );
+    await for (final phase in pages) {
+      if (isClosed || version != _readVersion) return;
+      switch (phase) {
+        case Cached<Group>(:final rows):
+          if (rowsShown || rows.isEmpty) break;
+          cachedShown = true;
+          replaceAll(rows);
+        case Server<Group>(:final rows):
+          if (rows.isEmpty) {
+            if (cachedShown) {
+              replaceAll(const <Group>[]);
+            } else if (isSearch || !isSilentRefresh) {
+              emit(const GroupsEmpty());
+            }
+            break;
+          }
+          _markNextReplace = true;
+          replaceAll(rows);
+          if (!isSearch && state is GroupsLoaded) {
+            emit((state as GroupsLoaded).copyWith(hasMore: true));
+          }
+        case PhaseError<Group>(:final error):
+          final offline = GroupsOffline.isConnectivityError(error);
+          if (cachedShown) {
+            // The cached rows stay. Offline, nothing more (D84 (2)); a real
+            // error reaches onError when the user or app started the load
+            // (D84 (5)).
+            if (!offline && !isSilentRefresh && !quiet) {
+              OfflineListErrors.report(this, error);
+            }
+            break;
+          }
+          if (isSilentRefresh && rowsShown) break;
+          if (offline && (isSearch || !isSilentRefresh)) {
+            // Nothing shown: the offline state, which loads again once on
+            // reconnect (D84 (3), (7), (8)).
+            _reloadOnConnect = isSearch && keyword != null
+                ? _ExecuteSearch(keyword)
+                : LoadGroups(searchKeyword: keyword);
+            emit(
+              GroupsOffline.hasServerOnlyFilter(keyword, groupsRequestBuilder)
+                  ? const GroupsConnectToSearch()
+                  : GroupsConnectToLoad(error),
+            );
+            break;
+          }
+          if (isSearch) {
+            emit(
+              GroupsError(
+                message: _offlineFailureMessage(error),
+                previousGroups: _originalGroups,
+              ),
+            );
+          } else if (!isSilentRefresh) {
+            emit(GroupsError(message: _offlineFailureMessage(error)));
+          }
+      }
+    }
+  }
+
+  /// The next page read in two phases. The cached page is appended at once
+  /// (rows already listed are skipped), and the server page then replaces it
+  /// by guid. Only an empty server page ends paging. An error keeps every
+  /// row; paging stays open only if a cached page was shown (more may be
+  /// cached), and a reconnect reload reopens it otherwise.
+  Future<void> _loadMoreTwoPhase(
+    GroupsRemoteDataSourceImpl source,
+    Emitter<GroupsState> emit, {
+    required int version,
+    required int seq,
+  }) async {
+    final provisional = <String>{};
+    final pages = GroupsOffline.readNextPage(
+      source,
+      limit: _pageSize,
+      searchKeyword: _currentSearchKeyword,
+      groupsRequestBuilder: groupsRequestBuilder,
+    );
+    await for (final phase in pages) {
+      if (isClosed) return;
+      if (version != _readVersion) {
+        _dropStaleLoadMore(seq, emit);
+        return;
+      }
+      switch (phase) {
+        case Cached<Group>(:final rows):
+          final merged = GroupsOffline.appendCached(items, rows, provisional);
+          if (provisional.isEmpty) break;
+          replaceAll(merged);
+        case Server<Group>(:final rows):
+          _isLoadingMore = false;
+          if (rows.isNotEmpty || provisional.isNotEmpty) {
+            _markNextReplace = true;
+            replaceAll(GroupsOffline.replacePage(items, provisional, rows));
+          }
+          if (state is GroupsLoaded) {
+            emit(
+              (state as GroupsLoaded).copyWith(
+                hasMore: rows.isNotEmpty,
+                isLoadingMore: false,
+              ),
+            );
+          }
+        case PhaseError<Group>():
+          _isLoadingMore = false;
+          if (state is GroupsLoaded) {
+            emit(
+              (state as GroupsLoaded).copyWith(
+                hasMore: provisional.isNotEmpty,
+                isLoadingMore: false,
+              ),
+            );
+          }
+      }
+    }
+  }
+
   /// Refresh groups list
   Future<void> _onRefreshGroups(
     RefreshGroups event,
@@ -705,6 +978,9 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     _searchDebounceTimer?.cancel();
 
     final keyword = event.keyword.trim();
+    // The keyword changed: a read for the previous one is stale now.
+    _readVersion++;
+    _reloadOnConnect = null;
 
     // If search is cleared, restore original list immediately (no debounce needed)
     if (keyword.isEmpty) {
@@ -747,6 +1023,10 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     Emitter<GroupsState> emit,
   ) async {
     _currentSearchKeyword = event.keyword;
+    final version = ++_readVersion;
+    _reloadOnConnect = null;
+    // A load-more of the previous list drops its page; paging restarts here.
+    _isLoadingMore = false;
 
     // Reset the SDK request cursor for a new search
     getGroupsUseCase.resetRequest();
@@ -754,13 +1034,28 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     // Emit loading state while searching
     emit(const GroupsLoading());
 
+    final offlineSource = OfflineGate.isOn()
+        ? GroupsOffline.twoPhaseSourceFor(getGroupsUseCase.repository)
+        : null;
+    if (offlineSource != null) {
+      await _loadFirstPageTwoPhase(
+        offlineSource,
+        emit,
+        keyword: event.keyword,
+        isSilentRefresh: false,
+        isSearch: true,
+        version: version,
+      );
+      return;
+    }
+
     final result = await getGroupsUseCase(
       limit: _pageSize,
       searchKeyword: event.keyword,
       groupsRequestBuilder: groupsRequestBuilder,
     );
 
-    if (isClosed) return;
+    if (isClosed || version != _readVersion) return;
 
     if (result is Success<List<Group>>) {
       final groups = result.data;
@@ -998,8 +1293,14 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
     Emitter<GroupsState> emit,
   ) {
     // Requirement: 6.6 - Refresh groups list on connection restored
+    final reload = _reloadOnConnect;
     if (state is GroupsLoaded) {
       add(const RefreshGroups());
+    } else if (reload != null &&
+        (state is GroupsConnectToLoad || state is GroupsConnectToSearch)) {
+      // The offline state: the failed read runs again, once (D84 (8)).
+      _reloadOnConnect = null;
+      add(reload);
     }
   }
 
@@ -1031,6 +1332,7 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> with ListBase<Group> {
   Future<void> close() {
     // Cancel search debounce timer
     _searchDebounceTimer?.cancel();
+    _offlineResetSub?.cancel();
 
     // Remove SDK listeners (Requirement 1.7)
     if (!disableSDKListeners) {
@@ -1077,6 +1379,26 @@ class _RestoreOriginalGroups extends GroupsEvent {
 
   @override
   List<Object> get props => [groups];
+}
+
+/// A current-gen session end or cache reset from the offline hub (G8).
+class _OfflineListReset extends GroupsEvent {
+  const _OfflineListReset(this.event);
+
+  final OfflineHubEvent event;
+
+  @override
+  List<Object?> get props => [event];
+}
+
+/// The one reload after a cache reset (G8), kit-started.
+class _CacheResetReload extends GroupsEvent {
+  const _CacheResetReload(this.keyword);
+
+  final String? keyword;
+
+  @override
+  List<Object?> get props => [keyword];
 }
 
 // ============================================================

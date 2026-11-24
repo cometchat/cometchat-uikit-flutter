@@ -4,6 +4,7 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sample_app/app_credentials.dart';
 import 'package:sample_app/screens/guard_screen.dart';
+import 'package:sample_app/utils/app_uikit_settings.dart';
 
 /// Screen shown when App ID / Auth Key / Region are not configured.
 /// Saves credentials to SharedPreferences and re-initialises CometChat.
@@ -65,8 +66,9 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
     if (_selectedRegion == null ||
         _appIdController.text.trim().isEmpty ||
         _authKeyController.text.trim().isEmpty) {
-      setState(() =>
-          _errorMessage = 'Please fill in all fields and select a region.');
+      setState(
+        () => _errorMessage = 'Please fill in all fields and select a region.',
+      );
       return;
     }
 
@@ -93,13 +95,15 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
     // the same settings as main.dart when it passed its builder. This init
     // replaces the launch one, so leaving enableCalls out here turned call
     // handling off until the next launch.
-    final uiKitSettings = widget.buildSettings?.call() ??
+    final uiKitSettings =
+        widget.buildSettings?.call() ??
         (UIKitSettingsBuilder()
               ..subscriptionType = CometChatSubscriptionType.allUsers
               ..region = AppCredentials.region
               ..autoEstablishSocketConnection = true
               ..appId = AppCredentials.appId
-              ..authKey = AppCredentials.authKey)
+              ..authKey = AppCredentials.authKey
+              ..offlineConfig = appOfflineConfig())
             .build();
 
     CometChatUIKit.init(
@@ -139,7 +143,8 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
             Positioned.fill(
               child: CustomPaint(
                 painter: _DottedPatternPainter(
-                  dotColor: _colorPalette.borderLight ??
+                  dotColor:
+                      _colorPalette.borderLight ??
                       Colors.grey.withValues(alpha: 0.3),
                 ),
               ),
@@ -156,8 +161,9 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                     children: [
                       // CometChat logo
                       Padding(
-                        padding:
-                            EdgeInsets.only(bottom: _spacing.padding8 ?? 32),
+                        padding: EdgeInsets.only(
+                          bottom: _spacing.padding8 ?? 32,
+                        ),
                         child: Image.asset(
                           'assets/cometchat_logo_with_text.png',
                           color: _colorPalette.textPrimary,
@@ -175,7 +181,8 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                             shape: RoundedRectangleBorder(
                               side: BorderSide(
                                 width: 1,
-                                color: _colorPalette.borderDefault ??
+                                color:
+                                    _colorPalette.borderDefault ??
                                     const Color(0xFFE8E8E8),
                               ),
                               borderRadius: BorderRadius.circular(20),
@@ -196,7 +203,9 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                             ],
                           ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 32),
+                            horizontal: 24,
+                            vertical: 32,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -250,18 +259,19 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                                           decoration: BoxDecoration(
                                             color: selected
                                                 ? _colorPalette
-                                                    .extendedPrimary50
+                                                      .extendedPrimary50
                                                 : _colorPalette.background1,
                                             borderRadius: BorderRadius.circular(
-                                                _spacing.radius2 ?? 8),
+                                              _spacing.radius2 ?? 8,
+                                            ),
                                             border: Border.all(
                                               color: selected
                                                   ? (_colorPalette
-                                                          .borderHighlight ??
-                                                      Colors.transparent)
+                                                            .borderHighlight ??
+                                                        Colors.transparent)
                                                   : (_colorPalette
-                                                          .borderLight ??
-                                                      Colors.transparent),
+                                                            .borderLight ??
+                                                        Colors.transparent),
                                               width: 1,
                                             ),
                                           ),
@@ -272,13 +282,19 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                                                 color: selected
                                                     ? _colorPalette.primary
                                                     : _colorPalette
-                                                        .textSecondary,
+                                                          .textSecondary,
                                                 fontSize: _typography
-                                                    .button?.medium?.fontSize,
+                                                    .button
+                                                    ?.medium
+                                                    ?.fontSize,
                                                 fontFamily: _typography
-                                                    .button?.medium?.fontFamily,
+                                                    .button
+                                                    ?.medium
+                                                    ?.fontFamily,
                                                 fontWeight: _typography
-                                                    .button?.medium?.fontWeight,
+                                                    .button
+                                                    ?.medium
+                                                    ?.fontWeight,
                                               ),
                                             ),
                                           ),
@@ -355,11 +371,13 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                                   onPressed: _isLoading ? null : _save,
                                   style: ButtonStyle(
                                     backgroundColor: WidgetStateProperty.all(
-                                        _colorPalette.primary),
+                                      _colorPalette.primary,
+                                    ),
                                     shape: WidgetStateProperty.all(
                                       RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(
-                                            _spacing.radius2 ?? 8),
+                                          _spacing.radius2 ?? 8,
+                                        ),
                                       ),
                                     ),
                                     elevation: WidgetStateProperty.all(0),
@@ -372,8 +390,9 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                                             strokeWidth: 2,
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(
-                                                    _colorPalette.white ??
-                                                        Colors.white),
+                                                  _colorPalette.white ??
+                                                      Colors.white,
+                                                ),
                                           ),
                                         )
                                       : Text(
@@ -382,11 +401,17 @@ class _AppCredentialsScreenState extends State<AppCredentialsScreen> {
                                             color:
                                                 _colorPalette.buttonIconColor,
                                             fontSize: _typography
-                                                .button?.medium?.fontSize,
+                                                .button
+                                                ?.medium
+                                                ?.fontSize,
                                             fontFamily: _typography
-                                                .button?.medium?.fontFamily,
+                                                .button
+                                                ?.medium
+                                                ?.fontFamily,
                                             fontWeight: _typography
-                                                .button?.medium?.fontWeight,
+                                                .button
+                                                ?.medium
+                                                ?.fontWeight,
                                           ),
                                         ),
                                 ),

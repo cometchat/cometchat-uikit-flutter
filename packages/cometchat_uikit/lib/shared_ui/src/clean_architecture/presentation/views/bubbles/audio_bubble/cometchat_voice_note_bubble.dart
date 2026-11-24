@@ -6,6 +6,7 @@ import "../../../../clean_architecture.dart";
 import 'package:flutter/scheduler.dart';
 
 import '../../../../../logging/cometchat_log.dart';
+import '../../../../../offline/offline_media.dart';
 
 /// [CometChatVoiceNoteBubble] renders a single audio message with the classic
 /// waveform player look.
@@ -225,8 +226,17 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
       fileName += widget.title!;
     }
     final localPath = FileUtils.getLocalFilePath(widget.metadata) ?? '';
+    // Offline (W5, G9): the SDK's cached copy plays without a download. Null
+    // with offline off.
+    final cached =
+        !FileUtils.isLocalFileAvailable(localPath) && OfflineMedia.enabled
+        ? await OfflineMedia.resolveUrl(widget.audioUrl)
+        : null;
     if (FileUtils.isLocalFileAvailable(localPath)) {
       this.localPath = localPath;
+      isFileExists = true;
+    } else if (cached != null) {
+      this.localPath = cached;
       isFileExists = true;
     } else {
       String? path = await BubbleUtils.isFileDownloaded(
@@ -248,7 +258,7 @@ class _CometChatVoiceNoteBubbleState extends State<CometChatVoiceNoteBubble>
     _audioState = AudioStateManager().getAudioState(
       tag,
       widget.audioUrl,
-      localPath,
+      cached ?? localPath,
     );
     unawaited(_audioState!.initializeController());
   }

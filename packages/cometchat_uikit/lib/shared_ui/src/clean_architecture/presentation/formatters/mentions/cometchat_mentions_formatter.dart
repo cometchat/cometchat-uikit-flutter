@@ -12,6 +12,8 @@ import '../../../domain/events/ui_events/cometchat_ui_events.dart';
 import '../../theme/theme.dart';
 import 'cometchat_mentions_style.dart';
 import '../../../../logging/cometchat_log.dart';
+import '../../../../offline/mentions_offline.dart';
+import '../../../../offline/offline_gate.dart';
 import '../../../../../cometchat_uikit_shared.dart'
     show
         BubbleAlignment,
@@ -303,8 +305,11 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
     required TextEditingController textEditingController,
     String? searchKeyword,
   }) async {
-    await _request.fetchNext(
-      onSuccess: (users) {
+    await MentionsOffline.fetchMentionSuggestions(
+      request: _request,
+      keyword: searchKeyword ?? _lastSearchKeyword,
+      offlineOn: OfflineGate.isOn(),
+      onRows: (users) {
         List<SuggestionListItem> suggestions = [];
         String? currentKeyword = searchKeyword ?? _lastSearchKeyword;
 
@@ -439,7 +444,7 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
 
         if (users.isNotEmpty) {
           suggestions.addAll(
-            (users as List<cc.User>)
+            users
                 .map(
                   (user) => SuggestionListItem(
                     id: user.uid,
@@ -575,7 +580,7 @@ class CometChatMentionsFormatter extends CometChatTextFormatter {
           }
         }
 
-        hasMore = !users.isEmpty;
+        hasMore = users.isNotEmpty;
       },
       onError: (exception) {
         if (onError != null) {

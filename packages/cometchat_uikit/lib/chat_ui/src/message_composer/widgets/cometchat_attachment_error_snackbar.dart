@@ -70,7 +70,9 @@ abstract final class CometChatAttachmentErrorSnackBar {
 
     final colors = CometChatThemeHelper.getColorPalette(context);
     final typography = CometChatThemeHelper.getTypography(context);
-    final message = tile.errorMessage ?? Translations.of(context).uploadFailed;
+    final message = tile.notSaved
+        ? Translations.of(context).fileNotSaved
+        : tile.errorMessage ?? Translations.of(context).uploadFailed;
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(

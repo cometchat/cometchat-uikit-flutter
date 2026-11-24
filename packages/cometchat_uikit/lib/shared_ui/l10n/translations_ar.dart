@@ -1606,4 +1606,87 @@ class TranslationsAr extends Translations {
 
   @override
   String messageFrom(String sender) => 'رسالة من $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "لم يُرسل بعد";
+
+  @override
+  String get messageNotSentTapToRetry => "لم يُرسل. اضغط لإعادة المحاولة";
+
+  @override
+  String get unsentMessageRemoved => "تمت إزالة رسالة غير مرسلة";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "ربما لم يتم إرسال بعض الرسائل غير المرسلة";
+
+  @override
+  String get queueFull => "يوجد عدد كبير جدًا من الرسائل في انتظار الإرسال";
+
+  @override
+  String get fileTooLargeOffline => "الملف كبير جدًا لإرساله دون اتصال";
+
+  @override
+  String get connectToLoadMore => "اتصل بالإنترنت لتحميل المزيد";
+
+  @override
+  String get connectToSearch => "اتصل بالإنترنت للبحث";
+
+  @override
+  String get connectToSearchSubtitle => "يحتاج البحث إلى اتصال بالإنترنت.";
+
+  @override
+  String get connectToLoadUsers => "اتصل بالإنترنت لتحميل المستخدمين";
+
+  @override
+  String get connectToLoadGroups => "اتصل بالإنترنت لتحميل المجموعات";
+
+  @override
+  String get connectToLoadMembers => "اتصل بالإنترنت لتحميل الأعضاء";
+
+  @override
+  String get connectToLoadChats => "اتصل بالإنترنت لتحميل المحادثات";
+
+  @override
+  String get connectToLoadMessages => "اتصل بالإنترنت لتحميل الرسائل";
+
+  @override
+  String get connectToLoadReactions => "اتصل بالإنترنت لتحميل التفاعلات";
+
+  @override
+  String get connectToLoadNotifications => "اتصل بالإنترنت لتحميل الإشعارات";
+
+  @override
+  String get mediaAvailableWhenOnline => "متاح عند الاتصال بالإنترنت";
+
+  @override
+  String get jumpToLatest => "الانتقال إلى الأحدث";
+
+  @override
+  String get sendingTryAgain => "جارٍ الإرسال… حاول مرة أخرى بعد قليل";
+
+  @override
+  String get fileNotSaved => "لم يتم حفظ الملف. أضفه مرة أخرى";
+
+  @override
+  String messagesNotSent(int n) => switch (n) {
+    0 => "لم يتم إرسال أي رسالة",
+    1 => "لم يتم إرسال رسالة واحدة",
+    2 => "لم يتم إرسال رسالتين",
+    _ when n % 100 >= 3 && n % 100 <= 10 => "لم يتم إرسال $n رسائل",
+    _ when n % 100 >= 11 => "لم يتم إرسال $n رسالة",
+    _ => "لم يتم إرسال $n رسالة",
+  };
+
+  @override
+  String unsentMessagesLost(int n) => switch (n) {
+    0 => "لا توجد رسائل غير مرسلة تعذّر استردادها",
+    1 => "تعذّر استرداد رسالة واحدة غير مرسلة",
+    2 => "تعذّر استرداد رسالتين غير مرسلتين",
+    _ when n % 100 >= 3 && n % 100 <= 10 => "تعذّر استرداد $n رسائل غير مرسلة",
+    _ when n % 100 >= 11 => "تعذّر استرداد $n رسالة غير مرسلة",
+    _ => "تعذّر استرداد $n رسالة غير مرسلة",
+  };
 }

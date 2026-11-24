@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../shared_ui/src/clean_architecture/core/utils/attachment_utils.dart';
 import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../shared_ui/src/offline/message_composer_offline.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
 import '../../../../shared_ui/src/clean_architecture/core/utils/platform_utils/platform_file_utils.dart'
     as platform;
 
@@ -42,6 +44,7 @@ class AttachmentTile {
     this.attachment,
     this.durationMillis,
     this.errorMessage,
+    this.notSaved = false,
   });
 
   final String fileId;
@@ -56,6 +59,12 @@ class AttachmentTile {
   /// Video/audio playback length in milliseconds, probed from the local file at
   /// staging (null until known, or for non-media / probe failure).
   int? durationMillis;
+
+  /// True for a file put back in the tray after a restart whose saved copy is
+  /// missing (BEH-UPLOAD-14). It cannot be uploaded again: its status is
+  /// [AttachmentTileStatus.rejected], the tile says the file was not saved and
+  /// offers remove only, and the user adds the file again.
+  bool notSaved;
 
   /// Bytes uploaded so far.
   int loaded;
@@ -108,6 +117,16 @@ class AttachmentTrayController extends ChangeNotifier {
   String? receiverId;
   String? receiverType;
 
+  /// The thread this composer replies in (`0`/null for the main chat). With
+  /// offline support on it completes the batch's triple, so a thread composer
+  /// never shares the main composer's batch (BEH-UPLOAD-14). Not sent with
+  /// offline support off, as today.
+  int? parentMessageId;
+
+  /// Tiles rebuilt by [restore] whose durable copy is missing, so Retry
+  /// cannot re-upload them.
+  final Set<String> _copylessIds = <String>{};
+
   late final _TrayUploadListener _listener;
 
   /// The per-composer upload request (one batch). Created lazily on the first
@@ -146,9 +165,12 @@ class AttachmentTrayController extends ChangeNotifier {
   }
 
   /// Tiles that count against [maxFileCount] — everything except rejected ones
-  /// (mirrors the SDK's own count gate, which excludes rejected/cancelled).
-  int get activeCount =>
-      _tiles.where((t) => t.status != AttachmentTileStatus.rejected).length;
+  /// (mirrors the SDK's own count gate, which excludes rejected/cancelled). A
+  /// not-saved tile shows as rejected but still counts: the SDK holds its file
+  /// as failed until the user removes it.
+  int get activeCount => _tiles
+      .where((t) => t.notSaved || t.status != AttachmentTileStatus.rejected)
+      .length;
 
   /// How many more attachments can still be staged.
   int get remainingSlots {
@@ -209,6 +231,10 @@ class AttachmentTrayController extends ChangeNotifier {
     final req = _request ??= CometChat.createUploadFileRequest(
       receiverId!,
       receiverType!,
+      parentMessageId: ComposerTrayOffline.batchParentId(
+        parentMessageId,
+        offlineOn: OfflineGate.isOn(),
+      ),
     )..addUploadListener(_listener);
     _batchId = req.getBatchId();
     return req;
@@ -340,6 +366,12 @@ class AttachmentTrayController extends ChangeNotifier {
     if (t == null || _request == null) return;
     // Over-limit tiles can't be retried — the file is too large / over count.
     if (fileId.startsWith('local_reject_')) return;
+    // Retry picks by file presence (BEH-UPLOAD-14). A live tile retries today's
+    // way: the SDK still holds the picked file. A restored tile has no file in
+    // memory, so the SDK re-uploads from its durable copy; one with no copy
+    // cannot be retried (its tile is rejected and not saved: remove it and
+    // add the file again — D57).
+    if (_copylessIds.contains(fileId)) return;
     t.loaded = 0;
     t.status = AttachmentTileStatus.uploading;
     _safeNotify();
@@ -356,6 +388,45 @@ class AttachmentTrayController extends ChangeNotifier {
     _batchId = null;
     _tiles.forEach(_releaseThumb);
     _tiles.clear();
+    _copylessIds.clear();
+    caption = '';
+    _safeNotify();
+  }
+
+  /// True while the tray holds nothing: no request and no tile. [restore]
+  /// only ever fills an empty tray, so it never clobbers a live one.
+  bool get isEmpty => _request == null && _tiles.isEmpty;
+
+  /// Rebuilds the tray from a batch the SDK restored for this composer's
+  /// triple (`CometChat.getExistingUploadFileRequest`, BEH-UPLOAD-14): one
+  /// tile per file, keyed by its `fileId`, in add order. Nothing uploads.
+  /// Returns false, changing nothing, when the tray is not empty.
+  bool restore(UploadFileRequest request) {
+    if (_disposed || !isEmpty) return false;
+    final files = request.getFiles();
+    _request = request..addUploadListener(_listener);
+    _batchId = request.getBatchId();
+    for (final f in files) {
+      final tile = ComposerTrayOffline.tileFromRestored(f);
+      _tiles.add(tile);
+      if (tile.notSaved) _copylessIds.add(f.fileId);
+    }
+    // New picks must not reuse a restored id.
+    _tileSeq = ComposerTrayOffline.nextTileSeq(_tileSeq, files);
+    _safeNotify();
+    return true;
+  }
+
+  /// Offline on, triple change or composer closed: empties the tray and lets
+  /// go of the batch **without** destroying it, so its own triple can restore
+  /// it later (BEH-UPLOAD-14). Offline off uses [clear], as today.
+  void detach() {
+    _request?.removeUploadListener();
+    _request = null;
+    _batchId = null;
+    _tiles.forEach(_releaseThumb);
+    _tiles.clear();
+    _copylessIds.clear();
     caption = '';
     _safeNotify();
   }
@@ -509,7 +580,13 @@ class AttachmentTrayController extends ChangeNotifier {
     // Composer closed / conversation switched mid-stage: abort any in-flight
     // uploads and release the batch server-side (fire-and-forget — nothing from
     // the tray survives disposal).
-    _request?.clearAll();
+    // Offline on: closing the chat detaches, keeping the batch for a later
+    // restore (BEH-UPLOAD-14).
+    if (OfflineGate.isOn()) {
+      _request?.removeUploadListener();
+    } else {
+      _request?.clearAll();
+    }
     _request = null;
     super.dispose();
   }

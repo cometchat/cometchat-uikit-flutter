@@ -919,7 +919,8 @@ void main() {
       },
     );
 
-    test('a failed edit restores the original in the list', () async {
+    test('D-352: a failed edit restores the original in the list, with no '
+        'failed mark, and reaches errorCallback once', () async {
       final errors = <Exception>[];
       when(
         () => repo.editMessage(any()),
@@ -941,39 +942,41 @@ void main() {
         same(original),
         reason: 'the optimistic edit must be rolled back',
       );
-      expect(recorder.sent.last.$2, core_enums.MessageStatus.error);
-      expect(recorder.sent.last.$1.metadata, {'error': 'edit rejected'});
+      expect(
+        recorder.sent,
+        isEmpty,
+        reason: 'a failed send would put the edited text back on the row',
+      );
+      expect(original.text, 'before');
+      expect(original.metadata?['error'], isNull);
       expect((errors.single as CometChatException).code, 'EDIT_ERROR');
       expect(bloc.state.status, MessageComposerStatus.error);
       await bloc.close();
     });
 
-    test(
-      'a failed edit keeps the metadata the message already carried',
-      () async {
-        when(
-          () => repo.editMessage(any()),
-        ).thenAnswer((_) async => const Failure(message: 'edit rejected'));
+    test('D-352: a failed edit leaves the original\'s metadata as it was (the '
+        'edit shares its map)', () async {
+      when(
+        () => repo.editMessage(any()),
+      ).thenAnswer((_) async => const Failure(message: 'edit rejected'));
 
-        // The rebuilt edit copies the original's metadata, so the failure path
-        // takes the "map already exists" arm.
-        final original = text(id: 3, body: 'before', metadata: {'kept': true});
-        final bloc = await ready();
+      // The rebuilt edit copies the original's metadata, so the failure path
+      // takes the "map already exists" arm.
+      final original = text(id: 3, body: 'before', metadata: {'kept': true});
+      final bloc = await ready();
 
-        bloc.add(SetEditMessage(original));
-        await settle();
-        bloc.add(const UpdateComposeText('after'));
-        await settle();
-        bloc.add(const EditTextMessage());
-        await settle();
+      bloc.add(SetEditMessage(original));
+      await settle();
+      bloc.add(const UpdateComposeText('after'));
+      await settle();
+      bloc.add(const EditTextMessage());
+      await settle();
 
-        expect(recorder.sent.last.$1.metadata, {
-          'kept': true,
-          'error': 'edit rejected',
-        });
-        await bloc.close();
-      },
-    );
+      expect(recorder.sent, isEmpty);
+      expect(recorder.edited.last.$1, same(original));
+      expect(original.metadata, {'kept': true});
+      await bloc.close();
+    });
 
     test('a custom send handler takes over the edit too', () async {
       final handled = <(BaseMessage, PreviewMessageMode?)>[];

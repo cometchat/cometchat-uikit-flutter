@@ -21,6 +21,7 @@ import 'package:sample_app/screens/threads_screen.dart';
 // Mobile-only imports — guarded by kIsWeb at call sites
 import 'package:sample_app/utils/call_error_snackbar.dart';
 import 'package:sample_app/utils/call_placement.dart';
+import 'package:sample_app/utils/message_header_offline.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -648,15 +649,19 @@ class _HomeScreenState extends State<HomeScreen> {
               final otherUid =
                   (sender?.uid == loggedInUid) ? receiverUid : sender?.uid;
               if (otherUid != null) {
-                CometChat.getUser(otherUid,
-                    onSuccess: (user) => _pushMessages(context,
+                MessageHeaderOffline.fetchChatById(
+                    otherUid, ReceiverTypeConstants.user,
+                    onUser: (user) => _pushMessages(context,
                         user: user, scrollToMessageId: messageId),
+                    onGroup: (_) {},
                     onError: (_) {});
               }
             } else if (receiverType == ReceiverTypeConstants.group) {
               final guid = receiverUid;
-              CometChat.getGroup(guid,
-                  onSuccess: (group) => _pushMessages(context,
+              MessageHeaderOffline.fetchChatById(
+                  guid, ReceiverTypeConstants.group,
+                  onUser: (_) {},
+                  onGroup: (group) => _pushMessages(context,
                       group: group, scrollToMessageId: messageId),
                   onError: (_) {});
             }
@@ -959,7 +964,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToChatWithUser(String uid) {
-    CometChat.getUser(uid, onSuccess: (user) {
+    MessageHeaderOffline.fetchChatById(uid, ReceiverTypeConstants.user,
+        onGroup: (_) {}, onUser: (user) {
       if (mounted) {
         _pushMessages(context, user: user);
       }
@@ -969,7 +975,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToChatWithGroup(String guid) {
-    CometChat.getGroup(guid, onSuccess: (group) {
+    MessageHeaderOffline.fetchChatById(guid, ReceiverTypeConstants.group,
+        onUser: (_) {}, onGroup: (group) {
       if (mounted) {
         _pushMessages(context, group: group);
       }

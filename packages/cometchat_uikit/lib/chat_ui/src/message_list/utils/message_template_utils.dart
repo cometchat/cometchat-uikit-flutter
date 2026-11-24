@@ -8,6 +8,7 @@ import '../../../../call_ui/src/utils/call_utils.dart';
 import '../../../../call_ui/src/utils/call_extension_constants.dart';
 import '../../../../call_ui/src/ongoing_call/call_screen_overlay.dart';
 import '../../../../src/active_call_tracker.dart';
+import '../../../../shared_ui/src/offline/offline_send.dart';
 import '../../../../src/call_errors.dart';
 import '../../../../src/calling_configuration_resolver.dart';
 import '../../../../src/meeting_session_settings.dart';
@@ -1394,6 +1395,10 @@ class MessageTemplateUtils {
         additionalConfigurations,
       );
     }
+    // Offline (W4, BEH-SEND-31): an unsent row keeps Copy only.
+    if (OfflineSend.instance.appliesTo(messageObject)) {
+      optionList = OfflineSend.instance.filterUnsent(messageObject, optionList);
+    }
     return optionList;
   }
 
@@ -1728,6 +1733,13 @@ class MessageTemplateUtils {
       );
     }
 
+    // Offline (W4, BEH-SEND-31): an unsent row keeps Copy only.
+    if (OfflineSend.instance.appliesTo(messageObject)) {
+      return OfflineSend.instance.filterUnsent(
+        messageObject,
+        messageOptionList,
+      );
+    }
     return messageOptionList;
   }
 

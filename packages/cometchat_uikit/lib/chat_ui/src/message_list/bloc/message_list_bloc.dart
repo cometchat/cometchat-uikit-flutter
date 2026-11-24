@@ -22,6 +22,18 @@ import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart'
 
 import 'message_list_event.dart';
 import 'message_list_state.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/offline_notice.dart';
+import '../../../../shared_ui/src/offline/message_list_offline_reads.dart';
+import '../../../../shared_ui/src/offline/message_list_offline_sync.dart';
+import '../../../../shared_ui/src/offline/offline_send.dart';
+import '../../../../shared_ui/src/offline/message_list_seam_context.dart';
+import '../../../../shared_ui/src/offline/thread_reply_count_offline.dart';
+import '../data/datasources/message_list_remote_datasource.dart';
+import '../data/repositories/message_list_repository_impl.dart';
+import '../domain/repositories/message_list_repository.dart';
 import '../utils/message_operation.dart';
 import '../di/message_list_service_locator.dart';
 import '../domain/usecases/get_messages_usecase.dart';
@@ -224,9 +236,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   /// above a specific message) — it preserves scroll offset.
   void notifyListChanged() {
     if (!_operationsController.isClosed) {
-      _operationsController.add(
-        MessageOperation.set(state.messages, animated: false),
-      );
+      _addOp(MessageOperation.set(state.messages, animated: false));
     }
   }
 
@@ -243,7 +253,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     final index = findMessageIndex(messageId);
     if (index == null) return;
     final message = state.messages[index];
-    _operationsController.add(MessageOperation.update(message, message, index));
+    _addOp(MessageOperation.update(message, message, index));
   }
 
   // ============================================================
@@ -297,6 +307,20 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
   /// Flag to track if index maps need full rebuild
   bool _mapNeedsRebuild = true;
+
+  /// Jump guard for the bloc's own reads (offline off; the offline read
+  /// path has its own window token): bumped when a jump replaces the rows.
+  /// An older or newer page fetched before that is dropped.
+  int _jumpWindowToken = 0;
+
+  /// Jump guard for the bloc's own reads: the latest jump request. An
+  /// earlier jump stops at its next step.
+  int _jumpSeq = 0;
+
+  /// Jump guard for the bloc's own reads: jumps still running. Paging waits
+  /// for them, since the page requests are rebuilt only when a jump
+  /// finishes.
+  int _jumpsInFlight = 0;
 
   /// Flag to skip unread anchor re-detection on the next LoadMessages.
   /// Set by ResetUnreadState so that a subsequent refresh doesn't
@@ -389,11 +413,13 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     _aiAssistantListenerId = 'message_list_bloc_ai_$timestamp';
 
     // Register event handlers (implementations in Task 9)
-    on<LoadMessages>(_onLoadMessages);
-    on<LoadOlderMessages>(_onLoadOlderMessages);
-    on<LoadNewerMessages>(_onLoadNewerMessages);
-    on<RefreshMessages>(_onRefreshMessages);
-    on<SyncMessages>(_onSyncMessages);
+    // Reads run inside a list-generation scope (W1 §2.7): once the list is
+    // cleared, an in-flight read's emits and row operations are dropped.
+    on<LoadMessages>(_genScoped(_onLoadMessages));
+    on<LoadOlderMessages>(_genScoped(_onLoadOlderMessages));
+    on<LoadNewerMessages>(_genScoped(_onLoadNewerMessages));
+    on<RefreshMessages>(_genScoped(_onRefreshMessages));
+    on<SyncMessages>(_genScoped(_onSyncMessages));
     on<MessageReceived>(_onMessageReceived);
     on<MessageEdited>(_onMessageEdited);
     on<MessagePinSaveChanged>(_onMessagePinSaveChanged);
@@ -402,17 +428,21 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     on<ReadReceiptReceived>(_onReadReceiptReceived);
     on<MarkMessageAsRead>(_onMarkMessageAsRead);
     on<SetActiveConversation>(_onSetActiveConversation);
-    on<JumpToMessage>(_onJumpToMessage);
+    on<JumpToMessage>(_genScoped(_onJumpToMessage));
     on<AddReaction>(_onAddReaction);
     on<RemoveReaction>(_onRemoveReaction);
     on<ReactionAddedFromSDK>(_onReactionAddedFromSDK);
     on<ReactionRemovedFromSDK>(_onReactionRemovedFromSDK);
     on<MarkMessageAsUnread>(_onMarkMessageAsUnread);
-    on<LoadFromUnread>(_onLoadFromUnread);
+    on<LoadFromUnread>(_genScoped(_onLoadFromUnread));
     on<ResetUnreadState>(_onResetUnreadState);
-    on<MessageSentByUser>(_onMessageSentByUser);
+    on<MessageSentByUser>(_genScoped(_onMessageSentByUser));
     on<ForceEmptyState>(_onForceEmptyState);
-    on<LoadLastAgentConversation>(_onLoadLastAgentConversation);
+    on<LoadLastAgentConversation>(_genScoped(_onLoadLastAgentConversation));
+
+    // Offline (W1 §2.6–§2.9): hub events and seam tasks run on the event loop.
+    on<_OfflineHubEventReceived>(_onOfflineHubEvent);
+    on<_OfflineSeamTask>(_onOfflineSeamTask);
 
     // List base hook events
     on<_ListMessageAdded>(_onListMessageAdded);
@@ -423,6 +453,116 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Initialize logged in user and register SDK listeners
     _initializeAndRegisterListeners();
+
+    // Offline (W1 §2.6/§2.7): hub subscription, seam host and notice stream.
+    // The hub publishes nothing while offline is off, so the OFF path is
+    // untouched.
+    _wireOffline();
+  }
+
+  // ============================================================
+  // OFFLINE (W1 §2.6–§2.9)
+  // ============================================================
+
+  /// The list generation (§2.7). Bumped on a session end (and, by W5, on a
+  /// cache reset); a read that started under an older generation drops its
+  /// emits and row operations.
+  int _listGen = 0;
+
+  StreamSubscription<OfflineHubEvent>? _offlineHubSub;
+  final StreamController<OfflineNotice> _offlineNoticeController =
+      StreamController<OfflineNotice>.broadcast();
+
+  void _wireOffline() {
+    registerOfflineNotices(this, _offlineNoticeController.stream);
+    registerMessageListSeamHost(this, _MessageListSeamHost(this));
+    ThreadReplyCountOffline.attach(this); // W7: own replies count from now
+    _offlineHubSub = OfflineHub.instance.events.listen((event) {
+      if (isClosed) return;
+      // Drop events from a session older than the current one (§2.7).
+      if (event.gen < OfflineHub.instance.gen) return;
+      // Bump now, not when the event is handled, so reads in flight stop
+      // writing at once.
+      if (event is SessionEnded) _listGen++;
+      add(_OfflineHubEventReceived(event));
+    });
+  }
+
+  /// Wraps a read handler so it runs in a zone that records the list
+  /// generation it started under; [_GenGuardedEmitter] and [_addOp] drop
+  /// writes from a stale generation. With no session end (always, with
+  /// offline off) nothing is ever dropped.
+  FutureOr<void> Function(E event, Emitter<MessageListState> emit) _genScoped<
+    E extends MessageListEvent
+  >(FutureOr<void> Function(E event, Emitter<MessageListState> emit) handler) {
+    return (E event, Emitter<MessageListState> emit) {
+      final gen = _listGen;
+      return runZoned(
+        () => handler(event, _GenGuardedEmitter(emit, () => gen != _listGen)),
+        zoneValues: {_kOfflineListGen: gen},
+      );
+    };
+  }
+
+  /// Pushes a row operation unless the running read is from a stale list
+  /// generation.
+  void _addOp(MessageOperation operation) {
+    if (_operationsController.isClosed) return;
+    final gen = Zone.current[_kOfflineListGen];
+    if (gen is int && gen != _listGen) return;
+    _operationsController.add(operation);
+  }
+
+  MessageListSeamContext _seamCtx(Emitter<MessageListState> emit) =>
+      _MessageListSeamCtx(this, emit, _listGen);
+
+  Future<void> _onOfflineHubEvent(
+    _OfflineHubEventReceived event,
+    Emitter<MessageListState> emit,
+  ) async {
+    final hubEvent = event.event;
+    // An event queued before a session end but handled after it belongs to
+    // the old user (§2.7): drop it. SessionEnded carries the new gen.
+    if (hubEvent.gen < OfflineHub.instance.gen) return;
+    if (hubEvent is SessionEnded) {
+      // Clear every row before the next frame (§2.7). W4/W5 clear their own
+      // maps (direct failures, held receipts, composer tray) in their
+      // collectors below.
+      _clearRows(emit);
+    }
+    final ctx = _seamCtx(emit);
+    await OfflineSend.instance.onHubEvent(ctx, hubEvent); // W4
+    await MessageListOfflineSync.instance.onHubEvent(ctx, hubEvent); // W5
+    ThreadReplyCountOffline.onMessageListHubEvent(this, ctx, hubEvent); // W7
+  }
+
+  /// Clears the rows, index maps and cursors (session end, cache reset).
+  void _clearRows(Emitter<MessageListState> emit) {
+    _messageIndexMap.clear();
+    _muidIndexMap.clear();
+    _mapNeedsRebuild = true;
+    _olderMessagesRequest = null;
+    _newerMessagesRequest = null;
+    if (!_operationsController.isClosed) {
+      _operationsController.add(
+        MessageOperation.set(const <BaseMessage>[], animated: false),
+      );
+    }
+    emit(
+      state.copyWith(
+        status: MessageListStatus.empty,
+        messages: [],
+        hasMoreOlder: false,
+        hasMoreNewer: false,
+      ),
+    );
+  }
+
+  Future<void> _onOfflineSeamTask(
+    _OfflineSeamTask event,
+    Emitter<MessageListState> emit,
+  ) async {
+    await event.body(_seamCtx(emit));
   }
 
   // ============================================================
@@ -923,6 +1063,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         onCCMessageDeletedCallback: _handleCCMessageDeleted,
         onThreadSubscriptionChangedCallback:
             _handleThreadSubscriptionChangedEvent,
+        onCCMessagePinSaveChangedCallback: _handleMessagePinSaveChanged,
       ),
     );
 
@@ -992,8 +1133,12 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       }
     }
 
-    // Mark as delivered if not from logged in user
-    if (!disableReceipts && message.sender?.uid != _loggedInUser?.uid) {
+    // Mark as delivered if not from logged in user. Offline: a message the
+    // reconnect sweep delivered gets no per-message receipt (W5).
+    if (!disableReceipts &&
+        message.sender?.uid != _loggedInUser?.uid &&
+        !(OfflineGate.isOn() &&
+            MessageListOfflineSync.isSyncDelivery(message))) {
       markAsDeliveredUseCase(message: message);
     }
 
@@ -1363,12 +1508,18 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   /// pulls what the backend wrote, as Android's `onCallActivity` does: the
   /// newer messages are synced, and the call's bubbles already on screen are
   /// re-read, since a call message keeps its ID while its status moves on.
-  /// Call messages are not replies, so a thread's list is left alone.
+  /// Call messages are not replies, so a thread's list is left alone. With
+  /// offline on, `SyncMessages` fetches nothing, so the offline seam reads the
+  /// newest page from the server instead.
   void _handleCallActivity(Call call) {
     if (isClosed || parentMessageId != null) return;
     if (state.status != MessageListStatus.loaded) return;
     if (!_isCallForCurrentConversation(call)) return;
-    add(const SyncMessages());
+    final host = OfflineGate.isOn() ? messageListSeamHostOf(this) : null;
+    if (host == null ||
+        !MessageListOfflineSync.instance.handleCallActivity(host)) {
+      add(const SyncMessages());
+    }
     final onScreen = {
       for (final m in state.messages)
         if (m is Call && m.sessionId == call.sessionId && m.id > 0) m.id,
@@ -1425,6 +1576,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   /// **Validates: Requirements 8.2**
   void _handleConnected() {
     if (isClosed) return;
+    // Offline sync seam (W1 §2.9 → W5). Inert in W1; when W5 handles the ON
+    // path there is no kit-side missed-message fetch.
+    final host = messageListSeamHostOf(this);
+    if (OfflineGate.isOn() &&
+        host != null &&
+        MessageListOfflineSync.instance.handleConnected(host)) {
+      return;
+    }
     // Silently sync any missed messages on reconnection (no loader)
     add(const SyncMessages());
   }
@@ -1477,7 +1636,11 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
               true,
             );
           }
-          _incrementThreadReplyCount(message.parentMessageId);
+          // Offline on: an own reply is counted at pending (W7).
+          if (!OfflineGate.isOn() ||
+              ThreadReplyCountOffline.claimSentReply(this, message)) {
+            _incrementThreadReplyCount(message.parentMessageId);
+          }
         }
         if (hideReplies) return;
       }
@@ -1685,9 +1848,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     );
 
     if (!_operationsController.isClosed) {
-      _operationsController.add(
-        MessageOperation.set(intercepted, animated: true),
-      );
+      _addOp(MessageOperation.set(intercepted, animated: true));
     }
 
     onAfterMessagesSet(intercepted);
@@ -1710,6 +1871,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     MessageSentByUser event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline send seam (W1 §2.9 → W4). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = OfflineSend.instance.handleSentByUser(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     final message = event.message;
     final statusStr = event.status;
     final isInProgress =
@@ -1761,9 +1930,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
       emit(state.copyWith(status: newStatus, messages: updatedMessages));
 
-      _operationsController.add(
-        MessageOperation.insert(intercepted, insertIndex, animated: true),
-      );
+      _addOp(MessageOperation.insert(intercepted, insertIndex, animated: true));
 
       onAfterMessageAdded(intercepted, insertIndex);
     } else if (isSent) {
@@ -1830,9 +1997,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         updatedMessages[existingIndex] = intercepted;
         emit(state.copyWith(messages: updatedMessages));
 
-        _operationsController.add(
-          MessageOperation.update(oldMessage, intercepted, existingIndex),
-        );
+        _addOp(MessageOperation.update(oldMessage, intercepted, existingIndex));
 
         onAfterMessageUpdated(oldMessage, intercepted, existingIndex);
       } else {
@@ -1874,9 +2039,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
         emit(state.copyWith(status: newStatus, messages: updatedMessages));
 
-        _operationsController.add(
-          MessageOperation.insert(message, insertIndex, animated: true),
-        );
+        _addOp(MessageOperation.insert(message, insertIndex, animated: true));
       }
     } else if (isError) {
       // Find the pending message by muid — try O(1) map lookup first
@@ -1916,9 +2079,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         updatedMessages[existingIndex] = message;
         emit(state.copyWith(messages: updatedMessages));
 
-        _operationsController.add(
-          MessageOperation.update(oldMessage, message, existingIndex),
-        );
+        _addOp(MessageOperation.update(oldMessage, message, existingIndex));
       }
     }
   }
@@ -1964,6 +2125,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     LoadMessages event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W2). Inert in W1 (returns false).
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineReads.instance.handleLoad(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     // Emit loading state
     emit(state.copyWith(status: MessageListStatus.loading));
 
@@ -2034,9 +2203,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
           // Emit set operation for animated list
           if (!_operationsController.isClosed) {
-            _operationsController.add(
-              MessageOperation.set(intercepted, animated: true),
-            );
+            _addOp(MessageOperation.set(intercepted, animated: true));
           }
 
           onAfterMessagesSet(intercepted);
@@ -2202,10 +2369,20 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     LoadOlderMessages event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W2). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineReads.instance.handleLoadOlder(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     // Check hasMoreOlder and isLoadingOlder flags
     if (!state.hasMoreOlder || state.isLoadingOlder) {
       return;
     }
+    // A running jump loads its own older page.
+    if (_jumpsInFlight > 0) return;
 
     // Check if request is initialized
     if (_olderMessagesRequest == null) {
@@ -2214,11 +2391,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Emit isLoadingOlder state
     emit(state.copyWith(isLoadingOlder: true));
+    final windowToken = _jumpWindowToken;
 
     // Call loadOlderMessagesUseCase
     final result = await loadOlderMessagesUseCase(
       request: _olderMessagesRequest!,
     );
+    // A jump replaced the rows (and reset the loader): drop this page.
+    if (windowToken != _jumpWindowToken) return;
 
     result.fold(
       (failure) {
@@ -2254,7 +2434,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
           // Emit insertAll operation for animated list (prepend at index 0)
           if (!_operationsController.isClosed) {
-            _operationsController.add(
+            _addOp(
               MessageOperation.insertAll(olderMessages, 0, animated: false),
             );
           }
@@ -2276,6 +2456,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     LoadNewerMessages event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W2). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineReads.instance.handleLoadNewer(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     // Check hasMoreNewer and isLoadingNewer flags
     if (!state.hasMoreNewer || state.isLoadingNewer) {
       // Emit to unblock any stream listeners waiting for state change
@@ -2284,6 +2472,8 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       );
       return;
     }
+    // A running jump sets the rows and the newer flags itself.
+    if (_jumpsInFlight > 0) return;
 
     // Check if request is initialized
     if (_newerMessagesRequest == null) {
@@ -2293,11 +2483,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Emit isLoadingNewer state
     emit(state.copyWith(isLoadingNewer: true));
+    final windowToken = _jumpWindowToken;
 
     // Call loadNewerMessagesUseCase
     final result = await loadNewerMessagesUseCase(
       request: _newerMessagesRequest!,
     );
+    // A jump replaced the rows (and reset the loader): drop this page.
+    if (windowToken != _jumpWindowToken) return;
 
     result.fold(
       (failure) {
@@ -2331,7 +2524,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
           // Emit insertAll operation for animated list (append at end)
           if (!_operationsController.isClosed) {
-            _operationsController.add(
+            _addOp(
               MessageOperation.insertAll(
                 newerMessages,
                 state.messages.length - newerMessages.length,
@@ -2353,6 +2546,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     RefreshMessages event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W2). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineReads.instance.handleRefresh(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     // Clear existing state
     _mapNeedsRebuild = true;
     _olderMessagesRequest = null;
@@ -2382,6 +2583,18 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     SyncMessages event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline sync seam (W1 §2.9 → W5): no fetch with offline on. With it
+    // off, rows left un-acked by an offline session turn failed (C6); a list
+    // that never had offline on has none, so today's path is unchanged.
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineSync.instance.handleSyncMessages(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    } else {
+      MessageListOfflineSync.instance.checkEffectiveOff(_seamCtx(emit));
+    }
     // If list isn't loaded yet, fall back to normal load.
     // But if the list is loaded and simply empty (e.g., new conversation with
     // conversation starters), do NOT re-fetch — the empty state is intentional.
@@ -2474,9 +2687,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
       // Emit insert operation for animated list (silent, no animation)
       if (!_operationsController.isClosed) {
-        _operationsController.add(
-          MessageOperation.set(intercepted, animated: false),
-        );
+        _addOp(MessageOperation.set(intercepted, animated: false));
       }
 
       // Mark the newest message as read
@@ -2501,6 +2712,30 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     JumpToMessage event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W2). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineReads.instance.handleJumpToMessage(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
+    final seq = ++_jumpSeq;
+    _jumpsInFlight++;
+    try {
+      await _jumpToMessageDirect(event, emit, seq);
+    } finally {
+      _jumpsInFlight--;
+    }
+  }
+
+  /// The jump on the bloc's own reads: [seq] is this jump's request number;
+  /// a later jump supersedes it.
+  Future<void> _jumpToMessageDirect(
+    JumpToMessage event,
+    Emitter<MessageListState> emit,
+    int seq,
+  ) async {
     final targetId = event.messageId;
     final convWith = conversationWith;
     if (convWith == null) return;
@@ -2520,7 +2755,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       // Non-fatal; intentionally ignored.
     }
 
-    if (targetMessage == null) {
+    if (targetMessage == null || seq != _jumpSeq) {
       return;
     }
 
@@ -2548,6 +2783,8 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       request: newerBuilder.build(),
     );
 
+    if (seq != _jumpSeq) return;
+
     List<BaseMessage> newerMessages = [];
     newerResult.fold((failure) {}, (messages) {
       newerMessages = messages;
@@ -2568,20 +2805,23 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       }
     }
 
+    // New window: pages fetched for the old one are dropped, and their
+    // loaders reset.
+    final windowToken = ++_jumpWindowToken;
     emit(
       state.copyWith(
         status: MessageListStatus.loaded,
         messages: intercepted,
         hasMoreOlder: true,
         hasMoreNewer: newerMessages.length >= 30,
+        isLoadingOlder: false,
+        isLoadingNewer: false,
         loggedInUser: _loggedInUser,
       ),
     );
 
     if (!_operationsController.isClosed) {
-      _operationsController.add(
-        MessageOperation.set(intercepted, animated: false),
-      );
+      _addOp(MessageOperation.set(intercepted, animated: false));
     }
 
     onAfterMessagesSet(intercepted);
@@ -2610,6 +2850,9 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       request: olderBuilder.build(),
     );
 
+    // A later jump replaced the rows: stop here.
+    if (windowToken != _jumpWindowToken) return;
+
     List<BaseMessage> olderMessages = [];
     olderResult.fold((failure) {}, (messages) {
       olderMessages = messages;
@@ -2637,9 +2880,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         );
 
         if (!_operationsController.isClosed) {
-          _operationsController.add(
-            MessageOperation.insertAll(olderMessages, 0, animated: false),
-          );
+          _addOp(MessageOperation.insertAll(olderMessages, 0, animated: false));
         }
 
         onAfterMessagesSet(interceptedCombined);
@@ -2709,6 +2950,17 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     // the message here left a list holding messages with status `initial`.
     if (state.status == MessageListStatus.initial) return;
 
+    // Offline (W5): a message the reconnect sweep delivered goes in sorted
+    // place, with no sound and no per-message read receipt. With offline off,
+    // rows an offline session left un-acked turn failed at this operation too
+    // (C6); a list that never had offline on skips the check.
+    final offlineOn = OfflineGate.isOn();
+    if (!offlineOn && MessageListOfflineSync.instance.mayHaveStrandedRows) {
+      MessageListOfflineSync.instance.checkEffectiveOff(_seamCtx(emit));
+    }
+    final syncDelivery =
+        offlineOn && MessageListOfflineSync.isSyncDelivery(message);
+
     ccLog(
       '[MessageListBloc] Message received: id=${message.id}, '
       'category=${message.category}, type=${message.type}, '
@@ -2734,9 +2986,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
             ),
           );
           _rebuildIndexMaps();
-          _operationsController.add(
-            MessageOperation.update(thinkingMsg, message, i),
-          );
+          _addOp(MessageOperation.update(thinkingMsg, message, i));
           // Notify composer that streaming is complete (restore send button)
           CometChatStreamCallBackEvents.ccStreamCompleted(true);
           return;
@@ -2779,7 +3029,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
           // Skip adding to list if hideReplies is true
           if (hideReplies) {
-            _playIncomingMessageSound(message);
+            if (!syncDelivery) _playIncomingMessageSound(message);
             return;
           }
         }
@@ -2830,7 +3080,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
           updatedMessages[existingIndex] = intercepted;
           emit(state.copyWith(messages: updatedMessages));
 
-          _operationsController.add(
+          _addOp(
             MessageOperation.update(oldMessage, intercepted, existingIndex),
           );
           onAfterMessageUpdated(oldMessage, intercepted, existingIndex);
@@ -2851,7 +3101,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Sound before the scrolled-up check: a message the list holds back until
     // the user returns to the bottom has still arrived.
-    _playIncomingMessageSound(message);
+    if (!syncDelivery) _playIncomingMessageSound(message);
 
     // If user has scrolled up (hasMoreNewer = true), don't append new messages
     // This prevents messages from appearing while user is viewing older messages
@@ -2865,6 +3115,15 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     // Interceptor: allow subclass to filter/transform
     final intercepted = onBeforeMessageAdded(message);
     if (intercepted == null) return;
+
+    if (syncDelivery) {
+      final index = MessageListOfflineSync.instance.insertSorted(
+        _seamCtx(emit),
+        intercepted,
+      );
+      onAfterMessageAdded(intercepted, index);
+      return;
+    }
 
     // Add message to end of list (newest messages at end)
     final insertIndex = state.messages.length;
@@ -2887,9 +3146,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     emit(state.copyWith(status: newStatus, messages: updatedMessages));
 
     // Emit insert operation for animated list
-    _operationsController.add(
-      MessageOperation.insert(intercepted, insertIndex, animated: true),
-    );
+    _addOp(MessageOperation.insert(intercepted, insertIndex, animated: true));
 
     onAfterMessageAdded(intercepted, insertIndex);
 
@@ -2924,6 +3181,17 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     if (index == null || index >= state.messages.length) return;
 
     final oldMessage = state.messages[index];
+    // G11, offline on or off: an own pin/save is applied from `onSuccess`
+    // (the ccMessagePinned/Saved kit events). SDK 5.1.0/5.1.1 also echo it
+    // through the SDK listener, and that echo is a no-op when the row already
+    // shows the state.
+    if (MessageListOfflineSync.instance.isPinSaveNoOp(
+      oldMessage,
+      incoming,
+      isPinScope: event.isPinScope,
+    )) {
+      return;
+    }
     if (event.isPinScope) {
       incoming.savedAt ??= oldMessage.savedAt;
     } else {
@@ -2978,9 +3246,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     emit(state.copyWith(messages: updatedMessages));
 
     // Emit update operation for animated list
-    _operationsController.add(
-      MessageOperation.update(oldMessage, intercepted, index),
-    );
+    _addOp(MessageOperation.update(oldMessage, intercepted, index));
 
     onAfterMessageUpdated(oldMessage, intercepted, index);
   }
@@ -3033,9 +3299,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       emit(state.copyWith(status: newStatus, messages: updatedMessages));
 
       // Emit remove operation for animated list
-      _operationsController.add(
-        MessageOperation.remove(oldMessage, index, animated: true),
-      );
+      _addOp(MessageOperation.remove(oldMessage, index, animated: true));
 
       onAfterMessageRemoved(oldMessage);
     } else {
@@ -3053,9 +3317,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
       emit(state.copyWith(messages: updatedMessages));
 
       // Emit update operation for animated list
-      _operationsController.add(
-        MessageOperation.update(oldMessage, intercepted, index),
-      );
+      _addOp(MessageOperation.update(oldMessage, intercepted, index));
 
       onAfterMessageUpdated(oldMessage, intercepted, index);
     }
@@ -3073,7 +3335,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
           msg.quotedMessage!.deletedAt ??=
               deletedMessage.deletedAt ?? DateTime.now();
           anyUpdated = true;
-          _operationsController.add(MessageOperation.update(msg, msg, i));
+          _addOp(MessageOperation.update(msg, msg, i));
         }
       }
       if (anyUpdated) {
@@ -3094,6 +3356,10 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     Emitter<MessageListState> emit,
   ) async {
     final receipt = event.receipt;
+    // Offline (W4 §3.6): hold a receipt for an id not shown yet.
+    if (OfflineGate.isOn()) {
+      OfflineSend.instance.noteReceipt(_seamCtx(emit), receipt);
+    }
 
     // Receipts are cumulative — "delivered up to messageId".
     // Update all outgoing messages with id <= receipt.messageId.
@@ -3124,6 +3390,10 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     Emitter<MessageListState> emit,
   ) async {
     final receipt = event.receipt;
+    // Offline (W4 §3.6): hold a receipt for an id not shown yet.
+    if (OfflineGate.isOn()) {
+      OfflineSend.instance.noteReceipt(_seamCtx(emit), receipt);
+    }
 
     // Receipts are cumulative — "read up to messageId".
     // Update all outgoing messages with id <= receipt.messageId.
@@ -3157,6 +3427,15 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
 
     // Call markAsReadUseCase
     final result = await markAsReadUseCase(message: event.message);
+
+    // Offline (W5): remember a chat read while offline; one markAsRead goes
+    // out for it after the next sync. The error stays swallowed.
+    if (result.isFailure && OfflineGate.isOn()) {
+      MessageListOfflineSync.instance.noteMarkReadFailed(
+        _seamCtx(emit),
+        event.message,
+      );
+    }
 
     result.fold((failure) {}, (_) {
       // Notify conversations list (and other listeners) so unread count resets
@@ -3634,9 +3913,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     emit(state.copyWith(messages: updatedMessages));
 
     if (!_operationsController.isClosed) {
-      _operationsController.add(
-        MessageOperation.update(oldMessage, intercepted, index),
-      );
+      _addOp(MessageOperation.update(oldMessage, intercepted, index));
     }
 
     onAfterMessageUpdated(oldMessage, intercepted, index);
@@ -3728,7 +4005,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     );
     _rebuildIndexMaps();
     if (!_operationsController.isClosed) {
-      _operationsController.add(
+      _addOp(
         MessageOperation.insert(
           event.item,
           index >= 0 ? index : event.updatedList.length - 1,
@@ -3752,7 +4029,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     );
     _rebuildIndexMaps();
     if (!_operationsController.isClosed) {
-      _operationsController.add(MessageOperation.remove(event.item, 0));
+      _addOp(MessageOperation.remove(event.item, 0));
     }
   }
 
@@ -3764,9 +4041,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     emit(state.copyWith(messages: List<BaseMessage>.from(event.updatedList)));
     _rebuildIndexMaps();
     if (!_operationsController.isClosed && index >= 0) {
-      _operationsController.add(
-        MessageOperation.update(event.oldItem, event.newItem, index),
-      );
+      _addOp(MessageOperation.update(event.oldItem, event.newItem, index));
     }
   }
 
@@ -3776,9 +4051,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
   ) {
     emit(state.copyWith(messages: const [], status: MessageListStatus.empty));
     if (!_operationsController.isClosed) {
-      _operationsController.add(
-        MessageOperation.set(const [], oldMessages: event.previousList),
-      );
+      _addOp(MessageOperation.set(const [], oldMessages: event.previousList));
     }
   }
 
@@ -3797,7 +4070,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     );
     _rebuildIndexMaps();
     if (!_operationsController.isClosed) {
-      _operationsController.add(
+      _addOp(
         MessageOperation.set(event.newList, oldMessages: event.previousList),
       );
     }
@@ -3860,6 +4133,10 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     // Close operations stream
     _operationsController.close();
 
+    // Offline: cancel hub subscriptions and close the notice stream (W1).
+    _offlineHubSub?.cancel();
+    _offlineNoticeController.close();
+
     // Clear index maps
     _messageIndexMap.clear();
     _muidIndexMap.clear();
@@ -3903,6 +4180,14 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
     LoadFromUnread event,
     Emitter<MessageListState> emit,
   ) async {
+    // Offline read seam (W1 §2.9 → W2). Inert in W1.
+    if (OfflineGate.isOn()) {
+      final handled = MessageListOfflineReads.instance.handleLoadFromUnread(
+        _seamCtx(emit),
+        event,
+      );
+      if (handled != null && await handled) return;
+    }
     if (parentMessageId != null) {
       add(
         LoadMessages(
@@ -4070,9 +4355,7 @@ class MessageListBloc extends Bloc<MessageListEvent, MessageListState>
         );
 
         if (!_operationsController.isClosed) {
-          _operationsController.add(
-            MessageOperation.set(interceptedDeduped, animated: false),
-          );
+          _addOp(MessageOperation.set(interceptedDeduped, animated: false));
         }
 
         onAfterMessagesSet(interceptedDeduped);
@@ -4857,18 +5140,41 @@ class _MessageListAIAssistantListener with AIAssistantListener {
 /// - ccMessageSent: When logged-in user sends a message
 /// - ccMessageEdited: When logged-in user edits a message
 /// - ccMessageDeleted: When logged-in user deletes a message
+/// - ccMessagePinned/Unpinned/Saved/Unsaved: the `onSuccess` of the
+///   logged-in user's own pin/save, from any screen (G11). SDK 5.1.2 sends no
+///   listener echo for it, so this is what updates the row.
 class _MessageListUIEventListener with CometChatMessageEventListener {
   final void Function(BaseMessage, dynamic) onCCMessageSentCallback;
   final void Function(BaseMessage, dynamic) onCCMessageEditedCallback;
   final void Function(BaseMessage, dynamic) onCCMessageDeletedCallback;
   final void Function(int, bool) onThreadSubscriptionChangedCallback;
 
+  /// Pin & Save: (message, isPinScope) — see [MessagePinSaveChanged].
+  final void Function(BaseMessage, bool) onCCMessagePinSaveChangedCallback;
+
   _MessageListUIEventListener({
     required this.onCCMessageSentCallback,
     required this.onCCMessageEditedCallback,
     required this.onCCMessageDeletedCallback,
     required this.onThreadSubscriptionChangedCallback,
+    required this.onCCMessagePinSaveChangedCallback,
   });
+
+  @override
+  void ccMessagePinned(BaseMessage message) =>
+      onCCMessagePinSaveChangedCallback(message, true);
+
+  @override
+  void ccMessageUnpinned(BaseMessage message) =>
+      onCCMessagePinSaveChangedCallback(message, true);
+
+  @override
+  void ccMessageSaved(BaseMessage message) =>
+      onCCMessagePinSaveChangedCallback(message, false);
+
+  @override
+  void ccMessageUnsaved(BaseMessage message) =>
+      onCCMessagePinSaveChangedCallback(message, false);
 
   @override
   void ccMessageSent(BaseMessage message, dynamic messageStatus) {
@@ -5007,4 +5313,281 @@ class _ListMessagesReplaced extends MessageListEvent {
   const _ListMessagesReplaced(this.previousList, this.newList);
   @override
   List<Object?> get props => [previousList, newList];
+}
+
+// ============================================================
+// OFFLINE (W1 §2.7–§2.9) — internal plumbing
+// ============================================================
+
+/// Zone key holding the list generation a read started under.
+const Symbol _kOfflineListGen = #ccOfflineListGen;
+
+/// An [Emitter] that drops emits once its read's list generation is stale.
+class _GenGuardedEmitter<S> implements Emitter<S> {
+  _GenGuardedEmitter(this._inner, this._stale);
+
+  final Emitter<S> _inner;
+  final bool Function() _stale;
+
+  @override
+  bool get isDone => _inner.isDone;
+
+  @override
+  void call(S state) {
+    if (_stale()) return;
+    _inner(state);
+  }
+
+  @override
+  Future<void> onEach<T>(
+    Stream<T> stream, {
+    required void Function(T data) onData,
+    void Function(Object error, StackTrace stackTrace)? onError,
+  }) => _inner.onEach<T>(
+    stream,
+    onData: (data) {
+      if (!_stale()) onData(data);
+    },
+    onError: onError,
+  );
+
+  @override
+  Future<void> forEach<T>(
+    Stream<T> stream, {
+    required S Function(T data) onData,
+    S Function(Object error, StackTrace stackTrace)? onError,
+  }) => _inner.onEach<T>(
+    stream,
+    onData: (data) => call(onData(data)),
+    onError: onError == null ? null : (e, st) => call(onError(e, st)),
+  );
+}
+
+/// A hub event delivered on the bloc's event loop.
+class _OfflineHubEventReceived extends MessageListEvent {
+  const _OfflineHubEventReceived(this.event);
+  final OfflineHubEvent event;
+  @override
+  List<Object?> get props => [event];
+}
+
+/// A seam task queued through [MessageListSeamHost.run].
+class _OfflineSeamTask extends MessageListEvent {
+  const _OfflineSeamTask(this.body);
+  final FutureOr<void> Function(MessageListSeamContext ctx) body;
+  @override
+  List<Object?> get props => [body];
+}
+
+class _MessageListSeamHost implements MessageListSeamHost {
+  _MessageListSeamHost(this._bloc);
+  final MessageListBloc _bloc;
+
+  @override
+  void run(FutureOr<void> Function(MessageListSeamContext ctx) body) {
+    if (_bloc.isClosed) return;
+    _bloc.add(_OfflineSeamTask(body));
+  }
+
+  @override
+  bool get isClosed => _bloc.isClosed;
+}
+
+class _MessageListSeamCtx implements MessageListSeamContext {
+  _MessageListSeamCtx(this._bloc, this._emit, this.opGen);
+
+  final MessageListBloc _bloc;
+  final Emitter<MessageListState> _emit;
+
+  @override
+  final int opGen;
+
+  @override
+  int get listGen => _bloc._listGen;
+
+  @override
+  bool get isStale => opGen != _bloc._listGen;
+
+  @override
+  bool get isClosed => _bloc.isClosed;
+
+  @override
+  Object get owner => _bloc;
+
+  @override
+  MessageListState get state => _bloc.state;
+
+  @override
+  void emit(MessageListState state) {
+    if (isStale || _emit.isDone || _bloc.isClosed) return;
+    _emit(state);
+  }
+
+  @override
+  void addOperation(MessageOperation operation) {
+    if (isStale) return;
+    _bloc._addOp(operation);
+  }
+
+  @override
+  void add(MessageListEvent event) {
+    if (!_bloc.isClosed) _bloc.add(event);
+  }
+
+  @override
+  void postNotice(OfflineNotice notice) {
+    if (!_bloc._offlineNoticeController.isClosed) {
+      _bloc._offlineNoticeController.add(notice);
+    }
+  }
+
+  @override
+  User? get user => _bloc.user;
+
+  @override
+  Group? get group => _bloc.group;
+
+  @override
+  int? get parentMessageId => _bloc.parentMessageId;
+
+  @override
+  User? get loggedInUser => _bloc._loggedInUser;
+
+  @override
+  Map<int, int> get messageIndexMap => _bloc._messageIndexMap;
+
+  @override
+  Map<String, int> get muidIndexMap => _bloc._muidIndexMap;
+
+  @override
+  MessagesRequest? get olderRequest => _bloc._olderMessagesRequest;
+
+  @override
+  set olderRequest(MessagesRequest? request) =>
+      _bloc._olderMessagesRequest = request;
+
+  @override
+  MessagesRequest? get newerRequest => _bloc._newerMessagesRequest;
+
+  @override
+  set newerRequest(MessagesRequest? request) =>
+      _bloc._newerMessagesRequest = request;
+
+  @override
+  MessageListRemoteDataSource? get remoteDataSource {
+    final repo = _bloc.getMessagesUseCase.repository;
+    return repo is MessageListRepositoryImpl ? repo.remoteDataSource : null;
+  }
+
+  @override
+  MessageListRepository get repository => _bloc.getMessagesUseCase.repository;
+
+  @override
+  List<BaseMessage>? onBeforeMessagesSet(List<BaseMessage> messages) =>
+      _bloc.onBeforeMessagesSet(messages);
+
+  @override
+  void onAfterMessagesSet(List<BaseMessage> messages) =>
+      _bloc.onAfterMessagesSet(messages);
+
+  @override
+  void markIndexMapsDirty() => _bloc._mapNeedsRebuild = true;
+
+  @override
+  int? findMessageIndex(int messageId) => _bloc.findMessageIndex(messageId);
+
+  @override
+  int? findMessageIndexByMuid(String muid) =>
+      _bloc.findMessageIndexByMuid(muid);
+
+  @override
+  void initializeThreadReplyCount(int parentMessageId, int replyCount) =>
+      _bloc.initializeThreadReplyCount(parentMessageId, replyCount);
+
+  @override
+  ValueNotifier<MessageReceiptStatus> receiptNotifierFor(BaseMessage message) =>
+      _bloc.getReceiptNotifierForMessage(message);
+
+  @override
+  void notifyListChanged() => _bloc.notifyListChanged();
+
+  @override
+  void notifyMessageChanged(int messageId) =>
+      _bloc.notifyMessageChanged(messageId);
+
+  @override
+  String? get conversationWith => _bloc.conversationWith;
+
+  @override
+  String get conversationType => _bloc.conversationType;
+
+  @override
+  List<String>? get types => _bloc.types;
+
+  @override
+  List<String>? get categories => _bloc.categories;
+
+  @override
+  bool get hideReplies => _bloc.hideReplies;
+
+  @override
+  bool get withParent => _bloc.withParent;
+
+  @override
+  bool get disableReceipts => _bloc.disableReceipts;
+
+  @override
+  MessagesRequestBuilder newMessagesRequestBuilder({int limit = 30}) {
+    final builder = MessagesRequestBuilder()..limit = limit;
+    final convWith = conversationWith;
+    if (conversationType == 'user') {
+      builder.uid = convWith;
+    } else {
+      builder.guid = convWith;
+    }
+    final parentId = _bloc.parentMessageId;
+    if (parentId != null) {
+      builder.parentMessageId = parentId;
+      builder.withParent = _bloc.withParent;
+    }
+    final t = _bloc.types;
+    if (t != null && t.isNotEmpty) builder.types = t;
+    final c = _bloc.categories;
+    if (c != null && c.isNotEmpty) builder.categories = c;
+    builder.hideReplies = _bloc.hideReplies;
+    return builder;
+  }
+
+  @override
+  void initializeCursors({int? oldestMessageId, int? newestMessageId}) {
+    final convWith = conversationWith;
+    if (convWith == null) return;
+    _bloc._initializeMessagesRequests(
+      conversationWith: convWith,
+      conversationType: conversationType,
+      parentMessageId: _bloc.parentMessageId,
+      types: _bloc.types,
+      categories: _bloc.categories,
+      oldestMessageId: oldestMessageId,
+      newestMessageId: newestMessageId,
+    );
+  }
+
+  @override
+  User? resolveLoggedInUser() =>
+      _bloc._loggedInUser ??= CometChatUIKit.loggedInUser;
+
+  @override
+  bool consumeSkipNextUnreadDetection() {
+    final skip = _bloc._skipNextUnreadDetection;
+    _bloc._skipNextUnreadDetection = false;
+    return skip;
+  }
+
+  @override
+  MessageListSeamContext resetList() {
+    _bloc._listGen++;
+    if (!_emit.isDone && !_bloc.isClosed) _bloc._clearRows(_emit);
+    return _MessageListSeamCtx(_bloc, _emit, _bloc._listGen);
+  }
 }

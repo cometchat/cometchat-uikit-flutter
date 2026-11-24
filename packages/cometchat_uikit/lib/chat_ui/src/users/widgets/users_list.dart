@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../cometchat_chat_uikit.dart';
 import '../../shared/list_options_menu.dart';
+import '../../../../shared_ui/src/offline/offline_list_states.dart';
+import '../../../../shared_ui/src/offline/offline_presence.dart';
+import '../bloc/users_offline.dart';
 
 /// Internal widget for rendering the users list
 class UsersList extends StatelessWidget {
@@ -71,7 +74,8 @@ class UsersList extends StatelessWidget {
         if (previous is UsersLoaded && current is UsersLoaded) {
           return previous.users.length != current.users.length ||
               previous.isLoadingMore != current.isLoadingMore ||
-              previous.selectedUsers != current.selectedUsers;
+              previous.selectedUsers != current.selectedUsers ||
+              UsersOffline.needsRebuild(previous.users, current.users);
         }
         return true;
       },
@@ -84,6 +88,25 @@ class UsersList extends StatelessWidget {
           return _buildEmptyState(context);
         } else if (state is UsersLoaded) {
           return _buildUsersList(context, state);
+        } else if (state is UsersConnectToSearch) {
+          return OfflineListStates.view(
+            context,
+            Translations.of(context).connectToSearch,
+            subtitle: Translations.of(context).connectToSearchSubtitle,
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
+          );
+        } else if (state is UsersConnectToLoad) {
+          // The app's error view if it passed one (D84 (3)).
+          return OfflineListStates.view(
+            context,
+            Translations.of(context).connectToLoadUsers,
+            appErrorView: errorStateView != null
+                ? Center(child: errorStateView!(context))
+                : null,
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
+          );
         }
         return const SizedBox.shrink();
       },
@@ -267,14 +290,22 @@ class UsersList extends StatelessWidget {
     final showCheckbox =
         selectionMode != null && selectionMode != SelectionMode.none;
 
-    return ValueListenableBuilder<String>(
-      valueListenable: usersBloc.getStatusNotifier(user.uid),
-      builder: (context, status, child) {
+    final statusNotifier = usersBloc.getStatusNotifier(user.uid);
+    return ListenableBuilder(
+      // With offline on, no presence while the SDK is not connected
+      // (ENG-41552 A); offline off, OfflinePresence.hidden is always false.
+      listenable: Listenable.merge([
+        statusNotifier,
+        OfflinePresence.listenable,
+      ]),
+      builder: (context, child) {
         // Use the real-time status from ValueNotifier (not stale user.status)
+        final status = statusNotifier.value;
         final isStatusVisible =
             usersStatusVisibility != false &&
             user.blockedByMe != true &&
-            user.hasBlockedMe != true;
+            user.hasBlockedMe != true &&
+            !OfflinePresence.hidden;
         final isOnline =
             isStatusVisible && status == UserStatusConstants.online;
 

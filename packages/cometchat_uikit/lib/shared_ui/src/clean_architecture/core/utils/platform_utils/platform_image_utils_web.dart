@@ -14,3 +14,7 @@ Widget buildFileImage(
   // Should never be reached on web — return placeholder
   return const SizedBox.shrink();
 }
+
+/// Web: a path on the device is a `blob:` object URL, loaded over the network
+/// path.
+ImageProvider fileImageProvider(String filePath) => NetworkImage(filePath);

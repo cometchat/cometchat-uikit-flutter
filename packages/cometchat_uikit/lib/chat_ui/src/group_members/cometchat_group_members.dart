@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
+import '../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../shared_ui/src/offline/offline_list_states.dart';
+import '../../../shared_ui/src/offline/offline_presence.dart';
+import 'bloc/group_members_offline.dart';
 
 /// [CometChatGroupMembers] displays all members of a [Group] as a list.
 ///
@@ -187,12 +191,18 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       );
       _isExternalBloc = false;
     }
+    OfflineListErrors.listen(_bloc, _onKeptRowsError);
     // Trigger initial load — this is the fix: onInit was never called before
     _bloc.add(const LoadGroupMembers());
     if (widget.stateCallBack != null) {
       widget.stateCallBack!(_buildLegacyControllerStub());
     }
   }
+
+  /// A real server error over cached rows that stay on screen, on a load the
+  /// user or app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error);
 
   @override
   void didChangeDependencies() {
@@ -207,6 +217,7 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
 
   @override
   void dispose() {
+    OfflineListErrors.cancel(_bloc, _onKeptRowsError);
     if (!_isExternalBloc) {
       _bloc.close();
     }
@@ -325,7 +336,11 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       isSelected: isSelected,
       onlineStatusIndicatorColor:
           groupMemberStyle.onlineStatusColor ?? _colorPalette.success,
-      usersStatusVisibility: widget.usersStatusVisibility,
+      // With offline on, no online dot while the SDK is not connected
+      // (D84 (10)); offline off, OfflinePresence.hidden is always false.
+      usersStatusVisibility: OfflinePresence.hidden
+          ? false
+          : widget.usersStatusVisibility,
       selectIcon: widget.selectIcon,
     );
 
@@ -870,11 +885,15 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
           }
           return SizedBox(
             key: keys[index],
-            child: _buildListItem(
-              state.members[index],
-              state,
-              style,
-              keys[index],
+            child: ValueListenableBuilder<bool>(
+              // Rebuilds the row's dot when the connection changes (D84 (10)).
+              valueListenable: OfflinePresence.listenable,
+              builder: (context, _, _) => _buildListItem(
+                state.members[index],
+                state,
+                style,
+                keys[index],
+              ),
             ),
           );
         },
@@ -927,6 +946,10 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
                 state.message,
               ),
             );
+          }
+          // Offline with nothing shown: onError once (D84 (3)).
+          if (state is GroupMembersConnectToLoad) {
+            widget.onError?.call(state.error);
           }
         },
         builder: (ctx, state) {
@@ -1080,6 +1103,26 @@ class _CometChatGroupMembersState extends State<CometChatGroupMembers> {
       // hideError suppresses the error view, as on CometChatConversations.
       if (widget.hideError == true) return const SizedBox.shrink();
       return _buildError(style);
+    } else if (state is GroupMembersConnectToSearch) {
+      return OfflineListStates.view(
+        context,
+        cc.Translations.of(context).connectToSearch,
+        subtitle: cc.Translations.of(context).connectToSearchSubtitle,
+        textColor: style.emptyStateTextColor,
+        textStyle: style.emptyStateTextStyle,
+      );
+    } else if (state is GroupMembersConnectToLoad) {
+      // The app's error view if it passed one (D84 (3)); hideError hides the
+      // error view, not this state.
+      return OfflineListStates.view(
+        context,
+        cc.Translations.of(context).connectToLoadMembers,
+        appErrorView: widget.errorStateView != null && widget.hideError != true
+            ? widget.errorStateView!(context)
+            : null,
+        textColor: style.emptyStateTextColor,
+        textStyle: style.emptyStateTextStyle,
+      );
     } else if (state is GroupMembersLoaded) {
       _syncLegacySelection(state);
       if (state.members.isEmpty) return _buildEmpty(style);

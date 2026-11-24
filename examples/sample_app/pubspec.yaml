@@ -5,7 +5,7 @@ publish_to: 'none'
 # release it demonstrates; only the dependency constraint below tracks the
 # library. The build number feeds Android versionCode via flutter.versionCode,
 # so it must only ever increase.
-version: 6.3.0
+version: 6.4.0
 
 environment:
   sdk: '>=3.10.8 <4.0.0'
@@ -14,7 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cometchat_chat_uikit: ^6.3.0
+  cometchat_chat_uikit: ^6.4.0
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +30,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+
+# Offline encryption (D86): the SDK's sqlite3 build hook uses the
+# cipher-enabled sqlite3mc source, so the encrypted offline cache can open.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

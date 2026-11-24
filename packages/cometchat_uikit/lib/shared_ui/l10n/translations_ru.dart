@@ -1595,4 +1595,86 @@ class TranslationsRu extends Translations {
 
   @override
   String messageFrom(String sender) => 'Сообщение от $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Ещё не отправлено";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Не отправлено. Нажмите, чтобы повторить";
+
+  @override
+  String get unsentMessageRemoved => "Неотправленное сообщение удалено";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Некоторые неотправленные сообщения, возможно, не были отправлены";
+
+  @override
+  String get queueFull => "Слишком много сообщений ожидают отправки";
+
+  @override
+  String get fileTooLargeOffline => "Файл слишком большой для отправки офлайн";
+
+  @override
+  String get connectToLoadMore => "Подключитесь, чтобы загрузить ещё";
+
+  @override
+  String get connectToSearch => "Подключитесь, чтобы искать";
+
+  @override
+  String get connectToSearchSubtitle =>
+      "Для поиска нужно подключение к интернету.";
+
+  @override
+  String get connectToLoadUsers =>
+      "Подключитесь, чтобы загрузить пользователей";
+
+  @override
+  String get connectToLoadGroups => "Подключитесь, чтобы загрузить группы";
+
+  @override
+  String get connectToLoadMembers => "Подключитесь, чтобы загрузить участников";
+
+  @override
+  String get connectToLoadChats => "Подключитесь, чтобы загрузить чаты";
+
+  @override
+  String get connectToLoadMessages => "Подключитесь, чтобы загрузить сообщения";
+
+  @override
+  String get connectToLoadReactions => "Подключитесь, чтобы загрузить реакции";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Подключитесь, чтобы загрузить уведомления";
+
+  @override
+  String get mediaAvailableWhenOnline => "Доступно при подключении к сети";
+
+  @override
+  String get jumpToLatest => "К последним";
+
+  @override
+  String get sendingTryAgain => "Отправка… попробуйте ещё раз чуть позже";
+
+  @override
+  String get fileNotSaved => "Файл не сохранён. Добавьте его снова";
+
+  @override
+  String messagesNotSent(int n) => switch ((n % 10, n % 100)) {
+    (1, != 11) => "$n сообщение не отправлено",
+    (2 || 3 || 4, < 12 || > 14) => "$n сообщения не отправлены",
+    _ => "$n сообщений не отправлено",
+  };
+
+  @override
+  String unsentMessagesLost(int n) => switch ((n % 10, n % 100)) {
+    (1, != 11) => "Не удалось восстановить $n неотправленное сообщение",
+    (2 || 3 || 4, < 12 || > 14) =>
+      "Не удалось восстановить $n неотправленных сообщения",
+    _ => "Не удалось восстановить $n неотправленных сообщений",
+  };
 }

@@ -51,6 +51,11 @@ class UIKitSettings {
   final List<String>? roles;
   final DateTimeFormatterCallback? dateTimeFormatterCallback;
 
+  ///[offlineConfig] optional offline-support configuration, passed straight
+  ///through to the SDK's `AppSettings`. Never read back by the kit. When
+  ///absent, offline support is off and the kit behaves exactly as today.
+  final OfflineConfig? offlineConfig;
+
   UIKitSettings._builder(UIKitSettingsBuilder builder)
     : appId = builder.appId,
       region = builder.region,
@@ -65,7 +70,8 @@ class UIKitSettings {
       adminHost = builder.adminHost,
       clientHost = builder.clientHost,
       roles = builder.roles,
-      dateTimeFormatterCallback = builder.dateTimeFormatterCallback;
+      dateTimeFormatterCallback = builder.dateTimeFormatterCallback,
+      offlineConfig = builder.offlineConfig;
 }
 
 ///Builder class for [UIKitSettings]
@@ -97,6 +103,11 @@ class UIKitSettingsBuilder {
   String? adminHost;
   String? clientHost;
   DateTimeFormatterCallback? dateTimeFormatterCallback;
+
+  ///[offlineConfig] optional offline-support configuration, passed straight
+  ///through to the SDK's `AppSettings`. Absent ⇒ offline off.
+  ///See [UIKitSettings.offlineConfig].
+  OfflineConfig? offlineConfig;
 
   UIKitSettingsBuilder();
 

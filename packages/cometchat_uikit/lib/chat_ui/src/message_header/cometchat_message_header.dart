@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
 import '../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
+import '../../../shared_ui/src/offline/offline_presence.dart';
 import '../../../call_ui/src/call_buttons/cometchat_call_buttons.dart';
 import '../../../src/calling_configuration_resolver.dart';
 import 'package:intl/intl.dart';
@@ -571,6 +572,15 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
 
   // Body / Title view using BLoC
   Widget _getBody(BuildContext context) {
+    // Presence hides while the SDK is not connected with offline on
+    // (ENG-41552 A); the header redraws when that changes.
+    return ValueListenableBuilder<bool>(
+      valueListenable: OfflinePresence.listenable,
+      builder: (context, _, _) => _getBlocBody(context),
+    );
+  }
+
+  Widget _getBlocBody(BuildContext context) {
     return BlocBuilder<MessageHeaderBloc, MessageHeaderState>(
       builder: (context, state) {
         // Handle initial/loading state - use widget's user/group directly
@@ -657,7 +667,9 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
     } else if (widget.subtitleView != null) {
       subtitle = widget.subtitleView!(state.group, state.user, context);
     } else if (state.user != null) {
-      if (widget.usersStatusVisibility == true && state.userIsNotBlocked) {
+      if (widget.usersStatusVisibility == true &&
+          state.userIsNotBlocked &&
+          !OfflinePresence.hidden) {
         final statusText = state.isUserOnline
             ? cc.Translations.of(context).online
             : _getUserActivityStatus(context, state);
@@ -972,7 +984,9 @@ class _CometChatMessageHeaderState extends State<CometChatMessageHeader> {
 
   bool _hideUserPresence(MessageHeaderState state) {
     return state.user != null &&
-        (widget.usersStatusVisibility == false || !state.userIsNotBlocked);
+        (widget.usersStatusVisibility == false ||
+            !state.userIsNotBlocked ||
+            OfflinePresence.hidden);
   }
 
   Widget? _buildCallButtons(CometChatMessageHeaderStyle style) {

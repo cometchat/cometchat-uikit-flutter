@@ -77,6 +77,7 @@ Future<void> _flush() => pumpEventQueue(times: 50);
 
 void main() {
   late _MockConversationsRepository repo;
+  // ignore: deprecated_member_use
   late Map<String, CallListener> sdkCallListeners;
   late Map<String, IncomingCallListener> callsSdkListeners;
   late List<ConversationsBloc> blocs;

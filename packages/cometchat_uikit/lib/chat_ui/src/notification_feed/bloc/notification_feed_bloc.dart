@@ -14,6 +14,12 @@ import '../domain/usecases/get_feed_item_usecase.dart';
 import 'notification_feed_event.dart';
 import 'notification_feed_state.dart';
 import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../shared_ui/src/offline/notification_feed_offline.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../../shared_ui/src/offline/offline_list_reset.dart';
+import '../../../../shared_ui/src/offline/two_phase.dart';
 
 /// BLoC for managing the notification feed lifecycle.
 ///
@@ -78,6 +84,13 @@ class NotificationFeedBloc
   // Generation counter for category switch cancellation
   int _fetchGeneration = 0;
 
+  /// Bumped on a session end or cache reset (G8, ENG-41569). A load-more or
+  /// unread-count read started under an older value drops its result; the
+  /// first-page reads drop theirs through [_fetchGeneration], bumped too.
+  int _resetGen = 0;
+
+  StreamSubscription<OfflineHubEvent>? _offlineResetSub;
+
   /// Helper to get initialized service locator.
   static NotificationFeedServiceLocator _getServiceLocator() {
     if (!NotificationFeedServiceLocator.instance.isInitialized) {
@@ -133,6 +146,25 @@ class NotificationFeedBloc
     on<ReportClicked>(_onReportClicked);
     on<UpdateUnreadCounts>(_onUpdateUnreadCounts);
     on<ConnectionStateChanged>(_onConnectionStateChanged);
+
+    // Session end and cache reset (G8): offline on only.
+    on<_OfflineListReset>(_onOfflineListReset);
+    on<_CacheResetReload>(
+      (event, emit) => _onLoadNotificationFeed(
+        const LoadNotificationFeed(),
+        emit,
+        quiet: true,
+      ),
+    );
+    _offlineResetSub = OfflineListReset.listen(
+      isClosed: () => isClosed,
+      onReset: (event) {
+        // Bump now so reads in flight stop writing at once.
+        _fetchGeneration++;
+        _resetGen++;
+        add(_OfflineListReset(event));
+      },
+    );
 
     // Register real-time listener (skip in tests)
     if (!disableSDKListeners) {
@@ -216,11 +248,47 @@ class NotificationFeedBloc
   // EVENT HANDLERS
   // ============================================================
 
+  /// Session end or cache reset (G8): clears the items, the index map, the
+  /// counts and the SDK requests before the next frame, and returns the feed
+  /// to all categories. A session end leaves it empty until it is next asked
+  /// to load; a cache reset reloads once from page one, quietly over items
+  /// (D84 (5)).
+  void _onOfflineListReset(
+    _OfflineListReset event,
+    Emitter<NotificationFeedState> emit,
+  ) {
+    final hubEvent = event.event;
+    if (OfflineListReset.isStale(hubEvent)) return;
+    _feedRequest = null;
+    _categoriesRequest = null;
+    _itemIndexMap.clear();
+    _deliveredItemIds.clear();
+    _viewedItemIds.clear();
+    emit(
+      state.copyWith(
+        screenState: NotificationFeedScreenState.empty,
+        items: const [],
+        categories: const [],
+        clearActiveCategory: true,
+        totalUnreadCount: 0,
+        categoryUnreadCounts: const {},
+        isLoadingMore: false,
+        isRefreshing: false,
+        hasMorePages: false,
+        clearError: true,
+      ),
+    );
+    if (hubEvent is CacheReset) add(const _CacheResetReload());
+  }
+
   /// Load initial notification feed: categories + first page of items.
+  /// [quiet] marks the kit's own cache-reset reload: a real error over the
+  /// cached items it shows does not reach `onError` (D84 (5)).
   Future<void> _onLoadNotificationFeed(
     LoadNotificationFeed event,
-    Emitter<NotificationFeedState> emit,
-  ) async {
+    Emitter<NotificationFeedState> emit, {
+    bool quiet = false,
+  }) async {
     emit(
       state.copyWith(
         screenState: NotificationFeedScreenState.loading,
@@ -258,6 +326,17 @@ class NotificationFeedBloc
     _feedRequest =
         (_externalFeedRequestBuilder ?? NotificationFeedRequestBuilder())
             .build();
+
+    final twoPhase = _twoPhaseSource();
+    if (twoPhase != null) {
+      emit(state.copyWith(categories: categories));
+      return _readFirstPageTwoPhase(
+        twoPhase,
+        currentGeneration,
+        emit,
+        silent: quiet,
+      );
+    }
 
     final itemsResult = await _getFeedItemsUseCase(_feedRequest!);
 
@@ -319,8 +398,16 @@ class NotificationFeedBloc
     if (_feedRequest == null) return;
 
     emit(state.copyWith(isLoadingMore: true));
+    final resetGen = _resetGen;
+
+    final twoPhase = _twoPhaseSource();
+    if (twoPhase != null) {
+      return _loadMoreTwoPhase(twoPhase, emit, resetGen: resetGen);
+    }
 
     final result = await _getFeedItemsUseCase(_feedRequest!);
+    // A session end or cache reset cleared the feed meanwhile.
+    if (resetGen != _resetGen) return;
 
     result.fold(
       (failure) {
@@ -393,6 +480,11 @@ class NotificationFeedBloc
       builder.setCategory(categoryFilter);
     }
     _feedRequest = builder.build();
+
+    final twoPhase = _twoPhaseSource();
+    if (twoPhase != null) {
+      return _readFirstPageTwoPhase(twoPhase, currentGeneration, emit);
+    }
 
     final result = await _getFeedItemsUseCase(_feedRequest!);
 
@@ -472,6 +564,17 @@ class NotificationFeedBloc
     }
     _feedRequest = builder.build();
 
+    final twoPhase = _twoPhaseSource();
+    if (twoPhase != null) {
+      return _readFirstPageTwoPhase(
+        twoPhase,
+        currentGeneration,
+        emit,
+        refreshing: true,
+        silent: event.silent,
+      );
+    }
+
     final result = await _getFeedItemsUseCase(_feedRequest!);
 
     if (currentGeneration != _fetchGeneration) return;
@@ -507,6 +610,125 @@ class NotificationFeedBloc
         _markItemsAsDelivered(items);
       },
     );
+  }
+
+  // ============================================================
+  // OFFLINE ON (W7): two-round reads (PR #23 §3.9)
+  // ============================================================
+
+  /// The two-phase source when offline is on and the items use case can read
+  /// in two rounds, else null (today's single read).
+  NotificationFeedTwoPhaseSource? _twoPhaseSource() => OfflineGate.isOn()
+      ? NotificationFeedOffline.sourceFor(_getFeedItemsUseCase)
+      : null;
+
+  /// First page (load, category switch, refresh): the cached page at once
+  /// (a refresh keeps the rows shown instead), then the server page in its
+  /// place. An empty cached page never ends the feed. A server error with rows
+  /// shown keeps them; a real one reaches `onError` (D84 (2), (5)), except on
+  /// the [silent] reconnect refresh. With nothing shown it is the offline
+  /// state when the device is offline (D84 (3)), else the error view; the
+  /// reconnect refresh replaces either.
+  Future<void> _readFirstPageTwoPhase(
+    NotificationFeedTwoPhaseSource source,
+    int generation,
+    Emitter<NotificationFeedState> emit, {
+    bool refreshing = false,
+    bool silent = false,
+  }) async {
+    void show(List<NotificationFeedItem> items, {required bool hasMore}) {
+      _rebuildIndexMap(items);
+      emit(
+        state.copyWith(
+          isRefreshing: false,
+          items: items,
+          screenState: items.isEmpty
+              ? NotificationFeedScreenState.empty
+              : NotificationFeedScreenState.loaded,
+          categoryUnreadCounts: _computeCategoryUnreadCounts(items),
+          totalUnreadCount: _computeTotalUnreadCount(items),
+          hasMorePages: hasMore,
+        ),
+      );
+    }
+
+    await for (final result in source.fetchFeedItemsTwoPhase(_feedRequest!)) {
+      if (isClosed || emit.isDone || generation != _fetchGeneration) return;
+      switch (result) {
+        case Cached(:final rows):
+          if (!refreshing && rows.isNotEmpty) {
+            show(NotificationFeedOffline.append(const [], rows), hasMore: true);
+          }
+        case Server(:final rows):
+          final items = NotificationFeedOffline.append(const [], rows);
+          show(items, hasMore: items.isNotEmpty);
+          _markItemsAsDelivered(items);
+        case PhaseError(:final error):
+          final offline = NotificationFeedOffline.isOffline(error);
+          if (state.items.isNotEmpty) {
+            emit(
+              state.copyWith(
+                isRefreshing: false,
+                screenState: NotificationFeedScreenState.loaded,
+              ),
+            );
+            // Offline, nothing more (D84 (2)); a real error reaches onError
+            // unless the kit started the read (D84 (5)).
+            if (!silent && !offline) OfflineListErrors.report(this, error);
+          } else {
+            // Nothing shown: offline, the error state is the offline state
+            // and onError fires once (D84 (3)); else the error view (D84 (4)).
+            NotificationFeedOffline.setOfflineState(this, offline);
+            emit(
+              state.copyWith(
+                isRefreshing: false,
+                screenState: NotificationFeedScreenState.error,
+                error: error.message,
+              ),
+            );
+          }
+      }
+    }
+  }
+
+  /// "Load more": the cached page, then the server page in its place, each
+  /// appending only items not already shown. The feed ends when a server page
+  /// adds nothing new.
+  Future<void> _loadMoreTwoPhase(
+    NotificationFeedTwoPhaseSource source,
+    Emitter<NotificationFeedState> emit, {
+    required int resetGen,
+  }) async {
+    final before = state.items;
+    void show(List<NotificationFeedItem> items, {bool? hasMore}) {
+      _rebuildIndexMap(items);
+      emit(
+        state.copyWith(
+          items: items,
+          isLoadingMore: hasMore == null,
+          hasMorePages: hasMore,
+          categoryUnreadCounts: _computeCategoryUnreadCounts(items),
+          totalUnreadCount: _computeTotalUnreadCount(items),
+        ),
+      );
+    }
+
+    await for (final result in source.fetchFeedItemsTwoPhase(_feedRequest!)) {
+      if (isClosed || emit.isDone || resetGen != _resetGen) return;
+      switch (result) {
+        case Cached(:final rows):
+          if (rows.isNotEmpty) {
+            show(NotificationFeedOffline.append(before, rows));
+          }
+        case Server(:final rows):
+          final items = NotificationFeedOffline.append(before, rows);
+          show(items, hasMore: items.length > before.length);
+          _markItemsAsDelivered(items.sublist(before.length));
+        case PhaseError():
+          // Keep what is shown (cached rows included); no error.
+          emit(state.copyWith(isLoadingMore: false));
+      }
+    }
   }
 
   /// Handle real-time feed item received.
@@ -699,7 +921,10 @@ class NotificationFeedBloc
     UpdateUnreadCounts event,
     Emitter<NotificationFeedState> emit,
   ) async {
+    final resetGen = _resetGen;
     final result = await _getUnreadCountUseCase();
+    // A count read for the session that ended must not land.
+    if (resetGen != _resetGen) return;
 
     result.fold(
       (failure) {
@@ -728,7 +953,7 @@ class NotificationFeedBloc
     // On reconnect, refresh feed to catch missed items
     if (!event.isOffline &&
         state.screenState != NotificationFeedScreenState.loading) {
-      add(const RefreshFeed());
+      add(const RefreshFeed(silent: true));
     }
   }
 
@@ -772,12 +997,32 @@ class NotificationFeedBloc
   @override
   Future<void> close() {
     _unreadCountTimer?.cancel();
+    _offlineResetSub?.cancel();
     if (!disableSDKListeners) {
       CometChat.removeNotificationFeedListener(_feedListenerKey);
       CometChat.removeConnectionListener(_connectionListenerKey);
     }
     return super.close();
   }
+}
+
+// ============================================================
+// OFFLINE RESET EVENTS (G8)
+// ============================================================
+
+/// A current-gen session end or cache reset from the offline hub.
+class _OfflineListReset extends NotificationFeedEvent {
+  const _OfflineListReset(this.event);
+
+  final OfflineHubEvent event;
+
+  @override
+  List<Object?> get props => [event];
+}
+
+/// The one reload after a cache reset, kit-started.
+class _CacheResetReload extends NotificationFeedEvent {
+  const _CacheResetReload();
 }
 
 // ============================================================

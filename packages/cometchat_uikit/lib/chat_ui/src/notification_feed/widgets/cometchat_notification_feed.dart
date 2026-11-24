@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import '../../../../shared_ui/src/offline/notification_feed_offline.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../../shared_ui/src/offline/offline_list_states.dart';
 
 /// A full-screen notification feed component that displays campaign/promotional
 /// notifications in a scrollable list with category-based filtering, timestamp
@@ -128,6 +132,7 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
       );
       _isExternalBloc = false;
     }
+    OfflineListErrors.listen(_bloc, _onKeptRowsError);
     _visibilityTracker = FeedVisibilityTracker(bloc: _bloc);
     _scrollController = ScrollController()..addListener(_onScroll);
 
@@ -170,8 +175,14 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
     return CometChatCardColorValue(light: hex, dark: hex);
   }
 
+  /// A real server error over cached items that stay on screen, on a load
+  /// the user or app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error.message ?? error.code);
+
   @override
   void dispose() {
+    OfflineListErrors.cancel(_bloc, _onKeptRowsError);
     _visibilityTracker.dispose();
     _scrollController.dispose();
     if (!_isExternalBloc) {
@@ -309,6 +320,12 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
           previous.items != current.items ||
           previous.isLoadingMore != current.isLoadingMore,
       listener: (context, state) {
+        if (state.screenState != NotificationFeedScreenState.error &&
+            OfflineGate.isOn()) {
+          // Out of the error state: the next one is the offline state only if
+          // a read says so (D84 (3)).
+          NotificationFeedOffline.setOfflineState(_bloc, false);
+        }
         if (state.screenState == NotificationFeedScreenState.error &&
             state.error != null) {
           widget.onError?.call(state.error!);
@@ -397,6 +414,19 @@ class _CometChatNotificationFeedState extends State<CometChatNotificationFeed> {
   }
 
   Widget _buildErrorView(String errorMessage) {
+    if (widget.errorStateView == null &&
+        OfflineGate.isOn() &&
+        NotificationFeedOffline.showsOfflineState(_bloc)) {
+      // Offline with nothing to show (D84 (3)): "Connect to load
+      // notifications", no Retry. The app's error view, if it passed one,
+      // shows instead (below).
+      return OfflineListStates.view(
+        context,
+        Translations.of(context).connectToLoadNotifications,
+        textColor: _style.emptyStateTextColor,
+        textStyle: _style.emptyStateTextStyle,
+      );
+    }
     if (widget.errorStateView != null) {
       return widget.errorStateView!;
     }

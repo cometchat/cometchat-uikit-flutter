@@ -1624,4 +1624,84 @@ class TranslationsFr extends Translations {
 
   @override
   String messageFrom(String sender) => 'Message de $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Pas encore envoyé";
+
+  @override
+  String get messageNotSentTapToRetry => "Non envoyé. Appuyez pour réessayer";
+
+  @override
+  String get unsentMessageRemoved => "Message non envoyé supprimé";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Certains messages non envoyés n'ont peut-être pas été envoyés";
+
+  @override
+  String get queueFull => "Trop de messages en attente d'envoi";
+
+  @override
+  String get fileTooLargeOffline =>
+      "Fichier trop volumineux pour être envoyé hors ligne";
+
+  @override
+  String get connectToLoadMore => "Connectez-vous pour en charger plus";
+
+  @override
+  String get connectToSearch => "Connectez-vous pour rechercher";
+
+  @override
+  String get connectToSearchSubtitle =>
+      "La recherche nécessite une connexion Internet.";
+
+  @override
+  String get connectToLoadUsers =>
+      "Connectez-vous pour charger les utilisateurs";
+
+  @override
+  String get connectToLoadGroups => "Connectez-vous pour charger les groupes";
+
+  @override
+  String get connectToLoadMembers => "Connectez-vous pour charger les membres";
+
+  @override
+  String get connectToLoadChats =>
+      "Connectez-vous pour charger les discussions";
+
+  @override
+  String get connectToLoadMessages =>
+      "Connectez-vous pour charger les messages";
+
+  @override
+  String get connectToLoadReactions =>
+      "Connectez-vous pour charger les réactions";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Connectez-vous pour charger les notifications";
+
+  @override
+  String get mediaAvailableWhenOnline => "Disponible en ligne";
+
+  @override
+  String get jumpToLatest => "Aller au plus récent";
+
+  @override
+  String get sendingTryAgain => "Envoi en cours… réessayez dans un instant";
+
+  @override
+  String get fileNotSaved => "Fichier non enregistré. Ajoutez-le à nouveau";
+
+  @override
+  String messagesNotSent(int n) => n <= 1
+      ? "$n message n'a pas été envoyé"
+      : "$n messages n'ont pas été envoyés";
+
+  @override
+  String unsentMessagesLost(int n) => n <= 1
+      ? "$n message non envoyé n'a pas pu être récupéré"
+      : "$n messages non envoyés n'ont pas pu être récupérés";
 }

@@ -6,6 +6,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// True for a `patrol test` build (ENG-41597).
+val patrolEnabled = project.findProperty("patrol-enabled") == "true"
+
 configurations.all {
     resolutionStrategy {
         // Force AndroidX instead of support library
@@ -38,7 +41,27 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Patrol builds (`patrol test` passes -Ppatrol-enabled=true) run the
+        // offline E2E suite on PatrolJUnitRunner under Android Test
+        // Orchestrator, one app process per test. App data is kept between
+        // tests (no clearPackageData), so a relaunch case can read what the
+        // test before it left. Every other build keeps the plain runner.
+        testInstrumentationRunner =
+            if (patrolEnabled) "pl.leancode.patrol.PatrolJUnitRunner"
+            else "androidx.test.runner.AndroidJUnitRunner"
+        if (patrolEnabled) {
+            // MainActivityTest is the integration_test (FlutterTestRunner)
+            // host; under Patrol it would wait forever for results that
+            // never come. Patrol runs only PatrolMainActivityTest.
+            testInstrumentationRunnerArguments["notClass"] =
+                "com.cometchat.sampleapp.flutter.android.MainActivityTest"
+        }
+    }
+
+    if (patrolEnabled) {
+        testOptions {
+            execution = "ANDROIDX_TEST_ORCHESTRATOR"
+        }
     }
 
     buildTypes {
@@ -63,6 +86,7 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.2.0")
     androidTestImplementation("androidx.test:rules:1.2.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
+    androidTestUtil("androidx.test:orchestrator:1.5.1")
 }
 
 flutter {

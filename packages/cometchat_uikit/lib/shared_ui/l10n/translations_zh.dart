@@ -1555,6 +1555,74 @@ class TranslationsZh extends Translations {
 
   @override
   String messageFrom(String sender) => '来自 $sender 的消息';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "尚未发送";
+
+  @override
+  String get messageNotSentTapToRetry => "未发送。点按重试";
+
+  @override
+  String get unsentMessageRemoved => "已移除未发送的消息";
+
+  @override
+  String get unsentMessagesMaybeLost => "部分未发送的消息可能未发送";
+
+  @override
+  String get queueFull => "等待发送的消息过多";
+
+  @override
+  String get fileTooLargeOffline => "文件过大，无法离线发送";
+
+  @override
+  String get connectToLoadMore => "连接网络以加载更多";
+
+  @override
+  String get connectToSearch => "连接网络以搜索";
+
+  @override
+  String get connectToSearchSubtitle => "搜索需要网络连接。";
+
+  @override
+  String get connectToLoadUsers => "连接网络以加载用户";
+
+  @override
+  String get connectToLoadGroups => "连接网络以加载群组";
+
+  @override
+  String get connectToLoadMembers => "连接网络以加载成员";
+
+  @override
+  String get connectToLoadChats => "连接网络以加载聊天";
+
+  @override
+  String get connectToLoadMessages => "连接网络以加载消息";
+
+  @override
+  String get connectToLoadReactions => "连接网络以加载反应";
+
+  @override
+  String get connectToLoadNotifications => "连接网络以加载通知";
+
+  @override
+  String get mediaAvailableWhenOnline => "联网后可用";
+
+  @override
+  String get jumpToLatest => "跳到最新";
+
+  @override
+  String get sendingTryAgain => "正在发送…请稍后再试";
+
+  @override
+  String get fileNotSaved => "文件未保存。请重新添加";
+
+  @override
+  String messagesNotSent(int n) => "$n 条消息未发送";
+
+  @override
+  String unsentMessagesLost(int n) => "无法恢复 $n 条未发送的消息";
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3050,4 +3118,72 @@ class TranslationsZhTw extends TranslationsZh {
 
   @override
   String get scrollToBottom => '捲動到底部';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "尚未傳送";
+
+  @override
+  String get messageNotSentTapToRetry => "未傳送。點一下重試";
+
+  @override
+  String get unsentMessageRemoved => "已移除未傳送的訊息";
+
+  @override
+  String get unsentMessagesMaybeLost => "部分未傳送的訊息可能未傳送";
+
+  @override
+  String get queueFull => "等待傳送的訊息過多";
+
+  @override
+  String get fileTooLargeOffline => "檔案過大，無法離線傳送";
+
+  @override
+  String get connectToLoadMore => "連線以載入更多";
+
+  @override
+  String get connectToSearch => "連線以搜尋";
+
+  @override
+  String get connectToSearchSubtitle => "搜尋需要網路連線。";
+
+  @override
+  String get connectToLoadUsers => "連線以載入使用者";
+
+  @override
+  String get connectToLoadGroups => "連線以載入群組";
+
+  @override
+  String get connectToLoadMembers => "連線以載入成員";
+
+  @override
+  String get connectToLoadChats => "連線以載入聊天";
+
+  @override
+  String get connectToLoadMessages => "連線以載入訊息";
+
+  @override
+  String get connectToLoadReactions => "連線以載入反應";
+
+  @override
+  String get connectToLoadNotifications => "連線以載入通知";
+
+  @override
+  String get mediaAvailableWhenOnline => "連線後可用";
+
+  @override
+  String get jumpToLatest => "跳至最新";
+
+  @override
+  String get sendingTryAgain => "正在傳送…請稍後再試";
+
+  @override
+  String get fileNotSaved => "檔案未儲存。請重新新增";
+
+  @override
+  String messagesNotSent(int n) => "$n 則訊息未傳送";
+
+  @override
+  String unsentMessagesLost(int n) => "無法復原 $n 則未傳送的訊息";
 }

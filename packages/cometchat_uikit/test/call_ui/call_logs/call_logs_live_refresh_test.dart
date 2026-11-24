@@ -44,6 +44,7 @@ import '../helpers/call_bloc_harness.dart';
 import '../helpers/fake_call_logs_remote.dart';
 
 /// The chat SDK listeners the bloc registered, by id.
+// ignore: deprecated_member_use
 final _callListeners = <String, CallListener>{};
 final _connectionListeners = <String, ConnectionListener>{};
 

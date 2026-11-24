@@ -1601,4 +1601,78 @@ class TranslationsMs extends Translations {
 
   @override
   String messageFrom(String sender) => 'Mesej daripada $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Belum dihantar";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Tidak dihantar. Ketik untuk mencuba lagi";
+
+  @override
+  String get unsentMessageRemoved =>
+      "Mesej yang belum dihantar telah dialih keluar";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Sesetengah mesej yang belum dihantar mungkin tidak dihantar";
+
+  @override
+  String get queueFull => "Terlalu banyak mesej menunggu untuk dihantar";
+
+  @override
+  String get fileTooLargeOffline =>
+      "Fail terlalu besar untuk dihantar secara luar talian";
+
+  @override
+  String get connectToLoadMore => "Sambung untuk memuatkan lagi";
+
+  @override
+  String get connectToSearch => "Sambung untuk mencari";
+
+  @override
+  String get connectToSearchSubtitle => "Carian memerlukan sambungan internet.";
+
+  @override
+  String get connectToLoadUsers => "Sambung untuk memuatkan pengguna";
+
+  @override
+  String get connectToLoadGroups => "Sambung untuk memuatkan kumpulan";
+
+  @override
+  String get connectToLoadMembers => "Sambung untuk memuatkan ahli";
+
+  @override
+  String get connectToLoadChats => "Sambung untuk memuatkan sembang";
+
+  @override
+  String get connectToLoadMessages => "Sambung untuk memuatkan mesej";
+
+  @override
+  String get connectToLoadReactions => "Sambung untuk memuatkan tindak balas";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Sambung untuk memuatkan pemberitahuan";
+
+  @override
+  String get mediaAvailableWhenOnline => "Tersedia apabila dalam talian";
+
+  @override
+  String get jumpToLatest => "Lompat ke terkini";
+
+  @override
+  String get sendingTryAgain => "Menghantar… cuba lagi sebentar lagi";
+
+  @override
+  String get fileNotSaved => "Fail tidak disimpan. Tambahkannya semula";
+
+  @override
+  String messagesNotSent(int n) => "$n mesej tidak dihantar";
+
+  @override
+  String unsentMessagesLost(int n) =>
+      "$n mesej yang belum dihantar tidak dapat dipulihkan";
 }

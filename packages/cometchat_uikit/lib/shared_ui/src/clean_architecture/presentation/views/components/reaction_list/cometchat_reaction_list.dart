@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../../../cometchat_uikit_shared.dart'
     show ListItemStyle, CometChatListItem, CometChatAvatarStyle;
+import '../../../../../offline/message_list_offline_reads.dart'
+    show isNotConnectedError;
+import '../../../../../offline/offline_gate.dart';
+import '../../../../../offline/offline_list_states.dart';
 
 /// [CometChatReactionList] is a StatefulWidget that displays the list of reactions
 /// for a particular message. It requires [reactionRequestBuilder] to fetch the
@@ -236,6 +240,7 @@ class _CometChatReactionListState extends State<CometChatReactionList> {
           );
         } else if (state is ReactionListError) {
           return getErrorView(
+            state,
             reactionListStyle,
             colorPalette,
             typography,
@@ -472,11 +477,26 @@ class _CometChatReactionListState extends State<CometChatReactionList> {
   }
 
   Widget getErrorView(
+    ReactionListError state,
     CometChatReactionListStyle reactionListStyle,
     CometChatColorPalette colorPalette,
     CometChatTypography typography,
     CometChatSpacing spacing,
   ) {
+    if (widget.errorStateView == null &&
+        OfflineGate.isOn() &&
+        isNotConnectedError(state.error)) {
+      // Offline with nothing to show (D84 (3)): "Connect to load reactions",
+      // no Retry; it reads again once on reconnect. The app's error view, if
+      // it passed one, shows instead (below).
+      return SizedBox(
+        height: widget.height ?? MediaQuery.of(context).size.height * .5,
+        child: OfflineListStates.view(
+          context,
+          Translations.of(context).connectToLoadReactions,
+        ),
+      );
+    }
     if (widget.errorStateView != null) {
       return widget.errorStateView!(context);
     }

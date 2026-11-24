@@ -84,29 +84,12 @@ class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
     GroupsRequestBuilder? groupsRequestBuilder,
   }) async {
     try {
-      // Build a new request only if we don't have one yet (first call or after reset)
-      if (_currentRequest == null) {
-        if (groupsRequestBuilder != null) {
-          _currentRequest = _buildFromAppBuilder(
-            groupsRequestBuilder,
-            limit: limit,
-            searchKeyword: searchKeyword,
-            joinedOnly: joinedOnly,
-          );
-        } else {
-          final requestBuilder = GroupsRequestBuilder()..limit = limit;
-
-          if (searchKeyword != null && searchKeyword.isNotEmpty) {
-            requestBuilder.searchKeyword = searchKeyword;
-          }
-
-          if (joinedOnly != null) {
-            requestBuilder.joinedOnly = joinedOnly;
-          }
-
-          _currentRequest = requestBuilder.build();
-        }
-      }
+      _ensureRequest(
+        limit: limit,
+        searchKeyword: searchKeyword,
+        joinedOnly: joinedOnly,
+        groupsRequestBuilder: groupsRequestBuilder,
+      );
 
       final completer = Completer<List<Group>>();
 
@@ -143,6 +126,72 @@ class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
         message: 'Unexpected error while fetching groups: ${e.toString()}',
         originalException: e is Exception ? e : null,
       );
+    }
+  }
+
+  /// The offline-on read of the next page (W6): the same request and cursor
+  /// as [getGroups], asked once with the SDK's two-phase [listener], so the
+  /// cached page arrives first and the server page after it (BEH-SNAP-03).
+  /// The kit calls it only while offline support is on.
+  void fetchNextTwoPhase({
+    int limit = 30,
+    String? searchKeyword,
+    bool? joinedOnly,
+    GroupsRequestBuilder? groupsRequestBuilder,
+    required GroupFetchListener listener,
+  }) {
+    try {
+      _ensureRequest(
+        limit: limit,
+        searchKeyword: searchKeyword,
+        joinedOnly: joinedOnly,
+        groupsRequestBuilder: groupsRequestBuilder,
+      );
+    } on CometChatException catch (e) {
+      listener.onError(e);
+      return;
+    } catch (e) {
+      final message = 'Unexpected error while fetching groups: $e';
+      listener.onError(CometChatException('ERR_UNHANDLED', message, message));
+      return;
+    }
+    unawaited(
+      _currentRequest!.fetchNext(
+        onSuccess: null,
+        onError: null,
+        listener: listener,
+      ),
+    );
+  }
+
+  /// Builds a new request only if there is none yet (first call or after
+  /// [resetRequest]); later calls reuse it so the SDK cursor advances.
+  void _ensureRequest({
+    required int limit,
+    String? searchKeyword,
+    bool? joinedOnly,
+    GroupsRequestBuilder? groupsRequestBuilder,
+  }) {
+    if (_currentRequest != null) return;
+    if (groupsRequestBuilder != null) {
+      _currentRequest = _buildFromAppBuilder(
+        groupsRequestBuilder,
+        limit: limit,
+        searchKeyword: searchKeyword,
+        joinedOnly: joinedOnly,
+      );
+    } else {
+      final requestBuilder = GroupsRequestBuilder()..limit = limit;
+
+      if (searchKeyword != null && searchKeyword.isNotEmpty) {
+        requestBuilder.searchKeyword = searchKeyword;
+      }
+
+      if (joinedOnly != null) {
+        requestBuilder.joinedOnly = joinedOnly;
+      }
+
+      _currentRequest = requestBuilder.build();
     }
   }
 

@@ -1596,4 +1596,77 @@ class TranslationsSv extends Translations {
 
   @override
   String messageFrom(String sender) => 'Meddelande från $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Inte skickat än";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Inte skickat. Tryck för att försöka igen";
+
+  @override
+  String get unsentMessageRemoved => "Oskickat meddelande borttaget";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Vissa oskickade meddelanden kanske inte har skickats";
+
+  @override
+  String get queueFull => "För många meddelanden väntar på att skickas";
+
+  @override
+  String get fileTooLargeOffline => "Filen är för stor för att skickas offline";
+
+  @override
+  String get connectToLoadMore => "Anslut för att läsa in fler";
+
+  @override
+  String get connectToSearch => "Anslut för att söka";
+
+  @override
+  String get connectToSearchSubtitle => "Sökning kräver en internetanslutning.";
+
+  @override
+  String get connectToLoadUsers => "Anslut för att läsa in användare";
+
+  @override
+  String get connectToLoadGroups => "Anslut för att läsa in grupper";
+
+  @override
+  String get connectToLoadMembers => "Anslut för att läsa in medlemmar";
+
+  @override
+  String get connectToLoadChats => "Anslut för att läsa in chattar";
+
+  @override
+  String get connectToLoadMessages => "Anslut för att läsa in meddelanden";
+
+  @override
+  String get connectToLoadReactions => "Anslut för att läsa in reaktioner";
+
+  @override
+  String get connectToLoadNotifications => "Anslut för att läsa in aviseringar";
+
+  @override
+  String get mediaAvailableWhenOnline => "Tillgänglig när du är online";
+
+  @override
+  String get jumpToLatest => "Gå till senaste";
+
+  @override
+  String get sendingTryAgain => "Skickar… försök igen om en stund";
+
+  @override
+  String get fileNotSaved => "Filen sparades inte. Lägg till den igen";
+
+  @override
+  String messagesNotSent(int n) =>
+      n == 1 ? "1 meddelande skickades inte" : "$n meddelanden skickades inte";
+
+  @override
+  String unsentMessagesLost(int n) => n == 1
+      ? "1 oskickat meddelande kunde inte återställas"
+      : "$n oskickade meddelanden kunde inte återställas";
 }

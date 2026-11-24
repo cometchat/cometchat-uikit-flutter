@@ -3,6 +3,8 @@ import '../../../../cometchat_chat_uikit.dart';
 import '../utils/status_indicator_helper.dart';
 import '../utils/conversation_utils.dart' as conv_utils;
 import '../utils/conversation_subtitle_utils.dart';
+import '../../../../shared_ui/src/offline/conversations_offline.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
 
 /// [CometChatConversationListItem] is a dedicated widget for displaying a single conversation list item.
 ///
@@ -839,6 +841,29 @@ class CometChatConversationListItem extends StatelessWidget {
         size: 16,
         color: receiptColors?.errorIconColor ?? effectiveColorPalette.error,
       );
+    }
+
+    // Offline (W3, BEH-SEND-30): an own unsent preview shows no receipt —
+    // a clock while it sends, the error icon once failed — from its status on
+    // every build.
+    if (OfflineGate.isOn()) {
+      final sendState = ConversationsOffline.previewSendState(conversation);
+      if (sendState == CometChatMessageSendState.failed) {
+        return Icon(
+          Icons.error_outline,
+          size: 16,
+          color: receiptColors?.errorIconColor ?? effectiveColorPalette.error,
+        );
+      }
+      if (sendState == CometChatMessageSendState.sending) {
+        return Icon(
+          Icons.schedule,
+          size: 16,
+          color:
+              receiptColors?.waitIconColor ??
+              effectiveColorPalette.iconSecondary,
+        );
+      }
     }
 
     final receiptStatus = _getReceiptStatus();

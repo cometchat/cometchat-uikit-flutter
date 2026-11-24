@@ -2,6 +2,14 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import "../../../../clean_architecture.dart";
+import '../../../../../../../src/chat_sdk_listeners.dart';
+import '../../../../../offline/message_list_offline_reads.dart'
+    show isNotConnectedError;
+import '../../../../../offline/offline_gate.dart';
+import '../../../../../offline/offline_hub_event.dart';
+import '../../../../../offline/offline_list_reset.dart';
+import '../../../../../offline/reaction_list_offline.dart';
+import '../../../../../offline/two_phase.dart';
 
 // Events
 abstract class ReactionListEvent extends Equatable {
@@ -193,6 +201,59 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
     on<RemoveOwnReaction>(_onRemoveReaction);
     on<ReactionAdded>(_onReactionAdded);
     on<ReactionRemoved>(_onReactionRemoved);
+
+    // Session end and cache reset (G8): offline on only.
+    on<_OfflineListReset>(_onOfflineListReset);
+    _offlineResetSub = OfflineListReset.listen(
+      isClosed: () => isClosed,
+      onReset: (event) {
+        // Bump now so reads in flight stop writing at once.
+        _listGen++;
+        add(_OfflineListReset(event));
+      },
+    );
+
+    // With offline on, the offline state ("Connect to load reactions") reads
+    // again once on reconnect (D84 (8)).
+    if (OfflineGate.isOn()) {
+      _listensForConnect = true;
+      ChatSdkListeners.addConnectionListener(
+        _eventListenerKey,
+        _ReactionListConnectionListener(_onConnected),
+      );
+    }
+  }
+
+  bool _listensForConnect = false;
+
+  /// The list generation (G8). Bumped on a session end or cache reset; a
+  /// read started under an older one drops its result.
+  int _listGen = 0;
+
+  StreamSubscription<OfflineHubEvent>? _offlineResetSub;
+
+  /// Session end or cache reset (G8): clears the reactions and their SDK
+  /// requests before the next frame. A session end leaves the list empty
+  /// until it is next asked to load; a cache reset reloads once from page
+  /// one (a failure over rows already keeps them, with no error).
+  void _onOfflineListReset(
+    _OfflineListReset event,
+    Emitter<ReactionListState> emit,
+  ) {
+    final hubEvent = event.event;
+    if (OfflineListReset.isStale(hubEvent)) return;
+    _reactionsRequests.clear();
+    _hasMoreReactions.clear();
+    emit(const ReactionListInitial());
+    if (hubEvent is CacheReset) add(const InitializeReactionList());
+  }
+
+  void _onConnected() {
+    final s = state;
+    if (isClosed || s is! ReactionListError || !isNotConnectedError(s.error)) {
+      return;
+    }
+    add(const InitializeReactionList());
   }
 
   Future<void> _onInitialize(
@@ -206,8 +267,11 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
       ),
     );
 
+    final gen = _listGen;
     _createReactionsRequest();
     await _fetchReactionsInternal(ReactionConstants.allReactions, emit);
+    // A session end or cache reset cleared the list meanwhile.
+    if (gen != _listGen) return;
 
     if (initialSelectedReaction != ReactionConstants.allReactions) {
       _createReactionsRequest(initialSelectedReaction);
@@ -394,12 +458,29 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
 
     final request = _reactionsRequests[reaction];
     if (request == null) return;
+    final gen = _listGen;
+
+    if (OfflineGate.isOn()) {
+      return _fetchReactionsTwoPhase(
+        reaction,
+        request,
+        currentReactions,
+        currentSelectedReaction,
+        emit,
+        gen: gen,
+      );
+    }
 
     final completer = Completer<void>();
 
     unawaited(
       request.fetchPrevious(
         onSuccess: (messageReactionsList) {
+          // A session end or cache reset cleared the list meanwhile.
+          if (gen != _listGen) {
+            completer.complete();
+            return;
+          }
           if (messageReactionsList.isEmpty) {
             _hasMoreReactions[reaction] = false;
             // Emit loaded state so UI transitions out of loading
@@ -461,7 +542,7 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
           completer.complete();
         },
         onError: (exception) {
-          if (!emit.isDone) {
+          if (!emit.isDone && gen == _listGen) {
             emit(
               ReactionListError(
                 error: exception,
@@ -476,6 +557,56 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
     );
 
     await completer.future;
+  }
+
+  /// Offline on (W7): the cached page at once, then the server page in its
+  /// place; a page adds only reactions not already shown. A server error after
+  /// rows are shown keeps them and shows no error; an empty cached page never
+  /// ends the list, only an empty server page does.
+  Future<void> _fetchReactionsTwoPhase(
+    String reaction,
+    ReactionsRequest request,
+    Map<String, List<Reaction>> before,
+    String selected,
+    Emitter<ReactionListState> emit, {
+    required int gen,
+  }) async {
+    void show(Map<String, List<Reaction>> rows) {
+      if (emit.isDone) return;
+      emit(
+        ReactionListLoaded(
+          messageReactions: rows,
+          selectedReaction: selected,
+          totalReactions: ReactionListOffline.total(rows),
+          canFetchMore: _hasMoreReactions[selected] ?? false,
+        ),
+      );
+    }
+
+    var shown = before;
+    await for (final result in ReactionListOffline.fetch(request)) {
+      if (isClosed || emit.isDone || gen != _listGen) return;
+      switch (result) {
+        case Cached(:final rows):
+          shown = ReactionListOffline.merge(before, rows);
+          show(shown);
+        case Server(:final rows):
+          _hasMoreReactions[reaction] = rows.isNotEmpty;
+          show(ReactionListOffline.merge(before, rows));
+        case PhaseError(:final error):
+          if (shown.isNotEmpty) {
+            show(shown);
+          } else {
+            emit(
+              ReactionListError(
+                error: error,
+                messageReactions: shown,
+                selectedReaction: selected,
+              ),
+            );
+          }
+      }
+    }
   }
 
   @override
@@ -494,7 +625,30 @@ class ReactionListBloc extends Bloc<ReactionListEvent, ReactionListState>
 
   @override
   Future<void> close() {
+    _offlineResetSub?.cancel();
     CometChatMessageEvents.removeMessagesListener(_eventListenerKey);
+    if (_listensForConnect) {
+      ChatSdkListeners.removeConnectionListener(_eventListenerKey);
+    }
     return super.close();
   }
+}
+
+/// A current-gen session end or cache reset from the offline hub (G8).
+class _OfflineListReset extends ReactionListEvent {
+  const _OfflineListReset(this.event);
+
+  final OfflineHubEvent event;
+
+  @override
+  List<Object?> get props => [event];
+}
+
+class _ReactionListConnectionListener with ConnectionListener {
+  _ReactionListConnectionListener(this._onConnected);
+
+  final void Function() _onConnected;
+
+  @override
+  void onConnected() => _onConnected();
 }

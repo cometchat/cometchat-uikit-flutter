@@ -1,5 +1,7 @@
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+import '../../../offline/offline_send.dart';
+
 ///[MessageReceiptUtils] is a utility class to determine receipt status
 class MessageReceiptUtils {
   static ReceiptStatus getReceiptStatus(BaseMessage message) {
@@ -15,6 +17,17 @@ class MessageReceiptUtils {
       if (message.moderationStatus?.value ==
           ModerationStatusEnum.DISAPPROVED.value) {
         return ReceiptStatus.error;
+      }
+    }
+
+    // Offline (W4, BEH-SEND-32): an unsent row shows the clock or the failed
+    // icon, never a server receipt.
+    if (OfflineSend.instance.appliesTo(message)) {
+      final unsent = OfflineSend.instance.unsentReceiptOf(message);
+      if (unsent != null) {
+        return unsent == MessageReceiptStatus.error
+            ? ReceiptStatus.error
+            : ReceiptStatus.waiting;
       }
     }
 

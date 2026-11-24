@@ -12,3 +12,6 @@ Widget buildFileImage(
 }) {
   return const SizedBox.shrink();
 }
+
+/// Stub — should never be reached at runtime.
+ImageProvider fileImageProvider(String filePath) => NetworkImage(filePath);

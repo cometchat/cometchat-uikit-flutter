@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -7,6 +9,8 @@ import '../../../../core/utils/platform_utils/platform_image_utils.dart'
     as platform_image;
 import 'image_viewer.dart';
 import '../../../../../logging/cometchat_log.dart';
+import '../../../../../offline/offline_hub_event.dart';
+import '../../../../../offline/offline_media.dart';
 
 ///[CometChatImageBubble] creates a widget that gives image bubble
 ///
@@ -95,6 +99,52 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
   bool _themeInitialized = false;
   Brightness? _cachedBrightness;
 
+  /// Offline support was on when this bubble was built (read once).
+  late final bool _offlineOn = OfflineMedia.enabled;
+
+  /// Offline on: the copy of [CometChatImageBubble.imageUrl] saved on the
+  /// phone, found through the SDK's cache (BEH-MEDIA-18). Always null with
+  /// offline off.
+  String? _offlinePath;
+
+  /// Offline on: the lookup of [_offlinePath] is still running, so the link
+  /// is not fetched yet (a saved copy is never re-downloaded).
+  late bool _resolving = _offlineOn;
+  StreamSubscription<OfflineHubEvent>? _mediaReady;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_offlineOn) return;
+    _mediaReady = OfflineMedia.listenMediaReady(_resolveOffline);
+    // The list rebuilds this bubble with a fresh state; an earlier answer for
+    // the same link starts it on that answer, with no spinner and no lookup.
+    final (known, path) = OfflineMedia.rememberedUrl(widget.imageUrl);
+    if (known) {
+      _offlinePath = path;
+      _resolving = false;
+      return;
+    }
+    _resolveOffline();
+  }
+
+  Future<void> _resolveOffline() async {
+    final url = widget.imageUrl;
+    final path = await OfflineMedia.resolveUrlRemembered(url);
+    if (!mounted || url != widget.imageUrl) return;
+    if (path == _offlinePath && !_resolving) return;
+    setState(() {
+      _offlinePath = path;
+      _resolving = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _mediaReady?.cancel();
+    super.dispose();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -135,6 +185,11 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
     }
     if (widget.spacing != oldWidget.spacing && widget.spacing != null) {
       spacing = widget.spacing!;
+    }
+    if (_offlineOn && widget.imageUrl != oldWidget.imageUrl) {
+      _offlinePath = null;
+      _resolving = true;
+      _resolveOffline();
     }
   }
 
@@ -215,6 +270,15 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
       return _buildLocalImage(localPath);
     }
 
+    if (_resolving) return _buildLoadingIndicator();
+    final offlinePath = _offlinePath;
+    if (offlinePath != null) {
+      // Web: the saved copy is a `blob:` URL, loaded like a link.
+      return kIsWeb
+          ? _buildNetworkImage(offlinePath)
+          : _buildLocalImage(offlinePath);
+    }
+
     final displayUrl = _resolveDisplayUrl();
     if (displayUrl != null && displayUrl.isNotEmpty) {
       return _buildNetworkImage(displayUrl);
@@ -263,7 +327,7 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
         },
         errorBuilder: (context, error, stackTrace) {
           ccLog('Image.network error: $error');
-          return _buildPlaceholderImage();
+          return _networkFailed(imageUrl);
         },
       );
     }
@@ -276,11 +340,22 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
       placeholder: (context, url) => _buildLoadingIndicator(),
       errorWidget: (context, url, error) {
         ccLog('CachedNetworkImage error: $error');
-        return _buildPlaceholderImage();
+        return _networkFailed(imageUrl);
       },
       fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: const Duration(milliseconds: 100),
     );
+  }
+
+  /// What shows when [failedUrl] cannot load. Offline on, a failed thumbnail
+  /// (an expired link kept in the offline store) falls back to the full
+  /// image; otherwise the placeholder, as before.
+  Widget _networkFailed(String failedUrl) {
+    final full = widget.imageUrl;
+    if (_offlineOn && full != null && full.isNotEmpty && failedUrl != full) {
+      return _buildNetworkImage(full);
+    }
+    return _buildPlaceholderImage();
   }
 
   Widget _buildLoadingIndicator() {
@@ -360,7 +435,10 @@ class _CometChatImageBubbleState extends State<CometChatImageBubble> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => ImageViewer(
-                          imageUrl: widget.imageUrl!,
+                          // Offline on: the copy saved on the phone.
+                          imageUrl: kIsWeb
+                              ? widget.imageUrl!
+                              : _offlinePath ?? widget.imageUrl!,
                           placeholderImage: widget.placeholderImage,
                           placeHolderImagePackageName:
                               widget.placeHolderImagePackageName,

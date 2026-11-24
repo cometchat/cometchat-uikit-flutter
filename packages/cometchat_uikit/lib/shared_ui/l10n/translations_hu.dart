@@ -1601,4 +1601,78 @@ class TranslationsHu extends Translations {
 
   @override
   String messageFrom(String sender) => 'Üzenet tőle: $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Még nincs elküldve";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Nincs elküldve. Koppints az újrapróbáláshoz";
+
+  @override
+  String get unsentMessageRemoved => "Az el nem küldött üzenet eltávolítva";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Előfordulhat, hogy néhány el nem küldött üzenet nem lett elküldve";
+
+  @override
+  String get queueFull => "Túl sok üzenet vár küldésre";
+
+  @override
+  String get fileTooLargeOffline => "A fájl túl nagy az offline küldéshez";
+
+  @override
+  String get connectToLoadMore => "Csatlakozz a továbbiak betöltéséhez";
+
+  @override
+  String get connectToSearch => "Csatlakozz a kereséshez";
+
+  @override
+  String get connectToSearchSubtitle =>
+      "A kereséshez internetkapcsolat szükséges.";
+
+  @override
+  String get connectToLoadUsers => "Csatlakozz a felhasználók betöltéséhez";
+
+  @override
+  String get connectToLoadGroups => "Csatlakozz a csoportok betöltéséhez";
+
+  @override
+  String get connectToLoadMembers => "Csatlakozz a tagok betöltéséhez";
+
+  @override
+  String get connectToLoadChats => "Csatlakozz a csevegések betöltéséhez";
+
+  @override
+  String get connectToLoadMessages => "Csatlakozz az üzenetek betöltéséhez";
+
+  @override
+  String get connectToLoadReactions => "Csatlakozz a reakciók betöltéséhez";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Csatlakozz az értesítések betöltéséhez";
+
+  @override
+  String get mediaAvailableWhenOnline => "Online elérhető";
+
+  @override
+  String get jumpToLatest => "Ugrás a legújabbra";
+
+  @override
+  String get sendingTryAgain =>
+      "Küldés folyamatban… próbáld újra egy pillanat múlva";
+
+  @override
+  String get fileNotSaved => "A fájl nincs mentve. Add hozzá újra";
+
+  @override
+  String messagesNotSent(int n) => "$n üzenet nem lett elküldve";
+
+  @override
+  String unsentMessagesLost(int n) =>
+      "$n el nem küldött üzenetet nem sikerült visszaállítani";
 }

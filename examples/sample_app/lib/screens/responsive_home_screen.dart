@@ -13,6 +13,7 @@ import 'package:sample_app/screens/thread_screen.dart';
 import 'package:sample_app/screens/threads_screen.dart';
 import 'package:sample_app/widgets/responsive_layout.dart';
 import 'package:sample_app/utils/call_error_snackbar.dart';
+import 'package:sample_app/utils/message_header_offline.dart';
 
 /// A responsive home screen that shows:
 /// - Desktop/Web (>=700px): 3-panel layout with nested navigators
@@ -1089,17 +1090,21 @@ class _ResponsiveHomeScreenState extends State<ResponsiveHomeScreen> {
       final loggedInUid = CometChatUIKit.loggedInUser?.uid;
       final otherUid = (sender?.uid == loggedInUid) ? receiverUid : sender?.uid;
       if (otherUid != null) {
-        CometChat.getUser(
+        MessageHeaderOffline.fetchChatById(
           otherUid,
-          onSuccess: (user) =>
+          ReceiverTypeConstants.user,
+          onUser: (user) =>
               _openConversation(user: user, scrollToMessageId: messageId),
+          onGroup: (_) {},
           onError: (_) {},
         );
       }
     } else if (receiverType == ReceiverTypeConstants.group) {
-      CometChat.getGroup(
+      MessageHeaderOffline.fetchChatById(
         receiverUid,
-        onSuccess: (group) =>
+        ReceiverTypeConstants.group,
+        onUser: (_) {},
+        onGroup: (group) =>
             _openConversation(group: group, scrollToMessageId: messageId),
         onError: (_) {},
       );

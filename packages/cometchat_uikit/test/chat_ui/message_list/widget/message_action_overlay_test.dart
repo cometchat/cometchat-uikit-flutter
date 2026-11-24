@@ -15,6 +15,7 @@ import 'dart:async';
 
 import 'package:cometchat_chat_uikit/chat_ui/src/message_list/widgets/cometchat_message_action_overlay.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
+import 'package:cometchat_chat_uikit/shared_ui/src/offline/contract_ids.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -224,6 +225,29 @@ void main() {
       expect(closed, isTrue);
       expect(result, isNull);
       expect(find.byType(CometChatMessageActionOverlay), findsNothing);
+    });
+
+    testWidgets('with offline off the options menu has no extra Semantics '
+        'node; with offline on it carries its identifier', (tester) async {
+      bool menuNode() => find
+          .byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.identifier == ContractIds.messageOptions,
+          )
+          .evaluate()
+          .isNotEmpty;
+      addTearDown(() => CometChat.debugSetOfflineEnabledOverride(null));
+
+      CometChat.debugSetOfflineEnabledOverride(false);
+      await pushOverlay(tester, overlay());
+      expect(find.text('Reply'), findsOneWidget);
+      expect(menuNode(), isFalse);
+
+      CometChat.debugSetOfflineEnabledOverride(true);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await pushOverlay(tester, overlay());
+      expect(menuNode(), isTrue);
     });
 
     testWidgets('tapping the bubble itself does NOT close it', (tester) async {

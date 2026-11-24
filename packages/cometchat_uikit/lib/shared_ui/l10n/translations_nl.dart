@@ -1603,4 +1603,80 @@ class TranslationsNl extends Translations {
 
   @override
   String messageFrom(String sender) => 'Bericht van $sender';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Nog niet verzonden";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Niet verzonden. Tik om opnieuw te proberen";
+
+  @override
+  String get unsentMessageRemoved => "Niet-verzonden bericht verwijderd";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Sommige niet-verzonden berichten zijn mogelijk niet verzonden";
+
+  @override
+  String get queueFull => "Te veel berichten wachten op verzending";
+
+  @override
+  String get fileTooLargeOffline => "Bestand te groot om offline te verzenden";
+
+  @override
+  String get connectToLoadMore => "Maak verbinding om meer te laden";
+
+  @override
+  String get connectToSearch => "Maak verbinding om te zoeken";
+
+  @override
+  String get connectToSearchSubtitle =>
+      "Zoeken vereist een internetverbinding.";
+
+  @override
+  String get connectToLoadUsers => "Maak verbinding om gebruikers te laden";
+
+  @override
+  String get connectToLoadGroups => "Maak verbinding om groepen te laden";
+
+  @override
+  String get connectToLoadMembers => "Maak verbinding om leden te laden";
+
+  @override
+  String get connectToLoadChats => "Maak verbinding om chats te laden";
+
+  @override
+  String get connectToLoadMessages => "Maak verbinding om berichten te laden";
+
+  @override
+  String get connectToLoadReactions => "Maak verbinding om reacties te laden";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Maak verbinding om meldingen te laden";
+
+  @override
+  String get mediaAvailableWhenOnline => "Beschikbaar wanneer online";
+
+  @override
+  String get jumpToLatest => "Naar nieuwste";
+
+  @override
+  String get sendingTryAgain => "Bezig met verzenden… probeer het zo opnieuw";
+
+  @override
+  String get fileNotSaved => "Bestand niet opgeslagen. Voeg het opnieuw toe";
+
+  @override
+  String messagesNotSent(int n) => n == 1
+      ? "1 bericht is niet verzonden"
+      : "$n berichten zijn niet verzonden";
+
+  @override
+  String unsentMessagesLost(int n) => n == 1
+      ? "1 niet-verzonden bericht kon niet worden hersteld"
+      : "$n niet-verzonden berichten konden niet worden hersteld";
 }

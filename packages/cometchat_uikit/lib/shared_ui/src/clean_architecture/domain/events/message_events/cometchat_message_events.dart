@@ -1,5 +1,6 @@
 import "package:cometchat_sdk/cometchat_sdk.dart" hide CardMessage;
 import '../../../core/constants/enums.dart';
+import '../../../../offline/message_send_state.dart';
 import '../../../data/models/interactive_message/form_message.dart';
 import '../../../data/models/interactive_message/card_message.dart';
 import '../../../data/models/interactive_message/scheduler_message.dart';
@@ -24,6 +25,29 @@ class CometChatMessageEvents {
   static void ccMessageSent(BaseMessage message, MessageStatus messageStatus) {
     messagesListener.forEach((key, value) {
       value.ccMessageSent(message, messageStatus);
+    });
+  }
+
+  /// Offline (additive, G14): emits one send-state transition of an own
+  /// message to every registered listener. Never called with offline off.
+  static void ccMessageSendStateChanged(
+    BaseMessage message,
+    CometChatMessageSendState state,
+    MessageFailureReason? reason,
+  ) {
+    messagesListener.forEach((key, value) {
+      value.ccMessageSendStateChanged(message, state, reason);
+    });
+  }
+
+  /// Offline (additive, G14): emits an offline cache-reset to every registered
+  /// listener. Never called with offline off.
+  static void ccOfflineCacheReset(
+    OfflineCacheResetReason reason,
+    int? pendingMessagesLost,
+  ) {
+    messagesListener.forEach((key, value) {
+      value.ccOfflineCacheReset(reason, pendingMessagesLost);
     });
   }
 

@@ -1596,4 +1596,77 @@ class TranslationsTr extends Translations {
 
   @override
   String messageFrom(String sender) => '$sender kişisinden mesaj';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "Henüz gönderilmedi";
+
+  @override
+  String get messageNotSentTapToRetry =>
+      "Gönderilmedi. Yeniden denemek için dokunun";
+
+  @override
+  String get unsentMessageRemoved => "Gönderilmemiş mesaj kaldırıldı";
+
+  @override
+  String get unsentMessagesMaybeLost =>
+      "Gönderilmemiş bazı mesajlar gönderilmemiş olabilir";
+
+  @override
+  String get queueFull => "Gönderilmeyi bekleyen çok fazla mesaj var";
+
+  @override
+  String get fileTooLargeOffline =>
+      "Dosya çevrimdışı gönderilemeyecek kadar büyük";
+
+  @override
+  String get connectToLoadMore => "Daha fazlasını yüklemek için bağlanın";
+
+  @override
+  String get connectToSearch => "Aramak için bağlanın";
+
+  @override
+  String get connectToSearchSubtitle =>
+      "Arama için internet bağlantısı gerekir.";
+
+  @override
+  String get connectToLoadUsers => "Kullanıcıları yüklemek için bağlanın";
+
+  @override
+  String get connectToLoadGroups => "Grupları yüklemek için bağlanın";
+
+  @override
+  String get connectToLoadMembers => "Üyeleri yüklemek için bağlanın";
+
+  @override
+  String get connectToLoadChats => "Sohbetleri yüklemek için bağlanın";
+
+  @override
+  String get connectToLoadMessages => "Mesajları yüklemek için bağlanın";
+
+  @override
+  String get connectToLoadReactions => "Tepkileri yüklemek için bağlanın";
+
+  @override
+  String get connectToLoadNotifications =>
+      "Bildirimleri yüklemek için bağlanın";
+
+  @override
+  String get mediaAvailableWhenOnline => "Çevrimiçiyken kullanılabilir";
+
+  @override
+  String get jumpToLatest => "En yeniye git";
+
+  @override
+  String get sendingTryAgain => "Gönderiliyor… birazdan tekrar deneyin";
+
+  @override
+  String get fileNotSaved => "Dosya kaydedilmedi. Yeniden ekleyin";
+
+  @override
+  String messagesNotSent(int n) => "$n mesaj gönderilmedi";
+
+  @override
+  String unsentMessagesLost(int n) => "Gönderilmemiş $n mesaj kurtarılamadı";
 }

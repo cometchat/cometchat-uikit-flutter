@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../cometchat_chat_uikit.dart';
 import '../../shared/list_options_menu.dart';
+import '../../../../shared_ui/src/offline/offline_list_states.dart';
+import '../bloc/groups_offline.dart';
 
 /// A widget that displays the list of groups with state handling and pagination.
 ///
@@ -153,7 +155,8 @@ class GroupsList extends StatelessWidget {
         if (previous is GroupsLoaded && current is GroupsLoaded) {
           return previous.groups.length != current.groups.length ||
               previous.isLoadingMore != current.isLoadingMore ||
-              previous.selectedGroups != current.selectedGroups;
+              previous.selectedGroups != current.selectedGroups ||
+              GroupsOffline.needsRebuild(previous.groups, current.groups);
         }
         return true;
       },
@@ -177,6 +180,31 @@ class GroupsList extends StatelessWidget {
         // Handle loaded state
         if (state is GroupsLoaded) {
           return _buildGroupsList(context, state);
+        }
+
+        // Offline, a search keyword with no cached match (D84 (7))
+        if (state is GroupsConnectToSearch) {
+          return OfflineListStates.view(
+            context,
+            Translations.of(context).connectToSearch,
+            subtitle: Translations.of(context).connectToSearchSubtitle,
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
+          );
+        }
+
+        // Offline with nothing cached: the app's error view if it passed one
+        // (D84 (3)). hideError hides the error view, not this state.
+        if (state is GroupsConnectToLoad) {
+          return OfflineListStates.view(
+            context,
+            Translations.of(context).connectToLoadGroups,
+            appErrorView: errorStateView != null && hideError != true
+                ? Center(child: errorStateView!(context))
+                : null,
+            textColor: style.emptyStateTextColor,
+            textStyle: style.emptyStateTextStyle,
+          );
         }
 
         // Default to loading view for initial/unknown states

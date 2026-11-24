@@ -6,6 +6,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 import '../../../../shared_ui/src/clean_architecture/core/utils/thread_toast.dart';
+import '../../../../shared_ui/src/offline/contract_ids.dart';
+import '../../../../shared_ui/src/offline/message_key.dart';
+import '../../../../shared_ui/src/offline/message_list_offline_reads.dart';
+import '../../../../shared_ui/src/offline/message_list_offline_sync.dart';
+import '../../../../shared_ui/src/offline/message_list_seam_context.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub.dart';
+import '../../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../../shared_ui/src/offline/offline_list_states.dart';
+import '../../../../shared_ui/src/offline/offline_notice.dart';
+import '../../../../shared_ui/src/offline/offline_send.dart';
+import '../../../../shared_ui/src/offline/scroll_anchor.dart';
 import 'cometchat_flag_message_dialog.dart';
 import 'cometchat_message_action_overlay.dart';
 import 'cometchat_message_swipe.dart';
@@ -202,6 +214,7 @@ class CometChatMessageList extends StatefulWidget {
     this.mentionAllLabel,
     this.mentionAllLabelId,
     this.emptyStateText,
+    this.hideOfflineNotices = false,
   }) : assert(
          user != null || group != null,
          "One of user or group should be passed",
@@ -380,6 +393,11 @@ class CometChatMessageList extends StatefulWidget {
   /// Default: false
   final bool loadLastAgentConversation;
 
+  ///[hideOfflineNotices] when true, suppresses the transient offline notices
+  ///(queue full, unsent removed, cache reset, etc.) this list would otherwise
+  ///show. Defaults to false. Additive public API (W1 §2.8, G14).
+  final bool hideOfflineNotices;
+
   @override
   State<CometChatMessageList> createState() => _CometChatMessageListState();
 }
@@ -397,6 +415,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   Map<String, CometChatMessageTemplate> _templateMap = {};
   late ScrollController _scrollController;
   StreamSubscription<MessageOperation>? _operationsSubscription;
+
+  /// Offline ON: holds the first visible row in place while a read merges
+  /// rows around it and the user is scrolled away from the bottom (PR #23
+  /// §3.3). Created lazily, on the first such merge.
+  ScrollAnchorKeeper? _scrollAnchor;
 
   // Cached bubble styles to avoid expensive lookups during rebuilds
   CometChatOutgoingMessageBubbleStyle? _cachedOutgoingStyle;
@@ -589,7 +612,13 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       _isExternalBloc = false;
     }
     _animatedBloc = AnimatedMessageListBloc();
+    OfflineListErrors.listen(_messageListBloc, _onKeptRowsError);
   }
+
+  /// A real server error over rows that stay on screen, on a load the user or
+  /// app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error);
 
   void _initializeTemplates() {
     List<CometChatMessageTemplate> templates =
@@ -627,6 +656,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     return null;
   }
 
+  StreamSubscription<OfflineNotice>? _offlineNoticeSub;
+
   void _initializeAdapter() {
     _blocAdapter = MessageListBlocAdapter(
       bloc: _messageListBloc,
@@ -637,6 +668,64 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     if (widget.stateCallBack != null) {
       widget.stateCallBack!(_blocAdapter);
     }
+    // Offline (W1 §2.8): show this list's notices and, as one list that shows
+    // notices, take the hub's queued ones — unless notices are hidden, in which
+    // case this list takes nothing. Nothing emits in W1; W4/W5 drive it. A test
+    // double bloc has no registered stream and is skipped.
+    if (!widget.hideOfflineNotices && _offlineNoticeSub == null) {
+      _offlineNoticeSub = offlineNoticesOf(
+        _messageListBloc,
+      )?.listen(_showOfflineNotice);
+      // The hub hands queued notices to a new sink synchronously, and a
+      // snackbar cannot be shown before initState returns: attach after the
+      // first frame, and only while still mounted.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _attachedNoticeSink || widget.hideOfflineNotices) {
+          return;
+        }
+        OfflineHub.instance.attachNoticeSink(_showOfflineNotice);
+        _attachedNoticeSink = true;
+      });
+    }
+  }
+
+  bool _attachedNoticeSink = false;
+
+  void _showOfflineNotice(OfflineNotice notice) {
+    if (!mounted || widget.hideOfflineNotices) return;
+    final t = Translations.of(context);
+    final String text;
+    String? copyText;
+    switch (notice) {
+      case QueueFull():
+        text = t.queueFull;
+      case FileTooLargeOffline():
+        text = t.fileTooLargeOffline;
+      case SendingTryAgain():
+        text = t.sendingTryAgain;
+      case UnsentRemoved(copyText: final c):
+        text = t.unsentMessageRemoved;
+        copyText = c;
+      case MessagesNotSent(count: final n):
+        text = t.messagesNotSent(n);
+      case UnsentLost(count: final n):
+        text = t.unsentMessagesLost(n);
+      case UnsentMaybeLost():
+        text = t.unsentMessagesMaybeLost;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 2),
+        action: (copyText != null && copyText.isNotEmpty)
+            ? SnackBarAction(
+                label: t.copy,
+                onPressed: () =>
+                    Clipboard.setData(ClipboardData(text: copyText!)),
+              )
+            : null,
+      ),
+    );
   }
 
   void _loadMessages() {
@@ -684,6 +773,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
 
   void _subscribeToOperations() {
     _operationsSubscription = _messageListBloc.operationsStream.listen((op) {
+      if (OfflineGate.isOn()) _anchorScrollFor(op);
       switch (op.type) {
         case MessageOperationType.insert:
           if (op.message != null) {
@@ -730,10 +820,38 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     });
   }
 
+  /// Offline ON: an in-place diff (a read merging rows) while the user is
+  /// scrolled away from the bottom holds the first visible row where it is.
+  /// Any other row operation ends a hold, so a reset, a jump or a send that
+  /// scrolls is never fought. At the bottom the list stays pinned as today.
+  void _anchorScrollFor(MessageOperation op) {
+    if (op.type == MessageOperationType.update) return;
+    final inPlace = op.type == MessageOperationType.set && op.animated;
+    final scrolledAway =
+        _scrollController.hasClients && _scrollController.offset > 48;
+    if (!inPlace || !scrolledAway) {
+      _scrollAnchor?.release();
+      return;
+    }
+    (_scrollAnchor ??= ScrollAnchorKeeper(
+      controller: _scrollController,
+      rows: () => _bubbleKeys.entries
+          .where((e) => e.key.startsWith('r:'))
+          .map((e) => e.value),
+    )).hold();
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
+      // Offline resume seam (W1 §2.9 → W5). Falls through in W1.
+      final host = messageListSeamHostOf(_messageListBloc);
+      if (OfflineGate.isOn() &&
+          host != null &&
+          MessageListOfflineSync.instance.handleResume(host)) {
+        return;
+      }
       // Silently sync any messages that arrived while the app was in the background
       _messageListBloc.add(const SyncMessages());
     }
@@ -742,28 +860,33 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   /// One [GlobalKey] per message, so the bubble keeps the same element — and
   /// therefore the same State — across rebuilds of the list.
   ///
-  /// Keyed the same way the list keys its items: muid where there is one,
-  /// because it spans the optimistic-to-acknowledged transition, else the id.
-  /// A message with neither gets a throwaway key rather than sharing
-  /// `id:0` with every other unsent message — duplicate GlobalKeys are a hard
-  /// framework error, and an unidentifiable message is rare and transient.
+  /// Keyed by the render key, stable from compose to ack (W1 §2.3) and the
+  /// same whether offline is on or off, so an offline flip mid-session
+  /// remounts nothing. A message with no identity at all gets a throwaway key
+  /// rather than sharing `s:0` with every other unsent message — duplicate
+  /// GlobalKeys are a hard framework error, and an unidentifiable message is
+  /// rare and transient.
   final Map<String, GlobalKey> _bubbleKeys = <String, GlobalKey>{};
 
-  GlobalKey _bubbleKeyFor(BaseMessage message) {
-    final String? identity = message.muid.isNotEmpty
-        ? 'muid:${message.muid}'
-        : (message.id > 0 ? 'id:${message.id}' : null);
-    if (identity == null) return GlobalKey();
-    return _bubbleKeys.putIfAbsent(identity, GlobalKey.new);
+  GlobalKey _bubbleKeyFor(BaseMessage message, String renderKey) {
+    if (message.id <= 0 && renderKey.startsWith('s:')) return GlobalKey();
+    return _bubbleKeys.putIfAbsent('r:$renderKey', GlobalKey.new);
   }
 
   @override
   void dispose() {
+    OfflineListErrors.cancel(_messageListBloc, _onKeptRowsError);
+    _scrollAnchor?.release();
     _bubbleKeys.clear();
     widget.controller?._detach(this);
     CometChatUIEvents.removeUiListener(_uiEventListenerId);
+    _stopWaitingForStarters();
     WidgetsBinding.instance.removeObserver(this);
     _operationsSubscription?.cancel();
+    _offlineNoticeSub?.cancel();
+    if (_attachedNoticeSink) {
+      OfflineHub.instance.detachNoticeSink(_showOfflineNotice);
+    }
     // Clear all audio states and release memory
     AudioStateManager().clearAll();
     if (!_isExternalBloc) {
@@ -823,11 +946,42 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   // AI Feature Triggers
   // ============================================================
 
+  /// The reads view a chat that opened offline and empty waits on for its
+  /// first server read before requesting conversation starters (ON path).
+  MessageListReadsView? _startersWaitingOn;
+
   /// Show conversation starters when the message list is empty.
   void _showConversationStarters() {
     if (widget.enableConversationStarters != true) return;
     if (widget.parentMessageId != null) return; // Not in threads
 
+    // Offline and empty: the request would fail and is never retried.
+    // Request once the list is connected, if it is still empty then.
+    if (OfflineGate.isOn()) {
+      final view = messageListReadsViewOf(_messageListBloc);
+      if (view.connectToLoadMore.value) {
+        if (_startersWaitingOn == null) {
+          _startersWaitingOn = view;
+          view.serverReads.addListener(_onServerReadForStarters);
+        }
+        return;
+      }
+    }
+    _requestConversationStarters();
+  }
+
+  void _stopWaitingForStarters() {
+    _startersWaitingOn?.serverReads.removeListener(_onServerReadForStarters);
+    _startersWaitingOn = null;
+  }
+
+  void _onServerReadForStarters() {
+    _stopWaitingForStarters();
+    if (!mounted || _messageListBloc.state.messages.isNotEmpty) return;
+    _requestConversationStarters();
+  }
+
+  void _requestConversationStarters() {
     CometChatUIEvents.showPanel(
       _messageListId,
       CustomUIPosition.messageListBottom,
@@ -941,6 +1095,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   }
 
   void _handleStateChanges(BuildContext context, MessageListState state) {
+    if (state.status != MessageListStatus.error && OfflineGate.isOn()) {
+      // Out of the error state: the next one is the offline state only if a
+      // window read says so (D84 (3)).
+      messageListReadsViewOf(_messageListBloc).showsOfflineState = false;
+    }
     if (state.status == MessageListStatus.error && widget.onError != null) {
       widget.onError!(
         CometChatException(
@@ -1311,6 +1470,20 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   }
 
   Widget _buildErrorState(BuildContext context, String? errorMessage) {
+    if (OfflineGate.isOn() &&
+        messageListReadsViewOf(_messageListBloc).showsOfflineState) {
+      // Offline with nothing to show (D84 (3)): "Connect to load messages",
+      // no Retry, or the app's error view if it passed one.
+      return OfflineListStates.view(
+        context,
+        Translations.of(context).connectToLoadMessages,
+        appErrorView: widget.errorStateView != null
+            ? Center(child: widget.errorStateView!(context))
+            : null,
+        textColor: _style.emptyStateTextColor,
+        textStyle: _style.emptyStateTextStyle,
+      );
+    }
     if (widget.errorStateView != null) {
       return Center(child: widget.errorStateView!(context));
     }
@@ -1371,6 +1544,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
                         _stickyDateNotifier.value = date;
                       },
                 onLoadOlder: () async {
+                  // Offline past the cache ("Connect to load more" up): no
+                  // read per scroll; the footer's tap retries (ON path only).
+                  if (skipOlderReadOnScroll(_messageListBloc)) return;
                   _messageListBloc.add(const LoadOlderMessages());
                 },
                 onLoadNewer: () async {
@@ -1396,6 +1572,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
               // Sticky date header — hidden for AI users
               if (widget.hideStickyDate != true && !_isAIUser)
                 _buildStickyDateHeader(),
+              // Offline reads (W2): "Connect to load more", "Jump to latest".
+              if (OfflineGate.isOn()) ..._buildOfflineReadsOverlays(context),
             ],
           ),
         ),
@@ -1429,6 +1607,99 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         if (panel == null) return const SizedBox.shrink();
         return panel;
       },
+    );
+  }
+
+  /// The offline-read affordances over the list (ON path only): a "Connect to
+  /// load more" footer at the top when scrolling back is blocked offline, and
+  /// a "Jump to latest" pill when a newer window is available (PR #23 §3.3).
+  List<Widget> _buildOfflineReadsOverlays(BuildContext context) {
+    final view = messageListReadsViewOf(_messageListBloc);
+    view.isAtBottom = () =>
+        !_scrollController.hasClients || _scrollController.offset <= 48;
+    final t = Translations.of(context);
+    return [
+      Positioned(
+        top: 44,
+        left: 0,
+        right: 0,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: view.connectToLoadMore,
+          builder: (context, show, _) {
+            if (!show) return const SizedBox.shrink();
+            return Center(
+              child: contractNode(
+                identifier: '${ContractIds.listFooter}.connect-to-load-more',
+                child: _offlineReadsChip(
+                  label: t.connectToLoadMore,
+                  icon: Icons.refresh,
+                  onTap: () {
+                    if (!view.retry()) {
+                      _messageListBloc.add(const LoadOlderMessages());
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      Positioned(
+        bottom: 16,
+        left: 0,
+        right: 0,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: view.jumpToLatest,
+          builder: (context, show, _) {
+            if (!show) return const SizedBox.shrink();
+            return Center(
+              child: _offlineReadsChip(
+                label: t.jumpToLatest,
+                icon: Icons.arrow_downward,
+                onTap: () {
+                  view.jumpToLatest.value = false;
+                  _handleScrollToBottomTap();
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    ];
+  }
+
+  Widget _offlineReadsChip({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: _colorPalette.background1,
+      elevation: 2,
+      borderRadius: BorderRadius.circular(_spacing.radiusMax ?? 1000),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_spacing.radiusMax ?? 1000),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: _spacing.padding3 ?? 12,
+            vertical: _spacing.padding2 ?? 8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: _colorPalette.iconSecondary),
+              SizedBox(width: _spacing.padding1 ?? 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: _colorPalette.textPrimary,
+                ).merge(_typography.caption1?.medium),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1562,6 +1833,8 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     );
 
     Color? backgroundColor = bubbleStyleData?.backgroundColor;
+    // Offline gate, read once for this row (W1 §2.1).
+    final bool offlineOn = OfflineGate.isOn();
 
     // AI assistant messages have transparent background (no bubble)
     final isAgenticMessage =
@@ -1707,7 +1980,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           final receiptStatus = _messageListBloc
               .getReceiptNotifierForMessage(message)
               .value;
-          if (receiptStatus == MessageReceiptStatus.error) {
+          if (receiptStatus == MessageReceiptStatus.error ||
+              (OfflineSend.instance.appliesTo(message, offlineOn: offlineOn) &&
+                  OfflineSend.instance.isFailed(message))) {
             statusInfoView = _getStatusInfoView(
               message,
               alignment,
@@ -1730,7 +2005,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       final bool isModerated = _isMessageModerated(message);
       final Widget? bottomView = isModerated
           ? _buildModerationView(alignment, message)
-          : null;
+          : (OfflineSend.instance.appliesTo(message, offlineOn: offlineOn)
+                ? _offlineUnsentCaption(message)
+                : null);
 
       // contentPadding is no longer needed — each bubble handles its own padding
       // For sticker messages with a reply, wrap the content in Align so the
@@ -1862,7 +2139,14 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     // Note: reactions are NOT included in the key because CometChatReactions
     // updates itself via ReactionsBloc. Including reactions here would force
     // a full teardown/rebuild of expensive content widgets (image, video, etc.)
-    final messageKey = message.id > 0 ? message.id : message.muid.hashCode;
+    // The render key (W1 §2.3), so an own row keeps its item key from
+    // compose to ack. It never depends on the offline gate, so a flip
+    // mid-session keeps every row mounted.
+    final String rowRenderKey = renderKey(
+      message,
+      _messageListBloc.state.loggedInUser?.uid ??
+          CometChatUIKit.loggedInUser?.uid,
+    );
     final editedHash = message.editedAt?.millisecondsSinceEpoch ?? 0;
     // deletedAt is part of the key so a delete forces the item to rebuild
     // immediately (same reason editedAt is included for edits).
@@ -1872,7 +2156,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     final pinnedHash = message.pinnedAt?.millisecondsSinceEpoch ?? 0;
     final savedHash = message.savedAt?.millisecondsSinceEpoch ?? 0;
     final compositeKey =
-        '$messageKey-$editedHash-$deletedHash-$pinnedHash-$savedHash';
+        '$rowRenderKey-$editedHash-$deletedHash-$pinnedHash-$savedHash';
 
     // A GlobalKey so the action overlay can measure the bubble — but the SAME
     // key for this message every build. A fresh GlobalKey here changed the
@@ -1881,7 +2165,7 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     // it. Every message's State was recreated whenever the list rebuilt, which
     // is what kept the audio bubbles flickering even once their list items
     // were keyed and correctly relocated (ENG-39490).
-    final bubbleKey = _bubbleKeyFor(message);
+    final bubbleKey = _bubbleKeyFor(message, rowRenderKey);
 
     // Opens the message-options menu. Bound to long-press (touch) and, for a
     // pointer-context-menu affordance, secondary tap / right-click (web +
@@ -1953,6 +2237,15 @@ class _CometChatMessageListState extends State<CometChatMessageList>
             },
             child: GestureDetector(
               onLongPress: openMessageActions,
+              // Offline (W4): tapping a failed row retries it.
+              onTap:
+                  OfflineSend.instance.appliesTo(
+                        message,
+                        offlineOn: offlineOn,
+                      ) &&
+                      OfflineSend.instance.isFailed(message)
+                  ? () => OfflineSend.instance.retry(_messageListBloc, message)
+                  : null,
               // On web/desktop a hover-revealed ⋯ button opens the same menu
               // (see [_MessageHoverActions]) — so those users don't have to
               // hold a message; long-press stays for touch.
@@ -2008,7 +2301,33 @@ class _CometChatMessageListState extends State<CometChatMessageList>
           )
         : swipeableWidget;
 
-    return KeyedSubtree(key: ValueKey<String>(compositeKey), child: child);
+    // State-contract row identifier (PR #23 TEST-PLAN §3.3), ON only. The
+    // Semantics wrapper is always there and only its identifier follows the
+    // gate, so an offline flip never swaps the wrapper (and with it the row).
+    // With offline off it carries nothing and no identifier is built.
+    return KeyedSubtree(
+      key: ValueKey<String>(compositeKey),
+      child: Semantics(
+        identifier: offlineOn
+            ? ContractIds.messageRowId(rowRenderKey, _contractRowState(message))
+            : null,
+        child: child,
+      ),
+    );
+  }
+
+  /// The row state the contract identifier carries.
+  static String _contractRowState(BaseMessage message) {
+    switch (sendStateOf(message)) {
+      case CometChatMessageSendState.sending:
+        return 'sending';
+      case CometChatMessageSendState.failed:
+        return 'failed';
+      case CometChatMessageSendState.sent:
+        if (message.readAt != null) return 'read';
+        if (message.deliveredAt != null) return 'delivered';
+        return 'sent';
+    }
   }
 
   /// Whether the hover ⋯ actions button should be offered for [message] — only
@@ -2756,6 +3075,37 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   /// Build the moderation banner shown at the bottom of a disapproved bubble.
   /// Visually matches v5's `getModerationView` (warning icon + localized text,
   /// error100 background, bottom-rounded to fuse with the bubble).
+  /// Offline (W4, G3): "Not sent yet" under an unsent own row, "Not sent. Tap
+  /// to retry" under a failed one; null for any other row.
+  Widget? _offlineUnsentCaption(BaseMessage message) {
+    final send = OfflineSend.instance;
+    if (!send.isUnsent(message)) return null;
+    final failed = send.isFailed(message);
+    final t = Translations.of(context);
+    final label = failed ? t.messageNotSentTapToRetry : t.messageNotSentYet;
+    final base = TextStyle(
+      color: failed
+          ? (_style.failedIconColor ?? _colorPalette.error)
+          : _colorPalette.textSecondary,
+      fontSize: _typography.caption2?.regular?.fontSize,
+      fontWeight: _typography.caption2?.regular?.fontWeight,
+      fontFamily: _typography.caption2?.regular?.fontFamily,
+    );
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          _spacing.padding2 ?? 8,
+          0,
+          _spacing.padding2 ?? 8,
+          _spacing.padding1 ?? 4,
+        ),
+        child: Text(label, style: base.merge(_style.notSentTextStyle)),
+      ),
+    );
+  }
+
   Widget _buildModerationView(BubbleAlignment alignment, BaseMessage message) {
     final moderationStyle =
         CometChatThemeHelper.getTheme<CometChatModerationStyle>(
@@ -3059,10 +3409,16 @@ class _CometChatMessageListState extends State<CometChatMessageList>
     // Moderated messages always show the error icon regardless of delivery
     // receipts — sender needs to see the send actually failed. v5 parity.
     final bool isModerated = _isMessageModerated(message);
+    // Offline (W4, BEH-SEND-32): an unsent row shows the clock or the failed
+    // icon from its status, never a server receipt.
+    final MessageReceiptStatus? unsent = OfflineSend.instance.appliesTo(message)
+        ? OfflineSend.instance.unsentReceiptOf(message)
+        : null;
 
     return ValueListenableBuilder<MessageReceiptStatus>(
       valueListenable: _messageListBloc.getReceiptNotifierForMessage(message),
-      builder: (context, notifierStatus, child) {
+      builder: (context, listenedStatus, child) {
+        final notifierStatus = unsent ?? listenedStatus;
         if (errorOnly &&
             !isModerated &&
             notifierStatus != MessageReceiptStatus.error) {
@@ -3361,6 +3717,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
 
     // Get action items from template
     final template = _resolveTemplate(message);
+    final bool unsentOffline =
+        OfflineSend.instance.appliesTo(message) &&
+        OfflineSend.instance.isUnsent(message);
 
     List<ActionItem> actionItems = [];
     if (template?.options != null) {
@@ -3386,13 +3745,22 @@ class _CometChatMessageListState extends State<CometChatMessageList>
               hideShareMessageOption: widget.hideShareMessageOption,
               hideTranslateMessageOption: widget.hideTranslateMessageOption,
             );
-        final options = template!.options!(
+        var options = template!.options!(
           loggedInUser,
           message,
           context,
           widget.group,
           configurations,
         );
+        // Offline (W4, G4/G5): an unsent row offers Retry, Delete and Copy
+        // only — nothing that needs a server id.
+        if (unsentOffline) {
+          options = OfflineSend.instance.unsentOptions(
+            context,
+            message,
+            options ?? const [],
+          );
+        }
         // Convert CometChatMessageOption to ActionItem and filter
         actionItems = _filterAndConvertOptions(options, message);
       }
@@ -3408,7 +3776,9 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       bubbleSize: bubbleSize,
       favoriteReactions: widget.favoriteReactions,
       hideReactions:
-          widget.disableReactions == true || widget.hideReactionOption == true,
+          unsentOffline ||
+          widget.disableReactions == true ||
+          widget.hideReactionOption == true,
       onReactionTap: (msg, reaction) {
         _handleReactionTap(msg, reaction);
       },
@@ -3528,6 +3898,11 @@ class _CometChatMessageListState extends State<CometChatMessageList>
         ),
         onItemClick: () {
           ccLog('[MessageList] Option clicked: ${option.id}');
+          // Offline (W4, G4): Retry of an unsent row.
+          if (option.id == kRetryMessageOptionId) {
+            OfflineSend.instance.retry(_messageListBloc, message);
+            return;
+          }
           // Handle inline reply option
           if (option.id == MessageOptionConstants.replyMessage) {
             ccLog(
@@ -3829,9 +4204,10 @@ class _CometChatMessageListState extends State<CometChatMessageList>
   /// Handle the Pin/Unpin message action: SDK call → toast + kit event.
   ///
   /// No confirmation step — pin is cheap and reversible from the same menu,
-  /// so a modal only adds a tap. The row itself updates through the SDK
-  /// listener fan-out (the pin events carry the full updated message into
-  /// the bloc's edit path), so no direct list mutation happens here.
+  /// so a modal only adds a tap. The row updates from `onSuccess` (G11): the
+  /// kit event below carries the returned message into the bloc's pin/save
+  /// merge path, in every open list that holds the row. A later SDK echo
+  /// (5.1.0/5.1.1) is a no-op there. On error the row is left as it was.
   Future<void> _handlePinToggle(
     BaseMessage message, {
     required bool pin,
@@ -4038,6 +4414,13 @@ class _CometChatMessageListState extends State<CometChatMessageList>
       ),
       onConfirm: (dialogContext) {
         Navigator.of(dialogContext).pop();
+        // Offline (W4, G4): an unsent row is discarded on the device; a sent
+        // one keeps the real delete (G10).
+        if (OfflineSend.instance.appliesTo(message) &&
+            OfflineSend.instance.isUnsent(message)) {
+          OfflineSend.instance.delete(_messageListBloc, message);
+          return;
+        }
         CometChat.deleteMessage(
           message.id,
           onSuccess: (updatedMessage) {

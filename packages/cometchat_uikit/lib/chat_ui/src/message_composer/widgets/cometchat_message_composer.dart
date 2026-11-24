@@ -25,7 +25,10 @@ import 'attachment_options_overlay.dart';
 // Import inline audio recorder
 import '../utils/composer_attachment_utils.dart';
 import '../../../../shared_ui/src/logging/cometchat_log.dart';
+import '../../../../shared_ui/src/offline/message_composer_offline.dart';
 import '../../../../shared_ui/src/clean_architecture/core/utils/ui_event_target.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_send.dart';
 
 ///
 /// [CometChatMessageComposer] component allows users to
@@ -637,6 +640,10 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
   /// .enableMultipleAttachments] is on and no external controller was given).
   AttachmentTrayController? _internalTrayController;
 
+  /// Restores the composer-owned tray from the SDK's saved batch once the
+  /// triple settles (BEH-UPLOAD-14; a no-op with offline support off).
+  ComposerTrayRestorer? _trayRestorer;
+
   /// The effective staging tray: external controller if provided, else the
   /// composer-owned one; null when multi-attachment is disabled.
   AttachmentTrayController? get _tray =>
@@ -654,6 +661,7 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     tray.receiverType = widget.user != null
         ? ReceiverTypeConstants.user
         : ReceiverTypeConstants.group;
+    tray.parentMessageId = widget.parentMessageId;
   }
 
   late final AnimationController _previewAnimController;
@@ -779,7 +787,18 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
         receiverType: widget.user != null
             ? ReceiverTypeConstants.user
             : ReceiverTypeConstants.group,
-      );
+      )..parentMessageId = widget.parentMessageId;
+      _trayRestorer = ComposerTrayRestorer(
+        tray: _internalTrayController!,
+        tripleOf: () => (
+          id: widget.user?.uid ?? widget.group?.guid,
+          type: widget.user != null
+              ? ReceiverTypeConstants.user
+              : ReceiverTypeConstants.group,
+          parentMessageId: widget.parentMessageId,
+        ),
+        isMounted: () => mounted,
+      )..schedule();
     }
 
     // Initialize reply/edit preview animation
@@ -1201,7 +1220,18 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
     // so we leave it untouched.
     final oldConversation = oldWidget.user?.uid ?? oldWidget.group?.guid;
     final newConversation = widget.user?.uid ?? widget.group?.guid;
-    if (oldConversation != newConversation) {
+    if (OfflineGate.isOn()) {
+      // Offline on: any triple change detaches the tray, keeping the old
+      // triple's batch for its own restore, then restores the new one.
+      if (oldConversation != newConversation ||
+          oldWidget.parentMessageId != widget.parentMessageId) {
+        _internalTrayController?.detach();
+        _syncTrayReceiver();
+        _trayRestorer
+          ?..tripleChanged()
+          ..schedule();
+      }
+    } else if (oldConversation != newConversation) {
       _internalTrayController?.clear();
       _syncTrayReceiver();
     }
@@ -2679,6 +2709,8 @@ class _CometChatMessageComposerState extends State<CometChatMessageComposer>
   /// Sends one batch message and completes when the server responds, so the
   /// caller can serialize sends.
   Future<void> _sendOneBatchMessage(MediaMessage msg) {
+    // Offline send helper (W4): queued in order, never awaits the network.
+    if (OfflineGate.isOn()) return OfflineSend.instance.sendBatchMessage(msg);
     final completer = Completer<void>();
     CometChat.sendMediaMessage(
       msg,

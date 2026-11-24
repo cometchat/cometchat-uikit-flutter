@@ -10,6 +10,7 @@ import '../../../../shared_ui/src/clean_architecture/core/utils/platform_utils/p
 import '../../../../shared_ui/src/clean_architecture/core/constants/enums.dart'
     as core_enums;
 import '../../../../shared_ui/src/clean_architecture/core/utils/ui_event_target.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
 
 /// BLoC for managing message composer state and business logic
 /// Handles message sending, editing, replying, and typing indicators
@@ -289,6 +290,13 @@ class MessageComposerBloc
     );
   }
 
+  /// Whether a send's result may set the composer's status. Offline on (W4),
+  /// a queued send settles at its ack, possibly minutes after the tap; by then
+  /// the user may be editing or replying, so the result moves the status only
+  /// while the composer is still in the `sending` state the tap left.
+  bool _resultMayMoveStatus(bool offlineOn) =>
+      !offlineOn || state.status == MessageComposerStatus.sending;
+
   void _playSound() {
     if (!disableSoundForMessages) {
       CometChatUIKit.soundManager.play(
@@ -460,6 +468,7 @@ class MessageComposerBloc
       core_enums.MessageStatus.inProgress,
     );
 
+    final offlineOn = OfflineGate.isOn(); // W4: read once at the tap
     final result = await _sendTextMessageUseCase(textMessage);
     result.fold(
       (failure) {
@@ -480,12 +489,14 @@ class MessageComposerBloc
             failure.message,
           ),
         );
-        emit(
-          state.copyWith(
-            status: MessageComposerStatus.error,
-            errorMessage: failure.message,
-          ),
-        );
+        if (_resultMayMoveStatus(offlineOn)) {
+          emit(
+            state.copyWith(
+              status: MessageComposerStatus.error,
+              errorMessage: failure.message,
+            ),
+          );
+        }
       },
       (sentMessage) {
         _playSound();
@@ -500,12 +511,14 @@ class MessageComposerBloc
           sentMessage,
           core_enums.MessageStatus.sent,
         );
-        emit(
-          state.copyWith(
-            status: MessageComposerStatus.success,
-            sentMessage: sentMessage,
-          ),
-        );
+        if (_resultMayMoveStatus(offlineOn)) {
+          emit(
+            state.copyWith(
+              status: MessageComposerStatus.success,
+              sentMessage: sentMessage,
+            ),
+          );
+        }
       },
     );
   }
@@ -605,6 +618,7 @@ class MessageComposerBloc
       core_enums.MessageStatus.inProgress,
     );
 
+    final offlineOn = OfflineGate.isOn(); // W4: read once at the tap
     final result = await _sendMediaMessageUseCase(mediaMessage);
     result.fold(
       (failure) {
@@ -624,12 +638,14 @@ class MessageComposerBloc
             failure.message,
           ),
         );
-        emit(
-          state.copyWith(
-            status: MessageComposerStatus.error,
-            errorMessage: failure.message,
-          ),
-        );
+        if (_resultMayMoveStatus(offlineOn)) {
+          emit(
+            state.copyWith(
+              status: MessageComposerStatus.error,
+              errorMessage: failure.message,
+            ),
+          );
+        }
       },
       (sentMessage) {
         // Preserve original local path on sent message
@@ -650,12 +666,14 @@ class MessageComposerBloc
           sentMessage,
           core_enums.MessageStatus.sent,
         );
-        emit(
-          state.copyWith(
-            status: MessageComposerStatus.success,
-            sentMessage: sentMessage,
-          ),
-        );
+        if (_resultMayMoveStatus(offlineOn)) {
+          emit(
+            state.copyWith(
+              status: MessageComposerStatus.success,
+              sentMessage: sentMessage,
+            ),
+          );
+        }
       },
     );
   }
@@ -742,6 +760,7 @@ class MessageComposerBloc
       core_enums.MessageStatus.inProgress,
     );
 
+    final offlineOn = OfflineGate.isOn(); // W4: read once at the tap
     final result = await _sendCustomMessageUseCase(customMessage);
     result.fold(
       (failure) {
@@ -761,12 +780,14 @@ class MessageComposerBloc
             failure.message,
           ),
         );
-        emit(
-          state.copyWith(
-            status: MessageComposerStatus.error,
-            errorMessage: failure.message,
-          ),
-        );
+        if (_resultMayMoveStatus(offlineOn)) {
+          emit(
+            state.copyWith(
+              status: MessageComposerStatus.error,
+              errorMessage: failure.message,
+            ),
+          );
+        }
       },
       (sentMessage) {
         _playSound();
@@ -779,12 +800,14 @@ class MessageComposerBloc
           sentMessage,
           core_enums.MessageStatus.sent,
         );
-        emit(
-          state.copyWith(
-            status: MessageComposerStatus.success,
-            sentMessage: sentMessage,
-          ),
-        );
+        if (_resultMayMoveStatus(offlineOn)) {
+          emit(
+            state.copyWith(
+              status: MessageComposerStatus.success,
+              sentMessage: sentMessage,
+            ),
+          );
+        }
       },
     );
   }
@@ -909,19 +932,14 @@ class MessageComposerBloc
     final result = await _editMessageUseCase(editedMessage);
     result.fold(
       (failure) {
-        // Revert the optimistic edit — restore the original message in the list.
+        // Revert the optimistic edit: the row shows the original message,
+        // with no failed mark (D-352). The edited copy is not announced as a
+        // failed send, which would put the edited text back on the row, and
+        // nothing is stamped on its metadata (a text edit shares the
+        // original's map).
         CometChatMessageEvents.ccMessageEdited(
           original,
           MessageEditStatus.success,
-        );
-        if (editedMessage.metadata != null) {
-          editedMessage.metadata!['error'] = failure.message;
-        } else {
-          editedMessage.metadata = {'error': failure.message};
-        }
-        CometChatMessageEvents.ccMessageSent(
-          editedMessage,
-          core_enums.MessageStatus.error,
         );
         errorCallback?.call(
           CometChatException(
@@ -1232,12 +1250,16 @@ class MessageComposerBloc
     BaseMessage message,
     core_enums.MessageStatus messageStatus,
   ) {
-    // Only clear reply if message belongs to current conversation
+    // Only clear reply if message belongs to current conversation. Offline on
+    // (W4), a send's `sent`/`error` can come minutes after its `inProgress`
+    // (a queued send's ack, an outbox failure), so only the start of a send
+    // dismisses the preview.
     if (state.isReplyMode &&
         _isForThisConversation(message) &&
         (messageStatus == core_enums.MessageStatus.inProgress ||
-            messageStatus == core_enums.MessageStatus.sent ||
-            messageStatus == core_enums.MessageStatus.error)) {
+            (!OfflineGate.isOn() &&
+                (messageStatus == core_enums.MessageStatus.sent ||
+                    messageStatus == core_enums.MessageStatus.error)))) {
       add(const ClearReplyMessage());
     }
   }

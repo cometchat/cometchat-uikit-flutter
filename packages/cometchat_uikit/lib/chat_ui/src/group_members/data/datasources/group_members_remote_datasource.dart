@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cometchat_sdk/cometchat_sdk.dart' hide CardMessage;
+
 import '../../../../../shared_ui/src/constants/ui_kit_constants.dart';
 import '../../../../../shared_ui/src/logging/cometchat_log.dart';
 
@@ -96,39 +97,12 @@ class GroupMembersRemoteDataSourceImpl implements GroupMembersRemoteDataSource {
     GroupMembersRequestBuilder? groupMembersRequestBuilder,
   }) async {
     try {
-      // Check if we need to create a new request
-      // (different guid, different search keyword, different app builder,
-      // or no existing request)
-      final needsNewRequest =
-          _currentRequest == null ||
-          _currentGuid != guid ||
-          _currentSearchKeyword != searchKeyword ||
-          !identical(_currentRequestBuilder, groupMembersRequestBuilder);
-
-      if (needsNewRequest) {
-        if (groupMembersRequestBuilder != null) {
-          _currentRequest = _buildFromAppBuilder(
-            groupMembersRequestBuilder,
-            guid: guid,
-            limit: limit,
-            searchKeyword: searchKeyword,
-          );
-        } else {
-          // Create a new request builder
-          final requestBuilder = GroupMembersRequestBuilder(guid)
-            ..limit = limit;
-
-          if (searchKeyword != null && searchKeyword.isNotEmpty) {
-            requestBuilder.searchKeyword = searchKeyword;
-          }
-
-          // Build the request
-          _currentRequest = requestBuilder.build();
-        }
-        _currentGuid = guid;
-        _currentSearchKeyword = searchKeyword;
-        _currentRequestBuilder = groupMembersRequestBuilder;
-      }
+      _ensureRequest(
+        guid: guid,
+        limit: limit,
+        searchKeyword: searchKeyword,
+        groupMembersRequestBuilder: groupMembersRequestBuilder,
+      );
 
       // Create a completer to convert callback-based API to Future
       final completer = Completer<List<GroupMember>>();
@@ -169,6 +143,84 @@ class GroupMembersRemoteDataSourceImpl implements GroupMembersRemoteDataSource {
             'Unexpected error while fetching group members: ${e.toString()}',
         originalException: e is Exception ? e : null,
       );
+    }
+  }
+
+  /// The offline-on read of the next page (W6): the same request and cursor
+  /// as [getGroupMembers], asked once with the SDK's two-phase [listener], so the
+  /// cached page arrives first and the server page after it (BEH-SNAP-03).
+  /// The kit calls it only while offline support is on.
+  void fetchNextTwoPhase({
+    required String guid,
+    int limit = 30,
+    String? searchKeyword,
+    GroupMembersRequestBuilder? groupMembersRequestBuilder,
+    required GroupMemberFetchListener listener,
+  }) {
+    try {
+      _ensureRequest(
+        guid: guid,
+        limit: limit,
+        searchKeyword: searchKeyword,
+        groupMembersRequestBuilder: groupMembersRequestBuilder,
+      );
+    } on CometChatException catch (e) {
+      listener.onError(e);
+      return;
+    } catch (e) {
+      final message = 'Unexpected error while fetching group members: $e';
+      listener.onError(CometChatException('ERR_UNHANDLED', message, message));
+      return;
+    }
+    unawaited(
+      _currentRequest!.fetchNext(
+        onSuccess: null,
+        onError: null,
+        listener: listener,
+      ),
+    );
+  }
+
+  /// Builds a new request when there is none, or when the group, keyword or
+  /// app builder changed; otherwise the request is reused so the SDK cursor
+  /// advances.
+  void _ensureRequest({
+    required String guid,
+    required int limit,
+    String? searchKeyword,
+    GroupMembersRequestBuilder? groupMembersRequestBuilder,
+  }) {
+    // Check if we need to create a new request
+    // (different guid, different search keyword, different app builder,
+    // or no existing request)
+    final needsNewRequest =
+        _currentRequest == null ||
+        _currentGuid != guid ||
+        _currentSearchKeyword != searchKeyword ||
+        !identical(_currentRequestBuilder, groupMembersRequestBuilder);
+
+    if (needsNewRequest) {
+      if (groupMembersRequestBuilder != null) {
+        _currentRequest = _buildFromAppBuilder(
+          groupMembersRequestBuilder,
+          guid: guid,
+          limit: limit,
+          searchKeyword: searchKeyword,
+        );
+      } else {
+        // Create a new request builder
+        final requestBuilder = GroupMembersRequestBuilder(guid)..limit = limit;
+
+        if (searchKeyword != null && searchKeyword.isNotEmpty) {
+          requestBuilder.searchKeyword = searchKeyword;
+        }
+
+        // Build the request
+        _currentRequest = requestBuilder.build();
+      }
+      _currentGuid = guid;
+      _currentSearchKeyword = searchKeyword;
+      _currentRequestBuilder = groupMembersRequestBuilder;
     }
   }
 

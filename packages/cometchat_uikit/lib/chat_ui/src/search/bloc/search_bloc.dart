@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cometchat_chat_uikit/cometchat_chat_uikit.dart';
 
+import '../../../../shared_ui/src/offline/message_key.dart';
+import '../../../../shared_ui/src/offline/offline_gate.dart';
+import '../../../../shared_ui/src/offline/offline_hub_event.dart';
+import '../../../../shared_ui/src/offline/offline_list_errors.dart';
+import '../../../../shared_ui/src/offline/offline_list_reset.dart';
+import '../../../../shared_ui/src/offline/search_offline.dart';
+import '../../../../shared_ui/src/offline/two_phase.dart';
+import '../../../../src/chat_sdk_listeners.dart';
+
 /// BLoC for managing conversation + message search state.
 ///
 /// Handles debounced text search, filter chip toggling with filter groups,
@@ -91,6 +100,106 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     on<ConversationsErrorReceived>(_onConversationsError);
     on<MessagesResultReceived>(_onMessagesResult);
     on<MessagesErrorReceived>(_onMessagesError);
+    on<_ConnectToSearchReceived>(_onConnectToSearch);
+    // Session end and cache reset (G8): offline on only.
+    on<_OfflineListReset>(_onOfflineListReset);
+    _offlineResetSub = OfflineListReset.listen(
+      isClosed: () => isClosed,
+      onReset: (event) {
+        // Bump now so reads in flight stop writing at once.
+        _conversationRequestVersion++;
+        _messageRequestVersion++;
+        add(_OfflineListReset(event));
+      },
+    );
+    // With offline on, a search that ended in "Connect to search" runs again
+    // once on reconnect (D84 (8)).
+    if (OfflineGate.isOn()) {
+      ChatSdkListeners.addConnectionListener(
+        _connectionListenerId,
+        _SearchConnectionListener(_onConnected),
+      );
+    }
+  }
+
+  StreamSubscription<OfflineHubEvent>? _offlineResetSub;
+
+  /// The first-page reads the kit started on a cache reset: a real error over
+  /// the cached rows they show does not reach `onError` (D84 (5)).
+  int? _quietConversationVersion;
+  int? _quietMessageVersion;
+
+  /// Session end or cache reset (G8): clears both result sections and their
+  /// SDK requests before the next frame. A session end leaves them empty
+  /// until the next search; a cache reset runs the current search once more,
+  /// from page one, quietly over rows.
+  void _onOfflineListReset(_OfflineListReset event, Emitter<SearchState> emit) {
+    final hubEvent = event.event;
+    if (OfflineListReset.isStale(hubEvent)) return;
+    final reload =
+        hubEvent is CacheReset &&
+        (state.searchText.isNotEmpty || state.selectedFilters.isNotEmpty);
+    // A debounced search typed by the user who left must not run.
+    if (hubEvent is SessionEnded) _debounceTimer?.cancel();
+    _conversationsRequest = null;
+    _messagesRequest = null;
+    if (reload) {
+      // Clears the rows and shows loading, then reads page one again.
+      _invalidateAndShowLoading(emit);
+      _handleSearchAndFilters();
+      _quietConversationVersion = _conversationRequestVersion;
+      _quietMessageVersion = _messageRequestVersion;
+      return;
+    }
+    _isFetchingConversations = false;
+    _isFetchingMessages = false;
+    _reloadOnConnect = false;
+    emit(
+      state.copyWith(
+        conversationsStatus: SearchStatus.initial,
+        conversations: const [],
+        hasMoreConversations: false,
+        messagesStatus: SearchStatus.initial,
+        messages: const [],
+        hasMoreMessages: false,
+        clearError: true,
+        connectToSearch: false,
+      ),
+    );
+  }
+
+  static int _instances = 0;
+  late final String _connectionListenerId =
+      'cometchat_search_bloc_${++_instances}';
+
+  /// Set when a section ended in "Connect to search"; cleared by any newer
+  /// search.
+  bool _reloadOnConnect = false;
+
+  void _onConnected() {
+    if (isClosed || !_reloadOnConnect || !state.connectToSearch) return;
+    _reloadOnConnect = false;
+    add(const RefreshCurrentSearch());
+  }
+
+  /// A first page the server answered with a real error keeps the cached
+  /// rows it showed; the app still hears of the error, since the user
+  /// started the search (D84 (5)). The not-connected error never comes here.
+  void _reportKeptRowsError(CometChatException e) =>
+      OfflineListErrors.report(this, e);
+
+  /// Offline, nothing to show: the offline state, run again once on
+  /// reconnect (D84 (8)). With a keyword it reads "Connect to search"
+  /// (D84 (7)); with only filter chips it is a plain list, "Connect to load
+  /// …", and [error] reaches `onError` once (D84 (3)).
+  void _connectToSearch({required bool conversations, required Object error}) {
+    _reloadOnConnect = true;
+    add(
+      _ConnectToSearchReceived(
+        conversations: conversations,
+        message: error.toString(),
+      ),
+    );
   }
 
   /// Selects which filter chips to expose based on the scope.
@@ -264,6 +373,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     _messageRequestVersion++;
     _isFetchingConversations = false;
     _isFetchingMessages = false;
+    _reloadOnConnect = false;
+    if (state.connectToSearch) emit(state.copyWith(connectToSearch: false));
 
     if (state.showConversations) {
       emit(
@@ -395,6 +506,25 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     );
   }
 
+  /// Offline on, server unreachable, no rows to show: the offline state.
+  void _onConnectToSearch(
+    _ConnectToSearchReceived event,
+    Emitter<SearchState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        conversationsStatus: event.conversations ? SearchStatus.empty : null,
+        conversations: event.conversations ? const [] : null,
+        hasMoreConversations: event.conversations ? false : null,
+        messagesStatus: event.conversations ? null : SearchStatus.empty,
+        messages: event.conversations ? null : const [],
+        hasMoreMessages: event.conversations ? null : false,
+        errorMessage: event.message,
+        connectToSearch: true,
+      ),
+    );
+  }
+
   // ============================================================
   // Search Execution — unified entry point
   // ============================================================
@@ -465,6 +595,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   Future<void> _fetchConversations(int version, {required bool append}) async {
     if (_isFetchingConversations) return;
     _isFetchingConversations = true;
+    final offlineOn = OfflineGate.isOn();
+    if (offlineOn && state.searchText.isEmpty) {
+      return _fetchConversationsTwoPhase(version, append: append);
+    }
 
     try {
       final completer = Completer<List<Conversation>>();
@@ -494,7 +628,57 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
     } catch (e) {
       if (version != _conversationRequestVersion || isClosed) return;
+      if (offlineOn && SearchOffline.isSearchConnectivityError(e)) {
+        if (append && state.conversations.isNotEmpty) {
+          // A later page keeps the rows shown and stops paging.
+          add(
+            const ConversationsResultReceived(
+              conversations: [],
+              hasMore: false,
+              append: true,
+            ),
+          );
+          return;
+        }
+        _connectToSearch(conversations: true, error: e);
+        return;
+      }
       add(ConversationsErrorReceived(e.toString()));
+    } finally {
+      _isFetchingConversations = false;
+    }
+  }
+
+  /// Offline on, no keyword: the conversations page in two rounds.
+  Future<void> _fetchConversationsTwoPhase(
+    int version, {
+    required bool append,
+  }) async {
+    final request = _conversationsRequest!;
+    try {
+      await SearchOffline.runSearchPageTwoPhase<Conversation>(
+        stream: conversationFetchStream((l) => request.fetchNext(listener: l)),
+        base: append ? state.conversations : const [],
+        keyOf: (c) => c.conversationId ?? '',
+        limit: state.selectedFilters.isNotEmpty
+            ? _filteredLimit
+            : _defaultLimit,
+        isCurrent: () => version == _conversationRequestVersion && !isClosed,
+        emitRows: (rows, hasMore) => add(
+          ConversationsResultReceived(
+            conversations: rows,
+            hasMore: hasMore,
+            append: false,
+          ),
+        ),
+        emitError: (e) => add(ConversationsErrorReceived(e.toString())),
+        onKeptRowsError: (e) {
+          if (append || version != _quietConversationVersion) {
+            _reportKeptRowsError(e);
+          }
+        },
+        onUnreachable: (e) => _connectToSearch(conversations: true, error: e),
+      );
     } finally {
       _isFetchingConversations = false;
     }
@@ -593,6 +777,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     int version,
   ) async {
     _isFetchingMessages = true;
+    // Offline on, no keyword: each request settles from the cache when the
+    // server is out of reach. A keyword keeps today's server-only read.
+    final gateOn = OfflineGate.isOn();
+    final offlineOn = gateOn && text.isEmpty;
+    // Offline on: a request the server could not answer, with nothing
+    // cached. Cached rows kept over one stay quietly (D84 (2)).
+    Object? unreachable;
 
     try {
       final allResults = <BaseMessage>[];
@@ -609,6 +800,22 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         final builder = _buildMessagesRequest(text, singleFilter);
 
         final request = builder.build();
+        if (offlineOn) {
+          final List<BaseMessage> rows;
+          try {
+            rows = await SearchOffline.readSettledRows(
+              SearchOffline.fetchPreviousPage(request),
+            );
+          } catch (e) {
+            if (!SearchOffline.isSearchConnectivityError(e)) rethrow;
+            unreachable = e;
+            continue;
+          }
+          for (final msg in rows) {
+            if (seenIds.add(msg.id)) allResults.add(msg);
+          }
+          continue;
+        }
         final completer = Completer<List<BaseMessage>>();
         unawaited(
           request.fetchPrevious(
@@ -632,6 +839,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       }
 
       if (version != _messageRequestVersion || isClosed) return;
+      if (unreachable != null && allResults.isEmpty) {
+        _connectToSearch(conversations: false, error: unreachable);
+        return;
+      }
 
       // Sort merged results by sentAt descending (newest first)
       allResults.sort((a, b) {
@@ -649,6 +860,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
     } catch (e) {
       if (version != _messageRequestVersion || isClosed) return;
+      if (gateOn && SearchOffline.isSearchConnectivityError(e)) {
+        _connectToSearch(conversations: false, error: e);
+        return;
+      }
       add(MessagesErrorReceived(e.toString()));
     } finally {
       _isFetchingMessages = false;
@@ -688,6 +903,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   Future<void> _fetchMessages(int version, {required bool append}) async {
     if (_isFetchingMessages) return;
     _isFetchingMessages = true;
+    final offlineOn = OfflineGate.isOn();
+    if (offlineOn && state.searchText.isEmpty) {
+      return _fetchMessagesTwoPhase(version, append: append);
+    }
 
     try {
       final completer = Completer<List<BaseMessage>>();
@@ -718,7 +937,60 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
     } catch (e) {
       if (version != _messageRequestVersion || isClosed) return;
+      if (offlineOn && SearchOffline.isSearchConnectivityError(e)) {
+        if (append && state.messages.isNotEmpty) {
+          // A later page keeps the rows shown and stops paging.
+          add(
+            const MessagesResultReceived(
+              messages: [],
+              hasMore: false,
+              append: true,
+            ),
+          );
+          return;
+        }
+        _connectToSearch(conversations: false, error: e);
+        return;
+      }
       add(MessagesErrorReceived(e.toString()));
+    } finally {
+      _isFetchingMessages = false;
+    }
+  }
+
+  /// Offline on, no keyword (message filters): the page in two rounds,
+  /// deduped by render key, newest first as today.
+  Future<void> _fetchMessagesTwoPhase(
+    int version, {
+    required bool append,
+  }) async {
+    final request = _messagesRequest!;
+    final myUid = CometChatUIKit.loggedInUser?.uid;
+    try {
+      await SearchOffline.runSearchPageTwoPhase<BaseMessage>(
+        stream: SearchOffline.fetchPreviousPage(request),
+        base: append ? state.messages : const [],
+        keyOf: (m) => renderKey(m, myUid),
+        order: (rows) => rows.reversed.toList(),
+        limit: state.selectedFilters.isNotEmpty
+            ? _filteredLimit
+            : _defaultLimit,
+        isCurrent: () => version == _messageRequestVersion && !isClosed,
+        emitRows: (rows, hasMore) => add(
+          MessagesResultReceived(
+            messages: rows,
+            hasMore: hasMore,
+            append: false,
+          ),
+        ),
+        emitError: (e) => add(MessagesErrorReceived(e.toString())),
+        onKeptRowsError: (e) {
+          if (append || version != _quietMessageVersion) {
+            _reportKeptRowsError(e);
+          }
+        },
+        onUnreachable: (e) => _connectToSearch(conversations: false, error: e),
+      );
     } finally {
       _isFetchingMessages = false;
     }
@@ -727,6 +999,46 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   @override
   Future<void> close() {
     _debounceTimer?.cancel();
+    _offlineResetSub?.cancel();
+    ChatSdkListeners.removeConnectionListener(_connectionListenerId);
     return super.close();
   }
+}
+
+/// Internal: a search could not reach the server and has no rows to show
+/// (offline on).
+class _ConnectToSearchReceived extends SearchEvent {
+  const _ConnectToSearchReceived({
+    required this.conversations,
+    required this.message,
+  });
+
+  /// Which section failed: conversations, else messages.
+  final bool conversations;
+
+  /// The not-connected error, as text (`onError` for a filter-only list).
+  final String message;
+
+  @override
+  List<Object?> get props => [conversations, message];
+}
+
+/// Internal: a current-gen session end or cache reset from the offline hub
+/// (G8).
+class _OfflineListReset extends SearchEvent {
+  const _OfflineListReset(this.event);
+
+  final OfflineHubEvent event;
+
+  @override
+  List<Object?> get props => [event];
+}
+
+class _SearchConnectionListener with ConnectionListener {
+  _SearchConnectionListener(this._onConnected);
+
+  final void Function() _onConnected;
+
+  @override
+  void onConnected() => _onConnected();
 }

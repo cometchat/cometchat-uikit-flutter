@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cometchat_chat_uikit.dart';
 import '../../../cometchat_chat_uikit.dart' as cc;
+import '../../../shared_ui/src/offline/offline_list_errors.dart';
+import 'bloc/users_offline.dart' show UsersConnectToLoad;
 
 /// [CometChatUsers] is a component that displays a list of users
 /// using Clean Architecture with BLoC pattern.
@@ -141,8 +143,14 @@ class _CometChatUsersState extends State<CometChatUsers>
       );
       _isExternalBloc = false;
     }
+    OfflineListErrors.listen(usersBloc, _onKeptRowsError);
     usersBloc.add(LoadUsers(searchKeyword: widget.searchKeyword));
   }
+
+  /// A real server error over cached rows that stay on screen, on a load the
+  /// user or app started (D84 (5)).
+  void _onKeptRowsError(CometChatException error) =>
+      widget.onError?.call(error);
 
   void _initializeServiceLocator() {
     if (!UsersServiceLocator.instance.isInitialized) {
@@ -183,6 +191,7 @@ class _CometChatUsersState extends State<CometChatUsers>
 
   @override
   void dispose() {
+    OfflineListErrors.cancel(usersBloc, _onKeptRowsError);
     if (!_isExternalBloc) {
       usersBloc.close();
     }
@@ -205,6 +214,9 @@ class _CometChatUsersState extends State<CometChatUsers>
 
     if (state is UsersError) {
       widget.onError?.call(Exception(state.message));
+    } else if (state is UsersConnectToLoad) {
+      // Offline with nothing shown: onError once (D84 (3)).
+      widget.onError?.call(state.error);
     } else if (state is UsersEmpty) {
       widget.onEmpty?.call();
     } else if (state is UsersLoaded) {

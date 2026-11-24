@@ -1,6 +1,7 @@
 import "package:cometchat_sdk/cometchat_sdk.dart" hide CardMessage;
 import '../../../core/utils/ui_event_handler.dart';
 import '../../../core/constants/enums.dart';
+import '../../../../offline/message_send_state.dart';
 import '../../../data/models/interactive_message/form_message.dart';
 import '../../../data/models/interactive_message/card_message.dart';
 import '../../../data/models/interactive_message/scheduler_message.dart';
@@ -14,6 +15,25 @@ mixin CometChatMessageEventListener implements UIEventHandler {
   //---composer events---
   //event for message sent by logged-in user
   void ccMessageSent(BaseMessage message, MessageStatus messageStatus) {}
+
+  //Offline (additive, G14): one event per transition of an own message's send
+  //state (sending/sent/failed). [reason] is non-null only on a failure. Default
+  //no-op so existing listeners are unaffected; never emitted with offline off.
+  /// Called once per send-state transition of an own message (offline only).
+  void ccMessageSendStateChanged(
+    BaseMessage message,
+    CometChatMessageSendState state,
+    MessageFailureReason? reason,
+  ) {}
+
+  //Offline (additive, G14): the SDK wiped and rebuilt the offline cache,
+  //losing unsent messages. [pendingMessagesLost] is null when unknown, never 0.
+  //Default no-op; never emitted with offline off.
+  /// Called when the SDK wiped and rebuilt the offline cache (offline only).
+  void ccOfflineCacheReset(
+    OfflineCacheResetReason reason,
+    int? pendingMessagesLost,
+  ) {}
 
   //---message list events---
   //event for message edited by logged-in user

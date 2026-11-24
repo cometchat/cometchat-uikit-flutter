@@ -1542,4 +1542,72 @@ class TranslationsJa extends Translations {
 
   @override
   String messageFrom(String sender) => '$senderさんからのメッセージ';
+
+  // --- Offline support (W1 §2.10) ---
+
+  @override
+  String get messageNotSentYet => "未送信";
+
+  @override
+  String get messageNotSentTapToRetry => "送信できませんでした。タップして再試行";
+
+  @override
+  String get unsentMessageRemoved => "未送信のメッセージを削除しました";
+
+  @override
+  String get unsentMessagesMaybeLost => "一部の未送信メッセージが送信されていない可能性があります";
+
+  @override
+  String get queueFull => "送信待ちのメッセージが多すぎます";
+
+  @override
+  String get fileTooLargeOffline => "オフラインで送信するにはファイルが大きすぎます";
+
+  @override
+  String get connectToLoadMore => "接続するとさらに読み込めます";
+
+  @override
+  String get connectToSearch => "接続すると検索できます";
+
+  @override
+  String get connectToSearchSubtitle => "検索にはインターネット接続が必要です。";
+
+  @override
+  String get connectToLoadUsers => "接続するとユーザーを読み込めます";
+
+  @override
+  String get connectToLoadGroups => "接続するとグループを読み込めます";
+
+  @override
+  String get connectToLoadMembers => "接続するとメンバーを読み込めます";
+
+  @override
+  String get connectToLoadChats => "接続するとチャットを読み込めます";
+
+  @override
+  String get connectToLoadMessages => "接続するとメッセージを読み込めます";
+
+  @override
+  String get connectToLoadReactions => "接続するとリアクションを読み込めます";
+
+  @override
+  String get connectToLoadNotifications => "接続すると通知を読み込めます";
+
+  @override
+  String get mediaAvailableWhenOnline => "オンライン時に利用可能";
+
+  @override
+  String get jumpToLatest => "最新へ移動";
+
+  @override
+  String get sendingTryAgain => "送信中…しばらくしてからもう一度お試しください";
+
+  @override
+  String get fileNotSaved => "ファイルが保存されていません。もう一度追加してください";
+
+  @override
+  String messagesNotSent(int n) => "$n件のメッセージを送信できませんでした";
+
+  @override
+  String unsentMessagesLost(int n) => "未送信のメッセージ$n件を復元できませんでした";
 }

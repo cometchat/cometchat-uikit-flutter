@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart' as vp;
 
 import '../../../../clean_architecture.dart';
 import '../../../../../logging/cometchat_log.dart';
+import '../../../../../offline/offline_media.dart';
 import '../audio_bubble/audio_playback_session.dart';
 import '../../../../core/utils/platform_utils/platform_file_utils.dart'
     as platform_file;
@@ -368,6 +369,18 @@ class _AudioRowState extends State<_AudioRow> {
         FileUtils.isLocalFileAvailable(stamped)) {
       if (!mounted) return;
       _localPath = stamped;
+      await _initController();
+      return;
+    }
+
+    // Offline (W5, G9): the SDK's cached copy plays without a download. Null
+    // with offline off.
+    final cached = OfflineMedia.enabled
+        ? await OfflineMedia.resolve(widget.attachment)
+        : null;
+    if (cached != null) {
+      if (!mounted || _isMismatch) return;
+      _localPath = cached;
       await _initController();
       return;
     }
