@@ -1,6 +1,6 @@
 name: cometchat_uikit_shared
 description: Shared Components and Resources for CometChat's chat and calls UI Kits
-version: 5.3.0
+version: 5.3.1
 homepage: https://www.cometchat.com/
 
 environment:

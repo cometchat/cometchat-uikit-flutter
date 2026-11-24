@@ -1,3 +1,14 @@
+## 5.3.1
+
+## New
+- None
+
+## Enhancements
+- None
+
+## Fixes
+- Fixed Swift Package Manager builds failing with `'UIWindowScene' is only available in iOS 13.0 or newer` on Xcode versions that allow an iOS 12 deployment target. The Swift package now declares iOS 13.0, the minimum iOS version of Flutter 3.38, so no supported app is affected. CocoaPods builds are unchanged.
+
 ## 5.3.0
 
 ## New

@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
   name: "cometchat_uikit_shared",
   platforms: [
-    .iOS("12.0")
+    .iOS("13.0")
   ],
   products: [
     .library(name: "cometchat-uikit-shared", targets: ["cometchat_uikit_shared"])
